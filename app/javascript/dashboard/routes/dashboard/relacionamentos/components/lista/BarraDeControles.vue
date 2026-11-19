@@ -9,9 +9,13 @@ import CampoDeBusca from './CampoDeBusca.vue';
 // #2894 — a faixa de controles acima da lista: busca, ordem e "Mais filtros".
 // Na aba Empresas não há "Mais filtros" (empresa, etiqueta e cidade são de
 // pessoa).
+// #3062 — `gruposDeOrdem` (lista/ordens.js): a aba Pessoas ganha as sete ordens
+// da lista de contatos de hoje, agrupadas por campo e nos dois sentidos. Sem
+// eles, ficam as três de sempre.
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
+  gruposDeOrdem: { type: Array, default: () => [] },
   filtrosAtivos: { type: Number, default: 0 },
   comFiltros: { type: Boolean, default: true },
   placeholder: { type: String, required: true },
@@ -62,9 +66,11 @@ const rotuloDosFiltros = computed(() =>
         </label>
         <ChoiceSelect
           :model-value="ordem"
-          :options="opcoesDeOrdem"
+          :options="gruposDeOrdem.length ? [] : opcoesDeOrdem"
+          :groups="gruposDeOrdem"
           :trigger-id="idDaOrdem"
           :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
+          data-relacionamentos="ordem"
           class="flex-1 min-w-0 md:flex-none"
           @update:model-value="emit('update:ordem', $event)"
         />

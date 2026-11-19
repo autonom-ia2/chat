@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -18,12 +19,15 @@ import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
 import AbasDaLista from '../components/lista/AbasDaLista.vue';
+import AcoesDaAba from '../components/lista/AcoesDaAba.vue';
 import BarraDeAcaoEmGrupo from '../components/lista/BarraDeAcaoEmGrupo.vue';
 import BarraDeControles from '../components/lista/BarraDeControles.vue';
 import DialogoApagar from '../components/lista/DialogoApagar.vue';
 import DialogoCriarCards from '../components/lista/DialogoCriarCards.vue';
 import DialogoEtiqueta from '../components/lista/DialogoEtiqueta.vue';
 import DialogoMandarMensagem from '../components/lista/DialogoMandarMensagem.vue';
+import DialogoPlanilha from '../components/lista/DialogoPlanilha.vue';
+import GavetaDeInformacoes from '../components/ficha/GavetaDeInformacoes.vue';
 import EstadoSemAcesso from '../components/lista/EstadoSemAcesso.vue';
 import EstadoSemResultado from '../components/lista/EstadoSemResultado.vue';
 import LinhasDeExemplo from '../components/lista/LinhasDeExemplo.vue';
@@ -50,6 +54,9 @@ import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
+import { gruposDeOrdem } from '../lista/ordens';
+import { useOrdemGuardada } from '../lista/useOrdemGuardada';
+import { usePessoaNaGaveta } from '../lista/usePessoaNaGaveta';
 
 // #2897 — a aba Seguros só é baixada quando abre: quem não tem a carteira (ou
 // não abre a aba) não carrega a tela dela.
@@ -74,6 +81,11 @@ const SeloDoSeguro = defineAsyncComponent(
 // enquanto ela está aberta, a lista de pessoas não carrega. Nessa conta a lista
 // de pessoas também ganha o selo do seguro ao lado do nome, o grupo "Só tem um
 // seguro" e a busca pelo número da apólice (carteira/useCarteiraNaLista.js).
+// #3062 — paridade com a lista de contatos de hoje, na aba Pessoas: "Nova
+// pessoa" e "Baixar planilha" ao lado das abas, "Etiquetas" (colocar e tirar
+// várias) na barra de ação em grupo, as sete ordens guardadas por pessoa da
+// equipe, o grupo "Ativos agora", o lápis de editar na linha e as pessoas
+// marcadas indo para o Guia (#934).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -128,6 +140,12 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// #3062 — "Nova pessoa" e o lápis da linha: quem edita contato; "Baixar
+// planilha": quem exporta contato. As regras da lista de contatos de hoje.
+const podeEditar = computed(() => Boolean(demo) || permissoes.podeEditar.value);
+const podeBaixar = computed(
+  () => Boolean(demo) || permissoes.podeExportar.value
+);
 // #2970 — "Conversar" da linha e "Mandar mensagem" da barra ainda só simulam:
 // aparecem só na demonstração. Fora dela, quem não pode nenhuma das três ações
 // de verdade não tem o que fazer com gente marcada, e a lista não oferece a
@@ -140,6 +158,15 @@ const podeMarcar = computed(
 const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
 const marcados = useMarcados();
+// #934 — as pessoas marcadas vão ao Guia ("põe a etiqueta nesses"), como na
+// lista de contatos de hoje.
+declararContexto({
+  selecionados: () => ({
+    recurso: 'contacts',
+    ids: marcados.pessoas.value.map(({ id }) => id),
+  }),
+});
+const ordemGuardada = useOrdemGuardada({ demo });
 // Na conta com a carteira, cada página de pessoas que chega pede os selos de
 // seguro daquelas pessoas; nas outras, a fonte passa como é. Se os selos não
 // chegam, a tela avisa acima das linhas: pessoa sem selo se lê como "não tem
@@ -149,7 +176,13 @@ const lista = useLista({
   fonte: carteira.comSelos(listaFonte({ demo, comSeguros: temSeguros })),
   aba,
   aoMudarConsulta: marcados.limpar,
+  ordemPadrao: ordemGuardada.ordemDaAba,
 });
+const mudarOrdem = nova => {
+  ordemGuardada.guardar(nova, aba.value);
+  return lista.mudarOrdem(nova);
+};
+const ordensDaAba = computed(() => (ehEmpresas.value ? [] : gruposDeOrdem(t)));
 // O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
 // texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
 // renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
@@ -191,6 +224,27 @@ const explicacao = computed(() => {
   return atual ? t(atual.explicacao) : '';
 });
 const contaDeMarcados = computed(() => contaDaMensagem(marcados.pessoas.value));
+
+// "Clientes · busca “ana” · 2 filtros": a lista que a planilha leva.
+const PLANILHA = 'RELACIONAMENTOS.LISTA.PLANILHA';
+const listaDaPlanilha = computed(() => {
+  const atual = grupos.value.find(({ id }) => id === lista.grupo.value);
+  const filtros = lista.filtrosAtivos.value;
+  return [
+    atual?.nome,
+    lista.busca.value && t(`${PLANILHA}.BUSCA`, { busca: lista.busca.value }),
+    filtros && t(`${PLANILHA}.FILTROS`, { count: filtros }, filtros),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+});
+const consultaDaTela = () => ({
+  aba: aba.value,
+  grupo: lista.grupo.value,
+  busca: lista.busca.value,
+  ordem: lista.ordem.value,
+  filtros: lista.filtros.value,
+});
 
 const contaVazia = computed(() => lista.resumo.value?.total === 0);
 // Na conta com a carteira a busca de pessoas também acha pelo número da
@@ -282,6 +336,67 @@ const dialogoDeMensagem = useTemplateRef('dialogoDeMensagem');
 const dialogoDeCards = useTemplateRef('dialogoDeCards');
 const dialogoDeEtiqueta = useTemplateRef('dialogoDeEtiqueta');
 const dialogoDeApagar = useTemplateRef('dialogoDeApagar');
+const dialogoDaPlanilha = useTemplateRef('dialogoDaPlanilha');
+
+// "Nova pessoa" e o lápis da linha: a gaveta "Alterar informações" da ficha.
+// Depois de criar, a lista volta do começo e o aviso leva à ficha nova; depois
+// de editar, a lista se atualiza sem sair do lugar.
+const gaveta = usePessoaNaGaveta({
+  acoes,
+  aoCriar: criada => {
+    useAlert(
+      t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.CRIADA', { nome: criada.name }),
+      {
+        type: 'link',
+        to: {
+          name: 'relacionamentos_pessoa',
+          params: { contactId: criada.id },
+        },
+        message: t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.ABRIR_FICHA'),
+        duration: 6000,
+      }
+    );
+    lista.recarregar();
+  },
+  aoSalvar: dados => {
+    useAlert(t('RELACIONAMENTOS.LISTA.EDITAR.SALVO', { nome: dados.name }));
+    lista.atualizar();
+  },
+  aoFalhar: nova =>
+    useAlert(
+      t(
+        nova
+          ? 'RELACIONAMENTOS.LISTA.NOVA_PESSOA.ERRO'
+          : 'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
+      )
+    ),
+});
+// As ações ao lado das abas só existem em Pessoas, para quem pode, e com a
+// lista à vista: sem acesso não há o que criar nem baixar; sem ninguém, não há
+// o que baixar.
+const criarNaAba = computed(
+  () => !ehEmpresas.value && !lista.semAcesso.value && podeEditar.value
+);
+const baixarNaAba = computed(
+  () =>
+    !ehEmpresas.value &&
+    !lista.semAcesso.value &&
+    !contaVazia.value &&
+    podeBaixar.value
+);
+const temLinhaDasAbas = computed(
+  () =>
+    (temAbas.value && !contaVazia.value) ||
+    criarNaAba.value ||
+    baixarNaAba.value
+);
+
+const tituloDaGaveta = computed(() =>
+  gaveta.ehNova.value ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.TITULO') : ''
+);
+const salvarDaGaveta = computed(() =>
+  gaveta.ehNova.value ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.SALVAR') : ''
+);
 
 const gavetaAberta = ref(false);
 const opcoesDeFiltro = ref({ empresas: [], etiquetas: [], cidades: [] });
@@ -372,15 +487,28 @@ watch(naAbaDeSeguros, estaNela => {
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />
-          <LinhasDeExemplo v-if="contaVazia" />
-          <template v-else>
+          <div
+            v-if="temLinhaDasAbas"
+            class="flex flex-wrap items-center justify-between gap-3"
+          >
             <AbasDaLista
-              v-if="temAbas"
+              v-if="temAbas && !contaVazia"
               :com-empresas="temEmpresas"
               :com-seguros="temSeguros"
               :model-value="aba"
               @update:model-value="trocarAba"
             />
+            <AcoesDaAba
+              v-if="criarNaAba || baixarNaAba"
+              class="sm:ms-auto"
+              :pode-criar="criarNaAba"
+              :pode-baixar="baixarNaAba"
+              @criar="gaveta.abrirNova"
+              @baixar="dialogoDaPlanilha.abrir()"
+            />
+          </div>
+          <LinhasDeExemplo v-if="contaVazia" />
+          <template v-else>
             <div
               :id="PAINEL_DAS_ABAS"
               :role="temAbas ? 'tabpanel' : undefined"
@@ -406,12 +534,13 @@ watch(naAbaDeSeguros, estaNela => {
                 v-if="!lista.semAcesso.value"
                 :busca="lista.busca.value"
                 :ordem="lista.ordem.value"
+                :grupos-de-ordem="ordensDaAba"
                 :filtros-ativos="lista.filtrosAtivos.value"
                 :com-filtros="!ehEmpresas"
                 :placeholder="placeholder"
                 :placeholder-curto="placeholderCurto"
                 @update:busca="lista.mudarBusca"
-                @update:ordem="lista.mudarOrdem"
+                @update:ordem="mudarOrdem"
                 @abrir-filtros="abrirFiltros"
               />
               <EstadoSemAcesso
@@ -479,9 +608,11 @@ watch(naAbaDeSeguros, estaNela => {
                       :marcada="marcados.ehMarcado(pessoa.id)"
                       :pode-marcar="podeMarcar"
                       :pode-conversar="naDemonstracao"
+                      :pode-editar="podeEditar"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
+                      @editar="gaveta.abrirEdicao"
                     >
                       <template v-if="seguroDe(pessoa)" #selos>
                         <SeloDoSeguro
@@ -562,6 +693,26 @@ watch(naAbaDeSeguros, estaNela => {
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
       @concluido="acoesEmGrupo.depoisDeAgir"
+    />
+    <DialogoPlanilha
+      v-if="podeBaixar"
+      ref="dialogoDaPlanilha"
+      :quantas="lista.total.value"
+      :lista="listaDaPlanilha"
+      :acoes="acoes"
+      :consulta="consultaDaTela"
+    />
+    <GavetaDeInformacoes
+      v-if="podeEditar"
+      :aberta="gaveta.aberta.value"
+      :pessoa="gaveta.pessoa.value"
+      :salvando="gaveta.salvando.value"
+      :titulo="tituloDaGaveta"
+      :rotulo-salvar="salvarDaGaveta"
+      :erros-do-servidor="gaveta.errosDoServidor.value"
+      marca="gaveta-da-pessoa"
+      @fechar="gaveta.fechar"
+      @salvar="gaveta.salvar"
     />
   </section>
 </template>

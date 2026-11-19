@@ -85,16 +85,55 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos: funções', type: 
 
   describe 'POST etiqueta' do
     it 'pede a chave de editar contatos' do
-      pedir('etiqueta', quem: pessoa_com(%w[contact_view contact_delete]), pessoa_ids: [ana.id], etiqueta: 'feira')
+      pedir('etiqueta', quem: pessoa_com(%w[contact_view contact_delete]), pessoa_ids: [ana.id], etiquetas: ['feira'])
 
       expect(response).to have_http_status(:unauthorized)
       expect(o_que_mudou).to eq([true, 0, []])
     end
 
     it 'etiqueta para quem tem a chave' do
-      pedir('etiqueta', quem: pessoa_com(%w[contact_manage]), pessoa_ids: [ana.id], etiqueta: 'feira')
+      pedir('etiqueta', quem: pessoa_com(%w[contact_manage]), pessoa_ids: [ana.id], etiquetas: ['feira'])
 
       expect(response.parsed_body).to eq('aplicadas' => 1, 'de_fora' => [])
+    end
+  end
+
+  # #3062 — tirar etiquetas pede a mesma chave de pôr.
+  describe 'POST etiqueta/tirar' do
+    before { ana.update_labels(%w[feira]) }
+
+    it 'pede a chave de editar contatos' do
+      pedir('etiqueta/tirar', quem: pessoa_com(%w[contact_view contact_delete]), pessoa_ids: [ana.id], etiquetas: ['feira'])
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(o_que_mudou).to eq([true, 0, %w[feira]])
+    end
+
+    it 'tira para quem tem a chave' do
+      pedir('etiqueta/tirar', quem: pessoa_com(%w[contact_manage]), pessoa_ids: [ana.id], etiquetas: ['feira'])
+
+      expect(response.parsed_body).to eq('tiradas' => 1, 'de_fora' => [])
+      expect(ana.reload.label_list).to be_empty
+    end
+  end
+
+  # #3062 — "Baixar planilha" pede a chave de exportar contatos, como o menu da lista de contatos de hoje.
+  describe 'POST pessoas/exportar' do
+    it 'pede a chave de exportar contatos: ver não basta' do
+      pedir('pessoas/exportar', quem: pessoa_com(%w[contact_view contact_manage]))
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(Account::ContactsExportJob).not_to have_been_enqueued
+    end
+
+    it 'põe a planilha na fila para quem tem a chave' do
+      quem = pessoa_com(%w[contact_view contact_export])
+
+      pedir('pessoas/exportar', quem: quem)
+
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body).to eq('email' => quem.email)
+      expect(Account::ContactsExportJob).to have_been_enqueued.with(account.id, quem.id, nil, { relacionamentos: {} })
     end
   end
 

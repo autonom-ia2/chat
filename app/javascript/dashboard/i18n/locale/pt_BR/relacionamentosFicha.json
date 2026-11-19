@@ -198,7 +198,9 @@
         "NOME": "Escreva o nome.",
         "EMAIL": "Confira o e-mail. Parece que falta algo.",
         "CPF": "Confira o CPF. São 11 números.",
-        "CNPJ": "Confira o CNPJ. São 14 números."
+        "CNPJ": "Confira o CNPJ. São 14 números.",
+        "EMAIL_REPETIDO": "Já existe outra pessoa com este e-mail.",
+        "TELEFONE_REPETIDO": "Já existe outra pessoa com este telefone."
       },
       "REDE": {
         "linkedin": "LinkedIn",

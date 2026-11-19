@@ -213,6 +213,60 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     it 'os mais novos primeiro' do
       expect(nomes(ordem: 'mais_novos')).to eq(%w[Bruno Ana ana Érica])
     end
+
+    it 'os sentidos contrários (#3062): conversa mais antiga, nome de Z a A e os mais antigos primeiro' do
+      expect(nomes(ordem: 'conversa_mais_antiga')).to eq(%w[Érica Ana ana Bruno])
+      expect(nomes(ordem: 'nome_z_a')).to eq(%w[Érica Bruno ana Ana])
+      expect(nomes(ordem: 'mais_antigos')).to eq(%w[Érica ana Ana Bruno])
+    end
+  end
+
+  # #3062 — as ordens da lista de contatos de hoje que a nova não tinha: e-mail, empresa, país e cidade, nos dois sentidos,
+  # sem diferença de acento nem de maiúscula. Quem não tem o dado (ou tem texto vazio) fica no fim nos dois sentidos.
+  describe 'ordem por e-mail, empresa, país e cidade' do
+    before do
+      pessoa('Carla', email: 'carla@exemplo.com.br',
+                      additional_attributes: { company_name: 'Ótica Sol', country: 'Brasil', city: 'São Paulo' })
+      pessoa('Ana', email: 'Ana@exemplo.com.br',
+                    additional_attributes: { company_name: 'padaria Lua', country: 'Argentina', city: 'Campinas' })
+      pessoa('Bruno', additional_attributes: { company_name: '', city: '' })
+    end
+
+    {
+      'email_a_z' => %w[Ana Carla Bruno], 'email_z_a' => %w[Carla Ana Bruno],
+      'empresa_a_z' => %w[Carla Ana Bruno], 'empresa_z_a' => %w[Ana Carla Bruno],
+      'pais_a_z' => %w[Ana Carla Bruno], 'pais_z_a' => %w[Carla Ana Bruno],
+      'cidade_a_z' => %w[Ana Carla Bruno], 'cidade_z_a' => %w[Carla Ana Bruno]
+    }.each do |ordem, esperado|
+      it "ordena por #{ordem}" do
+        expect(nomes(ordem: ordem)).to eq(esperado)
+      end
+    end
+
+    it 'a consulta inteira para a planilha sai na mesma ordem, sem página' do
+      stub_const('Relacionamentos::Consulta::POR_PAGINA', 1)
+
+      expect(consulta(ordem: 'cidade_z_a', pagina: '1').para_exportar.map(&:name)).to eq(%w[Carla Ana Bruno])
+    end
+  end
+
+  # #3062 — "Ativos agora": quem está com o chat do site aberto, a mesma presença que a lista de contatos de hoje lê.
+  describe 'grupo ativos agora' do
+    it 'traz só quem está online agora, na lista e na contagem' do
+      ana = pessoa('Ana Albuquerino')
+      pessoa('Bruno Brandolim')
+      OnlineStatusTracker.update_presence(account.id, 'Contact', ana.id)
+
+      expect(nomes(grupo: 'ativos_agora')).to eq(['Ana Albuquerino'])
+      expect(consulta.contagens).to include('todos' => 2, 'ativos_agora' => 1)
+    end
+
+    it 'sem ninguém online, o grupo vem vazio' do
+      pessoa('Ana Albuquerino')
+
+      expect(nomes(grupo: 'ativos_agora')).to be_empty
+      expect(consulta.contagens).to include('ativos_agora' => 0)
+    end
   end
 
   describe 'página' do
@@ -265,7 +319,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     let(:pedido) { { busca: 'brandolim', filtros: { cidade: 'Campinas' } } }
     let(:esperado) do
       { 'todos' => 5, 'clientes' => 2, 'falou_ha_pouco' => 1, 'sumiu_1_a_3_meses' => 2, 'sumiu_mais_de_3_meses' => 1,
-        'nunca_conversou' => 1, 'nao_quer_mensagens' => 1 }
+        'nunca_conversou' => 1, 'nao_quer_mensagens' => 1, 'ativos_agora' => 0 }
     end
 
     before do

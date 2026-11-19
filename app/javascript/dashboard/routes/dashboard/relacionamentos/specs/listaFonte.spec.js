@@ -104,6 +104,7 @@ describe('contagens', () => {
       sumiu_mais_de_3_meses: 71,
       nunca_conversou: 71,
       nao_quer_mensagens: 9,
+      ativos_agora: 3,
     });
   });
 
@@ -256,6 +257,34 @@ describe('listar: ordem', () => {
     });
     const criados = itens.map(p => p.created_at);
     expect(criados).toEqual([...criados].sort((a, b) => b - a));
+  });
+
+  // #3062 — as ordens da lista de contatos de hoje, também na demonstração.
+  it('ordena pelo outro sentido: nome de Z a A e quem chegou primeiro', async () => {
+    const porNome = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'nome_z_a' })
+    ).map(p => p.name);
+    expect(porNome).toEqual(
+      [...porNome].sort((a, b) => b.localeCompare(a, 'pt-BR'))
+    );
+    const criados = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'mais_antigos' })
+    ).map(p => p.created_at);
+    expect(criados).toEqual([...criados].sort((a, b) => a - b));
+  });
+
+  it('ordena por cidade de A a Z, com quem não tem cidade no fim', async () => {
+    const cidades = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'cidade_a_z' })
+    ).map(p => p.additional_attributes?.city || '');
+    const comCidade = cidades.filter(Boolean);
+    expect(comCidade.length).toBeGreaterThan(0);
+    expect(cidades.slice(0, comCidade.length)).toEqual(comCidade);
+    expect(comCidade).toEqual(
+      [...comCidade].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+      )
+    );
   });
 
   it('usa a última conversa quando a ordem não vem', async () => {

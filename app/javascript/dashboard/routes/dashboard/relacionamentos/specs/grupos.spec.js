@@ -38,6 +38,7 @@ describe('grupos de pessoas', () => {
       'sumiu_mais_de_3_meses',
       'nunca_conversou',
       'nao_quer_mensagens',
+      'ativos_agora',
     ]);
   });
 

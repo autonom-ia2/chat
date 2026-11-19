@@ -229,6 +229,41 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
     end
   end
 
+  # #3062 — "Baixar planilha": a consulta da tela vai para a fila da planilha que a lista de contatos de hoje manda
+  # por e-mail. A página não vai: a planilha leva a consulta inteira.
+  describe 'POST pessoas/exportar' do
+    let(:admin) { create(:user, account: account, role: :administrator) }
+
+    def exportar(quem: admin, **params)
+      post "#{base}/pessoas/exportar", params: params, headers: quem.create_new_auth_token
+    end
+
+    it 'põe na fila a consulta da tela, sem a página, e diz para qual e-mail a planilha vai' do
+      exportar(grupo: 'clientes', busca: 'ana', ordem: 'nome_z_a', pagina: '3', filtros: { cidade: 'Campinas' })
+
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body).to eq('email' => admin.email)
+      pedido = { 'grupo' => 'clientes', 'busca' => 'ana', 'ordem' => 'nome_z_a', 'filtros' => { 'cidade' => 'Campinas' } }
+      expect(Account::ContactsExportJob).to have_been_enqueued.with(account.id, admin.id, nil, { relacionamentos: pedido })
+    end
+
+    it 'é só de quem pode exportar contatos, como na lista de hoje' do
+      exportar(quem: agente)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(Account::ContactsExportJob).not_to have_been_enqueued
+    end
+
+    it 'responde 422 ao pedido que a lista não conhece, sem pôr nada na fila' do
+      [{ grupo: 'vips' }, { ordem: 'aleatoria' }, { filtros: { inventado: '1' } }].each do |params|
+        exportar(**params)
+
+        expect(response).to have_http_status(:unprocessable_entity), params.to_s
+      end
+      expect(Account::ContactsExportJob).not_to have_been_enqueued
+    end
+  end
+
   describe 'GET resumo' do
     it 'conta as pessoas, os clientes e quem sumiu há 1 a 3 meses' do
       pessoa('Ana Albuquerino', contact_type: :customer, last_activity_at: agora - 2.days)

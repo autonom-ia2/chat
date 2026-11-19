@@ -48,6 +48,8 @@ const assento = ({
     etiquetar: permissoes.podeEtiquetar.value,
     apagar: permissoes.podeApagar.value,
     trazer: permissoes.podeTrazer.value,
+    editar: permissoes.podeEditar.value,
+    exportar: permissoes.podeExportar.value,
   };
 };
 
@@ -129,5 +131,29 @@ describe('Trazer minha lista: administrador ou a chave contact_manage', () => {
     const comFuncao = chaves => assento({ funcao: 3, chaves }).trazer;
     expect(comFuncao(['custom_role', 'contact_view'])).toBe(false);
     expect(comFuncao(['custom_role', 'contact_manage'])).toBe(true);
+  });
+});
+
+// #3062 — "Nova pessoa" e o lápis da linha seguem a regra de criar e editar
+// contato; "Baixar planilha", a de exportar contato (ContactPolicy#export?).
+describe('Nova pessoa, editar e baixar planilha', () => {
+  it('administrador faz os três', () => {
+    expect(assento({ papel: 'administrator' })).toMatchObject({
+      editar: true,
+      exportar: true,
+    });
+  });
+
+  it('agente sem função edita, mas não baixa', () => {
+    expect(assento()).toMatchObject({ editar: true, exportar: false });
+  });
+
+  it('função personalizada: editar pede contact_manage; baixar, contact_export', () => {
+    expect(
+      assento({ funcao: 3, chaves: ['custom_role', 'contact_manage'] })
+    ).toMatchObject({ editar: true, exportar: false });
+    expect(
+      assento({ funcao: 3, chaves: ['custom_role', 'contact_export'] })
+    ).toMatchObject({ editar: false, exportar: true });
   });
 });

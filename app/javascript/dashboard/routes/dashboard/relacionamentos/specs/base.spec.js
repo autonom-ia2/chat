@@ -227,8 +227,9 @@ describe('etiquetas fictícias', () => {
     const usadas = new Set(pessoas(AGORA).flatMap(p => p.labels));
     expect(usadas.has('indicação')).toBe(true);
     expect(usadas.has('indicacao')).toBe(false);
-    expect(ETIQUETAS).toContain('indicação');
-    expect(ETIQUETAS).not.toContain('indicacao');
+    const nomes = ETIQUETAS.map(({ nome }) => nome);
+    expect(nomes).toContain('indicação');
+    expect(nomes).not.toContain('indicacao');
   });
 });
 

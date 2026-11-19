@@ -19,6 +19,9 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // #2897 — a aba Seguros usa o mesmo estado, com o grupo, a ordem e os filtros
 // dela (`grupoPadrao`, `ordemPadrao`, `filtrosVazios`, `contar`), e relê o que
 // está à vista com `atualizar`, sem voltar à página 1.
+// #3062 — `ordemPadrao` pode ser a ordem de cada aba (uma função do nome dela):
+// a aba Pessoas abre na ordem que a pessoa guardou e tem ordens que a aba
+// Empresas não tem. Trocar de aba volta para a ordem da aba nova.
 export const useLista = ({
   fonte,
   aba,
@@ -28,9 +31,11 @@ export const useLista = ({
   filtrosVazios = FILTROS_VAZIOS,
   contar = contarFiltros,
 }) => {
+  const ordemDaAba = nome =>
+    typeof ordemPadrao === 'function' ? ordemPadrao(nome) : ordemPadrao;
   const grupo = ref(grupoPadrao(aba.value));
   const busca = ref('');
-  const ordem = ref(ordemPadrao);
+  const ordem = ref(ordemDaAba(aba.value));
   const filtros = ref({ ...filtrosVazios });
   const pagina = ref(PRIMEIRA_PAGINA);
   const itens = ref([]);
@@ -178,6 +183,7 @@ export const useLista = ({
 
   watch(aba, nova => {
     grupo.value = grupoPadrao(nova);
+    ordem.value = ordemDaAba(nova);
     filtros.value = { ...filtrosVazios };
     recomecarRecontando();
   });

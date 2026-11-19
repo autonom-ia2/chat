@@ -1,8 +1,10 @@
 # A aba Pessoas da Lista nova de Relacionamentos (#2894): a página, o número de cada grupo e a consulta inteira. E as
 # leituras da ficha da pessoa (#2895), cada uma no formato que a tela lê: a pessoa, as conversas, os cards, as notas, os
 # arquivos e de onde ela veio.
+# #3062 — e "Baixar planilha": a mesma consulta da tela (grupo, busca, filtros e ordem) vira o arquivo que a lista de
+# contatos de hoje já manda por e-mail (Account::ContactsExportJob), para quem pode exportar contatos.
 class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts::Relacionamentos::BaseController
-  DA_LISTA = %i[index contagens todas].freeze
+  DA_LISTA = %i[index contagens todas exportar].freeze
 
   before_action :sem_parametros, except: DA_LISTA
   before_action :achar_pessoa, except: DA_LISTA
@@ -19,6 +21,16 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
   def todas
     itens = consulta.todos
     render json: { itens: itens, total: itens.size }
+  end
+
+  # A página não entra: a planilha leva a consulta inteira. O pedido é conferido aqui (422 para o que a lista não
+  # conhece), antes de ir para a fila: um filtro perdido no caminho mandaria a base inteira.
+  def exportar
+    authorize Contact, :export?
+    pedido_da_planilha = pedido.to_h.except('pagina')
+    ::Relacionamentos::ConsultaDePessoas.new(Current.account, pedido_da_planilha)
+    Account::ContactsExportJob.perform_later(Current.account.id, Current.user.id, nil, { relacionamentos: pedido_da_planilha })
+    render json: { email: Current.user.email }, status: :accepted
   end
 
   def show; end

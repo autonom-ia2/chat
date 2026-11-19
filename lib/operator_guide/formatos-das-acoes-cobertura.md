@@ -5,17 +5,17 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 757 |
+| No catálogo | 759 |
 | Sem corpo | 214 |
-| Com corpo | 543 |
-| Com corpo e formato completo | 456 (84,0%) |
+| Com corpo | 545 |
+| Com corpo e formato completo | 458 (84,0%) |
 | Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 20 de 227 |
+| Campos aninhados com vocabulário | 20 de 228 |
 | Leituras cruas tipadas | 229 de 322 |
 
 ## Incompletas por motivo

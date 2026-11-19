@@ -198,7 +198,9 @@
         "NOME": "Write the name.",
         "EMAIL": "Check the e-mail. Something seems to be missing.",
         "CPF": "Check the personal tax ID. It has 11 numbers.",
-        "CNPJ": "Check the company tax ID. It has 14 numbers."
+        "CNPJ": "Check the company tax ID. It has 14 numbers.",
+        "EMAIL_REPETIDO": "Another person already has this email.",
+        "TELEFONE_REPETIDO": "Another person already has this phone."
       },
       "REDE": {
         "linkedin": "LinkedIn",

@@ -114,7 +114,7 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
     before { create(:label, account: account, title: 'feira') }
 
     def etiquetar
-      described_class.new(account: account, user: admin, pessoa_ids: todos, etiqueta: 'feira').call
+      described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: ['feira']).call
     end
 
     it 'deixa de fora a pessoa com dado antigo que não passa mais na validação; as outras recebem a etiqueta' do
@@ -131,6 +131,38 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
       end
 
       expect(etiquetar).to eq(aplicadas: 2, de_fora: [de_fora(carla, 'nao_existe_mais')])
+    end
+  end
+
+  # #3062 — tirar as etiquetas escolhidas das pessoas marcadas, uma por uma, deixando as outras.
+  describe Relacionamentos::TirarEtiqueta do
+    before do
+      create(:label, account: account, title: 'feira')
+      create(:label, account: account, title: 'site')
+      [ana, bruno].each { |contato| contato.update_labels(%w[feira site]) }
+    end
+
+    def tirar
+      described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: ['feira']).call
+    end
+
+    it 'tira só a etiqueta escolhida; quem não tinha conta como feita' do
+      expect(tirar).to eq(tiradas: 3, de_fora: [])
+      expect([ana, bruno, carla].map { |contato| contato.reload.label_list }).to eq([%w[site], %w[site], []])
+    end
+
+    it 'deixa de fora a pessoa com dado antigo que não passa mais na validação; das outras tira' do
+      bruno.update_column(:phone_number, '123') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(tirar).to eq(tiradas: 2, de_fora: [de_fora(bruno, 'dados_invalidos')])
+      expect([ana, bruno].map { |contato| contato.reload.label_list.sort }).to eq([%w[site], %w[feira site]])
+    end
+
+    it 'recusa etiqueta que a conta não tem, antes de mexer em alguém' do
+      acao = described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: %w[feira evento])
+
+      expect { acao.call }.to raise_error(Relacionamentos::PedidoInvalido, 'etiqueta desconhecida')
+      expect(ana.reload.label_list.sort).to eq(%w[feira site])
     end
   end
 

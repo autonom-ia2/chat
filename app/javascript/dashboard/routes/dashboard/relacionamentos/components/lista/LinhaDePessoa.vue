@@ -19,14 +19,19 @@ import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 // para fazer, marcar não levaria a nada.
 // #2897 — `selos` é o lugar de mais um selo ao lado do nome: a conta que tem a
 // carteira de seguros põe ali o selo do seguro da pessoa.
+// #3062 — a edição rápida da lista de contatos de hoje: o lápis no fim da linha
+// abre "Alterar informações" sem sair da lista. Fica sempre à vista e discreto
+// (sem fundo), com o nome da pessoa no rótulo para o leitor de tela; só existe
+// com `podeEditar`.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
   podeMarcar: { type: Boolean, default: true },
   podeConversar: { type: Boolean, default: false },
+  podeEditar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
 });
-const emit = defineEmits(['abrir', 'alternar', 'conversar']);
+const emit = defineEmits(['abrir', 'alternar', 'conversar', 'editar']);
 
 const { t } = useI18n();
 
@@ -100,6 +105,19 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
         t('RELACIONAMENTOS.LISTA.LINHA.CONVERSAR_COM', { nome: pessoa.name })
       "
       @click="emit('conversar', pessoa)"
+    />
+    <Button
+      v-if="podeEditar"
+      ghost
+      slate
+      class="relative z-10 size-11 shrink-0"
+      icon="i-lucide-pencil"
+      data-relacionamentos="editar"
+      :aria-label="
+        t('RELACIONAMENTOS.LISTA.LINHA.EDITAR', { nome: pessoa.name })
+      "
+      :title="t('RELACIONAMENTOS.LISTA.LINHA.EDITAR', { nome: pessoa.name })"
+      @click="emit('editar', pessoa)"
     />
   </li>
 </template>

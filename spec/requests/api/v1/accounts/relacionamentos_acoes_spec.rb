@@ -9,7 +9,7 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
   let(:base) { "/api/v1/accounts/#{account.id}/relacionamentos" }
   let(:vendas) { create_crm_pipeline(account: account, user: admin, name: 'Vendas') }
   let(:outra_conta) { create(:account) }
-  let(:escritas) { %w[cards etiqueta apagar] }
+  let(:escritas) { %w[cards etiqueta etiqueta/tirar apagar] }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
@@ -67,7 +67,7 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
     expect(response).to have_http_status(:unauthorized)
 
     escritas.each do |caminho|
-      pedir(caminho, quem: de_fora, pessoa_ids: [ana.id], funil_id: vendas.first.id, etapa_id: vendas.last.id, etiqueta: 'feira')
+      pedir(caminho, quem: de_fora, pessoa_ids: [ana.id], funil_id: vendas.first.id, etapa_id: vendas.last.id, etiquetas: ['feira'])
 
       expect(response).to have_http_status(:unauthorized), caminho
     end
@@ -85,9 +85,11 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
       ['cards', { pessoa_ids: ['abc'], **destino }, 'pessoa_ids em formato inválido'],
       ['cards', { pessoa_ids: [ana.id], funil_id: [vendas.first.id], etapa_id: vendas.last.id }, 'funil_id em formato inválido'],
       ['cards', { pessoa_ids: [], **destino }, 'escolha pelo menos uma pessoa'],
-      ['etiqueta', { pessoa_ids: [ana.id], etiqueta: 'feira', etiquetas: ['site'] }, 'parâmetro desconhecido: etiquetas'],
-      ['etiqueta', { pessoa_ids: [ana.id], etiqueta: ['feira'] }, 'etiqueta em formato inválido'],
-      ['etiqueta', { etiqueta: 'feira' }, 'escolha pelo menos uma pessoa'],
+      ['etiqueta', { pessoa_ids: [ana.id], etiquetas: ['feira'], etiqueta: 'site' }, 'parâmetro desconhecido: etiqueta'],
+      ['etiqueta', { pessoa_ids: [ana.id], etiquetas: 'feira' }, 'etiquetas em formato inválido'],
+      ['etiqueta', { etiquetas: ['feira'] }, 'escolha pelo menos uma pessoa'],
+      ['etiqueta/tirar', { pessoa_ids: [ana.id], etiquetas: ['feira'], todas: true }, 'parâmetro desconhecido: todas'],
+      ['etiqueta/tirar', { pessoa_ids: [ana.id], etiquetas: 'feira' }, 'etiquetas em formato inválido'],
       ['apagar', { pessoa_ids: [ana.id], todas: true }, 'parâmetro desconhecido: todas'],
       ['apagar', { pessoa_ids: { id: ana.id } }, 'pessoa_ids em formato inválido'],
       ['apagar', {}, 'escolha pelo menos uma pessoa']
@@ -238,11 +240,22 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
       bruno = pessoa('Bruno Brandolim')
       carla = pessoa('Carla Carvalhedo')
 
-      pedir('etiqueta', pessoa_ids: [ana.id, bruno.id], etiqueta: 'feira')
+      pedir('etiqueta', pessoa_ids: [ana.id, bruno.id], etiquetas: ['feira'])
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq('aplicadas' => 2, 'de_fora' => [])
       expect([ana, bruno, carla].map { |contato| contato.reload.label_list.sort }).to eq([%w[feira site], %w[feira], []])
+    end
+
+    # #3062 — várias de uma vez, como a lista de contatos de hoje.
+    it 'aplica várias etiquetas de uma vez' do
+      create(:label, account: account, title: 'site')
+      ana = pessoa('Ana Albuquerino')
+
+      pedir('etiqueta', pessoa_ids: [ana.id], etiquetas: %w[feira site])
+
+      expect(response.parsed_body).to eq('aplicadas' => 1, 'de_fora' => [])
+      expect(ana.reload.label_list.sort).to eq(%w[feira site])
     end
 
     it 'responde 422 e não etiqueta ninguém com etiqueta que a conta não tem' do
@@ -250,8 +263,8 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
       ana = pessoa('Ana Albuquerino')
       pessoa_de_la = pessoa('Elisa Esteviano', conta: outra_conta)
       recusados = [
-        [{ pessoa_ids: [ana.id], etiqueta: 'evento' }, 'etiqueta desconhecida'],
-        [{ pessoa_ids: [ana.id], etiqueta: '' }, 'etiqueta desconhecida'],
+        [{ pessoa_ids: [ana.id], etiquetas: ['evento'] }, 'etiqueta desconhecida'],
+        [{ pessoa_ids: [ana.id], etiquetas: %w[feira evento] }, 'etiqueta desconhecida'],
         [{ pessoa_ids: [ana.id] }, 'etiqueta desconhecida']
       ]
 
@@ -262,6 +275,33 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
         expect(response.parsed_body).to eq('error' => mensagem)
       end
       expect([ana, pessoa_de_la].map { |contato| contato.reload.label_list }).to eq([[], []])
+    end
+  end
+
+  # #3062 — "Tirar etiquetas": as escolhidas saem de cada pessoa marcada; as outras ficam.
+  describe 'POST etiqueta/tirar' do
+    before { %w[feira site].each { |titulo| create(:label, account: account, title: titulo) } }
+
+    it 'tira só as etiquetas escolhidas de cada pessoa' do
+      ana = pessoa('Ana Albuquerino').tap { |contato| contato.update_labels(%w[feira site]) }
+      bruno = pessoa('Bruno Brandolim').tap { |contato| contato.update_labels(%w[feira]) }
+      carla = pessoa('Carla Carvalhedo').tap { |contato| contato.update_labels(%w[feira]) }
+
+      pedir('etiqueta/tirar', pessoa_ids: [ana.id, bruno.id], etiquetas: ['feira'])
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('tiradas' => 2, 'de_fora' => [])
+      expect([ana, bruno, carla].map { |contato| contato.reload.label_list }).to eq([%w[site], [], %w[feira]])
+    end
+
+    it 'responde 422 e não mexe em ninguém com etiqueta que a conta não tem' do
+      ana = pessoa('Ana Albuquerino').tap { |contato| contato.update_labels(%w[feira]) }
+
+      pedir('etiqueta/tirar', pessoa_ids: [ana.id], etiquetas: %w[feira evento])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'etiqueta desconhecida')
+      expect(ana.reload.label_list).to eq(%w[feira])
     end
   end
 
@@ -285,7 +325,7 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
     it 'etiqueta só quem é da conta' do
       create(:label, account: account, title: 'feira')
 
-      pedir('etiqueta', quem: admin, pessoa_ids: ids, etiqueta: 'feira')
+      pedir('etiqueta', quem: admin, pessoa_ids: ids, etiquetas: ['feira'])
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq('aplicadas' => 1, 'de_fora' => de_fora)

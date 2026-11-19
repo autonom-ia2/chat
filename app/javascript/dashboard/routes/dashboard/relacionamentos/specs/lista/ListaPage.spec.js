@@ -46,6 +46,15 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
     podeEtiquetar: { value: false },
     podeApagar: { value: false },
     podeTrazer: { value: false },
+    podeEditar: { value: false },
+    podeExportar: { value: false },
+  }),
+}));
+// #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: { value: {} },
+    updateUISettings: vi.fn(),
   }),
 }));
 // Fora da demonstração a lista lê do servidor; aqui ele recusa todo pedido (a
@@ -270,7 +279,7 @@ describe('ListaPage: cheia', () => {
     expect(w.get('h1').text()).toBe('Relacionamentos');
   });
 
-  it('abre com a frase de quem sumiu, as abas, os sete grupos e a primeira página', async () => {
+  it('abre com a frase de quem sumiu, as abas, os oito grupos e a primeira página', async () => {
     const w = await montar();
     expect(textoDe(w, '[data-heroi-frase]')).toBe(
       '42 pessoas pararam de falar com você nos últimos 3 meses.'
@@ -288,6 +297,7 @@ describe('ListaPage: cheia', () => {
       'Sumiu há mais de 3 meses 71',
       'Nunca conversou 71',
       'Não quer mensagens 9',
+      'Ativos agora 3',
     ]);
     expect(pilula(w, 'todos').attributes('aria-pressed')).toBe('true');
     expect(w.get(marca('explicacao-do-grupo')).text()).toBe('');
@@ -734,7 +744,9 @@ describe('ListaPage: marcar e agir em grupo', () => {
     await marcar(w, 2);
     await w.get(marca('etiqueta')).trigger('click');
     await assentar();
-    expect(w.get(marca('dialogo-etiqueta')).text()).toContain('Qual etiqueta?');
+    expect(w.get(marca('dialogo-etiqueta')).text()).toContain(
+      'Quais etiquetas colocar?'
+    );
     await w.get('[data-cancelar]').trigger('click');
     await w.get(marca('mais-acoes')).trigger('click');
     await w.get('[data-acao="apagar"]').trigger('click');
@@ -836,7 +848,11 @@ describe('ListaPage: conta vazia, erro', () => {
     expect(exemplo.findAll('[data-linha-de-exemplo]')).toHaveLength(5);
     expect(exemplo.text()).toContain('Sua lista vai ficar assim:');
     expect(exemplo.find('button, a, input').exists()).toBe(false);
-    expect(w.findAll('button')).toHaveLength(1);
+    // #3062 — fora o convite, só "Nova pessoa": não há lista para baixar.
+    expect(w.findAll('button').map(b => b.text())).toEqual([
+      'Trazer minha lista',
+      'Nova pessoa',
+    ]);
     const html = w.html();
     expect(html.indexOf('data-heroi-frase')).toBeLessThan(
       html.indexOf('linhas-de-exemplo')
@@ -848,7 +864,7 @@ describe('ListaPage: conta vazia, erro', () => {
     expect(w.find(marca('linhas-de-exemplo')).exists()).toBe(false);
   });
 
-  it('a conta vazia tem um botão só, "Trazer minha lista", e ele leva a trazer', async () => {
+  it('a conta vazia tem um botão só de "Trazer minha lista", e ele leva a trazer', async () => {
     const w = await montar({ demo: 'vazio' });
     const botoes = w
       .findAll('button')
