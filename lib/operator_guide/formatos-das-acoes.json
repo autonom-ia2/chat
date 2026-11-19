@@ -8478,6 +8478,35 @@
     ],
     "sem_corpo": false
   },
+  "PATCH ritmo_de_envio": {
+    "campos": {
+      "horario": {
+        "campos": {
+          "dias_da_semana": {
+            "tipo": "lista"
+          },
+          "fim": {},
+          "inicio": {}
+        },
+        "tipo": "objeto"
+      },
+      "limite": {
+        "campos": {
+          "dias": {},
+          "mensagens": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/ritmo_de_envio#update",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:29"
+    ],
+    "sem_corpo": false
+  },
   "PATCH saml_settings": {
     "campos": {
       "certificate": {
@@ -28634,6 +28663,35 @@
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:12",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:16",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
+  "PUT ritmo_de_envio": {
+    "campos": {
+      "horario": {
+        "campos": {
+          "dias_da_semana": {
+            "tipo": "lista"
+          },
+          "fim": {},
+          "inicio": {}
+        },
+        "tipo": "objeto"
+      },
+      "limite": {
+        "campos": {
+          "dias": {},
+          "mensagens": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/ritmo_de_envio#update",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:29"
     ],
     "sem_corpo": false
   },

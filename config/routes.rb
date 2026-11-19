@@ -266,6 +266,8 @@ Rails.application.routes.draw do
               get :people_sheet, to: 'campaign_import_audiences#people_sheet'
             end
           end
+          # #3063: limite de mensagens por cliente e horário de envio da conta (campanhas e Automação livre).
+          resource :ritmo_de_envio, only: [:show, :update], controller: 'ritmo_de_envio'
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
             # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).

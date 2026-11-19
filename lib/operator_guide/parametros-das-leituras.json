@@ -2573,6 +2573,10 @@
       "user_id"
     ]
   },
+  "ritmo_de_envio": {
+    "controller": "api/v1/accounts/ritmo_de_envio#show",
+    "parametros": []
+  },
   "saml_settings": {
     "controller": "api/v1/accounts/saml_settings#show",
     "parametros": []

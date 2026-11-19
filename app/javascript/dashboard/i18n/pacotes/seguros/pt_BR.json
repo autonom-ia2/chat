@@ -326,5 +326,10 @@
   },
   "AUTOMACAO_MODELOS": {
     "DESTAQUE_RAMO": "Mais usados por quem trabalha com seguro"
+  },
+  "CAMPAIGN_JOURNEY": {
+    "RITMO": {
+      "FORA_DA_CONTA": "Não entram nessa conta: o aviso de renovação do seguro, as respostas a quem acabou de escrever e as conversas da sua equipe."
+    }
   }
 }

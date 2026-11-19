@@ -36,9 +36,11 @@ module EmailCampaigns
         return reschedule(seconds_until_next_window) if daily_cap_reached?
 
         recipient = next_pending
-        return finalize if recipient.nil?
+        # #3063: only later recipients left (limit per customer or sending hours): the chain stops and the sweep
+        # (Autonomia::RitmoDeEnvio::Varredura) enqueues the DeliveryJob again when the time comes.
+        return if recipient.nil?
 
-        RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient)
+        deliver_now_or_postpone(recipient)
 
         @campaign.reload
         return finalize if @campaign.sending? && no_pending?
@@ -46,8 +48,16 @@ module EmailCampaigns
         reschedule(random_interval) if @campaign.sending?
       end
 
+      # #3063: the limit per customer and the sending hours of the account, right before the send.
+      def deliver_now_or_postpone(recipient)
+        return if ::EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient)
+
+        result = RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient)
+        ::EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, recipient) if result == :sent
+      end
+
       def next_pending
-        @campaign.email_campaign_recipients.pending.order(:id).first
+        ::EmailCampaigns::RitmoDoDestinatario.pendentes_na_vez(@campaign).order(:id).first
       end
 
       def no_pending?

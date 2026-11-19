@@ -3,7 +3,8 @@
     "SIDEBAR": {
       "GROUP": "Campaigns",
       "CAMPAIGNS": "Campaign",
-      "AUDIENCES": "Audience"
+      "AUDIENCES": "Audience",
+      "RITMO": "Message limit"
     },
     "CHANNELS": {
       "EMAIL": "Email",
@@ -748,6 +749,62 @@
       "nao_conferido": "could not check the template",
       "outro": "stopped before sending",
       "etiqueta_excluida_apagada": "excluded label deleted"
+    },
+    "RITMO": {
+      "BREADCRUMB": "Where you are",
+      "TITLE": "Message limit",
+      "SUBTITLE": "How many messages each customer gets and at what time. It applies to campaigns and to what your automations send.",
+      "LIMITE": {
+        "TITLE": "Limit per customer",
+        "HELP": "How many messages the same person can get in a period.",
+        "SEM_LIMITE": "No limit",
+        "MENSAGENS": "At most 1 message | At most {n} messages",
+        "MENSAGENS_LABEL": "Messages per customer",
+        "A_CADA": "every",
+        "DIAS": "1 day | {n} days",
+        "DIAS_LABEL": "Limit period"
+      },
+      "HORARIO": {
+        "TITLE": "Sending hours",
+        "HELP": "At what time messages can go out.",
+        "QUALQUER_HORA": "Any time",
+        "SO_EM_CERTOS": "Only at certain hours",
+        "QUANDO_LABEL": "When to send",
+        "DAS": "From",
+        "AS": "to",
+        "HORA": "{hora}:00",
+        "INICIO_LABEL": "Starts sending at",
+        "FIM_LABEL": "Stops sending at",
+        "DIAS_LABEL": "On these days",
+        "DIAS_DA_SEMANA": {
+          "0": "Sun",
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat"
+        },
+        "FUSO": "Each customer's local time applies. When the profile doesn't say, the account's ({fuso})."
+      },
+      "RESUMO": {
+        "LIMITE": "{mensagens} per customer every {dias}.",
+        "SEM_LIMITE": "No message limit per customer.",
+        "HORARIO": "Messages go out from {inicio} to {fim}.",
+        "QUALQUER_HORA": "Messages go out at any time."
+      },
+      "ESPERA": "Outside the limit or the hours, the message is not dropped: it waits and goes out on its own when allowed.",
+      "FORA_DA_CONTA": "Not counted: replies to someone who just wrote and your team's conversations.",
+      "PROBLEMA": {
+        "FIM_ANTES": "The stop time must be after the start time.",
+        "SEM_DIA": "Pick at least one day."
+      },
+      "SO_QUEM_CUIDA": "Only people who manage campaigns can change this.",
+      "SALVAR": "Save",
+      "SALVO": "Message limit saved.",
+      "ERRO_AO_SALVAR": "Couldn't save. Try again.",
+      "ERRO": "Couldn't open the message limit right now.",
+      "TENTAR_DE_NOVO": "Try again"
     }
   }
 }

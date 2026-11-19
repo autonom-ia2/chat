@@ -28,8 +28,13 @@ module Autonomia::Automacao::IaNoExecutor
     end
 
     executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
-    marcar_leitura(passo)
-    depois_da_ia(passo, executor, com_marco_dos_anexos(executor, executor.executar))
+    # #3063: o "escrever" ao cliente passa pelo limite por cliente e pelo horário de envio antes de pagar a IA
+    # (RitmoNoExecutor).
+    envio = lambda {
+      marcar_leitura(passo)
+      executor.executar
+    }
+    pelo_ritmo(passo, envio) { |resultado| depois_da_ia(passo, executor, com_marco_dos_anexos(executor, resultado)) }
   end
 
   # G46: o passo que leu os anexos novos grava o marco no registro, e a próxima leitura parte dele. Só quando o passo

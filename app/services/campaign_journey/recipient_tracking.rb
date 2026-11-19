@@ -9,11 +9,36 @@
 #   without a status.
 # - D4: once the provider accepted a message it is never marked failed: if saving `sent` fails,
 #   the status is forced to sent and the error logged.
+# - #3063 (item 2): out of the account's limit per customer or sending hours (Autonomia::RitmoDeEnvio::Porteiro) the
+#   recipient stays `queued` with `adiado_ate`, is not failed at the end of the run and is sent later by
+#   CampaignJourney::RetomarAdiadosJob (#retomar_adiados), which the sweep enqueues when the time comes. A message that
+#   went out counts for the limit.
 module CampaignJourney::RecipientTracking
   NOT_PROCESSED_REASON = 'Recipient was not processed'.freeze
   INSERT_BATCH_SIZE = 1000
 
+  # Sends the recipients whose postponement is due (CampaignJourney::RetomarAdiadosJob). The campaign already ran: no
+  # recipient is created; whoever is still due and was not sent at the end becomes failed, like in the first run.
+  def retomar_adiados
+    campaign.campaign_recipients.queued.where(adiado_ate: ..Time.current).includes(:contact)
+            .find_each(batch_size: INSERT_BATCH_SIZE) { |recipient| retomar_destinatario(recipient) }
+    fail_unprocessed_recipients
+  end
+
   private
+
+  # true when the recipient has to wait: it keeps `queued`, with the time it may go.
+  def adiado_pelo_ritmo?(recipient, contact)
+    ate = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campaign.account, contact: contact)
+    return false unless ate
+
+    recipient.update!(adiado_ate: ate)
+    true
+  end
+
+  def contar_no_ritmo(recipient, origem)
+    Autonomia::RitmoDeEnvio::Porteiro.contar!(account: campaign.account, contact_id: recipient.contact_id, origem: origem)
+  end
 
   # Returns the queued recipients as a lazy, batched enumerator (never the whole list in memory).
   def register_queued_recipients(contacts)
@@ -41,8 +66,10 @@ module CampaignJourney::RecipientTracking
     end
   end
 
+  # Whoever waits for a later time (adiado_ate in the future) is not "not processed".
   def fail_unprocessed_recipients
-    campaign.campaign_recipients.queued.where.not(id: accepted_by_provider.to_a).find_each do |recipient|
+    due = campaign.campaign_recipients.queued.where('adiado_ate IS NULL OR adiado_ate <= ?', Time.current)
+    due.where.not(id: accepted_by_provider.to_a).find_each do |recipient|
       recipient.mark_failed!(message: NOT_PROCESSED_REASON)
     end
   end

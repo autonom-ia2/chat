@@ -11,6 +11,7 @@ const NewAudiencePage = () => import('./NewAudiencePage.vue');
 const NewCampaignPage = () => import('./NewCampaignPage.vue');
 const LiveChatJourneyPage = () => import('./LiveChatJourneyPage.vue');
 const BrandKitsPage = () => import('./BrandKitsPage.vue');
+const RitmoDeEnvioPage = () => import('./RitmoDeEnvioPage.vue');
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
@@ -74,6 +75,14 @@ const requireAudiences = (to, _from, next) => {
 };
 
 export const campaignJourneyRoutes = [
+  // Limite de mensagens por cliente e horário de envio (#3063): quem vê campanhas lê; quem cuida delas muda.
+  {
+    path: 'message-limit',
+    name: 'campaigns_journey_ritmo',
+    meta,
+    beforeEnter: requireJourney,
+    component: RitmoDeEnvioPage,
+  },
   {
     path: 'all',
     name: 'campaigns_journey_index',

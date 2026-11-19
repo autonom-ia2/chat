@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_19_150000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1706,8 +1706,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
     t.datetime "failed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "adiado_ate"
     t.index ["account_id", "campaign_id"], name: "index_campaign_recipients_on_account_id_and_campaign_id"
     t.index ["account_id"], name: "index_campaign_recipients_on_account_id"
+    t.index ["adiado_ate"], name: "idx_campaign_recipients_adiado_ate", where: "(adiado_ate IS NOT NULL)"
     t.index ["campaign_id", "contact_id"], name: "index_campaign_recipients_on_campaign_id_and_contact_id", unique: true
     t.index ["campaign_id", "status"], name: "index_campaign_recipients_on_campaign_id_and_status"
     t.index ["campaign_id"], name: "index_campaign_recipients_on_campaign_id"
@@ -3978,8 +3980,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
     t.datetime "preflight_checked_at"
     t.datetime "preflight_valid_until"
     t.bigint "contact_id"
+    t.datetime "adiado_ate"
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
     t.index "lower((email)::text), sent_at", name: "idx_email_campaign_recipients_lower_email_sent_at"
+    t.index ["adiado_ate"], name: "idx_email_campaign_recipients_adiado_ate", where: "(adiado_ate IS NOT NULL)"
     t.index ["contact_id"], name: "index_email_campaign_recipients_on_contact_id"
     t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
     t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
@@ -4276,6 +4280,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
     t.index ["inbox_id", "name", "template_type", "locale"], name: "index_email_templates_on_inbox_scope", unique: true, where: "(inbox_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_email_templates_on_inbox_id"
     t.index ["name", "template_type", "locale"], name: "index_email_templates_on_installation_scope", unique: true, where: "((account_id IS NULL) AND (inbox_id IS NULL))"
+  end
+
+  create_table "envios_ao_cliente", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.datetime "enviado_em", null: false
+    t.string "origem", null: false
+    t.index ["account_id", "contact_id", "enviado_em"], name: "idx_envios_ao_cliente_conta_contato_quando"
+    t.index ["contact_id"], name: "index_envios_ao_cliente_on_contact_id"
+    t.index ["enviado_em"], name: "idx_envios_ao_cliente_enviado_em"
   end
 
   create_table "etiquetas_nomes", force: :cascade do |t|
@@ -4862,7 +4876,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
     t.datetime "cancelled_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "adiado_ate"
     t.index ["account_id"], name: "index_whatsapp_api_campaign_recipients_on_account_id"
+    t.index ["adiado_ate"], name: "idx_whatsapp_api_campaign_recipients_adiado_ate", where: "(adiado_ate IS NOT NULL)"
     t.index ["contact_id"], name: "index_whatsapp_api_campaign_recipients_on_contact_id"
     t.index ["conversation_id"], name: "index_whatsapp_api_campaign_recipients_on_conversation_id"
     t.index ["inbox_id", "status", "created_at"], name: "idx_wa_api_recipients_inbox_status"
@@ -5416,6 +5432,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_18_100000) do
   add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade
   add_foreign_key "email_suppressions", "accounts"
   add_foreign_key "email_template_import_ai_quotas", "accounts", on_delete: :cascade
+  add_foreign_key "envios_ao_cliente", "accounts"
+  add_foreign_key "envios_ao_cliente", "contacts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"

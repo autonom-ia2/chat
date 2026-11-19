@@ -326,5 +326,10 @@
   },
   "AUTOMACAO_MODELOS": {
     "DESTAQUE_RAMO": "Most used by insurance professionals"
+  },
+  "CAMPAIGN_JOURNEY": {
+    "RITMO": {
+      "FORA_DA_CONTA": "Not counted: the policy renewal notice, replies to someone who just wrote and your team’s conversations."
+    }
   }
 }

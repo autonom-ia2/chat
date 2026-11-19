@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (278 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (279 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -882,6 +882,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Clique no nome para abrir o painel com pessoas, empresas, outras colunas guardadas, quem não recebe, campanhas que usaram e Ver contatos e empresas; 4. Para subir uma planilha nova, clique em Novo público; 5. Em um público salvo, clique em Usar em nova campanha para abrir a campanha com ele escolhido; 6. Excluir público apaga só a lista; 7. Detalhes abre o histórico da importação com os arquivos.
 - gotchas: com a jornada ligada, Base Campanha e Histórico de bases saem do menu de três pontos de Contatos e moram aqui; públicos antigos aparecem com o nome da campanha e sem selos de canal, que só são calculados nas importações novas; excluir não apaga contatos, empresas, conversas nem resultados; público usado por campanha que ainda não terminou não pode ser excluído e a tela diz quais campanhas o usam; quem só tem campaign_view vê a lista sem os botões de criar, usar e excluir; com CAMPAIGN_IMPORT_ENABLED desligado o item Público some do menu e o endereço leva para Campanha.
 - nav_target: `campaigns_journey_audiences`
+
+### Limite de mensagens por cliente e horário de envio
+- intent: Como limito quantas mensagens cada cliente recebe?; Como evito mandar mensagem de madrugada?; Por que a mensagem da campanha não saiu agora?; Onde escolho o horário das campanhas?; A automação respeita o horário de envio?; Por que a automação ficou esperando antes de mandar?
+- onde_fica: Menu lateral > Campanhas > Limite de mensagens
+- rota: `campaigns_journey_ritmo` - `/app/accounts/:accountId/campaigns/message-limit`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: nova jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED); para ver, campaign_view; para mudar, administrador ou função com campaign_manage.
+- passos: 1. Abra Campanhas > Limite de mensagens; 2. Em Limite por cliente, escolha Sem limite ou No máximo N mensagens e o período (1, 7, 15 ou 30 dias); 3. Em Horário de envio, escolha A qualquer hora ou Só em certos horários, e então o horário de começar, o de parar e os dias da semana; 4. Confira o resumo em azul; 5. Clique em Salvar.
+- gotchas: vale para todas as campanhas (WhatsApp, SMS, WhatsApp não oficial e e-mail) e para as mensagens, e-mails, textos escritos pela IA e perguntas de reunião e pesquisa que as automações mandam ao cliente; fora do limite ou do horário a mensagem não é descartada: espera e sai sozinha até 5 minutos depois da hora em que pode, e a campanha fica enviando até lá; na automação, o histórico mostra que o passo esperou pelo limite ou pelo horário; vale o horário de cada cliente (o fuso da ficha, do país ou, sem isso, o da conta); não entram na conta a resposta da automação a quem acabou de escrever, as conversas da equipe, a IA que atende e, nas corretoras, o aviso de renovação do seguro; e-mail de planilha sem ficha respeita o horário mas não conta no limite; o padrão é sem limite e a qualquer hora; quem só tem campaign_view vê sem poder mudar.
+- nav_target: `campaigns_journey_ritmo`
 
 ### Criar um público com uma planilha
 - intent: Como crio um público?; Como subo a planilha de uma campanha?; Por que preciso escolher as colunas?; O que quer dizer linhas com problema?; Como desligo o e-mail ou o WhatsApp de um público?; O público vai criar empresas?
