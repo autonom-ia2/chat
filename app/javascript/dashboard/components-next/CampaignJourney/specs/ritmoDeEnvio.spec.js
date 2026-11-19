@@ -1,6 +1,7 @@
 import {
   SEM_LIMITE,
   alternarDia,
+  diasDoResumo,
   formularioDe,
   pedidoDe,
   problemaDo,
@@ -61,5 +62,11 @@ describe('ritmoDeEnvio (#3063)', () => {
     expect(alternarDia(dias, 2)).toEqual([1]);
     expect(alternarDia(dias, 6)).toEqual([1, 2, 6]);
     expect(dias).toEqual([1, 2]);
+  });
+
+  it('says the days as every day, weekdays or the list in screen order', () => {
+    expect(diasDoResumo([0, 1, 2, 3, 4, 5, 6])).toEqual({ tipo: 'TODOS' });
+    expect(diasDoResumo([5, 4, 3, 2, 1])).toEqual({ tipo: 'UTEIS' });
+    expect(diasDoResumo([0, 5, 1])).toEqual({ tipo: 'LISTA', dias: [1, 5, 0] });
   });
 });

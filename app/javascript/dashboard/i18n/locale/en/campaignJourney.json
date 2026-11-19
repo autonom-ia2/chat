@@ -752,8 +752,8 @@
     },
     "RITMO": {
       "BREADCRUMB": "Where you are",
-      "TITLE": "Message limit",
-      "SUBTITLE": "How many messages each customer gets and at what time. It applies to campaigns and to what your automations send.",
+      "TITLE": "Message limit and hours",
+      "SUBTITLE": "Choose how many messages each customer gets and at what time. It applies to campaigns and automations.",
       "LIMITE": {
         "TITLE": "Limit per customer",
         "HELP": "How many messages the same person can get in a period.",
@@ -785,26 +785,41 @@
           "5": "Fri",
           "6": "Sat"
         },
-        "FUSO": "Each customer's local time applies. When the profile doesn't say, the account's ({fuso})."
+        "FUSO": "The time is each customer's local time. If their profile doesn't say, your account's time zone applies.",
+        "DIAS_LONGOS": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        },
+        "DIAS_RESUMO": {
+          "TODOS": "every day",
+          "UTEIS": "Monday to Friday"
+        }
       },
       "RESUMO": {
         "LIMITE": "{mensagens} per customer every {dias}.",
         "SEM_LIMITE": "No message limit per customer.",
-        "HORARIO": "Messages go out from {inicio} to {fim}.",
-        "QUALQUER_HORA": "Messages go out at any time."
+        "HORARIO": "Messages go out {dias}, from {inicio} to {fim}.",
+        "QUALQUER_HORA": "Messages go out at any time.",
+        "FALTA_HORARIO": "Fix the hours to be able to save."
       },
-      "ESPERA": "Outside the limit or the hours, the message is not dropped: it waits and goes out on its own when allowed.",
-      "FORA_DA_CONTA": "Not counted: replies to someone who just wrote and your team's conversations.",
+      "ESPERA": "If it goes over the limit or outside the hours, the message is kept: it waits and goes out on its own later.",
+      "FORA_DA_CONTA": "The limit doesn't apply to replies to someone who just wrote to you, nor to your team's conversation with the customer.",
       "PROBLEMA": {
-        "FIM_ANTES": "The stop time must be after the start time.",
+        "FIM_ANTES": "The end ({fim}) must be after the start ({inicio}).",
         "SEM_DIA": "Pick at least one day."
       },
-      "SO_QUEM_CUIDA": "Only people who manage campaigns can change this.",
       "SALVAR": "Save",
       "SALVO": "Message limit saved.",
       "ERRO_AO_SALVAR": "Couldn't save. Try again.",
       "ERRO": "Couldn't open the message limit right now.",
-      "TENTAR_DE_NOVO": "Try again"
+      "TENTAR_DE_NOVO": "Try again",
+      "SO_LEITURA": "You can see this but not change it. To change it, talk to whoever manages campaigns.",
+      "TUDO_SALVO": "All saved."
     }
   }
 }

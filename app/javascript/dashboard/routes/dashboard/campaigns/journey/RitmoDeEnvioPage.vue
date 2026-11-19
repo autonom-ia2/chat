@@ -19,6 +19,7 @@ import {
   MENSAGENS,
   SEM_LIMITE,
   alternarDia,
+  diasDoResumo,
   formularioDe,
   pedidoDe,
   problemaDo,
@@ -26,12 +27,11 @@ import {
 
 const NS = 'CAMPAIGN_JOURNEY.RITMO';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const podeMudar = useCanManage('campaign_manage');
 
 const formulario = ref(formularioDe());
 const salvo = ref(JSON.stringify(pedidoDe(formulario.value)));
-const fuso = ref('');
 const carregando = ref(true);
 const erroAoCarregar = ref(false);
 const salvando = ref(false);
@@ -70,6 +70,25 @@ const podeSalvar = computed(
   () => podeMudar.value && mudou.value && !problema.value && !salvando.value
 );
 
+const diasEmTexto = dias => {
+  const { tipo, dias: lista } = diasDoResumo(dias);
+  if (tipo !== 'LISTA') return t(`${NS}.HORARIO.DIAS_RESUMO.${tipo}`);
+  const nomes = lista.map(dia => t(`${NS}.HORARIO.DIAS_LONGOS.${dia}`));
+  return new Intl.ListFormat(locale.value.replace('_', '-'), {
+    type: 'conjunction',
+  }).format(nomes);
+};
+
+const textoDoHorario = () => {
+  if (!formulario.value.comHorario) return t(`${NS}.RESUMO.QUALQUER_HORA`);
+  if (problema.value) return t(`${NS}.RESUMO.FALTA_HORARIO`);
+  return t(`${NS}.RESUMO.HORARIO`, {
+    dias: diasEmTexto(formulario.value.diasDaSemana),
+    inicio: hora(formulario.value.inicio),
+    fim: hora(formulario.value.fim),
+  });
+};
+
 const resumo = computed(() => {
   const partes = [];
   partes.push(
@@ -88,21 +107,13 @@ const resumo = computed(() => {
         })
       : t(`${NS}.RESUMO.SEM_LIMITE`)
   );
-  partes.push(
-    formulario.value.comHorario
-      ? t(`${NS}.RESUMO.HORARIO`, {
-          inicio: hora(formulario.value.inicio),
-          fim: hora(formulario.value.fim),
-        })
-      : t(`${NS}.RESUMO.QUALQUER_HORA`)
-  );
+  partes.push(textoDoHorario());
   return partes.join(' ');
 });
 
 const aplicar = payload => {
   formulario.value = formularioDe(payload);
   salvo.value = JSON.stringify(pedidoDe(formulario.value));
-  fuso.value = payload.fuso || '';
 };
 
 const carregar = async () => {
@@ -133,7 +144,6 @@ const salvar = async () => {
 };
 
 const marcarDia = dia => {
-  if (!podeMudar.value) return;
   formulario.value.diasDaSemana = alternarDia(
     formulario.value.diasDaSemana,
     dia
@@ -188,7 +198,19 @@ useOnEnter(carregar);
       </div>
 
       <form v-else class="flex flex-col gap-5" @submit.prevent="salvar">
+        <p
+          v-if="!podeMudar"
+          class="mb-0 flex items-start gap-2 rounded-2xl border border-n-weak bg-n-solid-1 px-4 py-3 text-sm text-n-slate-12"
+          data-ritmo-leitura
+        >
+          <span
+            class="i-lucide-lock mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ t(`${NS}.SO_LEITURA`) }}
+        </p>
         <section
+          v-if="podeMudar"
           class="rounded-3xl border border-n-weak bg-n-solid-1 px-5 py-5 shadow-sm sm:px-6"
           data-ritmo-limite
         >
@@ -204,7 +226,6 @@ useOnEnter(carregar);
                 v-model="formulario.mensagens"
                 :options="opcoesDeMensagens"
                 :aria-label="t(`${NS}.LIMITE.MENSAGENS_LABEL`)"
-                :disabled="!podeMudar"
               />
             </div>
             <template v-if="comLimite">
@@ -216,7 +237,6 @@ useOnEnter(carregar);
                   v-model="formulario.dias"
                   :options="opcoesDeDias"
                   :aria-label="t(`${NS}.LIMITE.DIAS_LABEL`)"
-                  :disabled="!podeMudar"
                 />
               </div>
             </template>
@@ -224,6 +244,7 @@ useOnEnter(carregar);
         </section>
 
         <section
+          v-if="podeMudar"
           class="rounded-3xl border border-n-weak bg-n-solid-1 px-5 py-5 shadow-sm sm:px-6"
           data-ritmo-horario
         >
@@ -238,35 +259,47 @@ useOnEnter(carregar);
               v-model="formulario.comHorario"
               :options="opcoesDeQuando"
               :aria-label="t(`${NS}.HORARIO.QUANDO_LABEL`)"
-              :disabled="!podeMudar"
             />
           </div>
           <template v-if="formulario.comHorario">
-            <div class="mt-4 flex flex-wrap items-center gap-3">
+            <div
+              class="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3"
+            >
               <span class="text-sm text-n-slate-11">
                 {{ t(`${NS}.HORARIO.DAS`) }}
               </span>
-              <div class="w-32">
+              <div class="w-full sm:w-32">
                 <ChoiceSelect
                   v-model="formulario.inicio"
                   :options="opcoesDeInicio"
                   :aria-label="t(`${NS}.HORARIO.INICIO_LABEL`)"
-                  :disabled="!podeMudar"
                 />
               </div>
               <span class="text-sm text-n-slate-11">
                 {{ t(`${NS}.HORARIO.AS`) }}
               </span>
-              <div class="w-32">
+              <div class="w-full sm:w-32">
                 <ChoiceSelect
                   v-model="formulario.fim"
                   :options="opcoesDeFim"
                   :aria-label="t(`${NS}.HORARIO.FIM_LABEL`)"
                   :invalid="problema === 'FIM_ANTES'"
-                  :disabled="!podeMudar"
                 />
               </div>
             </div>
+            <p
+              v-if="problema === 'FIM_ANTES'"
+              class="mb-0 mt-2 text-sm text-n-ruby-11"
+              role="alert"
+              data-ritmo-problema
+            >
+              {{
+                t(`${NS}.PROBLEMA.FIM_ANTES`, {
+                  inicio: hora(formulario.inicio),
+                  fim: hora(formulario.fim),
+                })
+              }}
+            </p>
             <fieldset class="mt-4">
               <legend class="mb-2 text-sm text-n-slate-11">
                 {{ t(`${NS}.HORARIO.DIAS_LABEL`) }}
@@ -276,31 +309,35 @@ useOnEnter(carregar);
                   v-for="dia in DIAS_DA_SEMANA"
                   :key="dia"
                   type="button"
-                  class="min-h-11 min-w-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-60"
+                  class="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
                   :class="
                     formulario.diasDaSemana.includes(dia)
                       ? 'border-n-brand bg-n-brand text-white'
-                      : 'border-n-weak bg-n-solid-1 text-n-slate-12 hover:bg-n-alpha-1'
+                      : 'border-n-slate-7 bg-n-alpha-1 text-n-slate-12 hover:bg-n-alpha-2'
                   "
                   :aria-pressed="formulario.diasDaSemana.includes(dia)"
-                  :disabled="!podeMudar"
                   :data-dia="dia"
                   @click="marcarDia(dia)"
                 >
+                  <span
+                    v-if="formulario.diasDaSemana.includes(dia)"
+                    class="i-lucide-check size-3.5"
+                    aria-hidden="true"
+                  />
                   {{ t(`${NS}.HORARIO.DIAS_DA_SEMANA.${dia}`) }}
                 </button>
               </div>
             </fieldset>
             <p class="mb-0 mt-4 text-xs text-n-slate-11">
-              {{ t(`${NS}.HORARIO.FUSO`, { fuso }) }}
+              {{ t(`${NS}.HORARIO.FUSO`) }}
             </p>
             <p
-              v-if="problema"
+              v-if="problema === 'SEM_DIA'"
               class="mb-0 mt-3 text-sm text-n-ruby-11"
               role="alert"
               data-ritmo-problema
             >
-              {{ t(`${NS}.PROBLEMA.${problema}`) }}
+              {{ t(`${NS}.PROBLEMA.SEM_DIA`) }}
             </p>
           </template>
         </section>
@@ -316,9 +353,17 @@ useOnEnter(carregar);
           </p>
         </section>
 
-        <div class="flex flex-wrap items-center justify-end gap-3">
-          <p v-if="!podeMudar" class="mb-0 text-sm text-n-slate-11">
-            {{ t(`${NS}.SO_QUEM_CUIDA`) }}
+        <div
+          v-if="podeMudar"
+          class="sticky bottom-0 -mx-4 flex items-center justify-end gap-3 border-t border-n-weak bg-n-slate-2 px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
+        >
+          <p
+            v-if="!mudou"
+            class="mb-0 flex min-h-11 items-center gap-1 text-sm text-n-slate-11"
+            data-ritmo-salvo
+          >
+            <span class="i-lucide-check size-4" aria-hidden="true" />
+            {{ t(`${NS}.TUDO_SALVO`) }}
           </p>
           <Button
             v-else
@@ -326,7 +371,7 @@ useOnEnter(carregar);
             :label="t(`${NS}.SALVAR`)"
             :is-loading="salvando"
             :disabled="!podeSalvar"
-            class="!min-h-11 !rounded-xl"
+            class="!min-h-11 w-full !rounded-xl sm:w-auto"
             data-ritmo-salvar
           />
         </div>

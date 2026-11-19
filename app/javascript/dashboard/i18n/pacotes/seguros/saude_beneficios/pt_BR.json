@@ -1204,7 +1204,7 @@
       "URL_PLACEHOLDER": "https://www.suacorretora.com.br/planos-de-saude"
     },
     "RITMO": {
-      "FORA_DA_CONTA": "Não entram nessa conta: o aviso de renovação do plano, as respostas a quem acabou de escrever e as conversas da sua equipe."
+      "FORA_DA_CONTA": "O limite não vale para o aviso de renovação do plano, para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente."
     }
   },
   "MACROS": {

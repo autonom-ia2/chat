@@ -52,3 +52,16 @@ export const problemaDo = formulario => {
 
 export const alternarDia = (dias, dia) =>
   dias.includes(dia) ? dias.filter(item => item !== dia) : [...dias, dia];
+
+const DIAS_UTEIS = [1, 2, 3, 4, 5];
+
+/** Como o resumo diz os dias: todos, de segunda a sexta, ou a lista (na ordem da tela). */
+export const diasDoResumo = dias => {
+  const escolhidos = DIAS_DA_SEMANA.filter(dia => dias.includes(dia));
+  if (escolhidos.length === DIAS_DA_SEMANA.length) return { tipo: 'TODOS' };
+  const soUteis =
+    escolhidos.length === DIAS_UTEIS.length &&
+    DIAS_UTEIS.every(dia => escolhidos.includes(dia));
+  if (soUteis) return { tipo: 'UTEIS' };
+  return { tipo: 'LISTA', dias: escolhidos };
+};
