@@ -47,5 +47,17 @@ Delivery through a separate PR; no merge or manual deploy authorized.
 
 ## CI and release
 
-Pending CI verification on the PR. No merge, deployment, production Rails,
-paid AI test, or direct production access performed for this implementation.
+PR: https://github.com/autonom-ia2/chat/pull/3052
+
+Initial commit 9b7cfa081c: all 12 RSpec shards and both Vitest shards passed.
+Guide, translations and Instagram integration checks passed. Automated code and
+security reviews completed without findings.
+
+The additional bounded email-regression workflow passed its behavioral tests but
+blocked on one Style/SafeNavigation offense in the new controller. The follow-up
+uses an explicit attachment guard before checking the storage object. Final CI
+must confirm this cleanup on the updated head; initial green tests are not final
+head verification.
+
+No merge, deployment, production Rails, paid AI test, or direct production access
+performed for this implementation.
