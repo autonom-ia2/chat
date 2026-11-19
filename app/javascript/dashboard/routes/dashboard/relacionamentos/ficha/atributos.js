@@ -109,11 +109,16 @@ export const linkSeguro = valor => {
 
 // O link como vai ser gravado: quem escreve "seusite.com.br" ganha o
 // "https://" na frente. Devolve '' quando nem assim é um endereço de site. Quem
-// confere é o parser de URL do navegador, não uma regra escrita à mão.
+// confere é o parser de URL do navegador, não uma regra escrita à mão. O
+// "https://" só entra quando o nome do site resultante tem ponto e não termina
+// nele: o parser aceita qualquer palavra como nome ("naotenho" viraria
+// "https://naotenho/"; no navegador, até "padaria bom dia" passa, com o espaço
+// trocado por %20). O que já veio com "http://" ou "https://" vale como está.
 export const linkCompleto = valor => {
   const escrito = String(valor ?? '').trim();
   if (!escrito) return '';
   if (linkSeguro(escrito)) return escrito;
   const comEsquema = `https://${escrito}`;
-  return linkSeguro(comEsquema) ? comEsquema : '';
+  const site = linkSeguro(comEsquema) ? new URL(comEsquema).hostname : '';
+  return site.includes('.') && !site.endsWith('.') ? comEsquema : '';
 };

@@ -583,6 +583,14 @@ describe('camposDaPessoa', () => {
     expect(linkCompleto(' exemplo.com.br ')).toBe('https://exemplo.com.br');
     expect(linkCompleto('padaria bom dia')).toBe('');
     expect(linkCompleto(LINK_PERIGOSO)).toBe('');
+  });
+
+  it('só completa com https:// quando o nome do site tem ponto e não termina nele', () => {
+    expect(linkCompleto('seusite.com.br')).toBe('https://seusite.com.br');
+    expect(linkCompleto('naotenho')).toBe('');
+    expect(linkCompleto('seusite.')).toBe('');
+    // O que já veio com esquema vale como está.
+    expect(linkCompleto('https://intranet')).toBe('https://intranet');
     expect(linkCompleto('')).toBe('');
   });
 });
