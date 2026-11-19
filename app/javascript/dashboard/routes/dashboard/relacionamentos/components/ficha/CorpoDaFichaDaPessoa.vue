@@ -24,6 +24,10 @@ import SecaoNotas from './SecaoNotas.vue';
 // só avisa (`verTodas`). Apagar uma nota emite `apagarNota` com ela.
 // #2897 — o slot `antes` abre a coluna principal: é onde a ficha põe o bloco
 // Seguros (o que a pessoa tem com a corretora vem antes da conversa).
+// #3075 — quem só pode ver lê em Informações que não pode mudar nada (a ficha
+// antiga dizia o mesmo, RecordReadOnly). Quem pode mudar os campos da ficha
+// (`podeEscolherCampos`) tem "Escolher campos" embaixo das informações. O slot
+// `lado` vem depois de Informações: é onde a ficha põe "Este contato é".
 const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -38,6 +42,7 @@ const props = defineProps({
   podeEditar: { type: Boolean, default: true },
   podeVerTodas: { type: Boolean, default: false },
   podeAbrirConversas: { type: Boolean, default: false },
+  podeEscolherCampos: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'verTodas',
@@ -47,6 +52,7 @@ const emit = defineEmits([
   'tentar',
   'abrirConversa',
   'apagarNota',
+  'escolherCampos',
 ]);
 
 const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
@@ -120,8 +126,30 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
             @click="emit('alterar')"
           />
         </template>
+        <p
+          v-if="!podeEditar"
+          data-relacionamentos="so-leitura"
+          class="flex items-start gap-2 p-3 m-0 mb-4 text-sm rounded-xl bg-n-alpha-1 text-n-slate-11"
+        >
+          <span
+            class="mt-0.5 i-lucide-eye size-4 shrink-0 text-n-blue-11"
+            aria-hidden="true"
+          />
+          {{ t('RELACIONAMENTOS_FICHA.INFORMACOES.SO_LEITURA') }}
+        </p>
         <ListaDeInformacoes :linhas="linhas" :redes="redes" />
+        <Button
+          v-if="podeEditar && podeEscolherCampos"
+          data-relacionamentos="escolher-campos"
+          slate
+          ghost
+          icon="i-lucide-settings-2"
+          class="!h-11 mt-4 -ms-3"
+          :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ESCOLHER_CAMPOS')"
+          @click="emit('escolherCampos')"
+        />
       </CartaoDaSecao>
+      <slot name="lado" />
       <DeOndeVeio
         v-if="podeVer('origem')"
         :origem="origem"

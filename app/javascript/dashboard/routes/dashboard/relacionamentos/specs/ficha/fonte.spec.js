@@ -126,25 +126,57 @@ describe('dados da demonstração', () => {
 describe('escritas da demonstração', () => {
   it('salvar guarda na memória e devolve cópia nova', async () => {
     const antes = await fonte.pessoa(ID_CLIENTE_COMPLETO);
-    const dados = {
-      name: 'Nome Novo',
-      email: 'novo@exemplo.com.br',
-      phone_number: antes.phone_number,
-      additional_attributes: {
-        city: 'Bauru',
-        company_name: antes.additional_attributes.company_name,
+    const pedido = {
+      contato: {
+        name: 'Nome Novo',
+        email: 'novo@exemplo.com.br',
+        phone_number: antes.phone_number,
+        additional_attributes: {
+          city: 'Bauru',
+          company_name: antes.additional_attributes.company_name,
+        },
+        custom_attributes: { cpf: '52998224725' },
       },
-      custom_attributes: { cpf: '52998224725' },
+      empresaNova: null,
+      foto: null,
+      apagar: [],
     };
-    const copiaDosDados = JSON.stringify(dados);
-    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, dados);
+    const copiaDoPedido = JSON.stringify(pedido);
+    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, pedido);
     expect(salvo.name).toBe('Nome Novo');
     expect(
       (await fonte.pessoa(ID_CLIENTE_COMPLETO)).additional_attributes.city
     ).toBe('Bauru');
-    expect(JSON.stringify(dados)).toBe(copiaDosDados);
+    expect(JSON.stringify(pedido)).toBe(copiaDoPedido);
     expect(salvo).not.toBe(await fonte.pessoa(ID_CLIENTE_COMPLETO));
     expect(antes.name).not.toBe('Nome Novo');
+  });
+
+  it('salvar apaga os campos pedidos e mantém os outros', async () => {
+    const antes = await fonte.pessoa(ID_CLIENTE_COMPLETO);
+    const [chave] = Object.keys(antes.custom_attributes);
+    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, {
+      contato: {
+        name: antes.name,
+        email: antes.email,
+        phone_number: antes.phone_number,
+        additional_attributes: {},
+        custom_attributes: { cor_favorita: 'azul' },
+      },
+      empresaNova: null,
+      foto: null,
+      apagar: [chave],
+    });
+    expect(salvo.custom_attributes).not.toHaveProperty(chave);
+    expect(salvo.custom_attributes.cor_favorita).toBe('azul');
+  });
+
+  it('buscarEmpresas acha as empresas inventadas pelo nome', async () => {
+    const [primeira] = await fonte.buscarEmpresas('a');
+    expect(primeira).toEqual({
+      id: expect.any(Number),
+      nome: expect.any(String),
+    });
   });
 
   it('marcar como cliente vale na hora e dá um card ganho', async () => {

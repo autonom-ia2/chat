@@ -175,7 +175,13 @@
       "CNPJ": "CNPJ",
       "SITE": "Site",
       "PESSOAS": "Pessoas",
-      "CLIENTES": "Clientes"
+      "CLIENTES": "Clientes",
+      "PAIS": "País",
+      "SOBRE": "Sobre a pessoa",
+      "SIM": "Sim",
+      "NAO": "Não",
+      "SO_LEITURA": "Você pode ver estas informações, mas não pode mudar.",
+      "ESCOLHER_CAMPOS": "Escolher campos da ficha"
     },
     "ORIGEM": {
       "TITULO": "De onde veio",
@@ -210,7 +216,8 @@
         "CPF": "Confira o CPF. São 11 números.",
         "CNPJ": "Confira o CNPJ. São 14 números.",
         "EMAIL_REPETIDO": "Este e-mail já está na ficha de outra pessoa. Procure esse e-mail na busca da lista ou apague o e-mail daqui.",
-        "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui."
+        "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui.",
+        "LINK": "Confira o link: precisa começar com https:// (ou http://)."
       },
       "SAIR": {
         "TITULO": "Sair sem salvar?",
@@ -229,7 +236,47 @@
         "github": "GitHub"
       },
       "CNPJ": "CNPJ",
-      "SITE": "Site"
+      "SITE": "Site",
+      "PAIS_ONDE_MORA": "País",
+      "PAIS_NENHUM": "Não informado",
+      "SOBRE": "Sobre a pessoa",
+      "SOBRE_EXEMPLO": "Ex.: prefere conversar pelo WhatsApp à tarde.",
+      "MAIS_CAMPOS": "Mais campos ({count})",
+      "ATRIBUTO": {
+        "SIM": "Sim",
+        "NAO": "Não",
+        "ESCOLHA": "Escolha uma opção",
+        "APAGAR": "Apagar",
+        "APAGAR_O": "Apagar o que está em {campo}",
+        "VAI_SAIR": "Este campo fica em branco quando você salvar."
+      },
+      "FOTO": {
+        "POR": "Pôr foto",
+        "TROCAR": "Trocar foto",
+        "TIRAR": "Tirar foto",
+        "MANTER": "Voltar como estava",
+        "VAI_SAIR": "A foto sai quando você salvar. No lugar ficam as iniciais do nome.",
+        "VAI_ENTRAR": "A foto nova entra quando você salvar.",
+        "ERRO_TIPO": "Esta foto não serve. Escolha uma foto JPG, PNG, GIF ou WEBP.",
+        "ERRO_TAMANHO": "Esta foto é grande demais. Escolha uma de até 15 MB."
+      },
+      "EMPRESA_ESCOLHA": {
+        "ROTULO": "Empresa",
+        "PLACEHOLDER": "Escreva o nome da empresa",
+        "DIGITE": "Escreva o nome para procurar entre as empresas cadastradas.",
+        "PROCURANDO": "Procurando…",
+        "ERRO": "Não consegui procurar agora. Tente de novo.",
+        "NENHUMA": "Nenhuma empresa cadastrada com “{termo}”.",
+        "ACHADAS": "Empresas encontradas",
+        "CADASTRAR": "Cadastrar “{nome}” como empresa nova",
+        "NOVA": "Empresa nova: o cadastro é feito quando você salvar.",
+        "SO_NOME": "Aqui só tem o nome escrito. Ligue a uma empresa cadastrada para abrir a ficha da empresa.",
+        "LIGAR": "Ligar a uma empresa",
+        "TROCAR": "Trocar",
+        "TIRAR": "Tirar da empresa",
+        "MANTER": "Manter {empresa}",
+        "VAI_SAIR": "Esta pessoa sai de {empresa} quando você salvar. Para pôr em outra, escreva o nome acima."
+      }
     },
     "APAGAR": {
       "TITULO": "Apagar {nome}?",

@@ -1,3 +1,4 @@
+import CompanyAPI from 'dashboard/api/companies';
 import ContactAPI from 'dashboard/api/contacts';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
@@ -20,7 +21,15 @@ vi.mock('dashboard/api/relacionamentos', () => ({
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/contacts', () => ({
-  default: { create: vi.fn(), update: vi.fn() },
+  default: {
+    create: vi.fn(),
+    update: vi.fn(),
+    destroyAvatar: vi.fn(),
+    destroyCustomAttributes: vi.fn(),
+  },
+}));
+vi.mock('dashboard/api/companies', () => ({
+  default: { create: vi.fn(), search: vi.fn() },
 }));
 
 const real = () => acoesDaListaFonte({ demo: null });
@@ -318,21 +327,56 @@ describe('planilha e pessoa', () => {
     await expect(real().exportar({ grupo: 'todos' })).rejects.toBe(recusado);
   });
 
+  // #3075 — o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar).
+  const pedido = (contato, extra) => ({
+    contato,
+    empresaNova: null,
+    foto: null,
+    apagar: [],
+    ...extra,
+  });
+
   it('criarPessoa manda os dados ao contato e devolve o contato criado', async () => {
     const criado = { id: 9, name: 'Ana Albuquerino' };
     ContactAPI.create.mockResolvedValue({
       data: { payload: { contact: criado } },
     });
-    const dados = { name: 'Ana Albuquerino', email: null };
-    expect(await real().criarPessoa(dados)).toEqual(criado);
-    expect(ContactAPI.create).toHaveBeenCalledWith(dados);
+    const contato = { name: 'Ana Albuquerino', email: null };
+    expect(await real().criarPessoa(pedido(contato))).toEqual(criado);
+    expect(ContactAPI.create).toHaveBeenCalledWith(contato);
+    expect(ContactAPI.update).not.toHaveBeenCalled();
+  });
+
+  it('criarPessoa com empresa nova e foto: cadastra, cria e põe a foto na criada', async () => {
+    CompanyAPI.create.mockResolvedValue({
+      data: { payload: { id: 4, name: 'Oficina do Bruno' } },
+    });
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: { id: 9, name: 'Bruno' } } },
+    });
+    ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    await real().criarPessoa(
+      pedido(
+        { name: 'Bruno', additional_attributes: {} },
+        { empresaNova: 'Oficina do Bruno', foto: { arquivo, previa: 'blob:x' } }
+      )
+    );
+    expect(ContactAPI.create).toHaveBeenCalledWith({
+      name: 'Bruno',
+      company_id: 4,
+      additional_attributes: { company_name: 'Oficina do Bruno' },
+    });
+    const [id, corpo] = ContactAPI.update.mock.calls[0];
+    expect(id).toBe(9);
+    expect(corpo.get('avatar')).toBeInstanceOf(File);
   });
 
   it('salvarPessoa grava no contato pelo id', async () => {
     ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
-    const dados = { name: 'Ana Albuquerino' };
-    await real().salvarPessoa(9, dados);
-    expect(ContactAPI.update).toHaveBeenCalledWith(9, dados);
+    const contato = { name: 'Ana Albuquerino' };
+    await real().salvarPessoa(9, pedido(contato));
+    expect(ContactAPI.update).toHaveBeenCalledWith(9, contato);
   });
 
   it('o 422 do e-mail repetido sobe como veio', async () => {
@@ -340,6 +384,8 @@ describe('planilha e pessoa', () => {
       response: { status: 422, data: { attributes: ['email'] } },
     });
     ContactAPI.create.mockRejectedValue(repetido);
-    await expect(real().criarPessoa({ name: 'Ana' })).rejects.toBe(repetido);
+    await expect(real().criarPessoa(pedido({ name: 'Ana' }))).rejects.toBe(
+      repetido
+    );
   });
 });

@@ -40,3 +40,11 @@ export const motivoDeFicarSemCard = pessoa =>
   pessoa.id % DE_QUANTAS_EM_QUANTAS_JA_TEM_CARD === 0
     ? MOTIVOS_DO_CARD.JA_TEM_CARD
     : null;
+
+// #3075 — as empresas que a escolha da gaveta acha na demonstração.
+export const EMPRESAS_DA_BUSCA = [
+  { id: 1, nome: 'Padaria Bom Dia' },
+  { id: 2, nome: 'Oficina do Bruno' },
+  { id: 3, nome: 'Fontanela Transportes' },
+  { id: 4, nome: 'Quintanilha Móveis' },
+];

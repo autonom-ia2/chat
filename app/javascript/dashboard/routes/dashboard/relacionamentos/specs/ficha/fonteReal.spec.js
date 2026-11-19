@@ -33,6 +33,8 @@ vi.mock('dashboard/api/contacts', () => ({
     removeOptOut: vi.fn(),
     markOptOut: vi.fn(),
     delete: vi.fn(),
+    destroyAvatar: vi.fn(),
+    destroyCustomAttributes: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/etiquetasDoContato', () => ({
@@ -46,7 +48,7 @@ vi.mock('dashboard/api/accountActions', () => ({
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/companies', () => ({
-  default: { update: vi.fn() },
+  default: { update: vi.fn(), create: vi.fn(), search: vi.fn() },
 }));
 
 const real = () => fichaFonte({ demo: null });
@@ -156,18 +158,91 @@ describe('escritas da pessoa', () => {
     RelacionamentosAPI.pessoa.mockResolvedValue({ data: relida });
   });
 
-  it('salvar manda os dados como a gaveta montou e relê a pessoa', async () => {
-    const dados = {
-      name: 'Ana Maria',
-      phone_number: null,
-      email: 'ana@exemplo.com.br',
-      additional_attributes: { city: 'Bauru', company_name: '' },
-      custom_attributes: { cpf: '52998224725' },
-    };
+  // #3075 — o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar).
+  const contato = {
+    name: 'Ana Maria',
+    phone_number: null,
+    email: 'ana@exemplo.com.br',
+    additional_attributes: { city: 'Bauru', company_name: '' },
+    custom_attributes: { cpf: '52998224725' },
+  };
+  const pedido = extra => ({
+    contato,
+    empresaNova: null,
+    foto: null,
+    apagar: [],
+    ...extra,
+  });
+
+  it('salvar manda o contato como a gaveta montou e relê a pessoa', async () => {
     ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
-    expect(await real().salvar(7, dados)).toEqual(relida);
-    expect(ContactAPI.update).toHaveBeenCalledWith(7, dados);
+    expect(await real().salvar(7, pedido())).toEqual(relida);
+    expect(ContactAPI.update).toHaveBeenCalledTimes(1);
+    expect(ContactAPI.update).toHaveBeenCalledWith(7, contato);
+    expect(ContactAPI.destroyAvatar).not.toHaveBeenCalled();
+    expect(ContactAPI.destroyCustomAttributes).not.toHaveBeenCalled();
     expect(RelacionamentosAPI.pessoa).toHaveBeenCalledWith(7);
+  });
+
+  it('empresa nova: cadastra pelo nome e liga a pessoa a ela', async () => {
+    CompanyAPI.create.mockResolvedValue({
+      data: { payload: { id: 31, name: 'Padaria Nova' } },
+    });
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    await real().salvar(7, pedido({ empresaNova: 'Padaria Nova' }));
+    expect(CompanyAPI.create).toHaveBeenCalledWith({
+      company: { name: 'Padaria Nova' },
+    });
+    expect(ContactAPI.update).toHaveBeenCalledWith(7, {
+      ...contato,
+      company_id: 31,
+      additional_attributes: {
+        ...contato.additional_attributes,
+        company_name: 'Padaria Nova',
+      },
+    });
+  });
+
+  it('a empresa que não foi cadastrada não deixa a pessoa pela metade', async () => {
+    CompanyAPI.create.mockRejectedValue(erroHttp(422));
+    await expect(
+      real().salvar(7, pedido({ empresaNova: 'Padaria Nova' }))
+    ).rejects.toThrow();
+    expect(ContactAPI.update).not.toHaveBeenCalled();
+  });
+
+  it('foto nova vai só com o arquivo; tirar a foto e apagar campos vêm depois', async () => {
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    ContactAPI.destroyCustomAttributes.mockResolvedValue({ data: {} });
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    await real().salvar(
+      7,
+      pedido({ foto: { arquivo, previa: 'blob:x' }, apagar: ['aniversario'] })
+    );
+    expect(ContactAPI.update).toHaveBeenCalledTimes(2);
+    const [, corpo] = ContactAPI.update.mock.calls[1];
+    expect(corpo.get('avatar')).toBeInstanceOf(File);
+    expect(ContactAPI.destroyCustomAttributes).toHaveBeenCalledWith(7, [
+      'aniversario',
+    ]);
+
+    vi.clearAllMocks();
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    ContactAPI.destroyAvatar.mockResolvedValue({ data: {} });
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: relida });
+    await real().salvar(7, pedido({ foto: { tirar: true } }));
+    expect(ContactAPI.update).toHaveBeenCalledTimes(1);
+    expect(ContactAPI.destroyAvatar).toHaveBeenCalledWith(7);
+  });
+
+  it('buscarEmpresas devolve id e nome das empresas da conta', async () => {
+    CompanyAPI.search.mockResolvedValue({
+      data: { payload: [{ id: 3, name: 'Padaria Bom Dia', domain: null }] },
+    });
+    expect(await real().buscarEmpresas('padaria')).toEqual([
+      { id: 3, nome: 'Padaria Bom Dia' },
+    ]);
+    expect(CompanyAPI.search).toHaveBeenCalledWith('padaria');
   });
 
   it('marcar como cliente escreve e relê a pessoa', async () => {

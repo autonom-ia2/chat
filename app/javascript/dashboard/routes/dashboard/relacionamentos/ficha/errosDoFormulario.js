@@ -3,10 +3,26 @@
 // Devolve a chave de tradução do problema (dentro de RELACIONAMENTOS_FICHA.GAVETA.ERRO).
 import { soDigitos } from '../fonte/texto';
 import { cpfValido, emailValido } from './validacao';
+import { linkSeguro, temValor } from './atributos';
 
 const mudou = (inicial, atual, campo) => inicial[campo] !== atual[campo];
 
-export const errosDoFormulario = (inicial, atual) => {
+// #3075 — o campo personalizado do tipo link só aceita endereço com http ou
+// https (o mesmo que a ficha deixa abrir). O erro fica em `atributo:<chave>`.
+const errosDosLinks = (inicial, atual, tipos) =>
+  Object.fromEntries(
+    Object.entries(atual.atributos ?? {})
+      .filter(
+        ([chave, valor]) =>
+          tipos[chave] === 'link' &&
+          temValor(valor) &&
+          valor !== inicial.atributos?.[chave] &&
+          !linkSeguro(valor)
+      )
+      .map(([chave]) => [`atributo:${chave}`, 'LINK'])
+  );
+
+export const errosDoFormulario = (inicial, atual, tipos = {}) => {
   const erros = {};
   if (!atual.nome.trim()) erros.nome = 'NOME';
   const email = atual.email.trim();
@@ -16,7 +32,7 @@ export const errosDoFormulario = (inicial, atual) => {
   if (atual.cpf && mudou(inicial, atual, 'cpf') && !cpfValido(atual.cpf)) {
     erros.cpf = 'CPF';
   }
-  return erros;
+  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
 };
 
 const TAMANHO_CNPJ = 14;

@@ -2,6 +2,7 @@
 import { computed, ref, toRef, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { camposDaPessoa } from '../../ficha/atributos';
 import { useFormularioDaPessoa } from '../../ficha/useFormularioDaPessoa';
 import DialogoDeConfirmacao from '../carteira/DialogoDeConfirmacao.vue';
 import CamposDaPessoa from './CamposDaPessoa.vue';
@@ -17,6 +18,10 @@ import GavetaLateral from './GavetaLateral.vue';
 // #3062 — fechar pelo X, pelo Esc ou pelo fundo com algo escrito pergunta antes
 // ("Sair sem salvar?", com "Continuar escrevendo"); sem nada mudado, fecha
 // direto. "Cancelar" é a escolha de sair e fecha sem perguntar.
+// #3075 — e os dados da ficha antiga: foto, país, "Sobre a pessoa", a empresa
+// cadastrada (`comEmpresas`, com `buscarEmpresas` para a escolha) e os campos
+// personalizados da conta (`definicoes`, com os `escolhidos` do configurador).
+// "Salvar" emite o pedido inteiro (ficha/informacoes.js#pedidoParaSalvar).
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   pessoa: { type: Object, default: null },
@@ -25,20 +30,48 @@ const props = defineProps({
   rotuloSalvar: { type: String, default: '' },
   marca: { type: String, default: 'gaveta-informacoes' },
   errosDoServidor: { type: Object, default: () => ({}) },
+  comEmpresas: { type: Boolean, default: false },
+  buscarEmpresas: { type: Function, default: null },
+  definicoes: { type: Array, default: () => [] },
+  escolhidos: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['fechar', 'salvar']);
 
 const { t } = useI18n();
+const tiposDosCampos = () =>
+  Object.fromEntries(
+    props.definicoes.map(definicao => [
+      definicao.attribute_key,
+      definicao.attribute_display_type,
+    ])
+  );
 const {
+  inicial,
   formulario,
   erros,
   mexido,
   abrir,
   mudar,
   mudarRede,
-  mudarExtra,
+  mudarAtributo,
+  mudarEmpresa,
   dadosSeValido,
-} = useFormularioDaPessoa();
+} = useFormularioDaPessoa({
+  comEmpresas: () => props.comEmpresas,
+  tiposDosCampos,
+});
+
+// A ordem dos campos sai do que a pessoa tinha ao abrir: escrever num campo
+// não o faz pular de lugar.
+const campos = computed(() =>
+  inicial.value
+    ? camposDaPessoa({
+        definicoes: props.definicoes,
+        escolhidos: props.escolhidos,
+        valores: inicial.value.atributos,
+      })
+    : []
+);
 
 const recusados = ref({});
 
@@ -104,10 +137,16 @@ const salvar = () => {
     <CamposDaPessoa
       v-if="formulario"
       :formulario="formulario"
+      :inicial="inicial"
       :erros="errosNaTela"
+      :foto-atual="pessoa?.thumbnail ?? ''"
+      :com-empresas="comEmpresas"
+      :buscar-empresas="buscarEmpresas"
+      :campos="campos"
       @mudar="mudar"
       @mudar-rede="mudarRede"
-      @mudar-extra="mudarExtra"
+      @mudar-atributo="mudarAtributo"
+      @mudar-empresa="mudarEmpresa"
     />
     <template #rodape>
       <Button

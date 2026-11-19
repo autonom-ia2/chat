@@ -10,15 +10,21 @@ import { camposRecusados } from './recusaDoContato';
 //    o aviso embaixo do campo (`errosDoServidor`);
 //  - outra falha: a gaveta fica aberta e `aoFalhar(ehNova)` avisa.
 // Clique duplo em "Salvar" não manda duas vezes.
+// #3075 — o que a gaveta manda é o pedido inteiro (ficha/informacoes.js#
+// pedidoParaSalvar): o contato, a empresa nova, a foto e os campos que saem.
+// `aoSalvar` recebe o contato.
 
 // A pessoa nova não leva campo vazio: só o que foi escrito.
-export const dadosDaPessoaNova = dados => ({
-  ...dados,
-  additional_attributes: Object.fromEntries(
-    Object.entries(dados.additional_attributes ?? {}).filter(
-      ([, valor]) => valor !== ''
-    )
-  ),
+export const dadosDaPessoaNova = pedido => ({
+  ...pedido,
+  contato: {
+    ...pedido.contato,
+    additional_attributes: Object.fromEntries(
+      Object.entries(pedido.contato.additional_attributes ?? {}).filter(
+        ([, valor]) => valor !== ''
+      )
+    ),
+  },
 });
 
 export const usePessoaNaGaveta = ({ acoes, aoCriar, aoSalvar, aoFalhar }) => {
@@ -34,20 +40,20 @@ export const usePessoaNaGaveta = ({ acoes, aoCriar, aoSalvar, aoFalhar }) => {
     aberta.value = true;
   };
 
-  const gravar = dados =>
+  const gravar = pedido =>
     ehNova.value
-      ? acoes.criarPessoa(dadosDaPessoaNova(dados))
-      : acoes.salvarPessoa(pessoa.value.id, dados);
+      ? acoes.criarPessoa(dadosDaPessoaNova(pedido))
+      : acoes.salvarPessoa(pessoa.value.id, pedido);
 
-  const salvar = async dados => {
+  const salvar = async pedido => {
     if (salvando.value) return;
     salvando.value = true;
     const nova = ehNova.value;
     try {
-      const gravada = await gravar(dados);
+      const gravada = await gravar(pedido);
       aberta.value = false;
       if (nova) aoCriar(gravada);
-      else aoSalvar(dados);
+      else aoSalvar(pedido.contato);
     } catch (falha) {
       const recusados = camposRecusados(falha);
       if (Object.keys(recusados).length) errosDoServidor.value = recusados;
