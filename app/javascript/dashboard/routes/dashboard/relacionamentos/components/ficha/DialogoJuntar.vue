@@ -11,11 +11,17 @@ import { formatarTelefone } from '../../lista/telefone';
 
 // #3071 — "Juntar com outra pessoa", em dois passos no mesmo diálogo:
 //  1. a busca da outra ficha (nome, telefone ou e-mail, pela busca da lista
-//     nova) e a escolha numa lista de botões de rádio. "Continuar" está sempre
-//     ligado: sem escolha, diz o que falta e leva o foco à busca;
-//  2. a confirmação, que diz qual ficha fica (a que está aberta), qual deixa de
-//     existir e o que acontece com conversas, notas, etiquetas e cards. "Voltar"
-//     leva de novo à busca, com a escolha guardada.
+//     nova) e a escolha numa lista de botões de rádio. Abre já procurando pelo
+//     nome da pessoa (a outra ficha costuma ter o mesmo nome) e diz qual ficha
+//     fica. Uma busca nova que não traz a escolhida desfaz a escolha.
+//     "Continuar" está sempre ligado: sem escolha, diz o que falta e leva o
+//     foco à busca;
+//  2. a confirmação, com as duas fichas (nome, telefone e e-mail), qual fica (a
+//     que está aberta) e qual deixa de existir, e o que acontece: tudo passa
+//     para a que fica; o nome, o telefone e o e-mail dela continuam. Quando o
+//     telefone ou o e-mail de quem sai é outro, uma linha avisa que ele se perde
+//     (ContactMergeAction: o que a ficha que fica já tem vale). "Voltar" leva de
+//     novo à busca, com a escolha guardada.
 // "Juntar fichas" emite `juntar` com a outra pessoa; quem usa fecha (`fechar`)
 // quando deu certo, ou passa a frase em `alerta` e o diálogo fica aberto.
 // Tocar fora não fecha (Esc e Cancelar fecham).
@@ -25,6 +31,8 @@ const props = defineProps({
   buscar: { type: Function, required: true },
   juntando: { type: Boolean, default: false },
   alerta: { type: String, default: '' },
+  // A conta tem a carteira: os seguros também passam.
+  comSeguros: { type: Boolean, default: false },
 });
 const emit = defineEmits(['juntar']);
 
@@ -62,6 +70,37 @@ const contatoDe = pessoa =>
     .filter(Boolean)
     .join(SEPARADOR) || t(`${JT}.SEM_CONTATO`);
 
+const mesmoEmail = (um, outro) =>
+  String(um).toLowerCase() === String(outro).toLowerCase();
+
+// O que a ficha que fica já tem vale: o telefone e o e-mail de quem sai só
+// passam quando ela não tem. Sendo outros, a pessoa precisa saber que somem.
+const perdas = computed(() => {
+  const saindo = escolhida.value;
+  if (!saindo) return [];
+  const ficando = props.pessoa;
+  return [
+    saindo.phone_number &&
+      ficando.phone_number &&
+      saindo.phone_number !== ficando.phone_number && {
+        marca: 'telefone',
+        texto: t(`${JT}.PERDE_TELEFONE`, {
+          telefone: formatarTelefone(saindo.phone_number),
+          sai: saindo.name,
+        }),
+      },
+    saindo.email &&
+      ficando.email &&
+      !mesmoEmail(saindo.email, ficando.email) && {
+        marca: 'email',
+        texto: t(`${JT}.PERDE_EMAIL`, {
+          email: saindo.email,
+          sai: saindo.name,
+        }),
+      },
+  ].filter(Boolean);
+});
+
 const procurar = async () => {
   pedido += 1;
   const meu = pedido;
@@ -74,7 +113,11 @@ const procurar = async () => {
   procurando.value = true;
   try {
     const achadas = await props.buscar(termo.value.trim());
-    if (meu === pedido) resultados.value = achadas;
+    if (meu !== pedido) return;
+    resultados.value = achadas;
+    if (!achadas.some(item => item.id === escolhida.value?.id)) {
+      escolhida.value = null;
+    }
   } catch {
     if (meu === pedido) {
       resultados.value = [];
@@ -123,15 +166,14 @@ const aoConfirmar = () => {
 };
 
 const abrir = () => {
-  pedido += 1;
   etapa.value = BUSCA;
-  termo.value = '';
+  termo.value = props.pessoa.name ?? '';
   resultados.value = [];
-  procurando.value = false;
   falhouBusca.value = false;
   escolhida.value = null;
   faltaEscolher.value = false;
   dialogo.value?.open();
+  procurar();
 };
 
 defineExpose({ abrir, fechar: () => dialogo.value?.close() });
@@ -149,7 +191,7 @@ defineExpose({ abrir, fechar: () => dialogo.value?.close() });
       <div v-if="etapa === BUSCA" class="flex flex-col gap-4">
         <TituloDoDialogo
           :titulo="t(`${JT}.TITULO`, { nome: fica })"
-          :aviso="t(`${JT}.AVISO`)"
+          :aviso="t(`${JT}.AVISO`, { nome: fica })"
         />
         <CampoDeBusca
           :model-value="termo"
@@ -251,7 +293,7 @@ defineExpose({ abrir, fechar: () => dialogo.value?.close() });
         >
           {{ t(`${JT}.CONFIRMA_TITULO`) }}
         </h3>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3">
           <div
             v-for="lado in [
               { marca: 'fica', pessoa, rotulo: 'FICA', tom: 'teal' },
@@ -269,26 +311,44 @@ defineExpose({ abrir, fechar: () => dialogo.value?.close() });
             />
             <span class="flex flex-col min-w-0">
               <span
-                class="text-xs font-semibold uppercase"
+                class="text-sm font-semibold"
                 :class="
                   lado.tom === 'teal' ? 'text-n-teal-11' : 'text-n-ruby-11'
                 "
               >
                 {{ t(`${JT}.${lado.rotulo}`) }}
               </span>
-              <span class="text-base font-medium break-words text-n-slate-12">{{
-                lado.pessoa.name
-              }}</span>
+              <span class="text-base font-medium break-words text-n-slate-12">
+                {{ lado.pessoa.name }}
+              </span>
+              <span
+                v-if="lado.pessoa.phone_number"
+                :data-juntar-telefone="lado.marca"
+                class="text-sm tabular-nums text-n-slate-11"
+              >
+                {{ formatarTelefone(lado.pessoa.phone_number) }}
+              </span>
+              <span
+                v-if="lado.pessoa.email"
+                :data-juntar-email="lado.marca"
+                class="text-sm break-all text-n-slate-11"
+              >
+                {{ lado.pessoa.email }}
+              </span>
             </span>
           </div>
         </div>
         <ul class="flex flex-col gap-3 p-0 m-0 list-none text-base">
           <li class="flex items-start gap-3 text-n-slate-12">
             <span
-              class="mt-1 i-lucide-arrow-right-left size-4 shrink-0 text-n-slate-11"
+              class="mt-1 i-lucide-combine size-4 shrink-0 text-n-slate-11"
               aria-hidden="true"
             />
-            {{ t(`${JT}.O_QUE_PASSA`, { sai, fica }) }}
+            {{
+              comSeguros
+                ? t(`${JT}.O_QUE_PASSA_COM_SEGUROS`, { sai, fica })
+                : t(`${JT}.O_QUE_PASSA`, { sai, fica })
+            }}
           </li>
           <li class="flex items-start gap-3 text-n-slate-12">
             <span
@@ -296,6 +356,18 @@ defineExpose({ abrir, fechar: () => dialogo.value?.close() });
               aria-hidden="true"
             />
             {{ t(`${JT}.O_QUE_FICA`, { sai, fica }) }}
+          </li>
+          <li
+            v-for="perda in perdas"
+            :key="perda.marca"
+            :data-juntar-perde="perda.marca"
+            class="flex items-start gap-3 text-n-amber-11"
+          >
+            <span
+              class="mt-1 i-lucide-circle-alert size-4 shrink-0"
+              aria-hidden="true"
+            />
+            {{ perda.texto }}
           </li>
           <li class="flex items-start gap-3 font-medium text-n-ruby-11">
             <span

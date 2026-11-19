@@ -2,6 +2,7 @@ import AccountActionsAPI from 'dashboard/api/accountActions';
 import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { fichaFonte } from '../../fonte/fichaFonte';
@@ -32,8 +33,10 @@ vi.mock('dashboard/api/contacts', () => ({
     removeOptOut: vi.fn(),
     markOptOut: vi.fn(),
     delete: vi.fn(),
-    updateContactLabels: vi.fn(),
   },
+}));
+vi.mock('dashboard/api/etiquetasDoContato', () => ({
+  default: { alterar: vi.fn() },
 }));
 vi.mock('dashboard/api/contactNotes', () => ({
   default: { create: vi.fn(), delete: vi.fn() },
@@ -221,10 +224,10 @@ describe('ações da ficha antiga', () => {
     ['bloquear', () => ContactAPI.update, [7], [7, { blocked: true }]],
     ['desbloquear', () => ContactAPI.update, [7], [7, { blocked: false }]],
     [
-      'trocarEtiquetas',
-      () => ContactAPI.updateContactLabels,
-      [7, ['feira', 'site']],
-      [7, ['feira', 'site']],
+      'alterarEtiquetas',
+      () => EtiquetasDoContatoAPI.alterar,
+      [7, { por: ['site'], tirar: ['feira'] }],
+      [7, { por: ['site'], tirar: ['feira'] }],
     ],
   ])(
     '%s escreve pelo contato e relê a pessoa',

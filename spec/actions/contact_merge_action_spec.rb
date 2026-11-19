@@ -48,6 +48,28 @@ describe ContactMergeAction do
         contact_merge
         expect(base_contact.reload.label_list).to match_array(%w[feira site indicacao])
       end
+
+      it 'does not repeat a label that differs only in case' do
+        base_contact.update!(label_list: %w[VIP])
+        mergee_contact.update!(label_list: %w[vip lead Lead])
+        contact_merge
+        expect(base_contact.reload.label_list.map(&:downcase)).to match_array(%w[vip lead])
+      end
+
+      it 'leaves the base labels as they were when the mergee brings nothing new' do
+        base_contact.update!(label_list: %w[feira site])
+        mergee_contact.update!(label_list: %w[Site])
+        contact_merge
+        expect(base_contact.reload.label_list).to match_array(%w[feira site])
+      end
+    end
+
+    context 'when mergee contact has no labels' do
+      it 'keeps the base labels' do
+        base_contact.update!(label_list: %w[feira])
+        contact_merge
+        expect(base_contact.reload.label_list).to eq(%w[feira])
+      end
     end
 
     context 'when base contact and merge contact are same' do

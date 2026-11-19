@@ -5,9 +5,33 @@
 // #3071 — e as ações que vieram da ficha antiga. `motivo` guarda a frase que o
 // servidor mandou na última falha (o DELETE do contato diz por que não apagou,
 // por exemplo), ou vazio: quem chama mostra a frase dele no lugar da genérica.
+// `ocupadoEm(nome)` diz se aquela ação está gravando; duas ações diferentes
+// podem estar no ar ao mesmo tempo sem uma soltar o "ocupado" da outra.
+// Só a falha do servidor (a resposta, a rede, o "não achei") vira `false`: um
+// defeito da tela vai para o Sentry, sem dado da pessoa, e também devolve
+// `false`, para a tela dizer que não deu.
 import { computed, ref } from 'vue';
+import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
+import { NAO_ACHEI, SEM_ACESSO } from './falhas';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
 import { usePartesDaFicha } from './usePartesDaFicha';
+
+const ONDE_FALHOU = { tela: 'relacionamentos_ficha_pessoa' };
+const FALHAS_COM_NOME = [NAO_ACHEI, SEM_ACESSO];
+
+const veioDoServidor = falha =>
+  Boolean(
+    falha?.isAxiosError ||
+      falha?.response ||
+      falha?.cause?.response ||
+      FALHAS_COM_NOME.includes(falha?.name)
+  );
+
+const fraseDoServidor = falha => {
+  const frase =
+    falha?.cause?.response?.data?.message ?? falha?.response?.data?.message;
+  return typeof frase === 'string' ? frase : '';
+};
 
 const PARTES_VAZIAS = {
   conversas: [],
@@ -20,7 +44,7 @@ const PARTES_VAZIAS = {
 export const useFichaDaPessoa = (fonte, id) => {
   const { estado, carregar, geracao } = useEstadoDaFicha();
   const pessoa = ref(null);
-  const ocupado = ref('');
+  const ocupados = ref(new Set());
   const motivo = ref('');
   const partes = usePartesDaFicha({
     leitores: Object.fromEntries(
@@ -48,22 +72,26 @@ export const useFichaDaPessoa = (fonte, id) => {
   // `acao` recebe `aindaVale()`: se a ficha trocou de pessoa durante a escrita,
   // o que foi gravado ficou gravado, mas a resposta velha não entra na pessoa
   // que está na tela.
+  const marcarOcupado = (nome, sim) => {
+    const novos = new Set(ocupados.value);
+    if (sim) novos.add(nome);
+    else novos.delete(nome);
+    ocupados.value = novos;
+  };
+
   const executar = async (nome, acao) => {
-    ocupado.value = nome;
+    marcarOcupado(nome, true);
     motivo.value = '';
     const geracaoDoPedido = geracao();
     try {
       await acao(() => geracaoDoPedido === geracao());
       return true;
     } catch (falha) {
-      const frase = falha?.cause?.response?.data?.message;
-      motivo.value =
-        typeof frase === 'string'
-          ? frase
-          : (falha?.response?.data?.message ?? '');
+      if (!veioDoServidor(falha)) reportarSemDados(falha, ONDE_FALHOU);
+      motivo.value = fraseDoServidor(falha);
       return false;
     } finally {
-      ocupado.value = '';
+      marcarOcupado(nome, false);
     }
   };
 
@@ -113,8 +141,9 @@ export const useFichaDaPessoa = (fonte, id) => {
     trocarPessoa('bloquear', () => fonte.bloquear(id.value));
   const desbloquear = () =>
     trocarPessoa('desbloquear', () => fonte.desbloquear(id.value));
-  const trocarEtiquetas = etiquetas =>
-    trocarPessoa('etiquetas', () => fonte.trocarEtiquetas(id.value, etiquetas));
+  // { por, tirar }: só o que mudou.
+  const alterarEtiquetas = mudanca =>
+    trocarPessoa('etiquetas', () => fonte.alterarEtiquetas(id.value, mudanca));
 
   // Depois de apagar, a página sai da ficha: não há o que guardar.
   const apagar = () => executar('apagar', () => fonte.apagar(id.value));
@@ -148,7 +177,8 @@ export const useFichaDaPessoa = (fonte, id) => {
     arquivos: computed(() => partes.valores.value.arquivos),
     origem: computed(() => partes.valores.value.origem),
     falhas: partes.falhas,
-    ocupado,
+    ocupadoEm: nome => ocupados.value.has(nome),
+    algumOcupado: computed(() => ocupados.value.size > 0),
     motivo,
     carregar: () => carregar(buscar),
     relerParte: partes.reler,
@@ -160,7 +190,7 @@ export const useFichaDaPessoa = (fonte, id) => {
     marcarNaoQuer,
     bloquear,
     desbloquear,
-    trocarEtiquetas,
+    alterarEtiquetas,
     apagar,
     juntar,
     apagarNota,

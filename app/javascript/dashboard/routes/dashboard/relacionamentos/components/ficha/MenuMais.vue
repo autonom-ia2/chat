@@ -13,6 +13,8 @@ import {
 // #3071 — quem decide quais itens aparecem é o cabeçalho (`itens`, cada um com
 // `evento`, a `chave` do texto em RELACIONAMENTOS_FICHA.ACOES, o `icone` e,
 // para o que apaga, `perigo`, que pinta o item de vermelho).
+// O fundo é sólido: o translúcido da casa deixava ler o texto da ficha por trás
+// dos itens.
 defineProps({
   itens: { type: Array, required: true },
 });
@@ -88,7 +90,9 @@ const aoTeclar = evento => {
           <span class="i-lucide-ellipsis size-5" aria-hidden="true" />
         </button>
       </template>
-      <DropdownBody class="top-12 ltr:right-0 rtl:left-0 min-w-64 z-50">
+      <DropdownBody
+        class="top-12 ltr:right-0 rtl:left-0 min-w-64 z-50 !bg-n-solid-2 !backdrop-blur-none"
+      >
         <DropdownItem
           v-for="item in itens"
           :key="item.evento"

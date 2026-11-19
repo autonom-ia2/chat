@@ -49,6 +49,7 @@ vi.mock('../../components/carteira/SegurosDaFicha.vue', () => {
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     currentAccount: { value: { carteira_seguros: false } },
+    isCloudFeatureEnabled: () => false,
   }),
 }));
 vi.mock('../../fonte/modoDemo', async importOriginal => ({

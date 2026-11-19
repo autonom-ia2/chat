@@ -29,9 +29,14 @@ vi.mock('../../components/carteira/SegurosDaFicha.vue', () => {
   carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'SegurosDaFicha'];
   return { default: { render: () => null } };
 });
+// #3071 — o "Ligar" é o VoiceCallButton da casa (ele decide se aparece).
+vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
+  default: { props: ['phone'], template: '<button data-ligar />' },
+}));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     currentAccount: { value: { carteira_seguros: false } },
+    isCloudFeatureEnabled: () => false,
   }),
 }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
@@ -600,7 +605,8 @@ describe('ficha da pessoa: quem só pode ver', () => {
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValueOnce({ data: [] });
     const semConversa = await abrirPessoa();
     const grupo = semConversa.get(`${marca('cabecalho')} [role="group"]`);
-    expect(grupo.findAll('button')).toHaveLength(1);
+    // O Ligar é do VoiceCallButton, que se esconde sem caixa de voz.
+    expect(grupo.findAll('button:not([data-ligar])')).toHaveLength(1);
     expect(grupo.find(marca('conversar')).exists()).toBe(true);
   });
 });

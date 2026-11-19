@@ -3,13 +3,15 @@ import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import Label from 'dashboard/components-next/label/Label.vue';
 import DialogoDeConfirmacao from '../carteira/DialogoDeConfirmacao.vue';
 
 // #3071 — pôr e tirar etiqueta na ficha: o diálogo abre com as etiquetas da
 // conta (com a cor) e as que a pessoa tem já marcadas. Marcar põe, desmarcar
-// tira; "Salvar etiquetas" emite `salvar` com a lista inteira que ela passa a
-// ter (o servidor troca a lista toda, como a ficha antiga). Sem mudança, só
-// fecha. A etiqueta que a pessoa tem e a conta já apagou aparece marcada, com o
+// tira; "Salvar etiquetas" emite `salvar` com { por, tirar }, só o que mudou
+// (o servidor aplica sobre a lista gravada e não apaga a etiqueta que outra
+// pessoa pôs no meio-tempo). Sem mudança, só fecha. Cada etiqueta aparece como
+// o Label da casa, com a cor dela. A etiqueta que a pessoa tem e a conta já apagou aparece marcada, com o
 // aviso: desmarcar tira, mas ela não volta. Quem usa fecha (`fechar`) quando
 // deu certo, ou passa a frase em `alerta` e o diálogo continua aberto.
 const props = defineProps({
@@ -44,12 +46,12 @@ const alternar = etiqueta => {
     : [...escolhidas.value, etiqueta];
 };
 
-const mudou = () => {
-  const antes = new Set(props.pessoa.labels ?? []);
-  return (
-    antes.size !== escolhidas.value.length ||
-    escolhidas.value.some(etiqueta => !antes.has(etiqueta))
-  );
+const mudanca = () => {
+  const antes = props.pessoa.labels ?? [];
+  return {
+    por: escolhidas.value.filter(etiqueta => !antes.includes(etiqueta)),
+    tirar: antes.filter(etiqueta => !escolhidas.value.includes(etiqueta)),
+  };
 };
 
 const abrir = async () => {
@@ -67,11 +69,12 @@ const fechar = () => dialogo.value?.fechar();
 
 const salvar = () => {
   if (props.salvando) return;
-  if (!opcoes.value.length || !mudou()) {
+  const { por, tirar } = mudanca();
+  if (!opcoes.value.length || (!por.length && !tirar.length)) {
     fechar();
     return;
   }
-  emit('salvar', [...escolhidas.value]);
+  emit('salvar', { por, tirar });
 };
 
 defineExpose({ abrir, fechar });
@@ -115,14 +118,11 @@ defineExpose({ abrir, fechar });
             :data-etiqueta="etiqueta.nome"
             @change="alternar(etiqueta.nome)"
           />
-          <span
-            class="rounded-full size-2.5 shrink-0 bg-n-slate-8"
-            :style="etiqueta.cor ? { backgroundColor: etiqueta.cor } : {}"
-            aria-hidden="true"
+          <Label
+            class="min-w-0"
+            compact
+            :label="{ title: etiqueta.nome, color: etiqueta.cor }"
           />
-          <span class="min-w-0 text-base truncate text-n-slate-12">
-            {{ etiqueta.nome }}
-          </span>
           <span
             v-if="etiqueta.apagada"
             data-relacionamentos="etiqueta-apagada"

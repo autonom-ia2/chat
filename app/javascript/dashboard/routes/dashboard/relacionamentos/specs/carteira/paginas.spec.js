@@ -48,6 +48,10 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
+// #3071 — o "Ligar" é o VoiceCallButton da casa (ele decide se aparece).
+vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
+  default: { props: ['phone'], template: '<button data-ligar />' },
+}));
 vi.mock('dashboard/composables/useAccount', async () => {
   const { ref } = await import('vue');
   return {

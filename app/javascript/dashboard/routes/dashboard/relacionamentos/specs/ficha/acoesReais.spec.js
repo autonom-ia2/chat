@@ -4,6 +4,7 @@ import { useAlert } from 'dashboard/composables';
 import AccountActionsAPI from 'dashboard/api/accountActions';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import FichaDaPessoaPage from '../../pages/FichaDaPessoaPage.vue';
@@ -13,15 +14,28 @@ import FichaDaPessoaPage from '../../pages/FichaDaPessoaPage.vue';
 // ou restringe, diz o que aconteceu e, quando dá, oferece "Desfazer".
 const contexto = vi.hoisted(() => ({ params: {}, empurrar: vi.fn() }));
 const pode = vi.hoisted(() => ({ apagar: false, lembrete: false }));
-const caixas = vi.hoisted(() => ({ lista: [] }));
+const conta = vi.hoisted(() => ({ carteira: false, flags: [] }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// O bloco Seguros conta 2 seguros da pessoa (o "Apagar" diz quantos saem).
 vi.mock('../../components/carteira/SegurosDaFicha.vue', () => ({
-  default: { render: () => null },
+  __esModule: true,
+  default: {
+    emits: ['quantos'],
+    mounted() {
+      this.$emit('quantos', 2);
+    },
+    render: () => null,
+  },
 }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
-    currentAccount: { value: { carteira_seguros: false } },
+    currentAccount: {
+      get value() {
+        return { carteira_seguros: conta.carteira };
+      },
+    },
+    isCloudFeatureEnabled: flag => conta.flags.includes(flag),
   }),
 }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
@@ -55,16 +69,6 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
     },
   }),
 }));
-vi.mock('dashboard/composables/store', () => ({
-  useMapGetter: () => ({
-    get value() {
-      return caixas.lista;
-    },
-  }),
-}));
-vi.mock('dashboard/helper/inbox', () => ({
-  isVoiceCallEnabled: caixa => Boolean(caixa.voz),
-}));
 vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
   default: {
     props: ['phone', 'contactId', 'label'],
@@ -76,8 +80,9 @@ vi.mock(
   () => ({
     __esModule: true,
     default: {
-      props: ['show', 'contato'],
-      template: '<div data-lembrete-gaveta>{{ contato.name }}</div>',
+      props: ['show', 'contato', 'titulo', 'dia'],
+      template:
+        '<div data-lembrete-gaveta :data-dia="dia.toDateString()">{{ contato.name }} | {{ titulo }}</div>',
     },
   })
 );
@@ -101,8 +106,10 @@ vi.mock('dashboard/api/contacts', () => ({
     delete: vi.fn(),
     markOptOut: vi.fn(),
     removeOptOut: vi.fn(),
-    updateContactLabels: vi.fn(),
   },
+}));
+vi.mock('dashboard/api/etiquetasDoContato', () => ({
+  default: { alterar: vi.fn() },
 }));
 vi.mock('dashboard/api/contactNotes', () => ({
   default: { create: vi.fn(), delete: vi.fn() },
@@ -198,7 +205,8 @@ const desfazer = async w => {
 beforeEach(() => {
   pode.apagar = false;
   pode.lembrete = false;
-  caixas.lista = [];
+  conta.carteira = false;
+  conta.flags = [];
   servidorResponde();
 });
 
@@ -223,6 +231,13 @@ describe('juntar com outra pessoa', () => {
     AccountActionsAPI.merge.mockResolvedValue({ data: {} });
     const w = await abrirPessoa();
     await escolherNoMais(w, 'juntar');
+    // Abre já procurando pelo nome da pessoa, e diz qual ficha fica.
+    expect(RelacionamentosAPI.pessoas).toHaveBeenCalledWith({
+      busca: 'Ana Albuquerino',
+    });
+    expect(w.get(marca('dialogo-juntar')).text()).toContain(
+      'A ficha de Ana Albuquerino fica; a que você escolher deixa de existir.'
+    );
     await buscar(w, 'Dornelaz');
     expect(RelacionamentosAPI.pessoas).toHaveBeenCalledWith({
       busca: 'Dornelaz',
@@ -238,8 +253,21 @@ describe('juntar com outra pessoa', () => {
       'Ana Albuquerino'
     );
     expect(dialogo.get(marca('juntar-sai')).text()).toContain('Bruno Dornelaz');
+    expect(dialogo.get(marca('juntar-sai')).text()).toContain(
+      'bruno@exemplo.com.br'
+    );
+    expect(dialogo.get('[data-juntar-telefone="fica"]').text()).toBe(
+      '+55 11 91031-0001'
+    );
     expect(dialogo.text()).toContain(
-      'Tudo o que é de Bruno Dornelaz (conversas, notas, etiquetas e cards) passa para a ficha de Ana Albuquerino.'
+      'Tudo o que é de Bruno Dornelaz passa para Ana Albuquerino: conversas, notas, etiquetas e cards.'
+    );
+    // O telefone e o e-mail de quem sai são outros: somem, e a tela avisa.
+    expect(dialogo.get('[data-juntar-perde="telefone"]').text()).toBe(
+      'O telefone +55 11 91031-0002 de Bruno Dornelaz não fica na ficha. Anote antes, se precisar.'
+    );
+    expect(dialogo.get('[data-juntar-perde="email"]').text()).toBe(
+      'O e-mail bruno@exemplo.com.br de Bruno Dornelaz não fica na ficha. Anote antes, se precisar.'
     );
     expect(dialogo.text()).toContain(
       'A ficha de Bruno Dornelaz deixa de existir. Não dá para desfazer.'
@@ -247,12 +275,71 @@ describe('juntar com outra pessoa', () => {
     await w.get(marca('juntar-confirmar')).trigger('submit');
     await flushPromises();
     expect(AccountActionsAPI.merge).toHaveBeenCalledWith(7, 8);
-    expect(useAlert).toHaveBeenCalledWith(
+    // O mesmo aviso das outras ações (com o × para fechar), sem "Desfazer".
+    expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
       'Pronto. Tudo de Bruno Dornelaz agora está na ficha de Ana Albuquerino.'
     );
+    expect(w.find('[data-carteira="desfazer"]').exists()).toBe(false);
     expect(w.find(marca('dialogo-juntar')).exists()).toBe(false);
     // A ficha relê tudo: as conversas da outra pessoa entram.
     expect(RelacionamentosAPI.conversasDaPessoa).toHaveBeenCalledTimes(2);
+  });
+
+  it('na conta com a carteira, a confirmação diz que os seguros também passam', async () => {
+    conta.carteira = true;
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: { itens: [BRUNO], total: 1, tem_mais: false },
+    });
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'juntar');
+    await w.get('[data-pessoa="8"]').setValue(true);
+    await w.get(marca('juntar-confirmar')).trigger('submit');
+    expect(w.get(marca('dialogo-juntar')).text()).toContain(
+      'passa para Ana Albuquerino: conversas, notas, etiquetas, cards e seguros.'
+    );
+  });
+
+  it('com o mesmo telefone e o mesmo e-mail, não avisa que algo se perde', async () => {
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: {
+        itens: [
+          {
+            ...BRUNO,
+            phone_number: ANA.phone_number,
+            email: 'ANA@exemplo.com.br',
+          },
+        ],
+        total: 1,
+        tem_mais: false,
+      },
+    });
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'juntar');
+    await w.get('[data-pessoa="8"]').setValue(true);
+    await w.get(marca('juntar-confirmar')).trigger('submit');
+    expect(w.find('[data-juntar-perde]').exists()).toBe(false);
+  });
+
+  it('uma busca nova que não traz a escolhida desfaz a escolha', async () => {
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: { itens: [BRUNO], total: 1, tem_mais: false },
+    });
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'juntar');
+    await w.get('[data-pessoa="8"]').setValue(true);
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: {
+        itens: [{ ...BRUNO, id: 9, name: 'Carla Pires' }],
+        total: 1,
+        tem_mais: false,
+      },
+    });
+    await buscar(w, 'Carla');
+    await w.get(marca('juntar-confirmar')).trigger('submit');
+    expect(w.get(marca('juntar-falta')).text()).toBe(
+      'Escolha a outra ficha na lista.'
+    );
+    expect(w.find(marca('juntar-sai')).exists()).toBe(false);
   });
 
   it('sem escolher ninguém, Continuar diz o que falta e não avança', async () => {
@@ -296,7 +383,7 @@ describe('juntar com outra pessoa', () => {
 });
 
 describe('bloquear e desbloquear', () => {
-  it('pergunta antes, bloqueia, mostra a faixa e "Desfazer" desbloqueia', async () => {
+  it('pergunta antes, bloqueia, diz que deu certo e leva o foco à faixa, que tem "Desbloquear"', async () => {
     ContactAPI.update.mockResolvedValue({ data: {} });
     const w = await abrirPessoa();
     RelacionamentosAPI.pessoa.mockResolvedValue({
@@ -304,20 +391,20 @@ describe('bloquear e desbloquear', () => {
     });
     await escolherNoMais(w, 'bloquear');
     expect(w.get('[data-carteira="confirmar-bloquear"]').text()).toContain(
-      'O que Ana mandar chega fechado e ninguém da equipe é avisado.'
+      'Se Ana mandar mensagem, a mensagem fica guardada e ninguém da equipe é avisado.'
     );
     await confirmar(w, 'confirmar-bloquear');
     expect(ContactAPI.update).toHaveBeenCalledWith(7, { blocked: true });
-    expect(w.get(marca('faixa-bloqueada')).text()).toContain(
+    const faixa = w.get(marca('faixa-bloqueada'));
+    expect(faixa.text()).toContain(
       'A ficha de Ana Albuquerino está bloqueada.'
     );
-    expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
+    expect(faixa.find(marca('desbloquear')).exists()).toBe(true);
+    expect(document.activeElement).toBe(faixa.element);
+    expect(useAlert).toHaveBeenCalledWith(
       'Pronto. A ficha de Ana Albuquerino está bloqueada.'
     );
-    RelacionamentosAPI.pessoa.mockResolvedValue({ data: ANA });
-    await desfazer(w);
-    expect(ContactAPI.update).toHaveBeenLastCalledWith(7, { blocked: false });
-    expect(w.find(marca('faixa-bloqueada')).exists()).toBe(false);
+    // A faixa já tem "Desbloquear": o aviso não repete com "Desfazer".
     expect(w.find('[data-carteira="desfazer"]').exists()).toBe(false);
   });
 
@@ -348,7 +435,7 @@ describe('apagar a pessoa', () => {
     const w = await abrirPessoa();
     await escolherNoMais(w, 'apagar');
     expect(w.get('[data-carteira="confirmar-apagar"]').text()).toContain(
-      'Não dá para desfazer.'
+      'A ficha de Ana Albuquerino sai do sistema, com as conversas, as mensagens e as notas. Não dá para desfazer.'
     );
     await confirmar(w, 'confirmar-apagar');
     expect(ContactAPI.delete).toHaveBeenCalledWith(7);
@@ -358,6 +445,54 @@ describe('apagar a pessoa', () => {
     expect(contexto.empurrar).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'relationships_home' })
     );
+  });
+
+  it('diz quantos seguros saem e o que acontece com os cards, como o servidor faz', async () => {
+    pode.apagar = true;
+    conta.carteira = true;
+    RelacionamentosAPI.cardsDaPessoa.mockResolvedValue({
+      data: [
+        {
+          id: 3,
+          titulo: 'Seguro auto',
+          funil: 'Vendas',
+          etapa: 'Novo',
+          valor: 0,
+          situacao: 'aberto',
+        },
+      ],
+    });
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'apagar');
+    const aviso = w.get('[data-carteira="confirmar-apagar"]').text();
+    expect(aviso).toContain(
+      'Os 2 seguros de Ana Albuquerino também saem, com o PDF.'
+    );
+    expect(aviso).toContain('Os cards continuam no funil, sem a pessoa.');
+  });
+
+  it('com a flag crm_arquivados, diz que os cards ficam sem os dados e as reuniões são canceladas', async () => {
+    pode.apagar = true;
+    conta.flags = ['crm_arquivados'];
+    RelacionamentosAPI.cardsDaPessoa.mockResolvedValue({
+      data: [
+        {
+          id: 3,
+          titulo: 'Seguro auto',
+          funil: 'Vendas',
+          etapa: 'Novo',
+          valor: 0,
+          situacao: 'aberto',
+        },
+      ],
+    });
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'apagar');
+    const aviso = w.get('[data-carteira="confirmar-apagar"]').text();
+    expect(aviso).toContain(
+      'Os cards continuam no funil, sem os dados da pessoa, e as reuniões marcadas são canceladas.'
+    );
+    expect(aviso).not.toContain('seguro');
   });
 
   it('se o servidor diz por que não apagou, a frase dele aparece no diálogo', async () => {
@@ -376,16 +511,36 @@ describe('apagar a pessoa', () => {
 });
 
 describe('etiquetas', () => {
-  it('abre com as da pessoa marcadas, salva a lista inteira e "Desfazer" volta como era', async () => {
-    LabelsAPI.get.mockResolvedValue({
-      data: {
-        payload: [
-          { title: 'site', color: '#0F766E' },
-          { title: 'feira', color: '#1F6FEB' },
-        ],
-      },
-    });
-    ContactAPI.updateContactLabels.mockResolvedValue({ data: {} });
+  const ETIQUETAS_DA_CONTA = {
+    data: {
+      payload: [
+        { title: 'site', color: '#0F766E' },
+        { title: 'feira', color: '#1F6FEB' },
+      ],
+    },
+  };
+  const salvarNoDialogo = async w => {
+    await w
+      .get('[data-carteira="dialogo-etiquetas"]')
+      .element.closest('[data-dialogo-falso]')
+      .querySelector('[data-carteira="dialogo-confirmar"]')
+      .click();
+    await flushPromises();
+  };
+
+  it('o cabeçalho mostra cada etiqueta com a cor dela', async () => {
+    LabelsAPI.get.mockResolvedValue(ETIQUETAS_DA_CONTA);
+    const w = await abrirPessoa();
+    const feira = w.get('[data-etiqueta-da-pessoa="feira"]');
+    expect(feira.text()).toBe('feira');
+    expect(feira.find('span').attributes('style')).toContain(
+      'background: rgb(31, 111, 235)'
+    );
+  });
+
+  it('salva só o que mudou, diz o que entrou e saiu, e "Desfazer" faz o contrário', async () => {
+    LabelsAPI.get.mockResolvedValue(ETIQUETAS_DA_CONTA);
+    EtiquetasDoContatoAPI.alterar.mockResolvedValue({ data: {} });
     const w = await abrirPessoa();
     await w.get(marca('mudar-etiquetas')).trigger('click');
     await flushPromises();
@@ -397,22 +552,51 @@ describe('etiquetas', () => {
     RelacionamentosAPI.pessoa.mockResolvedValue({
       data: { ...ANA, labels: ['site'] },
     });
-    await w
-      .get('[data-carteira="dialogo-etiquetas"]')
-      .element.closest('[data-dialogo-falso]')
-      .querySelector('[data-carteira="dialogo-confirmar"]')
-      .click();
-    await flushPromises();
-    expect(ContactAPI.updateContactLabels).toHaveBeenCalledWith(7, ['site']);
+    await salvarNoDialogo(w);
+    expect(EtiquetasDoContatoAPI.alterar).toHaveBeenCalledWith(7, {
+      por: ['site'],
+      tirar: ['feira'],
+    });
     expect(w.get(marca('cabecalho')).text()).toContain('site');
+    expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
+      'Pronto. Entrou: site. Saiu: feira.'
+    );
     RelacionamentosAPI.pessoa.mockResolvedValue({ data: ANA });
     await desfazer(w);
-    expect(ContactAPI.updateContactLabels).toHaveBeenLastCalledWith(7, [
-      'feira',
-    ]);
+    expect(EtiquetasDoContatoAPI.alterar).toHaveBeenLastCalledWith(7, {
+      por: ['feira'],
+      tirar: ['site'],
+    });
     expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
       'As etiquetas voltaram a ser como antes.'
     );
+  });
+
+  it('se o servidor recusa, a frase dele aparece no diálogo', async () => {
+    LabelsAPI.get.mockResolvedValue(ETIQUETAS_DA_CONTA);
+    EtiquetasDoContatoAPI.alterar.mockRejectedValue(
+      erroHttp(422, { message: 'no máximo 50 etiquetas por vez' })
+    );
+    const w = await abrirPessoa();
+    await w.get(marca('mudar-etiquetas')).trigger('click');
+    await flushPromises();
+    await w.get('[data-etiqueta="site"] input').setValue(true);
+    await salvarNoDialogo(w);
+    expect(w.get('[data-carteira="alerta-do-dialogo"]').text()).toBe(
+      'no máximo 50 etiquetas por vez'
+    );
+  });
+
+  it('o × fecha o aviso', async () => {
+    LabelsAPI.get.mockResolvedValue(ETIQUETAS_DA_CONTA);
+    EtiquetasDoContatoAPI.alterar.mockResolvedValue({ data: {} });
+    const w = await abrirPessoa();
+    await w.get(marca('mudar-etiquetas')).trigger('click');
+    await flushPromises();
+    await w.get('[data-etiqueta="site"] input').setValue(true);
+    await salvarNoDialogo(w);
+    await w.get('[data-carteira="fechar-aviso"]').trigger('click');
+    expect(w.get('[data-carteira="aviso-vivo"]').text()).toBe('');
   });
 });
 
@@ -431,21 +615,27 @@ describe('notas, "não quer mensagens" e conversas', () => {
     expect(useAlert).toHaveBeenCalledWith('Nota apagada.');
   });
 
-  it('marcar "não quer mensagens" pergunta, marca, mostra a faixa e "Desfazer" libera', async () => {
+  it('marcar "não quer mensagens" pergunta, marca, diz que deu certo e leva o foco à faixa', async () => {
     ContactAPI.markOptOut.mockResolvedValue({ data: {} });
-    ContactAPI.removeOptOut.mockResolvedValue({ data: {} });
     const w = await abrirPessoa();
     RelacionamentosAPI.pessoa.mockResolvedValue({
       data: { ...ANA, opted_out_at: AGORA, opt_out_source: 'manual' },
     });
-    await escolherNoMais(w, 'naoQuer');
+    await w.get(marca('mais-acoes')).trigger('click');
+    expect(w.get('[data-mais="naoQuer"]').text()).toBe(
+      'Marcar que não quer mensagens'
+    );
+    await w.get('[data-mais="naoQuer"]').trigger('click');
+    await flushPromises();
     await confirmar(w, 'confirmar-nao-quer');
     expect(ContactAPI.markOptOut).toHaveBeenCalledWith(7);
-    expect(w.find(marca('faixa-nao-quer')).exists()).toBe(true);
-    RelacionamentosAPI.pessoa.mockResolvedValue({ data: ANA });
-    await desfazer(w);
-    expect(ContactAPI.removeOptOut).toHaveBeenCalledWith(7);
-    expect(w.find(marca('faixa-nao-quer')).exists()).toBe(false);
+    const faixa = w.get(marca('faixa-nao-quer'));
+    expect(faixa.text()).toContain('Marcado pela equipe nesta ficha.');
+    expect(document.activeElement).toBe(faixa.element);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Pronto. Ana Albuquerino não vai mais receber campanhas nem mensagens automáticas.'
+    );
+    expect(w.find('[data-carteira="desfazer"]').exists()).toBe(false);
   });
 
   it('"Ver todas" mostra as 5 conversas, e cada uma abre a conversa dela', async () => {
@@ -453,6 +643,12 @@ describe('notas, "não quer mensagens" e conversas', () => {
     expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(3);
     await w.get(marca('ver-todas')).trigger('click');
     expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(5);
+    // "Ver menos" também embaixo; fechar por ele devolve o foco ao de cima.
+    await w.get(marca('ver-menos-embaixo')).trigger('click');
+    await flushPromises();
+    expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(3);
+    expect(document.activeElement).toBe(w.get(marca('ver-todas')).element);
+    await w.get(marca('ver-todas')).trigger('click');
     await w.get('[data-conversa="5"]').trigger('click');
     expect(contexto.empurrar).toHaveBeenCalledWith({
       name: 'inbox_conversation',
@@ -463,19 +659,11 @@ describe('notas, "não quer mensagens" e conversas', () => {
 });
 
 describe('Ligar e Lembrete', () => {
-  it('Ligar só aparece com caixa de voz na conta e telefone na pessoa', async () => {
-    const semVoz = await abrirPessoa();
-    expect(semVoz.find('[data-ligar]').exists()).toBe(false);
-    semVoz.unmount();
-    caixas.lista = [{ id: 1, voz: true }];
-    const comVoz = await abrirPessoa();
-    expect(comVoz.get('[data-ligar]').attributes('data-fone')).toBe(
+  it('Ligar é o VoiceCallButton da casa, que decide pela caixa de voz e pelo telefone', async () => {
+    const w = await abrirPessoa();
+    expect(w.get('[data-ligar]').attributes('data-fone')).toBe(
       '+5511910310001'
     );
-    comVoz.unmount();
-    servidorResponde({ ...ANA, phone_number: null });
-    const semTelefone = await abrirPessoa();
-    expect(semTelefone.find('[data-ligar]').exists()).toBe(false);
   });
 
   it('Lembrete, com a permissão, abre a gaveta do lembrete já com a pessoa', async () => {
@@ -484,7 +672,11 @@ describe('Ligar e Lembrete', () => {
     expect(w.find('[data-lembrete-gaveta]').exists()).toBe(false);
     await w.get(marca('lembrete')).trigger('click');
     await flushPromises();
-    expect(w.get('[data-lembrete-gaveta]').text()).toBe('Ana Albuquerino');
+    const gaveta = w.get('[data-lembrete-gaveta]');
+    expect(gaveta.text()).toBe('Ana Albuquerino | Falar com Ana');
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    expect(gaveta.attributes('data-dia')).toBe(amanha.toDateString());
   });
 
   it('sem a permissão, não tem Lembrete', async () => {

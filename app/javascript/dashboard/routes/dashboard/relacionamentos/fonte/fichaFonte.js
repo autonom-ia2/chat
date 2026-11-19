@@ -9,8 +9,8 @@
 //      #3071 — e as ações que vieram da ficha antiga: juntar com outra pessoa
 //      (actions/contact_merge: a pessoa da ficha fica, a outra é absorvida),
 //      bloquear e desbloquear (o PATCH do contato, campo `blocked`), apagar
-//      (DELETE contacts/:id), pôr e tirar etiqueta (contacts/:id/labels, com a
-//      lista inteira), apagar nota e marcar "não quer mensagens" (opt_out);
+//      (DELETE contacts/:id), pôr e tirar etiqueta (contacts/:id/labels/alterar,
+//      só o que mudou), apagar nota e marcar "não quer mensagens" (opt_out);
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/ficha.js), a escrita só
 //      fica na memória e tudo demora um instante, como a rede.
@@ -20,6 +20,7 @@ import AccountActionsAPI from 'dashboard/api/accountActions';
 import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
@@ -59,7 +60,7 @@ const ESCRITAS = [
   'desbloquear',
   'apagar',
   'juntar',
-  'trocarEtiquetas',
+  'alterarEtiquetas',
   'apagarNota',
 ];
 const METODOS = [...Object.keys(LEITURAS), ...ESCRITAS];
@@ -211,9 +212,10 @@ const fonteReal = () => ({
       .sort((a, b) => a.nome.localeCompare(b.nome));
   },
   buscarPessoas,
-  // A lista inteira de etiquetas que a pessoa passa a ter.
-  async trocarEtiquetas(id, etiquetas) {
-    await noServidor(() => ContactAPI.updateContactLabels(id, etiquetas));
+  // Só o que mudou: { por, tirar }. O servidor aplica sobre a lista que está
+  // gravada, e a etiqueta que outra pessoa pôs no meio-tempo não some.
+  async alterarEtiquetas(id, mudanca) {
+    await noServidor(() => EtiquetasDoContatoAPI.alterar(id, mudanca));
     return lerPessoa(id);
   },
   async apagarNota(id, notaId) {

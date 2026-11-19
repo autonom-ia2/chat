@@ -59,7 +59,11 @@ const liberavel = computed(
 </script>
 
 <template>
-  <div data-relacionamentos="faixa-nao-quer">
+  <div
+    data-relacionamentos="faixa-nao-quer"
+    tabindex="-1"
+    class="rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+  >
     <Banner
       color="amber"
       class="[&>div:first-child]:flex-1 [&>div:first-child]:min-w-0"

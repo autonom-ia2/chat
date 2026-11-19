@@ -2,6 +2,7 @@
 import {
   computed,
   defineAsyncComponent,
+  nextTick,
   onMounted,
   ref,
   useTemplateRef,
@@ -10,8 +11,8 @@ import {
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
-import { useMapGetter } from 'dashboard/composables/store';
-import { isVoiceCallEnabled } from 'dashboard/helper/inbox';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
@@ -32,6 +33,8 @@ import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { useConversarComPessoa } from '../carteira/useConversarComPessoa';
+import { trechoCurto } from '../ficha/formatos';
+import { useIdioma } from '../ficha/idioma';
 import { linhasDaPessoa, redesPreenchidas } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -69,13 +72,19 @@ const LembreteGaveta = defineAsyncComponent(
 // Ligar, Lembrete, pôr e tirar etiqueta, apagar nota, "Ver todas" as
 // conversas, e no "⋯" Não quer receber mensagens, Juntar, Bloquear ou
 // Desbloquear e Apagar. O que apaga ou restringe pergunta antes e diz o que vai
-// acontecer; o que dá para voltar atrás (bloquear, "não quer mensagens",
-// etiquetas) mostra o aviso com "Desfazer". Depois de apagar, a ficha volta
-// para a lista; depois de juntar, fica na mesma pessoa, já com o que veio da
-// outra. Na demonstração tudo isso roda na memória (demo/ficha.js); só a
-// conversa e o lembrete avisam, porque as pessoas são inventadas.
+// acontecer. Bloquear e "não quer mensagens" dizem que deu certo e levam o foco
+// à faixa que aparece, que já tem "Desbloquear" / "Liberar". Mudar etiquetas
+// mostra o aviso com "Desfazer"; juntar mostra o mesmo aviso, sem ele. O aviso
+// tem um × para fechar; no celular fica logo abaixo do cabeçalho, no meio da
+// página, e não cobre botão; no computador fica preso ao pé da tela, e a página
+// ganha folga embaixo enquanto ele existe. Depois de apagar, a ficha volta para
+// a lista; depois de juntar, fica na mesma pessoa, já com o que veio da outra.
+// Na demonstração tudo isso roda na memória (demo/ficha.js); só a conversa e o
+// lembrete avisam, porque as pessoas são inventadas.
 const { t } = useI18n();
 const route = useRoute();
+const idioma = useIdioma();
+const { isCloudFeatureEnabled } = useAccount();
 const acoes = useAcoesDaFicha();
 const permissoes = usePermissoesDaFicha();
 const demo = usarDemo(route.query);
@@ -110,6 +119,10 @@ const dialogoEtiquetas = useTemplateRef('dialogoEtiquetas');
 const conversaNova = useTemplateRef('conversaNova');
 const alertaDoJuntar = ref('');
 const alertaDasEtiquetas = ref('');
+// As cores das etiquetas da conta, para o cabeçalho: { [nome]: '#cor' }.
+const coresDasEtiquetas = ref({});
+// Quantos seguros a pessoa tem (o bloco Seguros conta): o "Apagar" diz.
+const quantosSeguros = ref(0);
 const {
   pergunta,
   alerta: alertaDaPergunta,
@@ -140,15 +153,16 @@ const resultado = (deuCerto, certo, erro, valores) => {
 };
 const ft = (chave, valores) => t(`RELACIONAMENTOS_FICHA.${chave}`, valores);
 
-// #3071 — "Ligar": a conta tem caixa com voz e a pessoa tem telefone (a regra
-// do VoiceCallButton, que liga de verdade). Na demonstração não há chamada.
-const caixas = useMapGetter('inboxes/getInboxes');
-const podeLigar = computed(
-  () =>
-    !fonte.usaDemo &&
-    Boolean(ficha.pessoa.value?.phone_number) &&
-    (caixas.value ?? []).some(isVoiceCallEnabled)
-);
+// #3071 — "Ligar": quem decide é o VoiceCallButton (caixa com voz e telefone).
+// Na demonstração as pessoas são inventadas: não há chamada.
+const podeLigar = computed(() => !fonte.usaDemo);
+
+// A faixa que acabou de aparecer recebe o foco: quem usa leitor de tela ouve o
+// que mudou, e o botão de voltar atrás está nela.
+const focarFaixa = async marca => {
+  await nextTick();
+  document.querySelector(`[data-relacionamentos="${marca}"]`)?.focus();
+};
 
 const marcarCliente = async () =>
   resultado(
@@ -225,33 +239,56 @@ const perguntarBloquear = () =>
     erro: ft('BLOQUEIO.ERRO_BLOQUEAR'),
     agir: async () => {
       if (!(await ficha.bloquear())) return false;
-      desfazer.mostrar(ft('BLOQUEIO.BLOQUEADA', { nome: nome.value }), () =>
-        desfeito(
-          ficha.desbloquear,
-          'BLOQUEIO.DESBLOQUEADA',
-          'BLOQUEIO.ERRO_DESBLOQUEAR'
-        )
-      );
+      resultado(true, 'RELACIONAMENTOS_FICHA.BLOQUEIO.BLOQUEADA', '', {
+        nome: nome.value,
+      });
       return true;
     },
+    depois: () => focarFaixa('faixa-bloqueada'),
   });
 
 const perguntarNaoQuer = () =>
   perguntar({
     marca: 'confirmar-nao-quer',
     tipo: 'edit',
+    // "Marcar que não quer" não cabe ao lado de "Cancelar" no diálogo estreito.
+    empilhado: true,
     titulo: ft('NAO_QUER.TITULO', { nome: nome.value }),
     aviso: ft('NAO_QUER.AVISO', { nome: primeiroNome.value }),
     confirmar: ft('NAO_QUER.CONFIRMAR'),
     erro: ft('NAO_QUER.ERRO'),
     agir: async () => {
       if (!(await ficha.marcarNaoQuer())) return false;
-      desfazer.mostrar(ft('NAO_QUER.MARCADO', { nome: nome.value }), () =>
-        desfeito(ficha.liberar, 'FAIXA.LIBERADO', 'FAIXA.ERRO')
-      );
+      resultado(true, 'RELACIONAMENTOS_FICHA.NAO_QUER.MARCADO', '', {
+        nome: nome.value,
+      });
       return true;
     },
+    depois: () => focarFaixa('faixa-nao-quer'),
   });
+
+// O que o DELETE contacts/:id faz de verdade: conversas, mensagens e notas
+// saem (destroy_async); os seguros saem com o PDF (ContactCarteira); os cards
+// ficam no funil sem a pessoa (nullify) ou, com a flag crm_arquivados, sem os
+// dados dela e com as reuniões futuras canceladas (ContactCrmCards).
+const avisoDeApagar = () => {
+  const valores = { nome: nome.value };
+  const cardsSemDados = isCloudFeatureEnabled(FEATURE_FLAGS.CRM_ARQUIVADOS);
+  return [
+    ft('APAGAR.AVISO', valores),
+    quantosSeguros.value > 0 &&
+      t(
+        'RELACIONAMENTOS_FICHA.APAGAR.SEGUROS',
+        { ...valores, count: quantosSeguros.value },
+        quantosSeguros.value
+      ),
+    ficha.cards.value.length > 0 &&
+      ft(cardsSemDados ? 'APAGAR.CARDS_SEM_DADOS' : 'APAGAR.CARDS'),
+    ft('APAGAR.NAO_VOLTA'),
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
 
 // Depois de apagar não há ficha: volta para a lista, e o aviso vai junto.
 const perguntarApagar = () =>
@@ -259,7 +296,7 @@ const perguntarApagar = () =>
     marca: 'confirmar-apagar',
     tipo: 'alert',
     titulo: ft('APAGAR.TITULO', { nome: nome.value }),
-    aviso: ft('APAGAR.AVISO', { nome: nome.value }),
+    aviso: avisoDeApagar(),
     confirmar: ft('APAGAR.CONFIRMAR', { nome: primeiroNome.value }),
     erro: ft('APAGAR.ERRO', { nome: nome.value }),
     agir: async () => {
@@ -273,10 +310,7 @@ const perguntarApagar = () =>
 
 // O texto da nota no aviso, curto: é para a pessoa reconhecer qual é.
 const TAMANHO_DO_TRECHO = 80;
-const trechoDa = texto =>
-  texto.length > TAMANHO_DO_TRECHO
-    ? `${texto.slice(0, TAMANHO_DO_TRECHO)}…`
-    : texto;
+const trechoDa = texto => trechoCurto(texto, TAMANHO_DO_TRECHO);
 
 const perguntarApagarNota = nota => {
   desfazer.limpar();
@@ -311,10 +345,7 @@ const juntar = async outra => {
     return;
   }
   dialogoJuntar.value?.fechar();
-  resultado(true, 'RELACIONAMENTOS_FICHA.JUNTAR.JUNTADAS', '', {
-    sai: outra.name,
-    fica,
-  });
+  desfazer.mostrar(ft('JUNTAR.JUNTADAS', { sai: outra.name, fica }));
 };
 
 const abrirEtiquetas = () => {
@@ -323,17 +354,30 @@ const abrirEtiquetas = () => {
   dialogoEtiquetas.value?.abrir();
 };
 
-const salvarEtiquetas = async etiquetas => {
-  const antes = [...(ficha.pessoa.value?.labels ?? [])];
+// "Pronto. Entrou: a e b. Saiu: c." — só as partes que existem.
+const emLista = nomes =>
+  new Intl.ListFormat(idioma.value, { type: 'conjunction' }).format(nomes);
+const fraseDasEtiquetas = ({ por, tirar }) =>
+  [
+    ft('ETIQUETAS.PRONTO'),
+    por.length && ft('ETIQUETAS.ENTROU', { etiquetas: emLista(por) }),
+    tirar.length && ft('ETIQUETAS.SAIU', { etiquetas: emLista(tirar) }),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+// Grava só o que mudou ({ por, tirar }); o "Desfazer" faz o contrário, também
+// só com a diferença.
+const salvarEtiquetas = async mudanca => {
   alertaDasEtiquetas.value = '';
-  if (!(await ficha.trocarEtiquetas(etiquetas))) {
-    alertaDasEtiquetas.value = ft('ETIQUETAS.ERRO');
+  if (!(await ficha.alterarEtiquetas(mudanca))) {
+    alertaDasEtiquetas.value = ficha.motivo.value || ft('ETIQUETAS.ERRO');
     return;
   }
   dialogoEtiquetas.value?.fechar();
-  desfazer.mostrar(ft('ETIQUETAS.SALVAS', { nome: nome.value }), () =>
+  desfazer.mostrar(fraseDasEtiquetas(mudanca), () =>
     desfeito(
-      () => ficha.trocarEtiquetas(antes),
+      () => ficha.alterarEtiquetas({ por: mudanca.tirar, tirar: mudanca.por }),
       'ETIQUETAS.VOLTARAM',
       'ETIQUETAS.ERRO'
     )
@@ -377,10 +421,33 @@ const abrirConversa = conversaId => {
   acoes.abrirConversa(conversaId);
 };
 
+// O lembrete aberto pela ficha já vem com o "O que é" e com "Amanhã, 09:00".
+const amanha = () => {
+  const dia = new Date();
+  dia.setDate(dia.getDate() + 1);
+  return dia;
+};
+const diaDoLembrete = ref(amanha());
+
 const lembrete = () => {
   desfazer.limpar();
   if (fonte.usaDemo) avisar('LEMBRETE');
-  else lembreteAberto.value = true;
+  else {
+    diaDoLembrete.value = amanha();
+    lembreteAberto.value = true;
+  }
+};
+
+const carregarCores = async () => {
+  try {
+    const daConta = await fonte.etiquetasDaConta();
+    coresDasEtiquetas.value = Object.fromEntries(
+      daConta.map(({ nome: etiqueta, cor }) => [etiqueta, cor])
+    );
+  } catch {
+    // Sem as cores, as etiquetas aparecem sem a bolinha: nada para avisar.
+    coresDasEtiquetas.value = {};
+  }
 };
 
 const novoCard = () => {
@@ -394,7 +461,10 @@ const abrirNoCrm = () => {
   acoes.abrirNoCrm(cardId);
 };
 
-onMounted(ficha.carregar);
+onMounted(() => {
+  ficha.carregar();
+  carregarCores();
+});
 // Ao sair da ficha o parâmetro some (id NaN): não é pedido, não é "não achei".
 watch(id, novo => {
   desfazer.limpar();
@@ -418,7 +488,8 @@ watch(
     <AvisoVivo :texto="aviso" />
     <main class="flex-1 min-w-0 overflow-y-auto">
       <div
-        class="flex flex-col w-full max-w-6xl min-w-0 gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10 md:pb-10"
+        class="flex flex-col w-full max-w-6xl min-w-0 gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10"
+        :class="desfazer.texto.value ? 'md:pb-28' : 'md:pb-10'"
       >
         <LinkDeVolta
           :texto="t('RELACIONAMENTOS_FICHA.VOLTAR.PESSOAS')"
@@ -467,12 +538,13 @@ watch(
         >
           <CabecalhoDaPessoa
             :pessoa="ficha.pessoa.value"
-            :marcando-cliente="ficha.ocupado.value === 'marcarCliente'"
+            :marcando-cliente="ficha.ocupadoEm('marcarCliente')"
             :pode-editar="podeEditar"
             :pode-apagar="podeApagar"
             :pode-criar-cards="podeCriarCards"
             :pode-lembrete="podeLembrete"
             :pode-ligar="podeLigar"
+            :cores-das-etiquetas="coresDasEtiquetas"
             @conversar="conversar"
             @novo-card="novoCard"
             @lembrete="lembrete"
@@ -485,7 +557,7 @@ watch(
           <FaixaBloqueada
             v-if="ficha.pessoa.value.blocked"
             :pessoa="ficha.pessoa.value"
-            :desbloqueando="ficha.ocupado.value === 'desbloquear'"
+            :desbloqueando="ficha.ocupadoEm('desbloquear')"
             :pode-desbloquear="podeEditar"
             @desbloquear="desbloquear"
           />
@@ -493,10 +565,25 @@ watch(
           <FaixaNaoQuer
             v-if="ficha.pessoa.value.opted_out_at"
             :pessoa="ficha.pessoa.value"
-            :liberando="ficha.ocupado.value === 'liberar'"
+            :liberando="ficha.ocupadoEm('liberar')"
             :agora="agora"
             :pode-liberar="podeEditar"
             @liberar="liberar"
+          />
+
+          <!-- O aviso do que acabou de acontecer. No celular fica aqui, logo
+               abaixo do cabeçalho e das faixas, sem cobrir nada; no computador
+               vai para o fim e fica preso ao pé da tela. Vazio, o espaço entre
+               os blocos não dobra (-mt-6 desfaz o gap). -->
+          <AvisoComDesfazer
+            class="md:order-last md:sticky md:z-30 md:bottom-4"
+            :class="{ '-mt-6': !desfazer.texto.value }"
+            :texto="desfazer.texto.value"
+            :pode-desfazer="desfazer.podeDesfazer.value"
+            :desfazendo="desfazer.desfazendo.value"
+            pode-fechar
+            @desfazer="desfazer.desfazer"
+            @fechar="desfazer.limpar"
           />
 
           <CorpoDaFichaDaPessoa
@@ -509,7 +596,7 @@ watch(
             :linhas="linhas"
             :redes="redes"
             :agora="agora"
-            :guardando-nota="ficha.ocupado.value === 'guardarNota'"
+            :guardando-nota="ficha.ocupadoEm('guardarNota')"
             :falhas="ficha.falhas.value"
             :pode-editar="podeEditar"
             pode-abrir-conversas
@@ -529,24 +616,18 @@ watch(
                 :pode-exportar="podeExportar"
                 :agora="agora"
                 @abrir-segurado="abrirSegurado"
+                @quantos="quantos => (quantosSeguros = quantos)"
               />
             </template>
           </CorpoDaFichaDaPessoa>
         </div>
-        <AvisoComDesfazer
-          class="sticky z-30 bottom-4 ms-20 md:ms-0"
-          :texto="desfazer.texto.value"
-          :pode-desfazer="desfazer.podeDesfazer.value"
-          :desfazendo="desfazer.desfazendo.value"
-          @desfazer="desfazer.desfazer"
-        />
       </div>
     </main>
 
     <GavetaDeInformacoes
       :aberta="gavetaAberta"
       :pessoa="ficha.pessoa.value"
-      :salvando="ficha.ocupado.value === 'salvar'"
+      :salvando="ficha.ocupadoEm('salvar')"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
     />
@@ -564,8 +645,9 @@ watch(
         :aviso="pergunta?.aviso ?? ''"
         :confirmar="pergunta?.confirmar ?? ''"
         :voltar="t('RELACIONAMENTOS.COMUM.CANCELAR')"
-        :ocupado="Boolean(ficha.ocupado.value)"
+        :ocupado="ficha.algumOcupado.value"
         :alerta="alertaDaPergunta"
+        :empilhado="pergunta?.empilhado ?? false"
         aviso-forte
         @confirmar="confirmarPergunta"
       />
@@ -573,15 +655,16 @@ watch(
         ref="dialogoJuntar"
         :pessoa="ficha.pessoa.value"
         :buscar="termo => fonte.buscarPessoas(termo, id)"
-        :juntando="ficha.ocupado.value === 'juntar'"
+        :juntando="ficha.ocupadoEm('juntar')"
         :alerta="alertaDoJuntar"
+        :com-seguros="comSeguros"
         @juntar="juntar"
       />
       <DialogoEtiquetasDaPessoa
         ref="dialogoEtiquetas"
         :pessoa="ficha.pessoa.value"
         :carregar="fonte.etiquetasDaConta"
-        :salvando="ficha.ocupado.value === 'etiquetas'"
+        :salvando="ficha.ocupadoEm('etiquetas')"
         :alerta="alertaDasEtiquetas"
         @salvar="salvarEtiquetas"
       />
@@ -589,6 +672,8 @@ watch(
         v-if="lembreteAberto"
         show
         :contato="{ id: ficha.pessoa.value.id, name: nome }"
+        :titulo="ft('ACOES.LEMBRETE_TITULO', { nome: primeiroNome })"
+        :dia="diaDoLembrete"
         @close="lembreteAberto = false"
       />
     </template>

@@ -424,9 +424,20 @@ export const apagar = id => {
 
 export const etiquetasDaConta = () => copia(ETIQUETAS_DA_CONTA);
 
-export const trocarEtiquetas = (id, etiquetas) => {
-  exigir(id);
-  memoria.etiquetas.set(id, [...etiquetas]);
+// Como o servidor (AlterarEtiquetasConcern): tira e põe sobre a lista que está
+// gravada, sem diferenciar maiúscula.
+export const alterarEtiquetas = (id, { por = [], tirar = [] }) => {
+  const atual = (pessoa(id) ?? exigir(id)).labels ?? [];
+  const tiradas = new Set(tirar.map(nome => nome.toLowerCase()));
+  const ficam = atual.filter(nome => !tiradas.has(nome.toLowerCase()));
+  const ja = new Set(ficam.map(nome => nome.toLowerCase()));
+  const novas = por.filter(nome => {
+    const chave = nome.toLowerCase();
+    if (ja.has(chave)) return false;
+    ja.add(chave);
+    return true;
+  });
+  memoria.etiquetas.set(id, [...ficam, ...novas]);
   return pessoa(id);
 };
 
@@ -522,7 +533,7 @@ export const demoDaFicha = {
   juntar,
   etiquetasDaConta,
   buscarPessoas,
-  trocarEtiquetas,
+  alterarEtiquetas,
   apagarNota,
   empresa,
   pessoasDaEmpresa,

@@ -25,7 +25,11 @@ const primeiroNome = computed(
 </script>
 
 <template>
-  <div data-relacionamentos="faixa-bloqueada">
+  <div
+    data-relacionamentos="faixa-bloqueada"
+    tabindex="-1"
+    class="rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+  >
     <Banner
       color="ruby"
       class="[&>div:first-child]:flex-1 [&>div:first-child]:min-w-0"

@@ -299,9 +299,13 @@ describe('ações da ficha antiga na demonstração', () => {
     ).toBeNull();
   });
 
-  it('trocar etiquetas grava a lista inteira', async () => {
-    const pessoa = await fonte.trocarEtiquetas(ID_CLIENTE_COMPLETO, ['site']);
-    expect(pessoa.labels).toEqual(['site']);
+  it('alterar etiquetas põe e tira só o que mudou, sem diferenciar maiúscula', async () => {
+    const antes = (await fonte.pessoa(ID_CLIENTE_COMPLETO)).labels;
+    const pessoa = await fonte.alterarEtiquetas(ID_CLIENTE_COMPLETO, {
+      por: ['nova', 'NOVA'],
+      tirar: antes.slice(0, 1).map(nome => nome.toUpperCase()),
+    });
+    expect(pessoa.labels).toEqual([...antes.slice(1), 'nova']);
   });
 
   it('apagar nota tira só ela', async () => {

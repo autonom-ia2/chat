@@ -6,6 +6,11 @@ import {
   idValido,
 } from '../../ficha/useEstadoDaFicha';
 import { FALHA_DA_PARTE } from '../../ficha/falhas';
+import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
+
+vi.mock('dashboard/helper/sentryPrivacy', () => ({
+  reportarSemDados: vi.fn(),
+}));
 
 // O estado das fichas e o que acontece quando a fonte falha (#2894, #2895).
 const pessoa = { id: 1, name: 'Ana' };
@@ -170,14 +175,49 @@ describe('useFichaDaPessoa', () => {
   });
 
   it('devolve false quando a escrita falha e solta o "ocupado"', async () => {
+    const falha = Object.assign(new Error('x'), { response: { status: 500 } });
     const ficha = useFichaDaPessoa(
-      fonteDaPessoa({ salvar: vi.fn().mockRejectedValue(new Error('x')) }),
+      fonteDaPessoa({ salvar: vi.fn().mockRejectedValue(falha) }),
       ref(1)
     );
     await ficha.carregar();
     expect(await ficha.salvar({})).toBe(false);
-    expect(ficha.ocupado.value).toBe('');
+    expect(ficha.ocupadoEm('salvar')).toBe(false);
+    expect(ficha.algumOcupado.value).toBe(false);
     expect(ficha.pessoa.value).toEqual(pessoa);
+    expect(reportarSemDados).not.toHaveBeenCalled();
+  });
+
+  // #3071 — um defeito da tela (não do servidor) não some calado: vai para o
+  // Sentry, sem dado da pessoa, e a ação devolve false.
+  it('um erro que não veio do servidor vai para o Sentry', async () => {
+    const defeito = new TypeError('x is not a function');
+    const ficha = useFichaDaPessoa(
+      fonteDaPessoa({ salvar: vi.fn().mockRejectedValue(defeito) }),
+      ref(1)
+    );
+    await ficha.carregar();
+    expect(await ficha.salvar({})).toBe(false);
+    expect(reportarSemDados).toHaveBeenCalledWith(defeito, {
+      tela: 'relacionamentos_ficha_pessoa',
+    });
+  });
+
+  it('duas ações ao mesmo tempo: terminar uma não solta o "ocupado" da outra', async () => {
+    const salvando = adiada();
+    const fonte = fonteDaPessoa({
+      salvar: vi.fn(() => salvando.promessa),
+      guardarNota: vi.fn().mockResolvedValue({ id: 'n' }),
+    });
+    const ficha = useFichaDaPessoa(fonte, ref(1));
+    await ficha.carregar();
+    const salvar = ficha.salvar({});
+    await ficha.guardarNota('oi');
+    expect(ficha.ocupadoEm('salvar')).toBe(true);
+    expect(ficha.ocupadoEm('guardarNota')).toBe(false);
+    salvando.resolver(pessoa);
+    await salvar;
+    expect(ficha.algumOcupado.value).toBe(false);
   });
 
   it('marcar como cliente troca a pessoa e relê os cards', async () => {
@@ -200,12 +240,12 @@ describe('useFichaDaPessoa', () => {
     const ficha = useFichaDaPessoa(fonte, ref(1));
     await ficha.carregar();
     const desmarcando = ficha.desmarcarCliente();
-    expect(ficha.ocupado.value).toBe('desmarcarCliente');
+    expect(ficha.ocupadoEm('desmarcarCliente')).toBe(true);
     gravando.resolver({ ...pessoa, contact_type: 'lead' });
     expect(await desmarcando).toBe(true);
     expect(fonte.desmarcarCliente).toHaveBeenCalledWith(1);
     expect(ficha.pessoa.value.contact_type).toBe('lead');
-    expect(ficha.ocupado.value).toBe('');
+    expect(ficha.ocupadoEm('desmarcarCliente')).toBe(false);
   });
 
   it('desmarcar cliente que falha devolve false e deixa a pessoa como estava', async () => {

@@ -2,7 +2,7 @@
 import { ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { quandoRelativo } from '../../ficha/formatos';
+import { quandoRelativo, trechoCurto } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
 import FalhaDaParte from './FalhaDaParte.vue';
@@ -25,10 +25,7 @@ const emit = defineEmits(['guardar', 'tentar', 'apagar']);
 
 // O texto da nota no rótulo da lixeira, curto: o leitor de tela diz qual é.
 const TAMANHO_DO_TRECHO = 60;
-const trecho = texto =>
-  texto.length > TAMANHO_DO_TRECHO
-    ? `${texto.slice(0, TAMANHO_DO_TRECHO)}…`
-    : texto;
+const trecho = texto => trechoCurto(texto, TAMANHO_DO_TRECHO);
 
 const { t } = useI18n();
 const idioma = useIdioma();

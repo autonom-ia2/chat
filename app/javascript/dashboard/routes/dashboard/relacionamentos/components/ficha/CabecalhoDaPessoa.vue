@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Label from 'dashboard/components-next/label/Label.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import { formatarMes } from '../../ficha/formatos';
 import { formatarTelefone } from '../../lista/telefone';
@@ -18,11 +19,14 @@ import MenuMais from './MenuMais.vue';
 // (`podeCriarCards` falso) não tem "Novo card".
 // #3071 — todas as ações da ficha antiga, de verdade:
 //  - "Conversar" aparece sempre: com conversa abre a mais recente; sem, a página
-//    abre a "Nova conversa" já com a pessoa. "Ligar" fica ao lado dele quando a
-//    conta tem caixa com voz e a pessoa tem telefone (`podeLigar`; o botão é o
-//    VoiceCallButton da casa, que escolhe a caixa e liga);
+//    abre a "Nova conversa" já com a pessoa. "Ligar" fica ao lado dele: é o
+//    VoiceCallButton da casa, que só aparece quando a conta tem caixa com voz e
+//    a pessoa tem telefone, e escolhe a caixa e liga. `podeLigar` falso só na
+//    demonstração, onde as pessoas são inventadas;
 //  - "Lembrete" com `podeLembrete` (a regra do "Novo lembrete" da ficha antiga);
-//  - as etiquetas ganham "Pôr etiqueta" / "Mudar etiquetas" (`podeEditar`);
+//  - as etiquetas, com a cor de cada uma (o Label da casa; `coresDasEtiquetas`
+//    vem das etiquetas da conta), ganham "Pôr etiqueta" / "Mudar etiquetas"
+//    (`podeEditar`), numa linha própria, alinhado com os ícones do contato;
 //  - o "⋯" tem Alterar informações, Não é mais cliente, Não quer receber
 //    mensagens, Juntar, Bloquear ou Desbloquear (de quem pode editar) e Apagar
 //    (`podeApagar`). Com dois itens ou mais é menu; com um só, é um botão:
@@ -35,6 +39,8 @@ const props = defineProps({
   podeCriarCards: { type: Boolean, default: true },
   podeLembrete: { type: Boolean, default: false },
   podeLigar: { type: Boolean, default: false },
+  // { [nome]: '#cor' }: as etiquetas da conta.
+  coresDasEtiquetas: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits([
   'conversar',
@@ -65,7 +71,7 @@ const ITEM = {
   alterar: { chave: 'ALTERAR_INFORMACOES', icone: 'i-lucide-pencil' },
   desmarcar: { chave: 'DESMARCAR_CLIENTE', icone: 'i-lucide-user-minus' },
   naoQuer: { chave: 'NAO_QUER', icone: 'i-lucide-bell-off' },
-  juntar: { chave: 'JUNTAR', icone: 'i-lucide-git-merge' },
+  juntar: { chave: 'JUNTAR', icone: 'i-lucide-combine' },
   bloquear: { chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
   desbloquear: { chave: 'DESBLOQUEAR', icone: 'i-lucide-shield-check' },
   apagar: { chave: 'APAGAR', icone: 'i-lucide-trash-2', perigo: true },
@@ -104,6 +110,12 @@ const botoesAoLadoDoMais = computed(
 );
 const grade = computed(() =>
   temMais.value ? GRADE_COM_MAIS[botoesAoLadoDoMais.value] : 'grid-cols-1'
+);
+const etiquetas = computed(() =>
+  (props.pessoa.labels ?? []).map(nome => ({
+    title: nome,
+    color: props.coresDasEtiquetas[nome] ?? null,
+  }))
 );
 const rotuloDasEtiquetas = computed(() =>
   t(
@@ -217,19 +229,19 @@ const rotuloDasEtiquetas = computed(() =>
         <div
           v-if="pessoa.labels?.length || podeEditar"
           data-relacionamentos="etiquetas-da-pessoa"
-          class="flex flex-wrap items-center min-w-0 gap-2"
+          class="flex flex-col items-start min-w-0 gap-1"
         >
           <ul
-            v-if="pessoa.labels?.length"
+            v-if="etiquetas.length"
             :aria-label="t('RELACIONAMENTOS_FICHA.CABECALHO.ETIQUETAS')"
             class="flex flex-wrap gap-2 p-0 m-0 list-none"
           >
             <li
-              v-for="etiqueta in pessoa.labels"
-              :key="etiqueta"
-              class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-n-iris-3 text-n-iris-11"
+              v-for="etiqueta in etiquetas"
+              :key="etiqueta.title"
+              :data-etiqueta-da-pessoa="etiqueta.title"
             >
-              {{ etiqueta }}
+              <Label :label="etiqueta" compact />
             </li>
           </ul>
           <Button
@@ -238,7 +250,7 @@ const rotuloDasEtiquetas = computed(() =>
             slate
             ghost
             icon="i-lucide-tag"
-            class="!h-11 -my-1 whitespace-nowrap"
+            class="!h-11 -ms-3 whitespace-nowrap"
             :label="rotuloDasEtiquetas"
             @click="emit('etiquetas')"
           />
