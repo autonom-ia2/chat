@@ -96,6 +96,7 @@ module WhatsappApiCampaigns
                                            variables: recipient_variables(recipient)).render
       message = ConversationRecorder.new(recipient: recipient, rendered_body: rendered_body).perform
       mark_recipient_sent!(recipient, message)
+      # Conta onde a campanha dá a mensagem por enviada: a entrega ao provedor segue assíncrona, pelo canal da caixa.
       Autonomia::RitmoDeEnvio::Porteiro.contar!(account: @campaign.account, contact_id: recipient.contact_id, origem: ORIGEM_DO_RITMO)
     rescue StandardError => e
       handle_recipient_failure(recipient, e)

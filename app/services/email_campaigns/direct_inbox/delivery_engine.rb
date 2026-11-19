@@ -50,10 +50,11 @@ module EmailCampaigns
 
       # #3063: the limit per customer and the sending hours of the account, right before the send.
       def deliver_now_or_postpone(recipient)
-        return if ::EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient)
+        contato = ::EmailCampaigns::RitmoDoDestinatario.contato(@campaign, recipient)
+        return if ::EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato)
 
         result = RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient)
-        ::EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, recipient) if result == :sent
+        ::EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, contato) if result == :sent
       end
 
       def next_pending

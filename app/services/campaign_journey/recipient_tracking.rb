@@ -18,11 +18,13 @@ module CampaignJourney::RecipientTracking
   INSERT_BATCH_SIZE = 1000
 
   # Sends the recipients whose postponement is due (CampaignJourney::RetomarAdiadosJob). The campaign already ran: no
-  # recipient is created; whoever is still due and was not sent at the end becomes failed, like in the first run.
+  # recipient is created. Only the recipients due when the run started are walked; whoever of them is still queued
+  # and not postponed again at the end becomes failed. Those that became due during the run wait for the next sweep.
   def retomar_adiados
-    campaign.campaign_recipients.queued.where(adiado_ate: ..Time.current).includes(:contact)
+    inicio = Time.current
+    campaign.campaign_recipients.queued.where(adiado_ate: ..inicio).includes(:contact)
             .find_each(batch_size: INSERT_BATCH_SIZE) { |recipient| retomar_destinatario(recipient) }
-    fail_unprocessed_recipients
+    fail_unprocessed_recipients(adiados_ate: inicio)
   end
 
   private
@@ -66,10 +68,12 @@ module CampaignJourney::RecipientTracking
     end
   end
 
-  # Whoever waits for a later time (adiado_ate in the future) is not "not processed".
-  def fail_unprocessed_recipients
-    due = campaign.campaign_recipients.queued.where('adiado_ate IS NULL OR adiado_ate <= ?', Time.current)
-    due.where.not(id: accepted_by_provider.to_a).find_each do |recipient|
+  # Whoever was postponed is not "not processed": it stays queued for the sweep, even when its time comes before the
+  # run ends. The first run fails only the never-postponed; the resumption (`adiados_ate`) only the ones it walked.
+  def fail_unprocessed_recipients(adiados_ate: nil)
+    queued = campaign.campaign_recipients.queued
+    walked = adiados_ate ? queued.where(adiado_ate: ..adiados_ate) : queued.where(adiado_ate: nil)
+    walked.where.not(id: accepted_by_provider.to_a).find_each do |recipient|
       recipient.mark_failed!(message: NOT_PROCESSED_REASON)
     end
   end

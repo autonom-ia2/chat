@@ -36,7 +36,10 @@ module CampaignJourney::SmsOneoffRecipients
 
   private
 
+  # The audience SMS badge is read again: turned off after the first run, the postponed are skipped like the others.
   def retomar_destinatario(recipient)
+    return recipient.mark_skipped!(CHANNEL_DISABLED_REASON) if sms_audience_link.present? && !audience_sms_enabled?
+
     process_sms_recipient(recipient)
   end
 

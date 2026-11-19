@@ -43,6 +43,15 @@ RSpec.describe 'Ritmo de envio API (#3063)', type: :request do
     expect(response.parsed_body['payload']).to include('limite' => nil, 'horario' => nil)
   end
 
+  it 'mandar só uma das chaves não apaga a outra' do
+    patch path, headers: headers, as: :json,
+                params: { limite: { mensagens: 3, dias: 7 }, horario: { inicio: 8, fim: 20, dias_da_semana: [1] } }
+    patch path, headers: headers, as: :json, params: { limite: { mensagens: 5, dias: 15 } }
+
+    expect(response.parsed_body['payload']).to include('limite' => { 'mensagens' => 5, 'dias' => 15 },
+                                                       'horario' => { 'inicio' => 8, 'fim' => 20, 'dias_da_semana' => [1] })
+  end
+
   it 'recusa o que a tela não oferece, dizendo o campo' do
     patch path, headers: headers, as: :json, params: { horario: { inicio: 20, fim: 8, dias_da_semana: [1] } }
 

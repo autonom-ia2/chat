@@ -32,6 +32,7 @@ class CreateEnviosAoCliente < ActiveRecord::Migration[7.2]
 
     RECIPIENT_TABLES.each do |table|
       add_column table, :adiado_ate, :datetime, if_not_exists: true
+      remove_invalid_index(table, "idx_#{table}_adiado_ate")
       add_index table, :adiado_ate, where: 'adiado_ate IS NOT NULL', algorithm: :concurrently, if_not_exists: true,
                                     name: "idx_#{table}_adiado_ate"
     end
@@ -43,5 +44,16 @@ class CreateEnviosAoCliente < ActiveRecord::Migration[7.2]
       remove_column table, :adiado_ate, if_exists: true
     end
     drop_table :envios_ao_cliente, if_exists: true
+  end
+
+  private
+
+  # Um CREATE INDEX CONCURRENTLY que caiu no meio deixa o índice INVALID com o nome; o if_not_exists pularia ele.
+  def remove_invalid_index(table, name)
+    invalid = select_value(<<~SQL.squish)
+      SELECT 1 FROM pg_index JOIN pg_class ON pg_class.oid = pg_index.indexrelid
+      WHERE pg_class.relname = #{connection.quote(name)} AND NOT pg_index.indisvalid
+    SQL
+    remove_index table, name: name, algorithm: :concurrently if invalid
   end
 end

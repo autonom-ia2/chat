@@ -25,8 +25,11 @@ class Api::V1::Accounts::RitmoDeEnvioController < Api::V1::Accounts::BaseControl
 
   private
 
+  # A chave que não veio no corpo fica como está: mandar só o limite não apaga o horário, e o contrário.
   def ritmo_params
-    params.permit(limite: %i[mensagens dias], horario: [:inicio, :fim, { dias_da_semana: [] }]).to_h
+    enviado = params.permit(limite: %i[mensagens dias], horario: [:inicio, :fim, { dias_da_semana: [] }]).to_h
+    guardado = ::Autonomia::RitmoDeEnvio::Config.da(Current.account).to_h
+    guardado.keys.index_with { |chave| params.key?(chave) ? enviado[chave] : guardado[chave] }
   end
 
   def gravar(valor)

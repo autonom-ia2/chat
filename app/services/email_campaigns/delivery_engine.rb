@@ -50,7 +50,8 @@ module EmailCampaigns
     end
 
     def deliver_one(recipient, sender, _suppressed = nil)
-      return if EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient)
+      contato = EmailCampaigns::RitmoDoDestinatario.contato(@campaign, recipient)
+      return if EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato)
 
       gate = EmailCampaigns::DeliveryClaim.new(@campaign)
       return unless gate.prepare(recipient) == :ready
@@ -65,7 +66,7 @@ module EmailCampaigns
       # SES has ACCEPTED the message by here — never route a post-send failure through the
       # transient-retry path (that would re-queue + re-send a delivered message = duplicate email).
       persist_sent!(recipient, message_id)
-      EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, recipient)
+      EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, contato)
     rescue StandardError => e
       Rails.logger.error("[EmailCampaigns::DeliveryEngine] campaign=#{@campaign.id} recipient=#{recipient.id} #{e.message}")
       handle_send_failure(recipient, e) if claimed

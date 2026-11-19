@@ -15,16 +15,17 @@ module EmailCampaigns::RitmoDoDestinatario
     campaign.email_campaign_recipients.pending.where('adiado_ate IS NULL OR adiado_ate <= ?', agora)
   end
 
-  def adiado?(campaign, recipient)
-    ate = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campaign.account, contact: contato(campaign, recipient))
+  # `contato`: o de #contato, buscado uma vez por destinatário pelo motor e passado aos dois.
+  def adiado?(campaign, recipient, contato)
+    ate = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campaign.account, contact: contato)
     return false unless ate
 
     recipient.update_columns(adiado_ate: ate, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     true
   end
 
-  def contar!(campaign, recipient)
-    Autonomia::RitmoDeEnvio::Porteiro.contar!(account: campaign.account, contact_id: contato(campaign, recipient)&.id, origem: ORIGEM)
+  def contar!(campaign, contato)
+    Autonomia::RitmoDeEnvio::Porteiro.contar!(account: campaign.account, contact_id: contato&.id, origem: ORIGEM)
   end
 
   def contato(campaign, recipient)

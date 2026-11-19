@@ -36,9 +36,13 @@ class Autonomia::RitmoDeEnvio::Varredura
     vencidos(CampaignRecipient.queued, :campaign_id)
   end
 
+  # Só a campanha cuja corrente parou (todo pendente está adiado): com alguém pendente sem adiamento a corrente segue
+  # viva e pega o vencido sozinha; um DeliveryJob a mais dobraria o ritmo da caixa.
   def whatsapp_api
     ids = vencidos(WhatsappApiCampaignRecipient.pending, :whatsapp_api_campaign_id)
-    WhatsappApiCampaign.running.where(id: ids).pluck(:id)
+    andando = WhatsappApiCampaignRecipient.pending.where(whatsapp_api_campaign_id: ids, adiado_ate: nil)
+                                          .distinct.pluck(:whatsapp_api_campaign_id)
+    WhatsappApiCampaign.running.where(id: ids - andando).pluck(:id)
   end
 
   def email
