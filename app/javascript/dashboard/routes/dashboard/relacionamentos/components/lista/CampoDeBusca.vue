@@ -6,6 +6,8 @@ import { useI18n } from 'vue-i18n';
 // #2894 — a busca da lista. Ao digitar espera 300 ms antes de avisar quem usa
 // (a lista não pisca a cada letra); Enter avisa na hora; o X (e Esc) limpa e
 // avisa na hora. Se quem usa limpar a busca por fora, o campo esvazia junto.
+// #3057 — mesma altura (h-10) e mesmo canto dos outros campos da barra (a
+// ordem e "Mais filtros"), para os três ficarem alinhados.
 const props = defineProps({
   modelValue: { type: String, default: '' },
   placeholder: { type: String, required: true },
@@ -75,7 +77,7 @@ onBeforeUnmount(parar);
       autocomplete="off"
       :placeholder="textoDoCampo"
       :aria-label="t('RELACIONAMENTOS.LISTA.BUSCA.ROTULO')"
-      class="w-full h-10 !mb-0 rounded-xl border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
+      class="w-full h-10 !mb-0 rounded-lg border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
       @input="aoDigitar"
       @keydown.enter.prevent="avisar"
       @keydown.esc="limpar"
@@ -84,7 +86,7 @@ onBeforeUnmount(parar);
       v-if="texto"
       type="button"
       :aria-label="t('RELACIONAMENTOS.LISTA.BUSCA.LIMPAR')"
-      class="absolute inset-y-0 flex items-center justify-center rounded-xl text-n-slate-11 hover:text-n-slate-12 size-11 ltr:right-0 rtl:left-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      class="absolute inset-y-0 flex items-center justify-center rounded-lg text-n-slate-11 hover:text-n-slate-12 size-11 ltr:right-0 rtl:left-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       @click="limpar"
     >
       <span class="i-lucide-x size-5" aria-hidden="true" />

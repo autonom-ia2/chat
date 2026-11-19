@@ -120,7 +120,8 @@
         "MARCAR": "Select {nome}",
         "CONVERSAR_COM": "Chat with {nome}",
         "ABRINDO_CONVERSA": "Opening the chat with {nome}",
-        "EDITAR": "Edit {nome}’s details"
+        "EDITAR": "Edit {nome}’s details",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Show more",

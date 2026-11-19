@@ -1,5 +1,6 @@
 <script setup>
 import { computed, useId } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -16,6 +17,9 @@ import {
 // caminho até o CRM: não há lista vazia nem botão desligado. O funil escolhido
 // que não tem etapa nenhuma também: no lugar de uma escolha vazia, a tela diz
 // isso e oferece o CRM (a pessoa cria a etapa lá, ou escolhe outro funil aqui).
+// #3057 — sem funil, quem pode criar funil no CRM (`podeCriar`) ganha o botão
+// azul "Criar o funil de renovações para mim" (quem cria é a página), e "Abrir
+// o CRM" vira um link ao lado. Quem não pode segue com o caminho até o CRM.
 //   v-model: { funilId, etapaId, ... } (o resto dos ajustes passa direto)
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -24,11 +28,19 @@ const props = defineProps({
   // O que falta (FALTAS) e o id do aviso que diz isso, quando há.
   falta: { type: String, default: '' },
   idDoAviso: { type: String, default: undefined },
+  podeCriar: { type: Boolean, default: false },
+  criando: { type: Boolean, default: false },
 });
-const emit = defineEmits(['update:modelValue', 'abrirCrm']);
+const emit = defineEmits(['update:modelValue', 'abrirCrm', 'criarFunil']);
 
 const { t } = useI18n();
 const to = chave => t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.ONDE.${chave}`);
+// #3057 — no celular o rótulo inteiro não cabe no botão (o Button corta com
+// "…"): lá ele é "Criar o funil para mim".
+const telaLarga = useMediaQuery('(min-width: 640px)');
+const rotuloDeCriar = computed(() =>
+  to(telaLarga.value ? 'CRIAR_FUNIL' : 'CRIAR_FUNIL_CURTO')
+);
 const id = useId();
 
 const paraEscolher = lista =>
@@ -62,8 +74,33 @@ defineExpose({
     data-carteira="sem-funil"
     class="flex flex-col items-start gap-4"
   >
-    <p class="m-0 text-base text-n-slate-12">{{ to('SEM_FUNIL') }}</p>
+    <p class="m-0 text-base text-n-slate-12">
+      {{ to(podeCriar ? 'SEM_FUNIL_CRIAR' : 'SEM_FUNIL') }}
+    </p>
+    <div
+      v-if="podeCriar"
+      class="flex flex-col items-start w-full gap-2 sm:flex-row sm:items-center sm:gap-6"
+    >
+      <Button
+        size="lg"
+        icon="i-lucide-plus"
+        class="w-full sm:w-auto"
+        data-carteira="criar-funil"
+        :is-loading="criando"
+        :label="rotuloDeCriar"
+        @click="emit('criarFunil')"
+      />
+      <Button
+        link
+        size="lg"
+        class="min-h-11"
+        data-carteira="abrir-crm"
+        :label="to('ABRIR_CRM')"
+        @click="emit('abrirCrm')"
+      />
+    </div>
     <Button
+      v-else
       slate
       faded
       size="lg"

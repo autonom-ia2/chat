@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -19,6 +19,9 @@ import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 // para fazer, marcar não levaria a nada.
 // #2897 — `selos` é o lugar de mais um selo ao lado do nome: a conta que tem a
 // carteira de seguros põe ali o selo do seguro da pessoa.
+// #3057 — no celular, no máximo 2 selos à vista; o resto vira "+N" (o leitor
+// de tela continua lendo todos). Ficam à vista, nesta ordem: "Não quer
+// mensagens" (é um alerta), o do seguro e "Cliente".
 // #3062 — a edição rápida da lista de contatos de hoje: o lápis no fim da linha
 // abre "Alterar informações" sem sair da lista. Fica sempre à vista e discreto
 // (sem fundo), com o nome da pessoa no rótulo para o leitor de tela; só existe
@@ -40,6 +43,22 @@ const partes = computed(() =>
 );
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
+
+const slots = useSlots();
+const SELOS_NO_CELULAR = 2;
+// Os selos da linha, do mais importante para o menos.
+const selos = computed(() =>
+  [
+    props.pessoa.opted_out_at && 'naoQuer',
+    slots.selos && 'seguro',
+    ehCliente.value && 'cliente',
+  ].filter(Boolean)
+);
+const sobram = computed(() =>
+  Math.max(0, selos.value.length - SELOS_NO_CELULAR)
+);
+const noCelular = selo =>
+  selos.value.indexOf(selo) >= SELOS_NO_CELULAR ? 'max-sm:sr-only' : '';
 </script>
 
 <template>
@@ -77,13 +96,35 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
         >
           {{ pessoa.name }}
         </button>
-        <SeloDeEstado v-if="ehCliente" tom="cliente">
+        <SeloDeEstado
+          v-if="ehCliente"
+          tom="cliente"
+          :class="noCelular('cliente')"
+        >
           {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
         </SeloDeEstado>
-        <SeloDeEstado v-if="pessoa.opted_out_at" tom="alerta">
+        <SeloDeEstado
+          v-if="pessoa.opted_out_at"
+          tom="alerta"
+          :class="noCelular('naoQuer')"
+        >
           {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
         </SeloDeEstado>
-        <slot name="selos" />
+        <span
+          v-if="$slots.selos"
+          class="inline-flex"
+          :class="noCelular('seguro')"
+        >
+          <slot name="selos" />
+        </span>
+        <span
+          v-if="sobram"
+          aria-hidden="true"
+          data-relacionamentos="mais-selos"
+          class="inline-flex items-center h-6 px-2 text-xs font-medium rounded-full sm:hidden bg-n-alpha-2 text-n-slate-11 tabular-nums"
+        >
+          {{ t('RELACIONAMENTOS.LISTA.LINHA.MAIS_SELOS', { n: sobram }) }}
+        </span>
       </div>
       <SegundaLinha :partes="partes" />
     </div>

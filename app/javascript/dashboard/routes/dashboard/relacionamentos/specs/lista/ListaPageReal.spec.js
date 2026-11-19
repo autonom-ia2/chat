@@ -771,7 +771,7 @@ describe('paridade com a lista de contatos de hoje', () => {
     expect(w.get(marca('dialogo-planilha')).text()).toContain(
       'Lista: Clientes · busca “ana”'
     );
-    await w.get('[data-confirmar]').trigger('click');
+    await w.get(marca('mandar-planilha')).trigger('click');
     await flushPromises();
     expect(RelacionamentosAPI.exportarPessoas).toHaveBeenCalledWith({
       grupo: 'clientes',
@@ -795,7 +795,7 @@ describe('paridade com a lista de contatos de hoje', () => {
     RelacionamentosAPI.exportarPessoas.mockRejectedValue(erroHttp(500));
     const w = await abrir();
     await w.get(marca('baixar-planilha')).trigger('click');
-    await w.get('[data-confirmar]').trigger('click');
+    await w.get(marca('mandar-planilha')).trigger('click');
     await flushPromises();
     expect(useAlert).toHaveBeenCalledWith(
       'Não consegui pedir a planilha. Tente de novo.'

@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import CotacaoDoSeguro from '../../components/carteira/CotacaoDoSeguro.vue';
 import {
   camposQueFaltam,
+  nomeDaCaixaNaFrase,
   podeEnviarProposta,
   situacaoDaCotacao,
   variacaoDaCotacao,
@@ -264,21 +265,22 @@ describe('"Enviar proposta"', () => {
     podeEnviar: true,
   });
 
-  it('só aparece quando a gaveta diz que pode, e o clique pede o envio', async () => {
+  // #3057 (2ª rodada) — o botão é o azul do rodapé da gaveta
+  // (gavetaDoAcabamento.spec.js); aqui fica só a linha de que nada sai antes.
+  it('não tem botão: com a proposta para enviar, só a linha de que nada sai antes do toque', () => {
     const sem = montar(pronta, { podeEnviar: false });
-    expect(sem.find(daCarteira('enviar-proposta')).exists()).toBe(false);
+    expect(sem.find(daCarteira('enviar-apoio')).exists()).toBe(false);
     sem.unmount();
 
     const w = montar(pronta, { podeEnviar: true });
-    const botao = w.get(daCarteira('enviar-proposta'));
-    expect(botao.text()).toBe('Enviar proposta');
-    expect(botao.attributes('disabled')).toBeUndefined();
-
-    await botao.trigger('click');
-    expect(w.emitted('enviar')).toHaveLength(1);
+    expect(w.find(daCarteira('enviar-proposta')).exists()).toBe(false);
+    expect(w.findAll('button')).toHaveLength(0);
+    expect(w.get(daCarteira('enviar-apoio')).text()).toBe(
+      'A proposta só vai ao cliente quando você tocar em Enviar proposta.'
+    );
   });
 
-  it('incerta: pede para conferir na conversa e oferece "Enviar de novo"', () => {
+  it('incerta: pede para conferir na conversa', () => {
     const incerta = cotacaoCom({
       etapa: 'proposta_enviada',
       premioCentavos: 100000,
@@ -291,7 +293,6 @@ describe('"Enviar proposta"', () => {
     expect(situacao(w)).toBe(
       'Não sabemos se a proposta chegou. Confira na conversa; se não chegou, envie de novo.'
     );
-    expect(w.get(daCarteira('enviar-proposta')).text()).toBe('Enviar de novo');
     expect(situacaoDaCotacao(incerta)).toEqual({ id: 'INCERTA' });
   });
 
@@ -389,5 +390,24 @@ describe('as puras', () => {
     ].forEach(tipo => {
       expect(fraseDoPasso({ tipo }).chave).toBe(`TIPOS.${tipo.toUpperCase()}`);
     });
+  });
+});
+
+describe('o nome da caixa na frase "pelo WhatsApp {caixa}"', () => {
+  it('tira o "WhatsApp" do começo para a frase não repetir', () => {
+    expect(nomeDaCaixaNaFrase('WhatsApp Renovações')).toBe('Renovações');
+    expect(nomeDaCaixaNaFrase('whatsapp da loja')).toBe('da loja');
+    expect(nomeDaCaixaNaFrase('WhatsApp')).toBe('');
+  });
+
+  it('deixa como está o nome que não começa com "WhatsApp"', () => {
+    expect(nomeDaCaixaNaFrase('Renovações')).toBe('Renovações');
+    expect(nomeDaCaixaNaFrase('Loja no WhatsApp')).toBe('Loja no WhatsApp');
+    expect(nomeDaCaixaNaFrase()).toBe('');
+    expect(nomeDaCaixaNaFrase(null)).toBe('');
+    expect(nomeDaCaixaNaFrase('Whatsappzinho Vendas')).toBe(
+      'Whatsappzinho Vendas'
+    );
+    expect(nomeDaCaixaNaFrase('WhatsApp-Vendas')).toBe('WhatsApp-Vendas');
   });
 });

@@ -192,7 +192,8 @@ describe('na conta com a carteira de seguros', () => {
     const [ana, bruno, carla] = linhas(w);
     expect(seloDaLinha(ana).text()).toBe('Seguro vencido');
     expect(seloDaLinha(ana).attributes('data-selo')).toBe('vermelho');
-    expect(seloDaLinha(bruno).text()).toBe('Seguro ativo');
+    // #3057 — o ativo que vence logo diz isso, em âmbar.
+    expect(seloDaLinha(bruno).text()).toBe('Seguro vence logo');
     expect(seloDaLinha(bruno).attributes('data-selo')).toBe('ambar');
     expect(seloDaLinha(carla).exists()).toBe(false);
   });

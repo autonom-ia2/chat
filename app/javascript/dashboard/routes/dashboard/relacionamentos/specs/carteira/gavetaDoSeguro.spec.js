@@ -154,8 +154,10 @@ const responderNo = async (w, marca, botao) => {
   await dialogoDe(w, marca).get(botao).trigger('click');
   await assentar();
 };
-const confirmarNo = (w, marca) => responderNo(w, marca, '[data-confirmar]');
-const voltarNo = (w, marca) => responderNo(w, marca, '[data-cancelar]');
+const confirmarNo = (w, marca) =>
+  responderNo(w, marca, '[data-carteira="dialogo-confirmar"]');
+const voltarNo = (w, marca) =>
+  responderNo(w, marca, '[data-carteira="dialogo-voltar"]');
 const abrirCorrecao = w => clicar(w, daCarteira('corrigir'));
 const salvar = w => clicar(w, daCarteira('salvar-correcao'));
 const escrever = (w, campo, texto) =>
@@ -322,6 +324,13 @@ describe('o que a gaveta mostra', () => {
     );
   });
 
+  it('tipo "Outro": mostra como estava na planilha', async () => {
+    const w = await abrirDoServidor({ ...DO_SERVIDOR, tipo: 'outro' });
+
+    expect(dado(w, 'ramo')).toContain('Na planilha estava como');
+    expect(dado(w, 'ramo')).toContain('Automóvel');
+  });
+
   it('os dados: número que não quebra, valor com centavos, datas inteiras', async () => {
     const w = await abrirDoServidor();
 
@@ -332,8 +341,9 @@ describe('o que a gaveta mostra', () => {
     expect(numero.classes()).toContain('whitespace-nowrap');
     expect(w.find('[data-dado="numero"] [data-copiar]').exists()).toBe(true);
     expect(dado(w, 'tipo')).toContain('Auto');
-    expect(dado(w, 'ramo')).toContain('Na planilha estava como');
-    expect(dado(w, 'ramo')).toContain('Automóvel');
+    // #3057 (revisão) — o ramo da planilha só aparece quando o tipo é "Outro":
+    // aí ele é o único jeito de saber o que é o seguro.
+    expect(w.find('[data-dado="ramo"]').exists()).toBe(false);
     expect(dado(w, 'seguradora')).toContain('Seguradora Atlântica');
     expect(dado(w, 'comeca')).toContain('29/11/2025');
     expect(dado(w, 'termina')).toContain('29/11/2026');
@@ -698,8 +708,12 @@ describe('corrigir', () => {
     const pergunta = dialogoDe(w, 'sair-sem-salvar');
     expect(pergunta.text()).toContain('Sair sem salvar?');
     expect(pergunta.text()).toContain('O que você mudou não fica guardado.');
-    expect(pergunta.get('[data-confirmar]').text()).toBe('Sair sem salvar');
-    expect(pergunta.get('[data-cancelar]').text()).toBe('Continuar corrigindo');
+    expect(pergunta.get('[data-carteira="dialogo-confirmar"]').text()).toBe(
+      'Sair sem salvar'
+    );
+    expect(pergunta.get('[data-carteira="dialogo-voltar"]').text()).toBe(
+      'Continuar corrigindo'
+    );
     expect(pergunta.attributes('data-fechar-fora')).toBe('false');
 
     await voltarNo(w, 'sair-sem-salvar');
@@ -979,8 +993,12 @@ describe('o PDF', () => {
     expect(pergunta.text()).toContain(
       'O PDF que está guardado sai e não volta. O novo entra no lugar.'
     );
-    expect(pergunta.get('[data-confirmar]').text()).toBe('Trocar o PDF');
-    expect(pergunta.get('[data-cancelar]').text()).toBe('Voltar');
+    expect(pergunta.get('[data-carteira="dialogo-confirmar"]').text()).toBe(
+      'Trocar o PDF'
+    );
+    expect(pergunta.get('[data-carteira="dialogo-voltar"]').text()).toBe(
+      'Voltar'
+    );
     expect(pergunta.attributes('data-fechar-fora')).toBe('false');
     expect(w.find('[data-passo="pdf_anexado"]').exists()).toBe(false);
 
@@ -1089,7 +1107,9 @@ describe('o PDF', () => {
     await escolherNoMenu(w, DO_RODAPE.APAGAR_PDF);
     const pergunta = dialogoDe(w, 'apagar-pdf');
     expect(pergunta.text()).toContain('Apagar o PDF deste seguro?');
-    expect(pergunta.get('[data-confirmar]').text()).toBe('Apagar o PDF');
+    expect(pergunta.get('[data-carteira="dialogo-confirmar"]').text()).toBe(
+      'Apagar o PDF'
+    );
     expect(pergunta.attributes('data-fechar-fora')).toBe('false');
     expect(azul(w).text()).toBe('Ver PDF');
 

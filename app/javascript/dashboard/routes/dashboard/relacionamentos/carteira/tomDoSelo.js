@@ -1,8 +1,11 @@
-// #2897 — a cor e o nome (chave do catálogo) de cada selo da carteira. O
-// seguro ativo que vence logo continua "Ativo", mas em âmbar: o verde diria
-// que não há nada a fazer.
+// #2897 — a cor e o nome (chave do catálogo) de cada selo da carteira.
 // #2898 — Em renovação vai em azul (alguém já está cuidando) e Renovado em
 // verde.
+// #3057 — o seguro ativo que vence em até 30 dias diz "Vence logo", em âmbar
+// (na lista de pessoas, "Seguro vence logo"): "Ativo" em âmbar não dizia por
+// que pedia atenção, e o verde diria que não há nada a fazer. Vale em todo
+// lugar que mostra o selo: a aba Seguros, a ficha, o painel da conversa e a
+// gaveta.
 import { SELOS } from '../fonte/selosDoSeguro';
 
 const TONS = {
@@ -20,21 +23,26 @@ const TOM_NEUTRO = 'neutro';
 const CONHECIDOS = Object.values(SELOS);
 export const VENCE_LOGO_EM_DIAS = 30;
 
-// `dias`: quantos faltam para o seguro terminar (sem isso, só o selo decide).
+// O seguro ativo que termina em até 30 dias. `dias`: quantos faltam para o
+// seguro terminar (sem isso, só o selo decide, e ele não vence logo).
+export const venceLogo = (selo, dias = null) =>
+  selo === SELOS.ATIVO && Number.isFinite(dias) && dias <= VENCE_LOGO_EM_DIAS;
+
 export const tomDoSelo = (selo, dias = null) => {
-  const venceLogo =
-    selo === SELOS.ATIVO && dias !== null && dias <= VENCE_LOGO_EM_DIAS;
-  if (venceLogo) return TOM_DE_QUEM_VENCE_LOGO;
+  if (venceLogo(selo, dias)) return TOM_DE_QUEM_VENCE_LOGO;
   return CONHECIDOS.includes(selo) ? TONS[selo] : TOM_NEUTRO;
 };
 
 const NEUTRO = 'DESCONHECIDO';
-const nomeDoSelo = selo =>
-  CONHECIDOS.includes(selo) ? selo.toUpperCase() : NEUTRO;
+const VENCE_LOGO = 'VENCE_LOGO';
+const nomeDoSelo = (selo, dias) => {
+  if (venceLogo(selo, dias)) return VENCE_LOGO;
+  return CONHECIDOS.includes(selo) ? selo.toUpperCase() : NEUTRO;
+};
 
-export const chaveDoSelo = selo =>
-  `RELACIONAMENTOS_CARTEIRA.SELOS.${nomeDoSelo(selo)}`;
+export const chaveDoSelo = (selo, dias = null) =>
+  `RELACIONAMENTOS_CARTEIRA.SELOS.${nomeDoSelo(selo, dias)}`;
 
 // Na lista de pessoas o selo diz o texto inteiro ("Seguro vencido").
-export const chaveDoSeloDaPessoa = selo =>
-  `RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS.${nomeDoSelo(selo)}`;
+export const chaveDoSeloDaPessoa = (selo, dias = null) =>
+  `RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS.${nomeDoSelo(selo, dias)}`;

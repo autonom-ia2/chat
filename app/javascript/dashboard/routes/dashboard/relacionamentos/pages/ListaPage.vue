@@ -42,6 +42,7 @@ import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
+import { diasParaTerminar } from '../fonte/selosDoSeguro';
 import { usarDemo } from '../fonte/modoDemo';
 import { chaveDoSeloDaPessoa } from '../carteira/tomDoSelo';
 import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
@@ -187,8 +188,10 @@ const ordensDaAba = computed(() => (ehEmpresas.value ? [] : gruposDeOrdem(t)));
 // texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
 // renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
 const seguroDe = ({ id }) => carteira.daPessoa(id);
-// O selo que a tela não conhece vira só "Seguro" (carteira/tomDoSelo.js).
-const rotuloDoSeguro = ({ selo }) => t(chaveDoSeloDaPessoa(selo));
+// O selo que a tela não conhece vira só "Seguro", e o ativo que termina em até
+// 30 dias diz "Seguro vence logo" (carteira/tomDoSelo.js).
+const rotuloDoSeguro = seguro =>
+  t(chaveDoSeloDaPessoa(seguro.selo, diasParaTerminar(seguro)));
 
 // Trocar de aba fecha a gaveta do seguro que estiver aberta (`?apolice=`).
 const DA_ABA = ['aba', 'apolice'];
@@ -305,7 +308,20 @@ const avisoDaLista = computed(() =>
     : ''
 );
 
-const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+// #3057 — a aba de onde a pessoa saiu vai junto (`?aba=`): a volta de "Como
+// trazer" leva de novo a ela (VoltarDoTrazer).
+const abaDeOrigem = () => {
+  if (naAbaDeSeguros.value) return ABA_SEGUROS;
+  return ehEmpresas.value ? ABAS.EMPRESAS : null;
+};
+const trazer = () => {
+  const origem = abaDeOrigem();
+  router.push(
+    origem
+      ? { name: 'relacionamentos_trazer', query: { aba: origem } }
+      : { name: 'relacionamentos_trazer' }
+  );
+};
 // O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
 const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
@@ -517,6 +533,7 @@ watch(naAbaDeSeguros, estaNela => {
             >
               <div v-if="!lista.semAcesso.value" class="flex flex-col">
                 <PilulasDeGrupo
+                  sem-vazios
                   :grupos="grupos"
                   :model-value="lista.grupo.value"
                   @update:model-value="lista.escolherGrupo"

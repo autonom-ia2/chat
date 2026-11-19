@@ -120,7 +120,8 @@
         "MARCAR": "Marcar {nome}",
         "CONVERSAR_COM": "Conversar com {nome}",
         "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}",
-        "EDITAR": "Alterar informações de {nome}"
+        "EDITAR": "Alterar informações de {nome}",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Mostrar mais",
