@@ -3,7 +3,7 @@ import ApiClient from './ApiClient';
 
 // #2897 — a carteira de seguros de Relacionamentos (relacionamentos/seguros…):
 // a aba Seguros, a gaveta de um seguro com as escritas dela, o PDF e os seguros
-// da ficha da pessoa e da empresa. Só existe em conta corretora de seguros (o
+// da ficha da pessoa e da empresa. Só existe em conta de seguros (o
 // payload da conta diz `carteira_seguros`): fora dela toda rota responde 404.
 //
 // Os params e o corpo vão como o servidor espera; quem traduz o que a tela pede

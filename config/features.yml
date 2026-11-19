@@ -1435,8 +1435,8 @@
 
 # Carteira de seguros (E4, #2897, épico #1240). Virou o padrão na E9 (#2902, decisão do Rodrigo em 18/11): o código não
 # lê mais a flag e a carteira (a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa) é de toda conta
-# corretora de seguros (Carteira::Acesso). Sem migration: com a leitura fora, o bit não decide mais nada. A entrada fica,
-# marcada `deprecated`: o bit é a posição. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
+# de seguros, de qualquer perfil (Carteira::Acesso; #3053, 19/11). Sem migration: com a leitura fora, o bit não decide
+# mais nada. A entrada fica, marcada `deprecated`: o bit é a posição. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
 - name: carteira_seguros
   display_name: Relacionamentos › carteira de seguros
   enabled: true

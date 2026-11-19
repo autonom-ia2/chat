@@ -1,6 +1,6 @@
 # Carteira de seguros (E4, #2897): o que os specs da carteira repetem. Os dados são sempre fictícios.
 module CarteiraHelpers
-  # A conta que tem a carteira: corretora de seguros (Carteira::Acesso; sem chave desde a E9, #2902).
+  # A conta que tem a carteira: conta de seguros (aqui, corretora) (Carteira::Acesso; sem chave desde a E9, #2902).
   def conta_com_carteira(**dados)
     create(:account, **dados).tap { |conta| com_a_carteira!(conta) }
   end
@@ -12,7 +12,7 @@ module CarteiraHelpers
     conta
   end
 
-  # A conta sai do nicho corretora (vai para o geral), e fica sem a carteira: é o que fecha a carteira desde a E9.
+  # A conta sai do nicho seguros (vai para o geral), e fica sem a carteira: é o que fecha a carteira desde a E9.
   def sem_a_carteira!(conta)
     Autonomia::Agents::Nicho.atribuir(conta, nicho: 'geral', perfil: nil)
     conta.save!

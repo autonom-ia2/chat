@@ -1194,7 +1194,7 @@ Rails.application.routes.draw do
                 end
               end
             end
-            # #2897 — carteira de seguros (só em conta corretora de seguros, Carteira::Acesso; 404 fora dela): a aba
+            # #2897 — carteira de seguros (só em conta de seguros, Carteira::Acesso; 404 fora dela): a aba
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
             # #2898 (E5.3) — "Apólice nova" feita à mão, a partir do seguro que ela renovou.
             post 'seguros', to: 'seguros/apolices_novas#create'

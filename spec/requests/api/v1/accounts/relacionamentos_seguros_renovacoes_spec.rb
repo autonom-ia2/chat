@@ -229,7 +229,7 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       expect([sem_login_ao_ler, response.status]).to eq([401, 401])
     end
 
-    it 'responde 404 sem a carteira: conta que saiu do nicho corretora ou que nunca foi corretora' do
+    it 'responde 404 sem a carteira: conta que saiu do nicho seguros ou que nunca foi de seguros' do
       comum = create(:account)
       dono = create(:user, account: comum, role: :administrator)
       sem_a_carteira!(account)

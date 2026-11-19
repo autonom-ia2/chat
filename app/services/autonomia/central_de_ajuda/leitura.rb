@@ -14,7 +14,7 @@ class Autonomia::CentralDeAjuda::Leitura
     'autonomia_agents' => ->(conta) { ::Autonomia::Agents::Config.enabled?(conta) },
     'autonomia_prospecting' => ->(conta) { ::Autonomia::Prospecting::Config.enabled?(conta) },
     'autonomia_insurance' => ->(conta) { ::Autonomia::Insurance::Config.enabled?(conta) },
-    # A carteira de seguros é de toda conta corretora (#2897; sem chave desde a E9, #2902).
+    # A carteira de seguros é de toda conta de seguros (#2897; sem chave desde a E9, #2902; qualquer perfil desde o #3053).
     'carteira_de_seguros' => ->(conta) { ::Carteira::Acesso.liberada?(conta) }
   }.freeze
 
