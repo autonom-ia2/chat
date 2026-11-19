@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteMenuMais from '../AgenteMenuMais.vue';
 import AgenteBotao from '../AgenteBotao.vue';
+import ArquivoOriginal from './ArquivoOriginal.vue';
 import { ehSite, estadoDaFonte, nomeDaFonte } from '../../utils/pagina';
 import { ehFotoDaBase } from '../../utils/estadoDoMaterial';
 
@@ -17,6 +18,8 @@ const props = defineProps({
   fonte: { type: Object, required: true },
   nomeAgente: { type: String, required: true },
   podeGerenciar: { type: Boolean, default: false },
+  // The agent drawer uses the agent endpoint; post material belongs to a different API.
+  mostrarOriginal: { type: Boolean, default: false },
   // #1369 — "Ler de novo" pedido e o site ainda não voltou da leitura: mostra "Lendo…".
   relendo: { type: Boolean, default: false },
   // Estado já decidido por quem usa ('lendo' | 'pronto' | 'falha'); vazio = lido da fonte.
@@ -175,6 +178,10 @@ const escolher = chave => {
           </template>
         </span>
       </span>
+      <ArquivoOriginal
+        v-if="mostrarOriginal && fonte.file_attached"
+        :fonte="fonte"
+      />
       <AgenteMenuMais
         v-if="podeGerenciar"
         :rotulo="t('AGENTS.JORNADA.PAGINA.SABE.MAIS_DE', { nome })"

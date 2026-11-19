@@ -3,7 +3,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   before_action :fetch_source, only: [:destroy, :resync]
 
   def index
-    @sources = @agent.sources.da_agente.order(created_at: :desc)
+    @sources = @agent.sources.da_agente.with_attached_file.order(created_at: :desc)
   end
 
   def create
