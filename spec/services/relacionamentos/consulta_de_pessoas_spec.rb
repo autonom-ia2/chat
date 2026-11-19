@@ -344,7 +344,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       lendo = consulta(ordem: 'nome')
       todas = nil
 
-      expect(consultas_feitas { todas = lendo.todos }).to eq(2)
+      expect(consultas_feitas { todas = lendo.todos }).to eq(1)
       expect(todas.to_h { |pessoa| [pessoa[:name], pessoa[:labels].sort] })
         .to eq('Ana' => %w[feira site], 'Bruno' => %w[site], 'Carla' => [], 'Diego' => [], 'Elisa' => [])
     end
