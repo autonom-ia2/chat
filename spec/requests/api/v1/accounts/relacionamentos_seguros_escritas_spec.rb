@@ -75,7 +75,7 @@ RSpec.describe 'Carteira de seguros: escritas', type: :request do
       expect(nao_mudou).to be(true)
     end
 
-    it 'responde 404 em conta fora do nicho corretora e não muda nada' do
+    it 'responde 404 em conta fora do nicho seguros e não muda nada' do
       sem_a_carteira!(account)
 
       escritas.each do |nome, pedir|

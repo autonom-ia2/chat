@@ -444,7 +444,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     end
 
     describe 'com a carteira desligada' do
-      # A conta já tem seguros gravados; sair do nicho corretora tem de devolver a lista de antes, inteira.
+      # A conta já tem seguros gravados; sair do nicho seguros tem de devolver a lista de antes, inteira.
       before do
         com_seguros('Marina Exemplo', { numero: 'EX-001234', bem: 'Carro Exemplo 2022' })
         sem_a_carteira!(account)

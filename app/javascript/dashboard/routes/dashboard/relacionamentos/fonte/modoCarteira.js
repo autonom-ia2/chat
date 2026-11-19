@@ -1,6 +1,6 @@
 // #2897 — o que liga a carteira de seguros nas telas de Relacionamentos: a aba
 // Seguros e o bloco Seguros das fichas. Quem responde é a conta: o payload dela
-// traz `carteira_seguros` (conta corretora de seguros, sem chave desde a E9,
+// traz `carteira_seguros` (conta de seguros, sem chave desde a E9,
 // #2902; o servidor decide em Carteira::Acesso). Sem isso nada de seguro
 // aparece e nenhuma rota da carteira é chamada.
 //

@@ -62,7 +62,7 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       end
     end
 
-    # E9 (#2902): as flags antigas (telas novas e carteira) saíram do código; só o nicho corretora fecha a carteira.
+    # E9 (#2902): as flags antigas (telas novas e carteira) saíram do código; só sair do nicho seguros fecha a carteira.
     it 'atende com as flags antigas desligadas' do
       account.disable_features!('relacionamentos_novo', 'carteira_seguros')
 
