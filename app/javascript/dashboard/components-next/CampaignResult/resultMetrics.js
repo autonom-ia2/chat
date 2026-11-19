@@ -65,6 +65,32 @@ const MESSAGE_KPIS = {
   ],
 };
 
+/**
+ * R$ of the won cards of a campaign (#3063): one amount per currency, whole units, joined by " + ";
+ * R$ 0 when nothing was won yet. null when the reader does not see sales values (the API sends null).
+ */
+// The card currency is free text: a code Intl does not know shows as "<code> <amount>" instead of breaking the page.
+const moneyText = (currency, cents, localeTag) => {
+  const options = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+  try {
+    return new Intl.NumberFormat(localeTag, {
+      ...options,
+      style: 'currency',
+      currency,
+    }).format(cents / 100);
+  } catch {
+    return `${currency} ${new Intl.NumberFormat(localeTag, options).format(cents / 100)}`;
+  }
+};
+
+export const wonValueText = (wonValue, localeTag) => {
+  if (!Array.isArray(wonValue)) return null;
+  const amounts = wonValue.length ? wonValue : [{ currency: 'BRL', cents: 0 }];
+  return amounts
+    .map(({ currency, cents }) => moneyText(currency, cents, localeTag))
+    .join(' + ');
+};
+
 /** Share of `part` in `whole`, one decimal, or null without a base. */
 export const percent = (part, whole) => {
   if (typeof part !== 'number' || typeof whole !== 'number' || whole <= 0)

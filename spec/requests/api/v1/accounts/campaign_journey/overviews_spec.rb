@@ -43,7 +43,7 @@ RSpec.describe 'Campaign journey overview API (#1007)', :aggregate_failures, typ
     CampaignJourney::CampaignMarks.mark!(conversation, recent)
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
     account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Ana — renovação', conversation_id: conversation.id, contact: ana,
-                              status: :won)
+                              status: :won, value_cents: 150_000)
 
     get_overview({ days: 30 })
 
@@ -55,7 +55,8 @@ RSpec.describe 'Campaign journey overview API (#1007)', :aggregate_failures, typ
     whatsapp_row = payload['campaigns'].last
     expect(whatsapp_row).to include('id' => recent.display_id, 'sent' => 1, 'delivered' => 1, 'replied' => 1, 'reply_rate' => 100.0)
     expect(whatsapp_row['engagement']).to include('kind' => 'read', 'count' => 1)
-    expect(payload['totals']).to include('campaigns' => 2, 'replied' => 1, 'deals' => { 'cards' => 1, 'won' => 1 })
+    won_value = [{ 'currency' => 'BRL', 'cents' => 150_000 }]
+    expect(payload['totals']).to include('campaigns' => 2, 'replied' => 1, 'deals' => { 'cards' => 1, 'won' => 1, 'won_value' => won_value })
     expect(payload['totals']['email_health']).to include('bounce_limit' => 5.0, 'complaint_limit' => 0.1)
 
     get_overview({ days: 90 })
