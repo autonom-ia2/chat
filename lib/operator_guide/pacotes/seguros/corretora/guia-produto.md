@@ -1245,13 +1245,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente
-- intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
+- intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"; "Como abro ou baixo um documento anexado ao agente?"
 - onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Conhecimento
 - rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; arquivo suportado ou URL para fonte.
-- passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte.
-- gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`.
+- passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte. Na jornada nova, abra O que sabe > Arquivos e sites e use Abrir arquivo original, ao lado do documento, para abrir o PDF ou baixar outros formatos.
+- gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`. Abrir o original exige permissão para ver agentes, não para editá-los; o link é temporário e não serve para compartilhar com clientes ou alimentar o Guia; sites e fontes sem anexo original não têm esse botão. Se o arquivo não estiver mais disponível no armazenamento, peça ao administrador para anexá-lo novamente.
 - nav_target: `autonomia_agent_panel`
 
 ### Conectar ou desconectar agente de uma caixa

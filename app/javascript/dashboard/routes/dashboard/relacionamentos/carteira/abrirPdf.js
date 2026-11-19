@@ -6,18 +6,4 @@
 // ela receber o arquivo.
 // `pedirLink` é a leitura da fonte (`fonte.pdf(id)`). Devolve a falha quando o
 // link não veio (e fecha a aba em branco), ou `null` quando o PDF abriu.
-export const abrirPdf = async (pedirLink, janela = window) => {
-  const aba = janela.open('', '_blank');
-  if (aba) aba.opener = null;
-  try {
-    const link = await pedirLink();
-    // Sem aba (o navegador bloqueou a nova): o PDF abre nesta, como um link. A
-    // pessoa sai da tela, mas nunca fica sem ver o PDF que pediu.
-    if (aba) aba.location.replace(link);
-    else janela.location.assign(link);
-    return null;
-  } catch (falha) {
-    aba?.close();
-    return falha;
-  }
-};
+export { openSignedFile as abrirPdf } from 'shared/helpers/openSignedFile';

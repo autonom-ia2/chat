@@ -1144,11 +1144,11 @@
 ### atualizar_conhecimento_e_fontes_do_agente
 - titulo: Atualizar conhecimento e fontes do agente
 - rota: autonomia_agent_panel
-- intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
+- intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"; "Como abro ou baixo um documento anexado ao agente?"
 - onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Conhecimento
 - pre_requisitos: agente existente; arquivo suportado ou URL para fonte.
-- passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte.
-- gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`.
+- passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte. Na jornada nova, abra O que sabe > Arquivos e sites e use Abrir arquivo original, ao lado do documento, para abrir o PDF ou baixar outros formatos.
+- gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`. Abrir o original exige permissão para ver agentes, não para editá-los; o link é temporário e não serve para compartilhar com clientes ou alimentar o Guia; sites e fontes sem anexo original não têm esse botão. Se o arquivo não estiver mais disponível no armazenamento, peça ao administrador para anexá-lo novamente.
 
 ### conectar_ou_desconectar_agente_de_uma_caixa
 - titulo: Conectar ou desconectar agente de uma caixa

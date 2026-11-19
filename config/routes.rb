@@ -677,6 +677,7 @@ Rails.application.routes.draw do
               end
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
+                resource :file, only: [:show], controller: 'agents/source_files'
               end
               # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
               get 'material', to: 'agents/material#show'
