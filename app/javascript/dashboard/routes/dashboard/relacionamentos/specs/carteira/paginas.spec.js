@@ -48,6 +48,10 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
+// #3071 — o "Ligar" é o VoiceCallButton da casa (ele decide se aparece).
+vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
+  default: { props: ['phone'], template: '<button data-ligar />' },
+}));
 vi.mock('dashboard/composables/useAccount', async () => {
   const { ref } = await import('vue');
   return {
@@ -85,9 +89,15 @@ vi.mock('../../ficha/usePermissoesDaFicha', async () => {
       podeCriarCards: ref(false),
       podeExportar: ref(false),
       podeAjustarRenovacoes: ref(false),
+      podeApagar: ref(false),
+      podeCriarLembrete: ref(false),
     }),
   };
 });
+// #3071 — a "Nova conversa" da ficha lê o contato do store: aqui não abre.
+vi.mock('../../components/carteira/ConversaNova.vue', () => ({
+  default: { render: () => null, methods: { abrir: async () => false } },
+}));
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
     pessoa: vi.fn(),
@@ -405,7 +415,11 @@ describe('o bloco Seguros nas fichas', () => {
 
       const w = await abrirFicha();
 
-      expect(w.find('[data-carteira]').exists()).toBe(false);
+      // #3071 — a ficha da pessoa usa o aviso com "Desfazer" da carteira (a
+      // região viva dele, vazia, fica na tela): ele não é peça de seguro.
+      expect(
+        w.find('[data-carteira]:not([data-carteira="aviso-vivo"])').exists()
+      ).toBe(false);
       expect(SegurosAPI.daPessoa).not.toHaveBeenCalled();
       expect(SegurosAPI.daEmpresa).not.toHaveBeenCalled();
       // A ficha abriu inteira: o título é o nome de quem ela mostra.

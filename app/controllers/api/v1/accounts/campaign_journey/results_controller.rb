@@ -1,7 +1,7 @@
 # Result of one campaign (#1007, PRD §6.5, O1–O2, E1–E4). Read-only, account-scoped.
 # Contract: docs/campaigns/publicos/resultado-1007.md.
 #
-#   GET …/campaign_journey/results/:channel/:id             campaign, totals and the CRM mark
+#   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals
 #   GET …/campaign_journey/results/:channel/:id/recipients  people, 25 per page, ?status=
 #   GET …/campaign_journey/results/:channel/:id/export      masked CSV, ?status=
 #   GET …/campaign_journey/results/email/:id/period         numbers of this campaign, ?period=7|14|30|all (#990)
@@ -21,7 +21,7 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
         campaign: @result.campaign_payload,
         totals: @result.totals,
         filters: @result.filters,
-        crm: { source_id: @result.source_id, enabled: Crm::Config.enabled? }
+        crm: crm_payload
       }
     }
   end
@@ -45,6 +45,15 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
   end
 
   private
+
+  # The CRM mark and, with the CRM on, what the campaign turned into there (#3063): cards, won and the R$ of the won.
+  def crm_payload
+    payload = { source_id: @result.source_id, enabled: Crm::Config.enabled? }
+    return payload.merge(deals: nil) unless payload[:enabled]
+
+    replies = ::CampaignJourney::ResultReplies.new(Current.account, @result.source_id)
+    payload.merge(deals: replies.deals_for(user: Current.user, account_user: Current.account_user))
+  end
 
   def authorize_result
     authorize(Campaign, action_name == 'export' ? :create? : :show?)

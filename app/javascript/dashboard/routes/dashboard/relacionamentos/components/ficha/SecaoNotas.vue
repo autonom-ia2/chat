@@ -2,7 +2,7 @@
 import { ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { quandoRelativo } from '../../ficha/formatos';
+import { quandoRelativo, trechoCurto } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
 import FalhaDaParte from './FalhaDaParte.vue';
@@ -12,6 +12,8 @@ import FalhaDaParte from './FalhaDaParte.vue';
 // sem erro). A nota nova aparece no topo porque a fonte a devolve primeiro.
 // Quem só pode ver (`podeEscrever` falso) lê as notas e não tem a caixa.
 // `falhou`: a leitura das notas não veio.
+// #3071 — quem pode escrever também apaga: cada nota tem a lixeira, que emite
+// `apagar` com a nota (a página pergunta antes).
 const props = defineProps({
   notas: { type: Array, required: true },
   guardando: { type: Boolean, default: false },
@@ -19,7 +21,11 @@ const props = defineProps({
   podeEscrever: { type: Boolean, default: true },
   falhou: { type: Boolean, default: false },
 });
-const emit = defineEmits(['guardar', 'tentar']);
+const emit = defineEmits(['guardar', 'tentar', 'apagar']);
+
+// O texto da nota no rótulo da lixeira, curto: o leitor de tela diz qual é.
+const TAMANHO_DO_TRECHO = 60;
+const trecho = texto => trechoCurto(texto, TAMANHO_DO_TRECHO);
 
 const { t } = useI18n();
 const idioma = useIdioma();
@@ -109,12 +115,27 @@ const assinatura = nota => {
         v-for="nota in notas"
         :key="nota.id"
         data-relacionamentos="nota"
-        class="pb-4 border-b border-n-weak last:border-b-0 last:pb-0"
+        class="flex items-start gap-3 pb-4 border-b border-n-weak last:border-b-0 last:pb-0"
       >
-        <p class="m-0 text-base text-n-slate-12">{{ nota.texto }}</p>
-        <p class="m-0 mt-1 text-sm text-n-slate-11">
-          {{ assinatura(nota) }}
-        </p>
+        <div class="flex-1 min-w-0">
+          <p class="m-0 text-base break-words text-n-slate-12">
+            {{ nota.texto }}
+          </p>
+          <p class="m-0 mt-1 text-sm text-n-slate-11">
+            {{ assinatura(nota) }}
+          </p>
+        </div>
+        <button
+          v-if="podeEscrever"
+          type="button"
+          data-relacionamentos="apagar-nota"
+          :aria-label="ra('APAGAR_ROTULO', { texto: trecho(nota.texto) })"
+          :title="ra('APAGAR')"
+          class="inline-flex items-center justify-center -mt-2 -me-2 bg-transparent border-0 rounded-lg size-11 shrink-0 text-n-slate-10 hover:text-n-ruby-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          @click="emit('apagar', nota)"
+        >
+          <span class="i-lucide-trash-2 size-5" aria-hidden="true" />
+        </button>
       </li>
     </ul>
   </CartaoDaSecao>

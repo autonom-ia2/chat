@@ -3,10 +3,12 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Label from 'dashboard/components-next/label/Label.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import { formatarMes } from '../../ficha/formatos';
 import { formatarTelefone } from '../../lista/telefone';
 import { useIdioma } from '../../ficha/idioma';
+import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import BotaoCopiar from './BotaoCopiar.vue';
 import MenuMais from './MenuMais.vue';
 
@@ -15,22 +17,30 @@ import MenuMais from './MenuMais.vue';
 // contato (`podeEditar` falso) não tem "Marcar como cliente", "Não é mais
 // cliente" nem "Alterar informações"; quem não pode criar card
 // (`podeCriarCards` falso) não tem "Novo card".
-// #2970 — o que ainda não é de verdade não aparece: "Conversar" só existe com
-// `podeConversar` (a página liga quando há conversa para abrir, ou na
-// demonstração). Sem ele nenhum botão é preenchido: as outras ações seguem
-// discretas, na mesma ordem. "Lembrete" e, no "⋯", Juntar, Bloquear e Apagar
-// ainda só avisam: só existem com `naDemonstracao`. Fora dela sobra o que é de
-// quem pode editar: de quem é cliente, o "⋯" com "Alterar informações" e "Não
-// é mais cliente"; de quem não é, só o botão "Alterar informações", sem menu.
-// Quem só pode ver não tem nenhum dos dois; sem ação nenhuma, o grupo de ações
-// não é desenhado.
+// #3071 — todas as ações da ficha antiga, de verdade:
+//  - "Conversar" aparece sempre: com conversa abre a mais recente; sem, a página
+//    abre a "Nova conversa" já com a pessoa. "Ligar" fica ao lado dele: é o
+//    VoiceCallButton da casa, que só aparece quando a conta tem caixa com voz e
+//    a pessoa tem telefone, e escolhe a caixa e liga. `podeLigar` falso só na
+//    demonstração, onde as pessoas são inventadas;
+//  - "Lembrete" com `podeLembrete` (a regra do "Novo lembrete" da ficha antiga);
+//  - as etiquetas, com a cor de cada uma (o Label da casa; `coresDasEtiquetas`
+//    vem das etiquetas da conta), ganham "Pôr etiqueta" / "Mudar etiquetas"
+//    (`podeEditar`), numa linha própria, alinhado com os ícones do contato;
+//  - o "⋯" tem Alterar informações, Não é mais cliente, Não quer receber
+//    mensagens, Juntar, Bloquear ou Desbloquear (de quem pode editar) e Apagar
+//    (`podeApagar`). Com dois itens ou mais é menu; com um só, é um botão:
+//    ninguém abre menu para uma escolha. Sem nenhum, não há botão.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcandoCliente: { type: Boolean, default: false },
   podeEditar: { type: Boolean, default: true },
+  podeApagar: { type: Boolean, default: false },
   podeCriarCards: { type: Boolean, default: true },
-  podeConversar: { type: Boolean, default: false },
-  naDemonstracao: { type: Boolean, default: false },
+  podeLembrete: { type: Boolean, default: false },
+  podeLigar: { type: Boolean, default: false },
+  // { [nome]: '#cor' }: as etiquetas da conta.
+  coresDasEtiquetas: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits([
   'conversar',
@@ -39,6 +49,7 @@ const emit = defineEmits([
   'marcarCliente',
   'abrirEmpresa',
   'maisAcao',
+  'etiquetas',
 ]);
 
 const { t } = useI18n();
@@ -56,30 +67,60 @@ const empresa = computed(
   () => props.pessoa.additional_attributes?.company_name || ''
 );
 
-// O "⋯" só é menu com dois itens ou mais: o desenho todo, na demonstração, ou
-// "Alterar informações" e "Não é mais cliente", de quem é cliente. Com um item
-// só, "Alterar informações" é um botão: ninguém abre menu para uma escolha.
-const temMais = computed(
-  () => props.naDemonstracao || (props.podeEditar && ehCliente.value)
+const ITEM = {
+  alterar: { chave: 'ALTERAR_INFORMACOES', icone: 'i-lucide-pencil' },
+  desmarcar: { chave: 'DESMARCAR_CLIENTE', icone: 'i-lucide-user-minus' },
+  naoQuer: { chave: 'NAO_QUER', icone: 'i-lucide-bell-off' },
+  juntar: { chave: 'JUNTAR', icone: 'i-lucide-combine' },
+  bloquear: { chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
+  desbloquear: { chave: 'DESBLOQUEAR', icone: 'i-lucide-shield-check' },
+  apagar: { chave: 'APAGAR', icone: 'i-lucide-trash-2', perigo: true },
+};
+const itensDoMais = computed(() => {
+  const edita = props.podeEditar;
+  return [
+    edita && 'alterar',
+    edita && ehCliente.value && 'desmarcar',
+    edita && !props.pessoa.opted_out_at && 'naoQuer',
+    edita && 'juntar',
+    edita && (props.pessoa.blocked ? 'desbloquear' : 'bloquear'),
+    props.podeApagar && 'apagar',
+  ]
+    .filter(Boolean)
+    .map(evento => ({ evento, ...ITEM[evento] }));
+});
+const temMais = computed(() => itensDoMais.value.length > 1);
+const unico = computed(() =>
+  itensDoMais.value.length === 1 ? itensDoMais.value[0] : null
 );
-const alteraDireto = computed(() => props.podeEditar && !temMais.value);
 const temSecundarias = computed(
-  () => props.podeCriarCards || props.podeEditar || props.naDemonstracao
+  () =>
+    props.podeCriarCards || props.podeLembrete || itensDoMais.value.length > 0
 );
 // Celular, com o "⋯": os botões com rótulo ao lado dele (Novo card, Lembrete)
 // dividem a linha e ele fica na ponta; sozinho, continua na ponta. Sem o "⋯",
-// cada botão ocupa a linha toda: "Alterar informações" não cabe ao lado de
-// outro.
+// cada botão ocupa a linha toda.
 const GRADE_COM_MAIS = [
   'grid-cols-1 justify-items-end',
   'grid-cols-[1fr_auto]',
   'grid-cols-[1fr_1fr_auto]',
 ];
 const botoesAoLadoDoMais = computed(
-  () => [props.podeCriarCards, props.naDemonstracao].filter(Boolean).length
+  () => [props.podeCriarCards, props.podeLembrete].filter(Boolean).length
 );
 const grade = computed(() =>
   temMais.value ? GRADE_COM_MAIS[botoesAoLadoDoMais.value] : 'grid-cols-1'
+);
+const etiquetas = computed(() =>
+  (props.pessoa.labels ?? []).map(nome => ({
+    title: nome,
+    color: props.coresDasEtiquetas[nome] ?? null,
+  }))
+);
+const rotuloDasEtiquetas = computed(() =>
+  t(
+    `RELACIONAMENTOS_FICHA.ACOES.${props.pessoa.labels?.length ? 'MUDAR_ETIQUETAS' : 'POR_ETIQUETA'}`
+  )
 );
 </script>
 
@@ -185,38 +226,66 @@ const grade = computed(() =>
             <span v-else class="min-w-0 break-words">{{ empresa }}</span>
           </div>
         </div>
-        <ul
-          v-if="pessoa.labels?.length"
-          :aria-label="t('RELACIONAMENTOS_FICHA.CABECALHO.ETIQUETAS')"
-          class="flex flex-wrap gap-2 p-0 m-0 list-none"
+        <div
+          v-if="pessoa.labels?.length || podeEditar"
+          data-relacionamentos="etiquetas-da-pessoa"
+          class="flex flex-col items-start min-w-0 gap-1"
         >
-          <li
-            v-for="etiqueta in pessoa.labels"
-            :key="etiqueta"
-            class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-n-iris-3 text-n-iris-11"
+          <ul
+            v-if="etiquetas.length"
+            :aria-label="t('RELACIONAMENTOS_FICHA.CABECALHO.ETIQUETAS')"
+            class="flex flex-wrap gap-2 p-0 m-0 list-none"
           >
-            {{ etiqueta }}
-          </li>
-        </ul>
+            <li
+              v-for="etiqueta in etiquetas"
+              :key="etiqueta.title"
+              :data-etiqueta-da-pessoa="etiqueta.title"
+            >
+              <Label :label="etiqueta" compact />
+            </li>
+          </ul>
+          <Button
+            v-if="podeEditar"
+            data-relacionamentos="mudar-etiquetas"
+            slate
+            ghost
+            icon="i-lucide-tag"
+            class="!h-11 -ms-3 whitespace-nowrap"
+            :label="rotuloDasEtiquetas"
+            @click="emit('etiquetas')"
+          />
+        </div>
       </div>
     </div>
     <div
-      v-if="podeConversar || temSecundarias"
       role="group"
       :aria-label="
         t('RELACIONAMENTOS_FICHA.CABECALHO.ACOES', { nome: pessoa.name })
       "
       class="flex flex-col w-full min-w-0 gap-3 lg:w-auto lg:flex-row lg:items-center lg:shrink-0"
     >
-      <Button
-        v-if="podeConversar"
-        data-relacionamentos="conversar"
-        size="lg"
-        class="w-full lg:w-auto whitespace-nowrap shrink-0"
-        icon="i-lucide-message-circle"
-        :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
-        @click="emit('conversar')"
-      />
+      <div class="flex items-center min-w-0 gap-3 lg:shrink-0">
+        <Button
+          data-relacionamentos="conversar"
+          size="lg"
+          class="flex-1 min-w-0 lg:flex-none whitespace-nowrap"
+          icon="i-lucide-message-circle"
+          :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
+          @click="emit('conversar')"
+        />
+        <VoiceCallButton
+          v-if="podeLigar"
+          data-relacionamentos="ligar"
+          :phone="pessoa.phone_number"
+          :contact-id="pessoa.id"
+          :label="t('RELACIONAMENTOS_FICHA.ACOES.LIGAR')"
+          icon="i-lucide-phone"
+          size="lg"
+          slate
+          faded
+          class="whitespace-nowrap shrink-0"
+        />
+      </div>
       <div
         v-if="temSecundarias"
         data-relacionamentos="acoes-secundarias"
@@ -234,29 +303,34 @@ const grade = computed(() =>
           @click="emit('novoCard')"
         />
         <Button
-          v-if="naDemonstracao"
+          v-if="podeLembrete"
+          data-relacionamentos="lembrete"
           slate
           faded
           size="lg"
+          icon="i-lucide-bell-plus"
           class="w-full whitespace-nowrap shrink-0 lg:w-auto"
           :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
           @click="emit('lembrete')"
         />
         <Button
-          v-if="alteraDireto"
-          data-relacionamentos="alterar-informacoes"
+          v-if="unico"
+          :data-relacionamentos="
+            unico.evento === 'alterar'
+              ? 'alterar-informacoes'
+              : `mais-${unico.evento}`
+          "
           slate
           faded
           size="lg"
           class="w-full whitespace-nowrap shrink-0 lg:w-auto"
-          :label="t('RELACIONAMENTOS_FICHA.ACOES.ALTERAR_INFORMACOES')"
-          @click="emit('maisAcao', 'alterar')"
+          :class="{ '!text-n-ruby-11': unico.perigo }"
+          :label="t(`RELACIONAMENTOS_FICHA.ACOES.${unico.chave}`)"
+          @click="emit('maisAcao', unico.evento)"
         />
         <MenuMais
           v-if="temMais"
-          :pode-alterar="podeEditar"
-          :eh-cliente="ehCliente"
-          :na-demonstracao="naDemonstracao"
+          :itens="itensDoMais"
           @acao="escolha => emit('maisAcao', escolha)"
         />
       </div>

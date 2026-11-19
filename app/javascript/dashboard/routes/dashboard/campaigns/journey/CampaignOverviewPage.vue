@@ -25,6 +25,7 @@ import {
   RESULT_CHANNELS,
   percent,
   resultRoute,
+  wonValueText,
 } from 'dashboard/components-next/CampaignResult/resultMetrics';
 
 const NS = 'RESULT_JOURNEY.OVERVIEW';
@@ -112,6 +113,16 @@ const kpis = computed(() => {
       value: value.deals.cards,
       note: t(`${NS}.TOTALS.DEALS_NOTE`, { won: number(value.deals.won) }),
     });
+    const revenue = wonValueText(value.deals.won_value, localeTag.value);
+    if (revenue) {
+      items.push({
+        key: 'revenue',
+        label: t(`${NS}.TOTALS.REVENUE`),
+        display: revenue,
+        wide: true,
+        note: t(`${NS}.TOTALS.REVENUE_NOTE`, { won: number(value.deals.won) }),
+      });
+    }
   }
   if (value.email_health) {
     items.push({

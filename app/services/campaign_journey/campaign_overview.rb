@@ -9,7 +9,7 @@
 #   its accepted sends count.
 # - "Responderam" = contacts whose conversation got the campaign mark (CampaignJourney::ResultReplies).
 # - "Viraram cards no CRM" = CRM cards linked to a conversation marked by these campaigns
-#   (null when the CRM is off).
+#   (null when the CRM is off), with the R$ of the won ones (#3063, CampaignJourney::ResultReplies#deals).
 # - "Saúde do e-mail" = permanent bounce and complaint rates of these e-mail campaigns, over the SES
 #   accepted sends, the same denominators the e-mail protection uses (limits 5% and 0.1%).
 class CampaignJourney::CampaignOverview
@@ -20,8 +20,10 @@ class CampaignJourney::CampaignOverview
   MAX_CAMPAIGNS = 500
   F = CampaignJourney::ResultFinder
 
-  def initialize(account:, days: DEFAULT_PERIOD, channel: nil, page: 1)
+  # reader: { user:, account_user: } — who reads; the deals follow what this person sees (ResultReplies#deals_for).
+  def initialize(account:, reader:, days: DEFAULT_PERIOD, channel: nil, page: 1)
     @account = account
+    @reader = reader
     @days = PERIODS.include?(days.to_i) ? days.to_i : DEFAULT_PERIOD
     @channel = F::CHANNELS.include?(channel.to_s) ? channel.to_s : nil
     @page = [page.to_i, 1].max
@@ -71,7 +73,7 @@ class CampaignJourney::CampaignOverview
       campaigns: rows.size,
       reached: rows.sum { |row| row[:delivered] || row[:sent] },
       replied: rows.sum { |row| row[:replied] },
-      deals: Crm::Config.enabled? ? CampaignJourney::ResultReplies.new(@account, rows.pluck(:source_id)).deals : nil,
+      deals: Crm::Config.enabled? ? CampaignJourney::ResultReplies.new(@account, rows.pluck(:source_id)).deals_for(**@reader) : nil,
       email_health: emails.any? ? email_health : nil
     }
   end

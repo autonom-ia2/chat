@@ -31,7 +31,11 @@ const overview = {
     campaigns: 2,
     reached: 1301,
     replied: 17,
-    deals: { cards: 9, won: 2 },
+    deals: {
+      cards: 9,
+      won: 2,
+      won_value: [{ currency: 'BRL', cents: 1234500 }],
+    },
     email_health: { hard_bounce_rate: 1.4, complaint_rate: 0 },
   },
   campaigns: [
@@ -138,10 +142,33 @@ describe('Gestão de campanhas overview (#1007, PRD §6.10, O3)', () => {
       'reached',
       'replied',
       'deals',
+      'revenue',
       'email_health',
     ]);
     expect(kpis[3][1]).toContain('9');
-    expect(kpis[4][1]).toContain('1.4%');
+    expect(kpis[4][1]).toContain('Closed sales');
+    expect(kpis[4][1]).toContain('R$12,345');
+    expect(kpis[5][1]).toContain('1.4%');
+  });
+
+  // #3063: without sales values (won_value null) the counts stay and the R$ does not show.
+  it('leaves the R$ out for who does not see sales values', async () => {
+    api.getOverview.mockResolvedValue({
+      data: {
+        payload: {
+          ...overview,
+          totals: {
+            ...overview.totals,
+            deals: { cards: 9, won: 2, won_value: null },
+          },
+        },
+      },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-kpi="deals"]').exists()).toBe(true);
+    expect(wrapper.find('[data-kpi="revenue"]').exists()).toBe(false);
   });
 
   it('compares the campaigns and each row opens its Resultado', async () => {

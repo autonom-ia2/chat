@@ -82,6 +82,16 @@ RSpec.describe Contacts::NinthDigitDuplicateMerger, :aggregate_failures do
     expect(base.reload.label_list.map(&:downcase).sort).to eq(%w[lead vip])
   end
 
+  # #3071: ContactMergeAction now also unions labels; the ninth-digit action leaves that to the merger, so a label is
+  # never added twice.
+  it 'adds each mergee label once, through the merger only' do
+    base.update!(label_list: ['Feira'])
+    mergee.update!(label_list: %w[feira site])
+
+    expect(outcomes).to eq(['merged'])
+    expect(base.reload.label_list).to contain_exactly('Feira', 'site')
+  end
+
   it 'gives the base the company of the merged contact when it has none, keeping the counter' do
     company = create(:company, account: account)
     mergee.update!(company: company)

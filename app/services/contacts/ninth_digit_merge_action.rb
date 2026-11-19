@@ -19,4 +19,10 @@ class Contacts::NinthDigitMergeAction < ContactMergeAction
     merge_contact_notes
     super
   end
+
+  # #3071: Contacts::NinthDigitDuplicateMerger#merge_labels already added the mergee's labels to the base, in the same
+  # transaction, right before this action runs.
+  def inherited_labels
+    {}
+  end
 end

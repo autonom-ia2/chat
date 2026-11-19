@@ -82,3 +82,13 @@ export const quandoRelativo = (segundos, agoraEmMs, idioma) => {
   if (meses < MESES_POR_ANO) return formato.format(-meses, 'month');
   return formato.format(-Math.floor(meses / MESES_POR_ANO), 'year');
 };
+
+// #3071 — o começo de um texto, para a pessoa reconhecer qual é (a nota no
+// aviso de apagar, no rótulo da lixeira). Conta por caractere (Array.from),
+// para não partir um emoji ao meio.
+export const trechoCurto = (texto, tamanho) => {
+  const letras = Array.from(texto ?? '');
+  return letras.length > tamanho
+    ? `${letras.slice(0, tamanho).join('')}…`
+    : (texto ?? '');
+};

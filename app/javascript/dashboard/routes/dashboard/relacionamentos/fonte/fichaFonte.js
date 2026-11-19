@@ -6,16 +6,28 @@
 //      empresa pela leitura da ficha e devolve isso. O que o servidor recusa
 //      ganha nome (ficha/falhas.js): 404 é NAO_ACHEI, 401 e 403 são SEM_ACESSO;
 //      o resto sobe como veio;
+//      #3071 — e as ações que vieram da ficha antiga: juntar com outra pessoa
+//      (actions/contact_merge: a pessoa da ficha fica, a outra é absorvida),
+//      bloquear e desbloquear (o PATCH do contato, campo `blocked`), apagar
+//      (DELETE contacts/:id), pôr e tirar etiqueta (contacts/:id/labels/alterar,
+//      só o que mudou), apagar nota e marcar "não quer mensagens" (opt_out);
+//      #3075 — salvar grava o pedido inteiro da gaveta (fonte/gravarPessoa.js:
+//      empresa nova, foto e campos que saem) e `buscarEmpresas` acha as
+//      empresas da conta para a escolha da gaveta;
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/ficha.js), a escrita só
 //      fica na memória e tudo demora um instante, como a rede.
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e os
 // dados fictícios nem entram no pacote.
+import AccountActionsAPI from 'dashboard/api/accountActions';
 import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
+import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
+import { GRAVOU_EM_PARTE, alterarPessoa, buscarEmpresas } from './gravarPessoa';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 
 const CARREGAR_DEMO = import.meta.env.DEV
@@ -37,6 +49,9 @@ const LEITURAS = {
   pessoasDaEmpresa: [],
   conversasDaEmpresa: [],
   cardsDaEmpresa: [],
+  etiquetasDaConta: [],
+  buscarPessoas: [],
+  buscarEmpresas: [],
 };
 const ESCRITAS = [
   'salvar',
@@ -45,6 +60,13 @@ const ESCRITAS = [
   'desmarcarCliente',
   'guardarNota',
   'liberarMensagens',
+  'marcarNaoQuer',
+  'bloquear',
+  'desbloquear',
+  'apagar',
+  'juntar',
+  'alterarEtiquetas',
+  'apagarNota',
 ];
 const METODOS = [...Object.keys(LEITURAS), ...ESCRITAS];
 
@@ -95,6 +117,16 @@ const comNome = falha => {
     : falha;
 };
 
+// #3075 — como `noServidor` (abaixo), para quem já devolve o que interessa
+// (fonte/gravarPessoa.js).
+const comNomeNaFalha = async acao => {
+  try {
+    return await acao();
+  } catch (falha) {
+    throw comNome(falha);
+  }
+};
+
 // `pedido()` é uma ida ao servidor: devolve o corpo da resposta.
 const noServidor = async pedido => {
   try {
@@ -127,6 +159,15 @@ const corpoDaEmpresa = ({ name, cnpj, domain }) => ({
   },
 });
 
+// Para escolher com quem juntar: a busca da lista nova (nome, telefone, e-mail,
+// empresa, CPF), sem a própria pessoa.
+const buscarPessoas = async (termo, semId) => {
+  const { itens } = await noServidor(() =>
+    RelacionamentosAPI.pessoas({ busca: termo })
+  );
+  return itens.filter(item => item.id !== semId);
+};
+
 const fonteReal = () => ({
   usaDemo: false,
   pessoa: lerPessoa,
@@ -141,11 +182,28 @@ const fonteReal = () => ({
   conversasDaEmpresa: id =>
     noServidor(() => RelacionamentosAPI.conversasDaEmpresa(id)),
   cardsDaEmpresa: id => noServidor(() => RelacionamentosAPI.cardsDaEmpresa(id)),
-  // `dados` já vem no formato do contato (ficha/informacoes.js).
-  async salvar(id, dados) {
-    await noServidor(() => ContactAPI.update(id, dados));
+  // `pedido` vem da gaveta (ficha/informacoes.js#pedidoParaSalvar).
+  // `retomada`: o que a tentativa anterior já gravou (fonte/gravarPessoa.js).
+  // Se a pessoa ficou gravada e um passo depois falhou (a foto, os campos que
+  // saem), a falha sobe com a pessoa relida em `retomada.pessoaNaFicha`: a
+  // ficha mostra como ela ficou.
+  async salvar(id, pedido, retomada = null) {
+    try {
+      await alterarPessoa(id, pedido, retomada);
+    } catch (falha) {
+      if (falha?.name !== GRAVOU_EM_PARTE) throw comNome(falha);
+      if (!falha.retomada.pessoa) throw falha;
+      // Se nem a releitura vier, a falha sobe do mesmo jeito, sem a pessoa.
+      const pessoaNaFicha = await lerPessoa(id).catch(() => null);
+      throw Object.assign(new Error(falha.message, { cause: falha.cause }), {
+        name: GRAVOU_EM_PARTE,
+        response: falha.response,
+        retomada: { ...falha.retomada, pessoaNaFicha },
+      });
+    }
     return lerPessoa(id);
   },
+  buscarEmpresas: termo => comNomeNaFalha(() => buscarEmpresas(termo)),
   async marcarCliente(id) {
     await noServidor(() => ContactAPI.markCustomer(id));
     return lerPessoa(id);
@@ -157,6 +215,43 @@ const fonteReal = () => ({
   async liberarMensagens(id) {
     await noServidor(() => ContactAPI.removeOptOut(id));
     return lerPessoa(id);
+  },
+  async marcarNaoQuer(id) {
+    await noServidor(() => ContactAPI.markOptOut(id));
+    return lerPessoa(id);
+  },
+  async bloquear(id) {
+    await noServidor(() => ContactAPI.update(id, { blocked: true }));
+    return lerPessoa(id);
+  },
+  async desbloquear(id) {
+    await noServidor(() => ContactAPI.update(id, { blocked: false }));
+    return lerPessoa(id);
+  },
+  async apagar(id) {
+    await noServidor(() => ContactAPI.delete(id));
+  },
+  // A pessoa da ficha (`id`) fica; a escolhida (`outraId`) é absorvida.
+  async juntar(id, outraId) {
+    await noServidor(() => AccountActionsAPI.merge(id, outraId));
+    return lerPessoa(id);
+  },
+  // As etiquetas da conta, com a cor, como a lista lê (acoesDaListaFonte.js).
+  async etiquetasDaConta() {
+    const { data } = await LabelsAPI.get(true);
+    return data.payload
+      .map(({ title, color }) => ({ nome: title, cor: color }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  },
+  buscarPessoas,
+  // Só o que mudou: { por, tirar }. O servidor aplica sobre a lista que está
+  // gravada, e a etiqueta que outra pessoa pôs no meio-tempo não some.
+  async alterarEtiquetas(id, mudanca) {
+    await noServidor(() => EtiquetasDoContatoAPI.alterar(id, mudanca));
+    return lerPessoa(id);
+  },
+  async apagarNota(id, notaId) {
+    await noServidor(() => ContactNotesAPI.delete(id, notaId));
   },
   async guardarNota(id, texto) {
     return notaDaTela(

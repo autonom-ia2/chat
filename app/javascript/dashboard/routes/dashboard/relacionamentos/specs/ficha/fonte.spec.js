@@ -126,25 +126,57 @@ describe('dados da demonstração', () => {
 describe('escritas da demonstração', () => {
   it('salvar guarda na memória e devolve cópia nova', async () => {
     const antes = await fonte.pessoa(ID_CLIENTE_COMPLETO);
-    const dados = {
-      name: 'Nome Novo',
-      email: 'novo@exemplo.com.br',
-      phone_number: antes.phone_number,
-      additional_attributes: {
-        city: 'Bauru',
-        company_name: antes.additional_attributes.company_name,
+    const pedido = {
+      contato: {
+        name: 'Nome Novo',
+        email: 'novo@exemplo.com.br',
+        phone_number: antes.phone_number,
+        additional_attributes: {
+          city: 'Bauru',
+          company_name: antes.additional_attributes.company_name,
+        },
+        custom_attributes: { cpf: '52998224725' },
       },
-      custom_attributes: { cpf: '52998224725' },
+      empresaNova: null,
+      foto: null,
+      apagar: [],
     };
-    const copiaDosDados = JSON.stringify(dados);
-    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, dados);
+    const copiaDoPedido = JSON.stringify(pedido);
+    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, pedido);
     expect(salvo.name).toBe('Nome Novo');
     expect(
       (await fonte.pessoa(ID_CLIENTE_COMPLETO)).additional_attributes.city
     ).toBe('Bauru');
-    expect(JSON.stringify(dados)).toBe(copiaDosDados);
+    expect(JSON.stringify(pedido)).toBe(copiaDoPedido);
     expect(salvo).not.toBe(await fonte.pessoa(ID_CLIENTE_COMPLETO));
     expect(antes.name).not.toBe('Nome Novo');
+  });
+
+  it('salvar apaga os campos pedidos e mantém os outros', async () => {
+    const antes = await fonte.pessoa(ID_CLIENTE_COMPLETO);
+    const [chave] = Object.keys(antes.custom_attributes);
+    const salvo = await fonte.salvar(ID_CLIENTE_COMPLETO, {
+      contato: {
+        name: antes.name,
+        email: antes.email,
+        phone_number: antes.phone_number,
+        additional_attributes: {},
+        custom_attributes: { cor_favorita: 'azul' },
+      },
+      empresaNova: null,
+      foto: null,
+      apagar: [chave],
+    });
+    expect(salvo.custom_attributes).not.toHaveProperty(chave);
+    expect(salvo.custom_attributes.cor_favorita).toBe('azul');
+  });
+
+  it('buscarEmpresas acha as empresas inventadas pelo nome', async () => {
+    const [primeira] = await fonte.buscarEmpresas('a');
+    expect(primeira).toEqual({
+      id: expect.any(Number),
+      nome: expect.any(String),
+    });
   });
 
   it('marcar como cliente vale na hora e dá um card ganho', async () => {
@@ -279,5 +311,73 @@ describe('cards e notas fictícios', () => {
       const dias = lista.map(n => Math.floor(n.quando / DIA_EM_SEGUNDOS));
       expect(new Set(dias).size).toBe(lista.length);
     });
+  });
+});
+
+// #3071 — as ações que vieram da ficha antiga também rodam na demonstração,
+// só na memória.
+describe('ações da ficha antiga na demonstração', () => {
+  it('bloquear e desbloquear trocam o bloqueio', async () => {
+    expect((await fonte.bloquear(ID_CLIENTE_COMPLETO)).blocked).toBe(true);
+    expect((await fonte.desbloquear(ID_CLIENTE_COMPLETO)).blocked).toBe(false);
+  });
+
+  it('marcar "não quer mensagens" põe a recusa manual, e liberar a tira', async () => {
+    const marcada = await fonte.marcarNaoQuer(ID_NUNCA_CONVERSOU);
+    expect(marcada.opted_out_at).toBeTruthy();
+    expect(marcada.opt_out_source).toBe('manual');
+    expect(
+      (await fonte.liberarMensagens(ID_NUNCA_CONVERSOU)).opted_out_at
+    ).toBeNull();
+  });
+
+  it('alterar etiquetas põe e tira só o que mudou, sem diferenciar maiúscula', async () => {
+    const antes = (await fonte.pessoa(ID_CLIENTE_COMPLETO)).labels;
+    const pessoa = await fonte.alterarEtiquetas(ID_CLIENTE_COMPLETO, {
+      por: ['nova', 'NOVA'],
+      tirar: antes.slice(0, 1).map(nome => nome.toUpperCase()),
+    });
+    expect(pessoa.labels).toEqual([...antes.slice(1), 'nova']);
+  });
+
+  it('apagar nota tira só ela', async () => {
+    const [primeira, ...resto] = await fonte.notas(ID_CLIENTE_COMPLETO);
+    await fonte.apagarNota(ID_CLIENTE_COMPLETO, primeira.id);
+    expect(await fonte.notas(ID_CLIENTE_COMPLETO)).toEqual(resto);
+  });
+
+  it('apagar some com a pessoa', async () => {
+    await fonte.apagar(ID_NUNCA_CONVERSOU);
+    expect(await fonte.pessoa(ID_NUNCA_CONVERSOU)).toBeNull();
+  });
+
+  it('juntar: a outra some, e as conversas e etiquetas dela vêm para a que fica', async () => {
+    const antes = await fonte.conversas(ID_CLIENTE_COMPLETO);
+    const daOutra = await fonte.conversas(ID_RECUSOU_MANUAL);
+    const outra = await fonte.pessoa(ID_RECUSOU_MANUAL);
+    const junta = await fonte.juntar(ID_CLIENTE_COMPLETO, ID_RECUSOU_MANUAL);
+    expect(await fonte.pessoa(ID_RECUSOU_MANUAL)).toBeNull();
+    expect(await fonte.conversas(ID_CLIENTE_COMPLETO)).toHaveLength(
+      antes.length + daOutra.length
+    );
+    outra.labels.forEach(etiqueta => expect(junta.labels).toContain(etiqueta));
+  });
+
+  it('buscar pessoas acha pelo nome sem acento e tira a própria pessoa', async () => {
+    const alguem = pessoas()[0];
+    const primeiroNome = alguem.name.split(' ')[0];
+    const achadas = await fonte.buscarPessoas(primeiroNome, alguem.id);
+    expect(achadas.map(({ id }) => id)).not.toContain(alguem.id);
+    achadas.forEach(item =>
+      expect(semAcento(item.name).toLowerCase()).toContain(
+        semAcento(primeiroNome).toLowerCase()
+      )
+    );
+  });
+
+  it('as etiquetas da conta vêm com a cor', async () => {
+    const etiquetas = await fonte.etiquetasDaConta();
+    expect(etiquetas.length).toBeGreaterThan(0);
+    etiquetas.forEach(item => expect(item.cor).toBeTruthy());
   });
 });

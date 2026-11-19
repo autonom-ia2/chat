@@ -59,6 +59,7 @@ import { useMarcados } from '../lista/useMarcados';
 import { gruposDeOrdem } from '../lista/ordens';
 import { useOrdemGuardada } from '../lista/useOrdemGuardada';
 import { usePessoaNaGaveta } from '../lista/usePessoaNaGaveta';
+import { useCamposDaConta } from '../ficha/useCamposDaConta';
 import { useDevolverEtiquetas } from '../lista/useDevolverEtiquetas';
 
 // #2897 — a aba Seguros só é baixada quando abre: quem não tem a carteira (ou
@@ -375,6 +376,10 @@ const dialogoDaPlanilha = useTemplateRef('dialogoDaPlanilha');
 // "Nova pessoa" e o lápis da linha: a gaveta "Alterar informações" da ficha.
 // Depois de criar, abre a ficha nova (o próximo passo de quem acabou de
 // cadastrar); depois de editar, a lista se atualiza sem sair do lugar.
+// #3075 — com a empresa cadastrada (`temEmpresas`) e os campos personalizados
+// da conta. A lista não lê o configurador de campos (seria uma leitura a mais
+// ao abrir a lista): os campos vêm na ordem da conta.
+const camposDaConta = useCamposDaConta({ comConfiguracao: false });
 const gaveta = usePessoaNaGaveta({
   acoes,
   aoCriar: criada => {
@@ -387,14 +392,22 @@ const gaveta = usePessoaNaGaveta({
     useAlert(t('RELACIONAMENTOS.LISTA.EDITAR.SALVO', { nome: dados.name }));
     lista.atualizar();
   },
-  aoFalhar: nova =>
+  // #3075 — `parcial`: a pessoa ficou gravada e só a foto (ou um campo que
+  // sai) falhou. A lista já a mostra; "Salvar" de novo repete só o que faltou.
+  aoFalhar: (nova, { parcial = false } = {}) => {
+    if (parcial) {
+      useAlert(t('RELACIONAMENTOS_FICHA.GAVETA.SALVOU_EM_PARTE'));
+      lista.atualizar();
+      return;
+    }
     useAlert(
       t(
         nova
           ? 'RELACIONAMENTOS.LISTA.NOVA_PESSOA.ERRO'
           : 'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
       )
-    ),
+    );
+  },
 });
 // As ações ao lado das abas só existem em Pessoas, para quem pode, e com a
 // lista à vista: sem acesso não há o que criar nem baixar; sem ninguém, não há
@@ -765,6 +778,10 @@ watch(naAbaDeSeguros, estaNela => {
       :titulo="tituloDaGaveta"
       :rotulo-salvar="salvarDaGaveta"
       :erros-do-servidor="gaveta.errosDoServidor.value"
+      :empresa-cadastrada="gaveta.empresaCadastrada.value"
+      :com-empresas="temEmpresas"
+      :buscar-empresas="acoes.buscarEmpresas"
+      :definicoes="camposDaConta.definicoes.value"
       marca="gaveta-da-pessoa"
       @fechar="gaveta.fechar"
       @salvar="gaveta.salvar"

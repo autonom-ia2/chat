@@ -36,6 +36,8 @@ const props = defineProps({
   // Pela ficha do cliente ou da empresa (Relacionamento): { id, name }.
   contato: { type: Object, default: null },
   empresa: { type: Object, default: null },
+  // #3071 — o "O que é" já escrito (a ficha nova da pessoa: "Falar com Ana").
+  titulo: { type: String, default: '' },
 });
 const emit = defineEmits(['close', 'salvou']);
 
@@ -133,6 +135,7 @@ watch(
     card.value = {};
     retorno.reiniciar();
     retorno.form.dueAt = inicioDoDia(props.dia);
+    if (props.titulo) retorno.form.title = props.titulo;
   },
   { immediate: true }
 );

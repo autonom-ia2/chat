@@ -11,11 +11,12 @@ import FichaDaEmpresaPage from '../../pages/FichaDaEmpresaPage.vue';
 // As duas fichas fora da demonstração (#2895): leem do servidor pelas leituras
 // novas, escrevem pelos endpoints que o painel já tem, mostram cada erro no
 // lugar certo, levam às rotas reais e escondem a escrita de quem só pode ver.
-// O que ainda só avisa não aparece aqui (#2970): "Conversar" sem conversa para
-// abrir, "Lembrete", "Ver todas", Juntar, Bloquear e Apagar do "⋯", "Mandar
-// mensagem" da empresa e o ícone de conversar de cada pessoa.
+// O que ainda só avisa não aparece aqui (#2970): "Mandar mensagem" da empresa
+// e o ícone de conversar de cada pessoa. As ações que vieram da ficha antiga
+// (#3071) têm o próprio arquivo: acoesReais.spec.js.
 const contexto = vi.hoisted(() => ({ params: {}, empurrar: vi.fn() }));
 const pode = vi.hoisted(() => ({ editar: true, criarCards: true }));
+const conversaNova = vi.hoisted(() => ({ abrir: vi.fn() }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 // A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
@@ -28,9 +29,14 @@ vi.mock('../../components/carteira/SegurosDaFicha.vue', () => {
   carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'SegurosDaFicha'];
   return { default: { render: () => null } };
 });
+// #3071 — o "Ligar" é o VoiceCallButton da casa (ele decide se aparece).
+vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
+  default: { props: ['phone'], template: '<button data-ligar />' },
+}));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     currentAccount: { value: { carteira_seguros: false } },
+    isCloudFeatureEnabled: () => false,
   }),
 }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
@@ -60,7 +66,20 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
       },
     },
     podeExportar: { value: false },
+    podeApagar: { value: false },
+    podeCriarLembrete: { value: false },
   }),
+}));
+// #3071 — as caixas da conta (para "Ligar") vêm do store: aqui não há voz.
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () => ({ value: [] }),
+}));
+// A "Nova conversa" da casa lê o contato do store: aqui só se vê se abriu.
+vi.mock('../../components/carteira/ConversaNova.vue', () => ({
+  default: {
+    render: () => null,
+    methods: { abrir: id => conversaNova.abrir(id) },
+  },
 }));
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
@@ -316,42 +335,34 @@ describe('ficha da pessoa: para onde os botões levam', () => {
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  // #2970 — começar conversa nova ainda não é de verdade: sem conversa para
-  // abrir, o botão não aparece. As outras ações do cabeçalho continuam.
-  it('com quem nunca conversou não há Conversar', async () => {
+  // #3071 — "Conversar" aparece sempre: com quem nunca conversou abre a "Nova
+  // conversa" já com a pessoa.
+  it('com quem nunca conversou, Conversar abre a Nova conversa já com a pessoa', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({ data: [] });
+    conversaNova.abrir.mockResolvedValue(true);
     const w = await abrirPessoa();
-    expect(w.find(marca('conversar')).exists()).toBe(false);
-    expect(w.get(marca('cabecalho')).text()).not.toContain('Conversar');
-    expect(w.find(marca('novo-card')).exists()).toBe(true);
-    expect(w.find(marca('alterar-informacoes')).exists()).toBe(true);
+    await w.get(marca('conversar')).trigger('click');
+    await flushPromises();
+    expect(conversaNova.abrir).toHaveBeenCalledWith(7);
+    expect(contexto.empurrar).not.toHaveBeenCalled();
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  // #2970 — "Lembrete", "Ver todas" e, no "⋯", Juntar, Bloquear e Apagar ainda
-  // só avisam ("Aqui abre…"): fora da demonstração não existem. Sobra um item
-  // só, e ele não fica em menu: "Alterar informações" é um botão.
-  it('não tem Lembrete, Ver todas nem "⋯", e "Alterar informações" abre a gaveta', async () => {
+  it('se a Nova conversa não abre (quem só lê conversas), a tela diz por quê', async () => {
+    RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({ data: [] });
+    conversaNova.abrir.mockResolvedValue(false);
     const w = await abrirPessoa();
-    expect(w.get(marca('cabecalho')).text()).not.toContain('Lembrete');
-    expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(2);
-    expect(w.get(marca('conversas')).text()).not.toContain('Ver todas');
-    expect(w.find(`${marca('conversas')} button`).exists()).toBe(false);
-    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
-    const alterar = w.get(marca('alterar-informacoes'));
-    expect(alterar.text()).toContain('Alterar informações');
-    await alterar.trigger('click');
-    expect(w.find(`${marca('gaveta-informacoes')} [data-foco]`).exists()).toBe(
-      true
+    await w.get(marca('conversar')).trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Vocês ainda não conversaram por aqui. O telefone está na ficha.'
     );
-    expect(useAlert).not.toHaveBeenCalled();
   });
 
-  // #2970 — a leitura das conversas falhou: a ficha não sabe se a pessoa tem
-  // conversa, e o botão não pode sumir de quem tem. O clique lê de novo.
+  // A leitura das conversas falhou: o clique lê de novo antes de abrir.
   const AVISO_DE_FALHA = `${marca('conversas')} ${marca('falha-da-parte')}`;
 
-  it('se as conversas não vieram, Conversar aparece, lê de novo e abre a mais recente', async () => {
+  it('se as conversas não vieram, Conversar lê de novo e abre a mais recente', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockRejectedValueOnce(erroHttp(500));
     const w = await abrirPessoa();
     expect(w.find(AVISO_DE_FALHA).exists()).toBe(true);
@@ -366,38 +377,24 @@ describe('ficha da pessoa: para onde os botões levam', () => {
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  it('se as conversas continuam sem vir, Conversar não sai do lugar e a parte segue dizendo que falhou', async () => {
+  it('se as conversas continuam sem vir, Conversar não abre nada e diz que não conseguiu ver', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(500));
     const w = await abrirPessoa();
     await w.get(marca('conversar')).trigger('click');
     await flushPromises();
-    expect(RelacionamentosAPI.conversasDaPessoa).toHaveBeenCalledTimes(2);
     expect(contexto.empurrar).not.toHaveBeenCalled();
-    expect(useAlert).not.toHaveBeenCalled();
-    expect(w.get(AVISO_DE_FALHA).text()).toContain(
-      'Não consegui mostrar esta parte.'
+    expect(conversaNova.abrir).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não consegui ver as conversas dessa pessoa agora. Tente de novo.'
     );
     expect(w.find(marca('conversar')).exists()).toBe(true);
   });
 
-  it('se a nova leitura diz que não há conversa, Conversar some sem sair do lugar', async () => {
-    RelacionamentosAPI.conversasDaPessoa
-      .mockRejectedValueOnce(erroHttp(500))
-      .mockResolvedValueOnce({ data: [] });
-    const w = await abrirPessoa();
-    await w.get(marca('conversar')).trigger('click');
-    await flushPromises();
-    expect(contexto.empurrar).not.toHaveBeenCalled();
-    expect(useAlert).not.toHaveBeenCalled();
-    expect(w.find(AVISO_DE_FALHA).exists()).toBe(false);
-    expect(w.find(marca('conversar')).exists()).toBe(false);
-  });
-
-  it('quem não pode ver as conversas fica sem a parte e sem Conversar', async () => {
+  it('quem não pode ver as conversas fica sem a parte, e Conversar continua', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(401));
     const w = await abrirPessoa();
     expect(w.find(marca('conversas')).exists()).toBe(false);
-    expect(w.find(marca('conversar')).exists()).toBe(false);
+    expect(w.find(marca('conversar')).exists()).toBe(true);
   });
 
   it('Abrir no CRM leva ao card', async () => {
@@ -478,9 +475,9 @@ describe('ficha da pessoa: escritas', () => {
     expect(useAlert).toHaveBeenCalledWith('Não consegui mudar. Tente de novo.');
   });
 
-  it('quem não é cliente não tem "⋯" nem "Não é mais cliente"', async () => {
+  it('quem não é cliente não tem "Não é mais cliente" no "⋯"', async () => {
     const w = await abrirPessoa();
-    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+    await w.get(marca('mais-acoes')).trigger('click');
     expect(w.text()).toContain('Alterar informações');
     expect(w.text()).not.toContain('Não é mais cliente');
   });
@@ -491,7 +488,6 @@ describe('ficha da pessoa: escritas', () => {
     expect(w.find(marca('alterar-informacoes')).exists()).toBe(false);
     await w.get(marca('mais-acoes')).trigger('click');
     const itens = w.findAll('.n-dropdown-item button');
-    expect(itens).toHaveLength(2);
     expect(itens[0].text()).toContain('Alterar informações');
     expect(itens[1].text()).toContain('Não é mais cliente');
   });
@@ -584,8 +580,10 @@ describe('ficha da pessoa: quem só pode ver', () => {
     expect(w.find(marca('guardar-nota')).exists()).toBe(false);
     expect(w.find(marca('faixa-nao-quer')).exists()).toBe(true);
     expect(w.get(marca('notas')).text()).toContain('Ligar.');
-    // #2970 — sem item de verdade para quem só pode ver, o "⋯" não aparece.
+    // Sem nada que quem só pode ver possa fazer, o "⋯" não aparece.
     expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+    expect(w.find(marca('mudar-etiquetas')).exists()).toBe(false);
+    expect(w.find(marca('apagar-nota')).exists()).toBe(false);
     expect(w.text()).not.toContain('Alterar informações');
   });
 
@@ -600,20 +598,15 @@ describe('ficha da pessoa: quem só pode ver', () => {
     expect(w.text()).not.toContain('Não é mais cliente');
   });
 
-  // #2970 — sem nada de verdade para fazer, o cabeçalho não desenha o grupo
-  // de ações; com conversa, sobra só Conversar.
-  it('sem poder criar card e sem conversa, o cabeçalho fica sem ação nenhuma', async () => {
+  // #3071 — sem poder criar card, sobra só Conversar, que aparece sempre.
+  it('sem poder criar card, o cabeçalho fica só com Conversar, com ou sem conversa', async () => {
     pode.editar = false;
     pode.criarCards = false;
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValueOnce({ data: [] });
     const semConversa = await abrirPessoa();
-    expect(
-      semConversa.find(`${marca('cabecalho')} [role="group"]`).exists()
-    ).toBe(false);
-    semConversa.unmount();
-    const comConversa = await abrirPessoa();
-    const grupo = comConversa.get(`${marca('cabecalho')} [role="group"]`);
-    expect(grupo.findAll('button')).toHaveLength(1);
+    const grupo = semConversa.get(`${marca('cabecalho')} [role="group"]`);
+    // O Ligar é do VoiceCallButton, que se esconde sem caixa de voz.
+    expect(grupo.findAll('button:not([data-ligar])')).toHaveLength(1);
     expect(grupo.find(marca('conversar')).exists()).toBe(true);
   });
 });

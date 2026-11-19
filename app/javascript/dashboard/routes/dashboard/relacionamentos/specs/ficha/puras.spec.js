@@ -23,13 +23,27 @@ import {
   situacaoDeConversaConhecida,
 } from '../../ficha/rotulos';
 import {
-  dadosParaSalvar,
   formularioDaPessoa,
   linhasDaEmpresa,
   linhasDaPessoa,
   nomeDaInformacao,
+  pedidoParaSalvar,
   redesPreenchidas,
 } from '../../ficha/informacoes';
+import {
+  camposDaPessoa,
+  linkCompleto,
+  linkSeguro,
+} from '../../ficha/atributos';
+import {
+  nomeDoPais,
+  nomeGravadoDoPais,
+  opcoesDePais,
+} from '../../ficha/paises';
+
+// Endereço que roda código no clique: nunca pode virar link. Montado em partes
+// para não ser um link de verdade dentro do teste.
+const LINK_PERIGOSO = ['javascript', 'alert(1)'].join(':');
 
 // As funções puras da ficha (#2894): formatos, conferência, origem da recusa e
 // informações.
@@ -150,6 +164,48 @@ describe('errosDoFormulario', () => {
       errosDoFormulario(inicial, { ...inicial, email: '', cpf: '' })
     ).toEqual({});
   });
+
+  // #3075 — o campo personalizado do tipo link aceita o endereço sem "https://".
+  it('link sem "https://" passa; o que não é site é cobrado', () => {
+    const comLinks = { ...inicial, atributos: { site: '' } };
+    const tipos = { site: 'link' };
+    const com = site => ({ ...comLinks, atributos: { site } });
+    expect(errosDoFormulario(comLinks, com('seusite.com.br'), tipos)).toEqual(
+      {}
+    );
+    expect(errosDoFormulario(comLinks, com('padaria bom dia'), tipos)).toEqual({
+      'atributo:site': 'LINK',
+    });
+  });
+
+  it('empresa escrita e não escolhida trava o salvar', () => {
+    expect(
+      errosDoFormulario(inicial, { ...inicial, empresaPendente: ' Quitanda ' })
+    ).toEqual({ empresa: 'EMPRESA_SEM_ESCOLHA' });
+    expect(
+      errosDoFormulario(inicial, { ...inicial, empresaPendente: '  ' })
+    ).toEqual({});
+  });
+
+  it('cobra o link novo que não abre; o antigo e o vazio passam', () => {
+    const comLinks = { ...inicial, atributos: { site: 'velho', outro: 'x' } };
+    const tipos = { site: 'link', outro: 'text' };
+    expect(
+      errosDoFormulario(
+        comLinks,
+        { ...comLinks, atributos: { site: LINK_PERIGOSO, outro: 'y' } },
+        tipos
+      )
+    ).toEqual({ 'atributo:site': 'LINK' });
+    expect(errosDoFormulario(comLinks, comLinks, tipos)).toEqual({});
+    expect(
+      errosDoFormulario(
+        comLinks,
+        { ...comLinks, atributos: { site: 'https://exemplo.com.br' } },
+        tipos
+      )
+    ).toEqual({});
+  });
 });
 
 describe('origem da recusa', () => {
@@ -174,6 +230,7 @@ describe('informações da pessoa', () => {
     name: 'Ana Teste',
     email: 'ana@exemplo.com.br',
     phone_number: '+5511900001001',
+    company_id: null,
     additional_attributes: {
       city: 'Santos',
       company_name: '',
@@ -181,39 +238,91 @@ describe('informações da pessoa', () => {
     },
     custom_attributes: { cpf: CPF_VALIDO, melhor_horario: 'Tarde' },
   };
+  const DEFINICOES = [
+    {
+      id: 1,
+      attribute_model: 'contact_attribute',
+      attribute_key: 'melhor_horario',
+      attribute_display_name: 'Melhor hora para ligar',
+      attribute_display_type: 'list',
+      attribute_values: ['Manhã', 'Tarde'],
+    },
+  ];
+  const linhasCom = (alvo, definicoes = DEFINICOES) =>
+    linhasDaPessoa(alvo, {
+      idioma: 'pt-BR',
+      campos: camposDaPessoa({
+        definicoes,
+        valores: alvo.custom_attributes,
+      }),
+    });
 
-  it('lista o fixo e o que a conta criou; o que falta fica vazio', () => {
-    const linhas = linhasDaPessoa(pessoa);
+  it('lista o fixo e os campos da conta com o nome que a conta deu', () => {
+    const linhas = linhasCom(pessoa);
     const por = chave => linhas.find(l => l.chave === chave);
     expect(por('cpf')).toMatchObject({ valor: '529.982.247-25', copiar: true });
     // A empresa fica só no cabeçalho.
     expect(por('empresa')).toBeUndefined();
     expect(por('conta:melhor_horario')).toMatchObject({
-      rotulo: 'Melhor horário',
+      rotulo: 'Melhor hora para ligar',
+      tipo: 'list',
       valor: 'Tarde',
     });
-    // Telefone e e-mail ficam só no cabeçalho.
+    // Telefone e e-mail ficam só no cabeçalho; país e "Sobre" vazios não vêm.
     expect(linhas.map(l => l.chave).slice(0, 2)).toEqual(['cpf', 'cidade']);
     expect(por('telefone')).toBeUndefined();
     expect(por('email')).toBeUndefined();
+    expect(por('pais')).toBeUndefined();
+    expect(por('sobre')).toBeUndefined();
+  });
+
+  it('país no idioma do painel e "Sobre a pessoa" com as quebras de linha', () => {
+    const linhas = linhasCom({
+      ...pessoa,
+      additional_attributes: {
+        ...pessoa.additional_attributes,
+        country_code: 'BR',
+        country: 'Brazil',
+        description: 'Prefere WhatsApp.\nLigar à tarde.',
+      },
+    });
+    const por = chave => linhas.find(l => l.chave === chave);
+    expect(por('pais').valor).toBe('Brasil');
+    expect(por('sobre')).toMatchObject({
+      valor: 'Prefere WhatsApp.\nLigar à tarde.',
+      longo: true,
+    });
+  });
+
+  it('valor gravado sem definição usa o nome da chave, com acento', () => {
+    expect(linhasCom(pessoa, [])).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          chave: 'conta:melhor_horario',
+          rotulo: 'Melhor horário',
+        }),
+      ])
+    );
+    expect(nomeDaInformacao('como_prefere_ser_chamado')).toBe(
+      'Como prefere ser chamado'
+    );
   });
 
   it('mesmo com empresa preenchida, Informações não a repete', () => {
     const comEmpresa = {
       ...pessoa,
+      company_id: 4,
       additional_attributes: {
         ...pessoa.additional_attributes,
         company_name: 'Padaria Dornelaz',
       },
     };
-    expect(linhasDaPessoa(comEmpresa).map(l => l.chave)).not.toContain(
-      'empresa'
-    );
-    expect(formularioDaPessoa(comEmpresa).empresa).toBe('Padaria Dornelaz');
-  });
-
-  it('o nome das informações da conta leva acento', () => {
-    expect(nomeDaInformacao('melhor_horario')).toBe('Melhor horário');
+    expect(linhasCom(comEmpresa).map(l => l.chave)).not.toContain('empresa');
+    expect(formularioDaPessoa(comEmpresa)).toMatchObject({
+      empresa: 'Padaria Dornelaz',
+      empresaId: 4,
+      empresaNova: false,
+    });
   });
 
   it('só mostra redes conhecidas e preenchidas', () => {
@@ -222,105 +331,293 @@ describe('informações da pessoa', () => {
     ]);
   });
 
-  it('dá nome à informação da conta', () => {
-    expect(nomeDaInformacao('como_prefere_ser_chamado')).toBe(
-      'Como prefere ser chamado'
-    );
-  });
-
   it('ida e volta do formulário, sem mutar a pessoa', () => {
     const antes = JSON.stringify(pessoa);
     const form = formularioDaPessoa(pessoa);
     expect(form.cpf).toBe('529.982.247-25');
     expect(form.redes.instagram).toBe('@ana');
-    expect(form.extras).toEqual({ melhor_horario: 'Tarde' });
-    const dados = dadosParaSalvar({
-      ...form,
-      cidade: ' Bauru ',
-      redes: { ...form.redes, instagram: '' },
+    expect(form.atributos).toEqual({ melhor_horario: 'Tarde' });
+    expect(form.foto).toBeNull();
+    const { contato } = pedidoParaSalvar(
+      { ...form, cidade: ' Bauru ', redes: { ...form.redes, instagram: '' } },
+      form
+    );
+    expect(contato.additional_attributes.city).toBe('Bauru');
+    expect(contato.additional_attributes.social_profiles).toEqual({
+      outra: 'x',
+      instagram: '',
     });
-    expect(dados.additional_attributes.city).toBe('Bauru');
-    expect(dados.additional_attributes.social_profiles).toEqual({ outra: 'x' });
-    expect(dados.custom_attributes).toEqual({
-      cpf: CPF_VALIDO,
-      melhor_horario: 'Tarde',
-    });
+    // O que ninguém mexeu não vai de novo: o servidor junta com o que há.
+    expect(contato.custom_attributes).toEqual({});
     expect(JSON.stringify(pessoa)).toBe(antes);
   });
 
   it('manda telefone e e-mail vazios como nulos', () => {
-    const dados = dadosParaSalvar({
-      ...formularioDaPessoa(pessoa),
-      telefone: '',
-      email: ' ',
-    });
-    expect(dados.phone_number).toBeNull();
-    expect(dados.email).toBeNull();
+    const form = formularioDaPessoa(pessoa);
+    const { contato } = pedidoParaSalvar(
+      { ...form, telefone: '', email: ' ' },
+      form
+    );
+    expect(contato.phone_number).toBeNull();
+    expect(contato.email).toBeNull();
   });
 });
 
-describe('dadosParaSalvar: campos esvaziados', () => {
+describe('pedidoParaSalvar: link completo', () => {
+  const pessoa = {
+    name: 'Ana',
+    additional_attributes: {},
+    custom_attributes: { site: 'velho.com.br', blog: '' },
+  };
+  const tipos = { site: 'link', blog: 'link' };
+  it('o link novo sem "https://" vai completo; o antigo sem ele não conta como mudado', () => {
+    const inicial = formularioDaPessoa(pessoa);
+    expect(
+      pedidoParaSalvar(inicial, inicial, { tipos }).contato.custom_attributes
+    ).toEqual({});
+    const atual = {
+      ...inicial,
+      atributos: { ...inicial.atributos, blog: 'ana.blog.br' },
+    };
+    expect(
+      pedidoParaSalvar(atual, inicial, { tipos }).contato.custom_attributes
+    ).toEqual({ blog: 'https://ana.blog.br' });
+  });
+});
+
+describe('pedidoParaSalvar: o que muda e o que sai', () => {
   const pessoaCheia = {
     name: 'Ana',
     phone_number: '+5511900001007',
     email: 'ana@exemplo.com.br',
+    company_id: 4,
     additional_attributes: {
       city: 'Santos',
+      company_name: 'Padaria Dornelaz',
+      description: 'Cliente antiga.',
       social_profiles: { instagram: '@ana', github: '' },
     },
-    custom_attributes: { cpf: CPF_VALIDO, melhor_horario: 'Tarde' },
+    custom_attributes: {
+      cpf: CPF_VALIDO,
+      melhor_horario: 'Tarde',
+      filhos: 2,
+      vip: false,
+    },
   };
+  const inicial = formularioDaPessoa(pessoaCheia);
 
-  it('manda vazio explícito para o que existia e a pessoa apagou', () => {
-    const inicial = formularioDaPessoa(pessoaCheia);
-    const dados = dadosParaSalvar(
+  it('campo esvaziado sai de verdade; o tipo do que muda continua', () => {
+    const { contato, apagar } = pedidoParaSalvar(
       {
         ...inicial,
         cpf: '',
-        redes: { ...inicial.redes, instagram: '' },
-        extras: { melhor_horario: '' },
+        atributos: { ...inicial.atributos, melhor_horario: '', filhos: 3 },
       },
       inicial
     );
-    expect(dados.custom_attributes).toEqual({ cpf: '', melhor_horario: '' });
-    expect(dados.additional_attributes.social_profiles).toEqual({
-      instagram: '',
-    });
+    expect(apagar).toEqual(['cpf', 'melhor_horario']);
+    expect(contato.custom_attributes).toEqual({ filhos: 3 });
   });
 
-  it('continua omitindo o que nunca existiu, e não muda a entrada', () => {
-    const inicial = formularioDaPessoa(pessoaCheia);
+  it('"não" (false) é valor: marcar e desmarcar vão; quem nunca teve não sai', () => {
+    const { contato, apagar } = pedidoParaSalvar(
+      { ...inicial, atributos: { ...inicial.atributos, vip: true, novo: '' } },
+      inicial
+    );
+    expect(contato.custom_attributes).toEqual({ vip: true });
+    expect(apagar).toEqual([]);
+  });
+
+  it('país e "Sobre a pessoa" vão como a ficha antiga grava', () => {
+    const { contato } = pedidoParaSalvar(
+      { ...inicial, pais: 'PT', sobre: ' ' },
+      inicial
+    );
+    expect(contato.additional_attributes).toMatchObject({
+      country_code: 'PT',
+      country: 'Portugal',
+      description: '',
+    });
+    const semMudar = pedidoParaSalvar(inicial, inicial).contato;
+    expect(semMudar.additional_attributes).not.toHaveProperty('country_code');
+    expect(semMudar.additional_attributes.description).toBe('Cliente antiga.');
+  });
+
+  it('empresa: escolher outra manda o id; tirar manda nulo; sem a chave, só o nome', () => {
+    const outra = { ...inicial, empresa: 'Oficina', empresaId: 9 };
+    expect(
+      pedidoParaSalvar(outra, inicial, { comEmpresas: true }).contato
+    ).toMatchObject({
+      company_id: 9,
+      additional_attributes: { company_name: 'Oficina' },
+    });
+    const tirada = { ...inicial, empresa: '', empresaId: null };
+    expect(
+      pedidoParaSalvar(tirada, inicial, { comEmpresas: true }).contato
+        .company_id
+    ).toBeNull();
+    expect(pedidoParaSalvar(outra, inicial).contato).not.toHaveProperty(
+      'company_id'
+    );
+    expect(
+      pedidoParaSalvar(inicial, inicial, { comEmpresas: true }).contato
+    ).not.toHaveProperty('company_id');
+  });
+
+  it('empresa nova vai pelo nome, para a fonte cadastrar', () => {
+    const nova = {
+      ...inicial,
+      empresa: ' Padaria Nova ',
+      empresaId: null,
+      empresaNova: true,
+    };
+    const pedido = pedidoParaSalvar(nova, inicial, { comEmpresas: true });
+    expect(pedido.empresaNova).toBe('Padaria Nova');
+    expect(pedido.contato).not.toHaveProperty('company_id');
+  });
+
+  it('a foto pedida vai junto', () => {
+    expect(
+      pedidoParaSalvar({ ...inicial, foto: { tirar: true } }, inicial).foto
+    ).toEqual({ tirar: true });
+  });
+
+  it('continua omitindo a rede que nunca existiu, e não muda a entrada', () => {
     const formulario = { ...inicial, cpf: '' };
     const antes = JSON.stringify([inicial, formulario]);
-    const dados = dadosParaSalvar(formulario, inicial);
-    expect(dados.additional_attributes.social_profiles).toEqual({
+    const { contato } = pedidoParaSalvar(formulario, inicial);
+    expect(contato.additional_attributes.social_profiles).toEqual({
       instagram: '@ana',
     });
-    expect(
-      Object.keys(dados.additional_attributes.social_profiles)
-    ).not.toContain('github');
     expect(JSON.stringify([inicial, formulario])).toBe(antes);
   });
 
   // O servidor troca `social_profiles` inteiro. Rede que a tela não mostra
   // (gravada por outra tela ou por importação) tem de voltar junto.
   it('devolve as redes que a tela não mostra, sem perder nenhuma', () => {
-    const comOutraRede = {
+    const comOutraRede = formularioDaPessoa({
       ...pessoaCheia,
       additional_attributes: {
         ...pessoaCheia.additional_attributes,
         social_profiles: { instagram: '@ana', youtube: 'canaldaana' },
       },
-    };
-    const inicial = formularioDaPessoa(comOutraRede);
-    const dados = dadosParaSalvar(
-      { ...inicial, redes: { ...inicial.redes, instagram: '@ana.nova' } },
-      inicial
+    });
+    const { contato } = pedidoParaSalvar(
+      {
+        ...comOutraRede,
+        redes: { ...comOutraRede.redes, instagram: '@ana.nova' },
+      },
+      comOutraRede
     );
-    expect(dados.additional_attributes.social_profiles).toEqual({
+    expect(contato.additional_attributes.social_profiles).toEqual({
       youtube: 'canaldaana',
       instagram: '@ana.nova',
     });
+  });
+});
+
+describe('camposDaPessoa', () => {
+  const definicao = (id, chave, tipo, extra) => ({
+    id,
+    attribute_model: 'contact_attribute',
+    attribute_key: chave,
+    attribute_display_name: `Nome de ${chave}`,
+    attribute_display_type: tipo,
+    ...extra,
+  });
+  const DEFINICOES = [
+    definicao(1, 'aniversario', 'date'),
+    definicao(2, 'site', 'link'),
+    definicao(3, 'escondido', 'text', { oculto_na_tela: true }),
+    definicao(4, 'waha_whatsapp_chat_id', 'text'),
+    definicao(5, 'cpf', 'text'),
+    definicao(6, 'plano', 'list', { attribute_values: ['Ouro'] }),
+    definicao(7, 'vip', 'checkbox'),
+    { ...definicao(8, 'setor', 'text'), attribute_model: 'company_attribute' },
+    definicao(9, 'cor', 'moeda'),
+  ];
+
+  it('a ordem: escolhidos pelo configurador, os com valor, os soltos e o resto', () => {
+    const campos = camposDaPessoa({
+      definicoes: DEFINICOES,
+      escolhidos: [6],
+      valores: {
+        site: 'https://exemplo.com.br',
+        escondido: 'x',
+        waha_whatsapp_chat_id: '55@c.us',
+        cpf: CPF_VALIDO,
+        vip: false,
+        solto: 'algo',
+      },
+    });
+    expect(campos.map(c => [c.chave, c.principal])).toEqual([
+      ['plano', true],
+      ['site', true],
+      ['vip', true],
+      ['solto', true],
+      ['aniversario', false],
+      ['cor', false],
+    ]);
+    expect(campos.find(c => c.chave === 'plano')).toMatchObject({
+      rotulo: 'Nome de plano',
+      tipo: 'list',
+      opcoes: ['Ouro'],
+      valor: '',
+    });
+    // Tipo desconhecido vira texto.
+    expect(campos.find(c => c.chave === 'cor').tipo).toBe('text');
+  });
+
+  it('link só abre com http ou https', () => {
+    expect(linkSeguro('https://exemplo.com.br')).toBe(
+      'https://exemplo.com.br/'
+    );
+    expect(linkSeguro(LINK_PERIGOSO)).toBe('');
+    expect(linkSeguro('exemplo.com.br')).toBe('');
+  });
+
+  it('o link escrito sem "https://" ganha o começo; o que não é site fica vazio', () => {
+    expect(linkCompleto('https://exemplo.com.br')).toBe(
+      'https://exemplo.com.br'
+    );
+    expect(linkCompleto(' exemplo.com.br ')).toBe('https://exemplo.com.br');
+    expect(linkCompleto('padaria bom dia')).toBe('');
+    expect(linkCompleto(LINK_PERIGOSO)).toBe('');
+  });
+
+  it('só completa com https:// quando o nome do site tem ponto e não termina nele', () => {
+    expect(linkCompleto('seusite.com.br')).toBe('https://seusite.com.br');
+    expect(linkCompleto('naotenho')).toBe('');
+    expect(linkCompleto('seusite.')).toBe('');
+    // O que já veio com esquema vale como está.
+    expect(linkCompleto('https://intranet')).toBe('https://intranet');
+    expect(linkCompleto('')).toBe('');
+  });
+});
+
+describe('país', () => {
+  it('nome no idioma do painel; gravado em inglês, como a ficha antiga', () => {
+    expect(nomeDoPais('BR', 'pt-BR')).toBe('Brasil');
+    expect(nomeDoPais('BR', 'en')).toBe('Brazil');
+    expect(nomeDoPais('ZZ', 'pt-BR', 'Terra do Nunca')).toBe('Terra do Nunca');
+    expect(nomeGravadoDoPais('BR')).toBe('Brazil');
+  });
+
+  it('a escolha começa pelo país padrão do telefone e segue em ordem alfabética', () => {
+    const [padrao, ...resto] = opcoesDePais('pt-BR', 'Não informado');
+    expect(padrao.value).toBe('BR');
+    expect(padrao.label).toContain('Brasil');
+    const nomes = resto.map(opcao => opcao.searchLabel);
+    expect(nomes).toEqual(
+      [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    );
+    expect(resto.some(opcao => opcao.value === '')).toBe(false);
+  });
+
+  it('"Não informado" só aparece, em primeiro, quando há país escolhido', () => {
+    const [limpar, padrao] = opcoesDePais('pt-BR', 'Não informado', 'PT');
+    expect(limpar).toEqual({ value: '', label: 'Não informado' });
+    expect(padrao.value).toBe('BR');
   });
 });
 

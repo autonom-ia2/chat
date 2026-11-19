@@ -6,10 +6,11 @@
 // cliente tem ao menos um card ganho. Os textos são inventados e neutros.
 // As escritas ficam na memória deste módulo para a tela refletir o que foi feito,
 // e devolvem uma cópia nova: nada que chega é alterado.
-import { empresaPorId, pessoaPorId, pessoas } from './base';
+import { empresaPorId, empresas, pessoaPorId, pessoas } from './base';
 import { sorteioFixo } from './sorteioFixo';
 import { DIA_EM_MS } from '../fonte/grupos';
-import { semAcento } from '../fonte/texto';
+import { normalizado, semAcento } from '../fonte/texto';
+import { ETIQUETAS as ETIQUETAS_DA_CONTA } from './acoesDaLista';
 
 const SEGUNDOS_POR_DIA = DIA_EM_MS / 1000;
 const SEMENTE_BASE = 1009;
@@ -91,6 +92,14 @@ const memoria = {
   liberadas: new Set(),
   notas: new Map(),
   proximaNota: 1,
+  // #3071 — as ações que vieram da ficha antiga.
+  bloqueios: new Map(),
+  recusas: new Map(),
+  etiquetas: new Map(),
+  notasApagadas: new Set(),
+  apagadas: new Set(),
+  // id de quem ficou -> ids de quem foi absorvido.
+  juntadas: new Map(),
 };
 
 export const esquecerEscritas = () => {
@@ -100,7 +109,22 @@ export const esquecerEscritas = () => {
   memoria.liberadas.clear();
   memoria.notas.clear();
   memoria.proximaNota = 1;
+  memoria.bloqueios.clear();
+  memoria.recusas.clear();
+  memoria.etiquetas.clear();
+  memoria.notasApagadas.clear();
+  memoria.apagadas.clear();
+  memoria.juntadas.clear();
 };
+
+// Quem foi absorvido por esta pessoa num "Juntar", e quem os absorvidos já tinham absorvido.
+const absorvidas = id =>
+  (memoria.juntadas.get(id) ?? []).flatMap(outra => [
+    outra,
+    ...absorvidas(outra),
+  ]);
+const daPessoaEDasAbsorvidas = (id, ler) =>
+  [id, ...absorvidas(id)].flatMap(cada => ler(cada));
 
 // ---- geração a partir do id -------------------------------------------------
 
@@ -170,19 +194,32 @@ const comEscritas = pessoa => {
     ...memoria.edicoes.get(pessoa.id),
     ...marcaDeCliente(pessoa.id),
   };
-  return memoria.liberadas.has(pessoa.id)
-    ? { ...comCliente, opted_out_at: null, opt_out_source: null }
-    : comCliente;
+  const id = pessoa.id;
+  const extras = {
+    ...(memoria.bloqueios.has(id) && { blocked: memoria.bloqueios.get(id) }),
+    ...(memoria.etiquetas.has(id) && { labels: memoria.etiquetas.get(id) }),
+  };
+  if (memoria.recusas.has(id)) {
+    return {
+      ...comCliente,
+      ...extras,
+      opted_out_at: memoria.recusas.get(id),
+      opt_out_source: 'manual',
+    };
+  }
+  return memoria.liberadas.has(id)
+    ? { ...comCliente, ...extras, opted_out_at: null, opt_out_source: null }
+    : { ...comCliente, ...extras };
 };
 
 const pessoaCompleta = base => copia(comEscritas(comExtras(base)));
 
 export const pessoa = id => {
-  const base = pessoaPorId(id);
+  const base = memoria.apagadas.has(id) ? null : pessoaPorId(id);
   return base ? pessoaCompleta(base) : null;
 };
 
-export const conversas = id => {
+const conversasSo = id => {
   const base = pessoaPorId(id);
   if (!base?.last_activity_at) return [];
   const sorteio = sorteioDe(id, 7);
@@ -216,7 +253,10 @@ const cardDe = (id, i, sorteio, situacao, titulo) => {
   };
 };
 
-export const cards = id => {
+export const conversas = id =>
+  daPessoaEDasAbsorvidas(id, conversasSo).sort((a, b) => b.quando - a.quando);
+
+const cardsSo = id => {
   const base = pessoaPorId(id);
   if (!base) return [];
   const sorteio = sorteioDe(id, 11);
@@ -259,11 +299,15 @@ const notasDeBase = id => {
   }));
 };
 
+export const cards = id => daPessoaEDasAbsorvidas(id, cardsSo);
+
+const notasSo = id => [...(memoria.notas.get(id) ?? []), ...notasDeBase(id)];
+
 export const notas = id =>
   copia(
-    [...(memoria.notas.get(id) ?? []), ...notasDeBase(id)].sort(
-      (a, b) => b.quando - a.quando
-    )
+    daPessoaEDasAbsorvidas(id, notasSo)
+      .filter(nota => !memoria.notasApagadas.has(nota.id))
+      .sort((a, b) => b.quando - a.quando)
   );
 
 export const arquivos = id => {
@@ -304,21 +348,46 @@ const exigir = id => {
   return base;
 };
 
-export const salvar = (id, dados) => {
-  const base = exigir(id);
-  const mesmaEmpresa =
-    dados.additional_attributes?.company_name ===
-    base.additional_attributes?.company_name;
+// #3075 — `pedido` é o da gaveta (ficha/informacoes.js#pedidoParaSalvar): os
+// campos que saem saem, a empresa escolhida vem com o id e a nova fica só com o
+// nome (a demonstração não cadastra empresa). A foto nova aparece pela prévia.
+const fotoDoPedido = foto => {
+  if (foto?.arquivo) return { thumbnail: foto.previa };
+  if (foto?.tirar) return { thumbnail: '' };
+  return {};
+};
+
+export const salvar = (id, { contato, empresaNova, foto, apagar = [] }) => {
+  exigir(id);
+  const atual = pessoa(id);
+  const atributos = Object.entries({
+    ...atual.custom_attributes,
+    ...contato.custom_attributes,
+  }).filter(([chave]) => !apagar.includes(chave));
+  const empresaId =
+    'company_id' in contato ? contato.company_id : atual.company_id;
   memoria.edicoes.set(id, {
-    name: dados.name,
-    email: dados.email,
-    phone_number: dados.phone_number,
-    additional_attributes: copia(dados.additional_attributes ?? {}),
-    custom_attributes: copia(dados.custom_attributes ?? {}),
-    company_id: mesmaEmpresa ? base.company_id : null,
+    name: contato.name,
+    email: contato.email,
+    phone_number: contato.phone_number,
+    additional_attributes: copia({
+      ...atual.additional_attributes,
+      ...contato.additional_attributes,
+    }),
+    custom_attributes: copia(Object.fromEntries(atributos)),
+    company_id: empresaNova ? null : empresaId,
+    ...fotoDoPedido(foto),
   });
   return pessoa(id);
 };
+
+const TOTAL_DE_EMPRESAS_NA_BUSCA = 8;
+
+export const buscarEmpresas = termo =>
+  empresas()
+    .filter(item => normalizado(item.name).includes(normalizado(termo)))
+    .slice(0, TOTAL_DE_EMPRESAS_NA_BUSCA)
+    .map(item => ({ id: item.id, nome: item.name }));
 
 export const marcarCliente = id => {
   exigir(id);
@@ -348,6 +417,83 @@ export const guardarNota = (id, texto) => {
 export const liberarMensagens = id => {
   exigir(id);
   memoria.liberadas.add(id);
+  return pessoa(id);
+};
+
+// #3071 — as ações que vieram da ficha antiga.
+export const marcarNaoQuer = id => {
+  exigir(id);
+  memoria.liberadas.delete(id);
+  memoria.recusas.set(id, agoraEmSegundos());
+  return pessoa(id);
+};
+
+// "Liberar" também desfaz a marca feita aqui.
+export const liberarMensagensDepoisDeMarcar = id => {
+  memoria.recusas.delete(id);
+  return liberarMensagens(id);
+};
+
+const trocarBloqueio = (id, bloqueada) => {
+  exigir(id);
+  memoria.bloqueios.set(id, bloqueada);
+  return pessoa(id);
+};
+export const bloquear = id => trocarBloqueio(id, true);
+export const desbloquear = id => trocarBloqueio(id, false);
+
+export const apagar = id => {
+  exigir(id);
+  memoria.apagadas.add(id);
+};
+
+export const etiquetasDaConta = () => copia(ETIQUETAS_DA_CONTA);
+
+// Como o servidor (AlterarEtiquetasConcern): tira e põe sobre a lista que está
+// gravada, sem diferenciar maiúscula.
+export const alterarEtiquetas = (id, { por = [], tirar = [] }) => {
+  const atual = (pessoa(id) ?? exigir(id)).labels ?? [];
+  const tiradas = new Set(tirar.map(nome => nome.toLowerCase()));
+  const ficam = atual.filter(nome => !tiradas.has(nome.toLowerCase()));
+  const ja = new Set(ficam.map(nome => nome.toLowerCase()));
+  const novas = por.filter(nome => {
+    const chave = nome.toLowerCase();
+    if (ja.has(chave)) return false;
+    ja.add(chave);
+    return true;
+  });
+  memoria.etiquetas.set(id, [...ficam, ...novas]);
+  return pessoa(id);
+};
+
+export const apagarNota = (id, notaId) => {
+  exigir(id);
+  memoria.notasApagadas.add(notaId);
+};
+
+const LIMITE_DA_BUSCA = 8;
+export const buscarPessoas = (termo, semId) => {
+  const procurado = semAcento(termo).toLowerCase();
+  return pessoas()
+    .filter(item => item.id !== semId && !memoria.apagadas.has(item.id))
+    .filter(item =>
+      [item.name, item.email, item.phone_number]
+        .filter(Boolean)
+        .some(valor => semAcento(valor).toLowerCase().includes(procurado))
+    )
+    .slice(0, LIMITE_DA_BUSCA)
+    .map(item => pessoaCompleta(item));
+};
+
+// A pessoa da ficha fica; a outra some, e o que era da outra passa para cá.
+export const juntar = (id, outraId) => {
+  const fica = pessoa(id) ?? exigir(id);
+  const sai = pessoa(outraId) ?? exigir(outraId);
+  memoria.apagadas.add(outraId);
+  memoria.juntadas.set(id, [...(memoria.juntadas.get(id) ?? []), outraId]);
+  memoria.etiquetas.set(id, [
+    ...new Set([...(fica.labels ?? []), ...(sai.labels ?? [])]),
+  ]);
   return pessoa(id);
 };
 
@@ -404,7 +550,17 @@ export const demoDaFicha = {
   marcarCliente,
   desmarcarCliente,
   guardarNota,
-  liberarMensagens,
+  liberarMensagens: liberarMensagensDepoisDeMarcar,
+  marcarNaoQuer,
+  bloquear,
+  desbloquear,
+  apagar,
+  juntar,
+  etiquetasDaConta,
+  buscarPessoas,
+  buscarEmpresas,
+  alterarEtiquetas,
+  apagarNota,
   empresa,
   pessoasDaEmpresa,
   conversasDaEmpresa,
