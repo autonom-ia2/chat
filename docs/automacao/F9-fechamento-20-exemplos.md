@@ -1,5 +1,10 @@
 # Automação livre · teste de fechamento dos 20 exemplos (F9.6 a F9.8)
 
+> **Estado atual (18/11):** os 20 exemplos têm spec de ponta a ponta na main (`spec/fechamento/automacao/exemplo_01`
+> a `exemplo_20`, `pendentes_spec.rb` vazio) e as flags deles estão ligadas em todas as contas. Ainda não foram montados
+> em produção, e a rodada com IA real (3.4) não aconteceu. Estado e o que falta: [`estado-2414.md`](estado-2414.md).
+> As seções abaixo são o desenho e o histórico do fechamento.
+
 - **Épico:** #2414 · **Issue:** #2570 · **Base:** termos de aceite F1–F9 (31/10, commit `dcd9a9f5d4`, em [`termos-de-aceite-F1-F9.md`](termos-de-aceite-F1-F9.md)), main em `4bd7168c0f` (05/11).
 - **Para que serve:** o épico só fecha quando os 20 exemplos dos termos rodam de ponta a ponta no ambiente de testes,
   montados como o dono montaria, com teste automático conferindo o resultado prometido. Este documento desenha esse
