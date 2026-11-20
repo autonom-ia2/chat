@@ -11,8 +11,9 @@ linha no histórico.
 
 1. A flag `automacao_passos_novos` está **ligada em todas as contas desde
    13/11** (ordem do Rodrigo; a Orquestração ligou nas contas existentes das
-   duas stacks, com backup do valor anterior, e `enabled: true` faz a conta nova
-   nascer com ela). No painel local, ligar pelo kit `bin/demo`. Ela fica na
+   duas stacks, com backup do valor anterior; a migration
+   `20261120100000_ligar_automacao_passos_novos_em_todas` liga o padrão das
+   contas novas e as contas criadas depois). No painel local, ligar pelo kit `bin/demo`. Ela fica na
    posição 47 (1 << 46) da `feature_flags_ext_2` de `config/features.yml`,
    logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
    Desligar é o rollback: quem espera resposta num destes passos para naquele

@@ -7,7 +7,7 @@ Atualizado em 20/11/2026. Esta é a página que outra sessão deve ler antes de 
 
 O épico está entregue em código. As fases F0 a F9 estão na main, os 20 exemplos dos termos de aceite rodam de ponta a
 ponta na CI, e os 6 passos novos estão no ar e ligados em todas as contas. Em 19/11 os passos novos foram conferidos no
-uso real (conta 1) e os dois pontos que travavam a pessoa foram consertados (#3061). O que **não** aconteceu:
+uso real (numa conta piloto) e os dois pontos que travavam a pessoa foram consertados (#3061). O que **não** aconteceu:
 
 - conferir os passos novos na tela de celular (390) e rodar de verdade pesquisa, reunião, para cada, buscar e bloco
   (mandariam mensagem a contato real; ficaram conferidos só por ensaio);
@@ -65,10 +65,17 @@ O #3072 é do épico de seguros (#3063), mas mexe no executor. Quem mexer no exe
 
 ## 3. Flags em produção
 
+Fonte: leitura da Orquestração Deploy em 13/11 (o repositório não tem como provar estado de produção).
+
 - As 12 flags que os 20 exemplos usam estão ligadas em todas as contas (Hub2You e Autonom.ia).
 - `automacao_no_crm` está na posição 48 (1 << 47) e ligada em todas.
 - `automacao_passos_novos` está na posição 47 (1 << 46). O Rodrigo mandou ligar em todas em 13/11, e ela foi ligada sem a
-  conferência em tela que estava prevista. A Orquestração guardou o valor anterior de cada conta. Desligar é o rollback:
+  conferência em tela que estava prevista. A Orquestração guardou o valor anterior de cada conta.
+  - **Conta nova:** o `enabled: true` do `features.yml` não basta. O padrão das contas novas fica gravado em
+    `ACCOUNT_LEVEL_FEATURE_DEFAULTS`, e o ConfigLoader do deploy não sobrescreve valor já gravado. Quem liga o padrão
+    (e as contas criadas depois de 13/11) é a migration `20261120100000_ligar_automacao_passos_novos_em_todas`, com
+    backup no log e `down` que desliga só as contas que ela ligou.
+  - Desligar é o rollback:
   - o salvar recusa a receita que tem um dos seis passos;
   - a execução que chega num deles para ali, com o motivo `passos_novos_desligados`;
   - o "para cada" não abre mais filhas.
@@ -91,11 +98,10 @@ O #3072 é do épico de seguros (#3063), mas mexe no executor. Quem mexer no exe
 | Consultas Premium em lote no passo Buscar | decisão de cobrança | Rodrigo |
 | Montar os 20 exemplos numa conta de teste em produção e rodar a IA real uma vez | proposta, sem Issue | Rodrigo (OK + orçamento) |
 | Avulsas da Automação livre, sem vínculo com o fechamento | #2413, #2597, #2523 | — |
-| Apagar as automações de teste #28 e #29 da conta 1 ("Conferência 2982 … (teste, pode apagar)", desligadas) | conta 1 | Rodrigo (escrita em produção) |
+| Apagar as duas automações de teste da conferência da #2982 (desligadas, marcadas "teste, pode apagar") | conta piloto | Rodrigo (escrita em produção) |
 
-Os 125 prints do protótipo dos passos novos ficavam fora do git, na worktree `2414-ft-c1-telas`. Em 18/11 essa worktree
-e o snapshot `20261112-070227-430eed8b…` já não existiam (outra limpeza os removeu). Os prints novos sairão da
-conferência da #2982.
+Os 125 prints do protótipo dos passos novos ficavam fora do git, numa worktree local. Em 18/11 ela já não existia
+(outra limpeza a removeu). Os prints novos sairão da conferência da #2982.
 
 ### Seguros (#3063): quem cuida
 
@@ -142,7 +148,8 @@ Quem pega a Automação revisa só o que o #3063 tocar no executor.
    - depois `pnpm guia:build`.
 
    Os formatos dependem do padrão das colunas no **banco de teste local**. Antes de gerar, aplique cada migration
-   pendente com `RAILS_ENV=test rails db:migrate:up VERSION=…` e depois rode `git checkout -- db/schema.rb`. Sem isso,
+   pendente com `RAILS_ENV=test rails db:migrate:up VERSION=…`. Depois confira `git diff db/schema.rb` e desfaça só a
+   mudança que o migrate fez (nunca alteração sua). Sem isso,
    o `formatos:check` local diz "em dia" e a CI reprova.
 3. **Depois de juntar a main,** rode o rubocop em todos os `.rb` do PR: o job "Email backend" da CI cobre os arquivos
    tocados. Revisor que só lê não pega erro de API do ActiveRecord. Exemplo: `where(relação com OR)` lança

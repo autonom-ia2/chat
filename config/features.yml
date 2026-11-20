@@ -1412,8 +1412,9 @@
 # Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11, logo depois da
 # agente_ferramentas_prontas_ip_proprio (#2945, 46). Nasceu desligada em produção (exceção à regra de 07/11) até o
 # motor dos seis passos ficar completo; o Rodrigo mandou ligar em todas em 13/11, e a Orquestração ligou nas contas
-# existentes (Hub2You e Autonom.ia) com backup. `enabled: true` faz a conta nova nascer igual às outras. Estado e o que
-# falta conferir: docs/automacao/estado-2414.md.
+# existentes (Hub2You e Autonom.ia) com backup. O padrão das contas novas em produção muda pela migration
+# 20261120100000_ligar_automacao_passos_novos_em_todas (o ConfigLoader não sobrescreve o `false` já gravado); o
+# `enabled: true` aqui vale para instalação nova e para o banco de teste. Estado: docs/automacao/estado-2414.md.
 - name: automacao_passos_novos
   display_name: Automação › passos novos (aprovação, para cada, outra automação, outro sistema, reunião, pesquisa)
   enabled: true
