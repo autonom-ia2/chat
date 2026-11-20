@@ -54,9 +54,16 @@ class Api::V1::Accounts::CompaniesController < Api::V1::Accounts::EnterpriseAcco
     end
   end
 
+  # #3079 — empresa com poucas pessoas sai na hora (200): quem apagou relê a lista e ela já não está lá. Só a que tem
+  # mais pessoas que um lote do job vai para a fila (202), e a tela avisa que ela sai em alguns minutos.
   def destroy
-    Companies::DeleteJob.perform_later(company_id: @company.id)
-    head :ok
+    if @company.contacts.count <= Companies::DeleteJob::BATCH_SIZE
+      Companies::DeleteJob.perform_now(company_id: @company.id)
+      head :ok
+    else
+      Companies::DeleteJob.perform_later(company_id: @company.id)
+      head :accepted
+    end
   end
 
   def avatar

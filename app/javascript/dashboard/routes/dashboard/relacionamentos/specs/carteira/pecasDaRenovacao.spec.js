@@ -202,7 +202,7 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
   it('aberta: diz o funil, a etapa e quem cuida, e leva ao card', async () => {
     const w = abrir(seguroCom());
 
-    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(situacao(w)).toBe('A renovação está em “A vencer”.');
     expect(w.get(daCarteira('quem-cuida')).text()).toBe(
       'Quem cuida: Bruna Teixeirão'
     );
@@ -350,6 +350,40 @@ describe('o selo de um seguro que a tela não conhece', () => {
   });
 });
 
+// #3057 (revisão) — na linha da aba Seguros (`comPrazo`) o selo diz o prazo
+// de verdade; fora dela continua "Vence logo".
+describe('o selo com o prazo', () => {
+  const texto = (dias, comPrazo = true) =>
+    montar(SeloDoSeguro, {
+      seguro: { id: 7, selo: 'ativo', dias },
+      comPrazo,
+    })
+      .get('[data-carteira="selo"]')
+      .text();
+
+  it.each([
+    [0, 'Vence hoje'],
+    [1, 'Vence amanhã'],
+    [3, 'Vence em 3 dias'],
+    [30, 'Vence em 30 dias'],
+  ])('%i dias: "%s"', (dias, esperado) => {
+    expect(texto(dias)).toBe(esperado);
+  });
+
+  it('longe de vencer continua "Ativo"; sem `comPrazo`, "Vence logo"', () => {
+    expect(texto(31)).toBe('Ativo');
+    expect(texto(3, false)).toBe('Vence logo');
+  });
+
+  it('o vencido diz "Vencido", nunca um prazo', () => {
+    const w = montar(SeloDoSeguro, {
+      seguro: { id: 7, selo: 'vencido', dias: -2 },
+      comPrazo: true,
+    });
+    expect(w.get('[data-carteira="selo"]').text()).toBe('Vencido');
+  });
+});
+
 describe('o convite para escolher o funil das renovações', () => {
   const fonteCom = resposta => ({
     ajustes: vi.fn().mockResolvedValue(resposta),
@@ -463,57 +497,55 @@ describe('o convite para escolher o funil das renovações', () => {
   });
 });
 
+// #3057 (revisão) — os dois atalhos moram num só botão-menu "Renovações ▾",
+// no desktop e no celular: a faixa fica com menos controles do mesmo peso.
 describe('os atalhos da renovação na faixa de controles', () => {
   const abrir = (props = {}) =>
     montar(ControlesDeSeguros, { ordem: 'vence_primeiro', ...props });
+  const RENOVACOES = daCarteira('renovacoes');
+  const gatilhoDe = w => w.get(`${RENOVACOES} [aria-haspopup="menu"]`);
   const doMenu = w =>
     w
-      .findAll(`${daCarteira('mais-da-carteira')} [role="menuitem"]`)
-      .map(item => item.attributes('data-acao'));
+      .findAll(`${RENOVACOES} [role="menuitem"]`)
+      .map(item => [item.attributes('data-acao'), item.text()]);
 
-  it('"Resultados" aparece para todos; "Ajustar renovações" só para quem pode mudar', () => {
+  it('"Ver como foram" aparece para todos; "Ajustar renovações" só para quem pode mudar', () => {
     const quemSoVe = abrir();
 
-    expect(quemSoVe.get(daCarteira('resultados')).text()).toBe('Resultados');
-    expect(quemSoVe.find(daCarteira('ajustar')).exists()).toBe(false);
-    expect(doMenu(quemSoVe)).toEqual(['resultados']);
+    expect(gatilhoDe(quemSoVe).text()).toBe('Renovações');
+    expect(doMenu(quemSoVe)).toEqual([
+      ['resultados', 'Ver como foram as renovações'],
+    ]);
     quemSoVe.unmount();
 
     const quemMuda = abrir({ podeAjustar: true });
 
-    expect(quemMuda.get(daCarteira('ajustar')).text()).toBe(
-      'Ajustar renovações'
-    );
-    expect(doMenu(quemMuda)).toEqual(['resultados', 'ajustar']);
+    expect(doMenu(quemMuda)).toEqual([
+      ['resultados', 'Ver como foram as renovações'],
+      ['ajustar', 'Ajustar renovações'],
+    ]);
   });
 
   it('cada atalho avisa a página com o próprio evento', async () => {
     const w = abrir({ podeAjustar: true });
 
-    await w.get(daCarteira('resultados')).trigger('click');
-    await w.get(daCarteira('ajustar')).trigger('click');
+    await gatilhoDe(w).trigger('click');
+    await w.get('[role="menuitem"][data-acao="resultados"]').trigger('click');
+    await gatilhoDe(w).trigger('click');
+    await w.get('[role="menuitem"][data-acao="ajustar"]').trigger('click');
 
     expect(w.emitted('resultados')).toHaveLength(1);
     expect(w.emitted('ajustar')).toHaveLength(1);
   });
 
-  it('no celular os atalhos moram no "⋯", que abre para baixo', async () => {
+  it('o menu tem texto (não é um "⋯"), aparece em toda largura e abre para baixo', () => {
     const w = abrir({ podeAjustar: true });
-    const gatilho = w.get(
-      `${daCarteira('mais-da-carteira')} [aria-haspopup="menu"]`
-    );
 
-    expect(gatilho.attributes('aria-label')).toBe('Mais opções da carteira');
-    expect(w.get(daCarteira('mais-da-carteira')).classes()).toContain(
-      'sm:hidden'
-    );
+    expect(gatilhoDe(w).attributes('aria-label')).toBeUndefined();
+    expect(w.get(RENOVACOES).classes()).not.toContain('sm:hidden');
     expect(w.get('[role="menu"]').classes()).toContain('top-full');
-
-    await gatilho.trigger('click');
-    await w.get('[role="menuitem"][data-acao="ajustar"]').trigger('click');
-
-    expect(w.emitted('ajustar')).toHaveLength(1);
-    expect(w.emitted('resultados')).toBeUndefined();
+    expect(w.find(daCarteira('resultados')).exists()).toBe(false);
+    expect(w.find(daCarteira('ajustar')).exists()).toBe(false);
   });
 });
 

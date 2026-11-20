@@ -29,9 +29,49 @@
       },
       "ORDENAR": {
         "ROTULO": "Sort",
+        "NO_BOTAO": "Sort: {ordem}",
         "ULTIMA_CONVERSA": "Last chat",
         "NOME": "Name",
-        "MAIS_NOVOS": "Newest"
+        "MAIS_NOVOS": "Newest",
+        "CAMPOS": {
+          "ULTIMA_CONVERSA": "Last conversation",
+          "NOME": "Name",
+          "EMAIL": "Email",
+          "EMPRESA": "Company",
+          "CIDADE": "City",
+          "PAIS": "Country",
+          "CHEGADA": "When they arrived",
+          "SITE": "Website",
+          "PESSOAS": "Number of people"
+        },
+        "SENTIDOS": {
+          "RECENTE": "Most recent first",
+          "ANTIGA": "Oldest first",
+          "A_Z": "A to Z",
+          "Z_A": "Z to A",
+          "MAIS": "Most people first",
+          "MENOS": "Fewest people first"
+        },
+        "ESCOLHIDA": {
+          "ULTIMA_CONVERSA_RECENTE": "Most recent conversation",
+          "ULTIMA_CONVERSA_ANTIGA": "Oldest conversation",
+          "NOME_A_Z": "Name, A to Z",
+          "NOME_Z_A": "Name, Z to A",
+          "EMAIL_A_Z": "Email, A to Z",
+          "EMAIL_Z_A": "Email, Z to A",
+          "EMPRESA_A_Z": "Company, A to Z",
+          "EMPRESA_Z_A": "Company, Z to A",
+          "CIDADE_A_Z": "City, A to Z",
+          "CIDADE_Z_A": "City, Z to A",
+          "PAIS_A_Z": "Country, A to Z",
+          "PAIS_Z_A": "Country, Z to A",
+          "CHEGADA_RECENTE": "Newest arrivals first",
+          "CHEGADA_ANTIGA": "Oldest arrivals first",
+          "SITE_A_Z": "Website, A to Z",
+          "SITE_Z_A": "Website, Z to A",
+          "PESSOAS_MAIS": "Most people first",
+          "PESSOAS_MENOS": "Fewest people first"
+        }
       },
       "FILTROS": {
         "BOTAO": "More filters",
@@ -50,6 +90,33 @@
         "VER_RESULTADO": "See results",
         "LIMPAR": "Clear"
       },
+      "TOPO": {
+        "NOVA_PESSOA": "New person",
+        "BAIXAR": "Download spreadsheet",
+        "BAIXAR_NO_FIM": "Download this list as a spreadsheet",
+        "NOVA_EMPRESA": "New company"
+      },
+      "NOVA_PESSOA": {
+        "TITULO": "New person",
+        "SALVAR": "Save person",
+        "CRIADA": "{nome} is on your list.",
+        "ERRO": "I couldn't save. Please try again."
+      },
+      "EDITAR": {
+        "SALVO": "{nome}’s details saved."
+      },
+      "PLANILHA": {
+        "TITULO": "Get this list as a spreadsheet",
+        "TEXTO": "I will build a spreadsheet with {count} person and send the link to {email}. | I will build a spreadsheet with {count} people and send the link to {email}.",
+        "O_QUE_VAI": "It has name, email, phone and labels, in the order shown on screen.",
+        "QUAL_LISTA": "List: {lista}",
+        "BUSCA": "search “{busca}”",
+        "FILTROS": "{count} filter | {count} filters",
+        "CONFIRMAR": "Send by email",
+        "ENVIADA": "Done. The spreadsheet will reach {email} in a few minutes.",
+        "ESPERAR": "You just asked for a spreadsheet. You can ask for another one in a few minutes.",
+        "ERRO": "I couldn't request the spreadsheet. Please try again."
+      },
       "EXEMPLO": {
         "LEGENDA": "Your list will look like this:"
       },
@@ -63,7 +130,9 @@
         "PESSOAS_DA_EMPRESA": "No one yet | {count} person | {count} people",
         "MARCAR": "Select {nome}",
         "CONVERSAR_COM": "Chat with {nome}",
-        "ABRINDO_CONVERSA": "Opening the chat with {nome}"
+        "ABRINDO_CONVERSA": "Opening the chat with {nome}",
+        "EDITAR": "Edit {nome}’s details",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Show more",
@@ -79,7 +148,7 @@
         "ROTULO": "What to do with the people you selected",
         "MANDAR_MENSAGEM": "Send message",
         "CRIAR_CARDS": "Create cards",
-        "ETIQUETA": "Label",
+        "ETIQUETA": "Labels",
         "MAIS": "More actions",
         "APAGAR": "Delete"
       },
@@ -122,13 +191,24 @@
         "ABRIR_CRM": "Open the CRM"
       },
       "ETIQUETA": {
-        "TITULO": "Add a label",
-        "PERGUNTA": "Which label?",
-        "ESCOLHA": "Choose a label",
-        "APLICAR": "Add label",
-        "APLICADA": "Label “{etiqueta}” added to {count} person. | Label “{etiqueta}” added to {count} people.",
-        "ERRO": "I couldn't add the label. Try again.",
-        "FALTA_ESCOLHER": "Choose a label."
+        "TITULO": "Labels",
+        "PARA_QUEM": "For the person you selected. | For the {count} people you selected.",
+        "MODO": "What should I do with the labels?",
+        "COLOCAR": "Add",
+        "TIRAR": "Remove",
+        "PERGUNTA_COLOCAR": "Which labels to add?",
+        "PERGUNTA_TIRAR": "Which labels to remove?",
+        "BOTAO_COLOCAR": "Add to {count} person | Add to {count} people",
+        "BOTAO_TIRAR": "Remove from {count} person | Remove from {count} people",
+        "QUANTAS": "· {count} person | · {count} people",
+        "APLICADA": "Nothing changed: everyone you selected already had {etiquetas}. | Done: I added {etiquetas} to {count} person. | Done: I added {etiquetas} to {count} people.",
+        "TIRADA": "Nothing changed: nobody you selected had {etiquetas}. | Done: I removed {etiquetas} from {count} person. | Done: I removed {etiquetas} from {count} people.",
+        "DEVOLVIDAS": "Done: the labels are back on the people who had them.",
+        "ERRO_AO_DEVOLVER": "I could not put the labels back. Try again.",
+        "ERRO": "I couldn't change the labels. Please try again.",
+        "FALTA_ESCOLHER": "Choose at least one label.",
+        "SEM_ETIQUETAS": "The account has no labels yet. An administrator creates them in Settings, Labels.",
+        "NINGUEM_TEM": "Nobody you selected has a label."
       },
       "APAGAR": {
         "TITULO": "Delete {count} person? | Delete {count} people?",
@@ -149,7 +229,25 @@
         "FILTROS_SEM_RESULTADO": "I couldn't find anyone with these filters.",
         "LIMPAR_FILTROS": "Clear filters"
       },
-      "ERRO_DA_TELA": "I couldn't show the people."
+      "ERRO_DA_TELA": "I couldn't show the people.",
+      "NOVA_EMPRESA": {
+        "TITULO": "New company",
+        "SALVAR": "Create company",
+        "CRIADA": "{nome} was created.",
+        "ERRO": "I couldn’t create the company. Try again.",
+        "JA_CRIADA": "Already created: {nome}. Tap Create company to finish.",
+        "EM_PARTE": "The company was created, but the photo or a field didn’t go in. Tap Create company again."
+      },
+      "APAGAR_EMPRESAS": {
+        "TITULO": "Delete {count} company? | Delete {count} companies?",
+        "AVISO": "The people in these companies stay on your list, with their conversations, but without a company. These companies’ reminders and files are deleted.",
+        "SEGUROS": "These companies’ policies stay saved, but without the company linked to them.",
+        "NAO_VOLTA": "This can’t be undone.",
+        "CONFIRMAR": "Delete",
+        "APAGADAS": "{count} company deleted. | {count} companies deleted.",
+        "NA_FILA": "{nomes} has many people and leaves the list in a few minutes. | {nomes} have many people and leave the list in a few minutes.",
+        "ERRO": "I couldn’t delete. Try again."
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Try again",
@@ -166,7 +264,8 @@
       "CONVERSAR": "Chat",
       "GRUPOS": "Groups",
       "ERRO_DA_TELA": "I couldn't load this.",
-      "ENTENDI": "Got it"
+      "ENTENDI": "Got it",
+      "FECHAR_AVISO": "Close notice"
     },
     "GRUPOS": {
       "TODOS": {
@@ -196,6 +295,10 @@
       "NAO_QUER_MENSAGENS": {
         "NOME": "Doesn't want messages",
         "EXPLICACAO": "People who asked not to receive messages. Nobody here gets a campaign."
+      },
+      "ATIVOS_AGORA": {
+        "NOME": "On your site now",
+        "EXPLICACAO": "Who has the chat on your website open right now."
       },
       "EMPRESAS_TODAS": {
         "NOME": "All",

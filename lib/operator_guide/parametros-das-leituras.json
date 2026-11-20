@@ -2340,6 +2340,7 @@
     "controller": "api/v1/accounts/relacionamentos/empresas#index",
     "parametros": [
       "busca",
+      "filtros",
       "grupo",
       "ordem",
       "pagina"
@@ -2369,6 +2370,7 @@
     "controller": "api/v1/accounts/relacionamentos/empresas#contagens",
     "parametros": [
       "busca",
+      "filtros",
       "grupo",
       "ordem",
       "pagina"
@@ -2572,6 +2574,10 @@
       "page",
       "user_id"
     ]
+  },
+  "ritmo_de_envio": {
+    "controller": "api/v1/accounts/ritmo_de_envio#show",
+    "parametros": []
   },
   "saml_settings": {
     "controller": "api/v1/accounts/saml_settings#show",

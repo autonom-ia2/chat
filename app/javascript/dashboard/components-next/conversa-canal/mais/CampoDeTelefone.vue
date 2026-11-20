@@ -175,7 +175,7 @@ const aoDigitar = evento => {
       v-if="erro || ajuda"
       :id="idDaMensagem"
       aria-live="polite"
-      class="min-w-0 mt-1 mb-0 text-label-small"
+      class="min-w-0 mt-1 mb-0 text-sm"
       :class="erro ? 'text-n-ruby-9' : 'text-n-slate-11'"
     >
       {{ erro || ajuda }}

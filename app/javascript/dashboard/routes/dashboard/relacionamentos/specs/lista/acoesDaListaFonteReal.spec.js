@@ -1,3 +1,5 @@
+import CompanyAPI from 'dashboard/api/companies';
+import ContactAPI from 'dashboard/api/contacts';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { acoesDaListaFonte } from '../../fonte/acoesDaListaFonte';
@@ -12,10 +14,23 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     funis: vi.fn(),
     criarCards: vi.fn(),
     aplicarEtiqueta: vi.fn(),
+    tirarEtiqueta: vi.fn(),
+    exportarPessoas: vi.fn(),
     apagar: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
+vi.mock('dashboard/api/contacts', () => ({
+  default: {
+    create: vi.fn(),
+    update: vi.fn(),
+    destroyAvatar: vi.fn(),
+    destroyCustomAttributes: vi.fn(),
+  },
+}));
+vi.mock('dashboard/api/companies', () => ({
+  default: { create: vi.fn(), search: vi.fn() },
+}));
 
 const real = () => acoesDaListaFonte({ demo: null });
 const pessoas = quantas =>
@@ -70,11 +85,19 @@ describe('leituras', () => {
     await expect(real().funis()).rejects.toBe(recusado);
   });
 
-  it('etiquetas lê as da conta pelo cliente que o painel já usa, em ordem alfabética', async () => {
+  it('etiquetas lê as da conta pelo cliente que o painel já usa, com a cor, em ordem alfabética', async () => {
     LabelsAPI.get.mockResolvedValue({
-      data: { payload: [{ title: 'site' }, { title: 'feira' }] },
+      data: {
+        payload: [
+          { title: 'site', color: '#0F766E' },
+          { title: 'feira', color: '#1F6FEB' },
+        ],
+      },
     });
-    expect(await real().etiquetas()).toEqual(['feira', 'site']);
+    expect(await real().etiquetas()).toEqual([
+      { nome: 'feira', cor: '#1F6FEB' },
+      { nome: 'site', cor: '#0F766E' },
+    ]);
     expect(LabelsAPI.get).toHaveBeenCalledWith(true);
   });
 });
@@ -234,14 +257,29 @@ describe('cada escrita manda o corpo que o servidor espera', () => {
     });
   });
 
-  it('aplicarEtiqueta: pessoa_ids e etiqueta, e devolve `aplicadas`', async () => {
+  it('aplicarEtiqueta: pessoa_ids e etiquetas, e devolve `aplicadas`', async () => {
     respondeAFatia('aplicarEtiqueta', 'aplicadas');
     expect(
-      await real().aplicarEtiqueta({ pessoas: pessoas(2), etiqueta: 'feira' })
+      await real().aplicarEtiqueta({
+        pessoas: pessoas(2),
+        etiquetas: ['feira', 'site'],
+      })
     ).toEqual({ aplicadas: 2, deFora: [], faltam: [], erro: null });
     expect(RelacionamentosAPI.aplicarEtiqueta).toHaveBeenCalledWith({
       pessoa_ids: [1, 2],
-      etiqueta: 'feira',
+      etiquetas: ['feira', 'site'],
+    });
+  });
+
+  // #3062 — tirar etiquetas: o mesmo corpo de pôr, noutro endereço.
+  it('tirarEtiqueta: pessoa_ids e etiquetas, e devolve `tiradas`', async () => {
+    respondeAFatia('tirarEtiqueta', 'tiradas');
+    expect(
+      await real().tirarEtiqueta({ pessoas: pessoas(2), etiquetas: ['feira'] })
+    ).toEqual({ tiradas: 2, deFora: [], faltam: [], erro: null });
+    expect(RelacionamentosAPI.tirarEtiqueta).toHaveBeenCalledWith({
+      pessoa_ids: [1, 2],
+      etiquetas: ['feira'],
     });
   });
 
@@ -256,5 +294,128 @@ describe('cada escrita manda o corpo que o servidor espera', () => {
     expect(RelacionamentosAPI.apagar).toHaveBeenCalledWith({
       pessoa_ids: [1, 2],
     });
+  });
+});
+
+// #3062 — "Baixar planilha", "Nova pessoa" e "Editar" da linha.
+describe('planilha e pessoa', () => {
+  it('exportar manda a consulta da tela sem a página e devolve o e-mail', async () => {
+    RelacionamentosAPI.exportarPessoas.mockResolvedValue({
+      data: { email: 'ana@exemplo.com.br' },
+    });
+    expect(
+      await real().exportar({
+        aba: 'pessoas',
+        grupo: 'clientes',
+        busca: 'ana',
+        ordem: 'cidade_a_z',
+        pagina: 3,
+        filtros: { cidade: 'Campinas', empresa: '', etiqueta: '' },
+      })
+    ).toEqual({ email: 'ana@exemplo.com.br' });
+    expect(RelacionamentosAPI.exportarPessoas).toHaveBeenCalledWith({
+      grupo: 'clientes',
+      busca: 'ana',
+      ordem: 'cidade_a_z',
+      'filtros[cidade]': 'Campinas',
+    });
+  });
+
+  it('exportar repassa a recusa do servidor', async () => {
+    const recusado = erroHttp(401);
+    RelacionamentosAPI.exportarPessoas.mockRejectedValue(recusado);
+    await expect(real().exportar({ grupo: 'todos' })).rejects.toBe(recusado);
+  });
+
+  // #3075 — o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar).
+  const pedido = (contato, extra) => ({
+    contato,
+    empresaNova: null,
+    foto: null,
+    apagar: [],
+    ...extra,
+  });
+
+  it('criarPessoa manda os dados ao contato e devolve o contato criado', async () => {
+    const criado = { id: 9, name: 'Ana Albuquerino' };
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: criado } },
+    });
+    const contato = { name: 'Ana Albuquerino', email: null };
+    expect(await real().criarPessoa(pedido(contato))).toEqual(criado);
+    expect(ContactAPI.create).toHaveBeenCalledWith(contato);
+    expect(ContactAPI.update).not.toHaveBeenCalled();
+  });
+
+  it('criarPessoa com empresa nova e foto: cadastra, cria e põe a foto na criada', async () => {
+    CompanyAPI.search.mockResolvedValue({ data: { payload: [] } });
+    CompanyAPI.create.mockResolvedValue({
+      data: { payload: { id: 4, name: 'Oficina do Bruno' } },
+    });
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: { id: 9, name: 'Bruno' } } },
+    });
+    ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    await real().criarPessoa(
+      pedido(
+        { name: 'Bruno', additional_attributes: {} },
+        { empresaNova: 'Oficina do Bruno', foto: { arquivo, previa: 'blob:x' } }
+      )
+    );
+    expect(ContactAPI.create).toHaveBeenCalledWith({
+      name: 'Bruno',
+      company_id: 4,
+      additional_attributes: { company_name: 'Oficina do Bruno' },
+    });
+    const [id, corpo] = ContactAPI.update.mock.calls[0];
+    expect(id).toBe(9);
+    expect(corpo.get('avatar')).toBeInstanceOf(File);
+  });
+
+  it('foto que falha depois da pessoa criada: a nova tentativa não cria outra pessoa', async () => {
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: { id: 9, name: 'Bruno' } } },
+    });
+    ContactAPI.update.mockRejectedValueOnce(
+      Object.assign(new Error('500'), { response: { status: 500 } })
+    );
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    const comFoto = pedido(
+      { name: 'Bruno', additional_attributes: {} },
+      { foto: { arquivo, previa: 'blob:x' } }
+    );
+    const falha = await real()
+      .criarPessoa(comFoto)
+      .catch(erro => erro);
+    expect(falha.name).toBe('GravouEmParte');
+    expect(falha.retomada.pessoa).toEqual({ id: 9, name: 'Bruno' });
+
+    ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
+    expect(await real().criarPessoa(comFoto, falha.retomada)).toEqual({
+      id: 9,
+      name: 'Bruno',
+    });
+    expect(ContactAPI.create).toHaveBeenCalledTimes(1);
+    const [id, corpo] = ContactAPI.update.mock.calls.at(-1);
+    expect(id).toBe(9);
+    expect(corpo).toBeInstanceOf(FormData);
+  });
+
+  it('salvarPessoa grava no contato pelo id', async () => {
+    ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
+    const contato = { name: 'Ana Albuquerino' };
+    await real().salvarPessoa(9, pedido(contato));
+    expect(ContactAPI.update).toHaveBeenCalledWith(9, contato);
+  });
+
+  it('o 422 do e-mail repetido sobe como veio', async () => {
+    const repetido = Object.assign(new Error('422'), {
+      response: { status: 422, data: { attributes: ['email'] } },
+    });
+    ContactAPI.create.mockRejectedValue(repetido);
+    await expect(real().criarPessoa(pedido({ name: 'Ana' }))).rejects.toBe(
+      repetido
+    );
   });
 });

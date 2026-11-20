@@ -5,11 +5,12 @@ import CompanyMediaView from 'dashboard/routes/dashboard/relationships/CompanyMe
 
 const accountId = ref(31);
 const mediaEnabled = ref(true);
+const navigationEnabled = ref(false);
 const route = reactive({ params: { companyId: '3' }, query: {} });
 vi.mock('axios', () => ({ default: { get: vi.fn() } }));
 vi.mock('vue-router', () => ({ useRoute: () => route }));
 vi.mock('dashboard/composables/useRelationships', () => ({
-  useRelationships: () => ({ accountId, mediaEnabled }),
+  useRelationships: () => ({ accountId, mediaEnabled, navigationEnabled }),
 }));
 const originalClient = window.axios;
 let wrapper;
@@ -17,6 +18,7 @@ beforeEach(() => {
   window.axios = axios;
   accountId.value = 31;
   mediaEnabled.value = true;
+  navigationEnabled.value = false;
   route.params.companyId = '3';
   route.query = {};
 });
@@ -58,6 +60,31 @@ it('loads the real company name and preserves filters when returning to its medi
     params: { accountId: 31, companyId: 3 },
     query: route.query,
   });
+});
+
+// #3078 — with the new Relacionamentos menu, the links go to the new list
+// (Empresas tab) and to the new company page.
+it('links to the new Relacionamentos list and company page when the new menu is on', async () => {
+  navigationEnabled.value = true;
+  axios.get.mockResolvedValue({
+    data: { payload: { id: 3, name: 'Empresa' } },
+  });
+  wrapper = mountView();
+  await flushPromises();
+  const links = wrapper
+    .findAllComponents({ name: 'RouterLink' })
+    .map(link => link.props('to'));
+  expect(links.slice(1)).toEqual([
+    {
+      name: 'relationships_home',
+      params: { accountId: 31 },
+      query: { aba: 'empresas' },
+    },
+    {
+      name: 'relacionamentos_empresa',
+      params: { accountId: 31, companyId: 3 },
+    },
+  ]);
 });
 
 it('returns to the media tab even when the expanded page was opened directly', async () => {

@@ -108,21 +108,23 @@ describe('CabecalhoDaPessoa', () => {
     expect(w.emitted('marcarCliente')).toHaveLength(1);
   });
 
-  it('com `podeConversar`, Conversar é a ação principal e emite', async () => {
-    const w = montar({ pessoa: pessoa(), podeConversar: true });
+  // #3071 — "Conversar" aparece sempre, até para quem só pode ver.
+  it('Conversar é sempre a ação principal e emite', async () => {
+    const w = montar({
+      pessoa: pessoa(),
+      podeEditar: false,
+      podeCriarCards: false,
+    });
     await w.get('[data-relacionamentos="conversar"]').trigger('click');
     expect(w.emitted('conversar')).toHaveLength(1);
+    expect(w.find('[data-relacionamentos="acoes-secundarias"]').exists()).toBe(
+      false
+    );
   });
 
-  // #2970 — sem conversa para abrir o botão não existe (a demonstração mostra
-  // "Lembrete" e o menu inteiro: `naDemonstracao`).
-  it('sem `podeConversar` não tem Conversar, e as outras ações seguem discretas, sem botão preenchido', () => {
-    const w = montar({ pessoa: pessoa(), naDemonstracao: true });
-    expect(w.find('[data-relacionamentos="conversar"]').exists()).toBe(false);
+  it('com `podeLembrete`, Lembrete é discreto, emite e divide a linha com Novo card e o "⋯"', async () => {
+    const w = montar({ pessoa: pessoa(), podeLembrete: true });
     const secundarias = w.get('[data-relacionamentos="acoes-secundarias"]');
-    expect(
-      secundarias.find('[data-relacionamentos="novo-card"]').exists()
-    ).toBe(true);
     expect(secundarias.classes()).toContain('grid-cols-[1fr_1fr_auto]');
     const rotulos = ['NOVO_CARD', 'LEMBRETE'].map(
       chave => `RELACIONAMENTOS_FICHA.ACOES.${chave}`
@@ -134,106 +136,156 @@ describe('CabecalhoDaPessoa', () => {
     discretos.forEach(b =>
       expect(b.vm.$attrs).toMatchObject({ slate: '', faded: '' })
     );
+    await w.get('[data-relacionamentos="lembrete"]').trigger('click');
+    expect(w.emitted('lembrete')).toHaveLength(1);
   });
 
-  it('na demonstração, sem poder criar card, Lembrete e o "⋯" dividem a linha', () => {
-    const w = montar({
-      pessoa: pessoa(),
-      podeCriarCards: false,
-      naDemonstracao: true,
-    });
-    expect(w.find('[data-relacionamentos="novo-card"]').exists()).toBe(false);
-    expect(
-      w.get('[data-relacionamentos="acoes-secundarias"]').classes()
-    ).toContain('grid-cols-[1fr_auto]');
+  it('sem `podeLembrete` não tem Lembrete', () => {
+    const w = montar({ pessoa: pessoa() });
+    expect(w.find('[data-relacionamentos="lembrete"]').exists()).toBe(false);
+    expect(w.text()).not.toContain('ACOES.LEMBRETE');
   });
 
-  // #2970 — "Lembrete" e, no "⋯", Juntar, Bloquear e Apagar ainda só avisam.
-  // Com um item só não há menu: "Alterar informações" é um botão.
-  describe('sem `naDemonstracao`', () => {
+  describe('o "⋯"', () => {
     const CLIENTE = { contact_type: 'customer' };
     const ALTERAR = '[data-relacionamentos="alterar-informacoes"]';
     const MAIS = '[data-relacionamentos="mais-acoes"]';
-    const itensDoMais = async w => {
-      await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-      return w.findAll('.n-dropdown-item button').map(item => item.text());
+    const eventosDoMais = async w => {
+      await w.get(MAIS).trigger('click');
+      return w
+        .findAll('.n-dropdown-item button')
+        .map(item => item.attributes('data-mais'));
     };
     const grade = w =>
       w.get('[data-relacionamentos="acoes-secundarias"]').classes();
 
-    it('não tem Lembrete nem "⋯": "Alterar informações" é um botão discreto, que emite', async () => {
+    it('de quem pode editar: Alterar, Não quer mensagens, Juntar e Bloquear, nessa ordem', async () => {
       const w = montar({ pessoa: pessoa() });
-      expect(w.text()).not.toContain('ACOES.LEMBRETE');
-      expect(w.find('[data-relacionamentos="novo-card"]').exists()).toBe(true);
-      expect(w.find(MAIS).exists()).toBe(false);
-      expect(grade(w)).toContain('grid-cols-1');
-      expect(grade(w)).not.toContain('justify-items-end');
-      const alterar = w
-        .findAllComponents(Button)
-        .find(
-          b =>
-            b.props('label') ===
-            'RELACIONAMENTOS_FICHA.ACOES.ALTERAR_INFORMACOES'
-        );
-      expect(alterar.vm.$attrs).toMatchObject({ slate: '', faded: '' });
-      await w.get(ALTERAR).trigger('click');
-      expect(w.emitted('maisAcao')[0]).toEqual(['alterar']);
-    });
-
-    it('de quem é cliente, o "⋯" guarda "Alterar informações" e "Não é mais cliente", sem botão solto', async () => {
-      const w = montar({ pessoa: pessoa(CLIENTE) });
-      expect(w.find(ALTERAR).exists()).toBe(false);
+      expect(await eventosDoMais(w)).toEqual([
+        'alterar',
+        'naoQuer',
+        'juntar',
+        'bloquear',
+      ]);
       expect(grade(w)).toContain('grid-cols-[1fr_auto]');
-      const itens = await itensDoMais(w);
-      expect(itens).toHaveLength(2);
-      expect(itens[0]).toContain('ACOES.ALTERAR_INFORMACOES');
-      expect(itens[1]).toContain('ACOES.DESMARCAR_CLIENTE');
     });
 
-    it('sem poder criar card, o "⋯" de quem é cliente fica sozinho, na ponta', () => {
-      const w = montar({ pessoa: pessoa(CLIENTE), podeCriarCards: false });
-      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
+    it('de quem é cliente, "Não é mais cliente" vem logo depois de Alterar', async () => {
+      const w = montar({ pessoa: pessoa(CLIENTE) });
+      const eventos = await eventosDoMais(w);
+      expect(eventos.slice(0, 2)).toEqual(['alterar', 'desmarcar']);
+    });
+
+    it('quem já não quer mensagens não tem a opção de novo; bloqueada tem Desbloquear', async () => {
+      const w = montar({
+        pessoa: pessoa({ opted_out_at: SEGUNDOS, blocked: true }),
+      });
+      const eventos = await eventosDoMais(w);
+      expect(eventos).not.toContain('naoQuer');
+      expect(eventos).not.toContain('bloquear');
+      expect(eventos).toContain('desbloquear');
+    });
+
+    it('com `podeApagar`, Apagar é o último item, em vermelho', async () => {
+      const w = montar({ pessoa: pessoa(), podeApagar: true });
+      const eventos = await eventosDoMais(w);
+      expect(eventos.at(-1)).toBe('apagar');
+      expect(w.get('[data-mais="apagar"]').classes().join(' ')).toContain(
+        'text-n-ruby-11'
+      );
+    });
+
+    it('repassa a escolha', async () => {
+      const w = montar({ pessoa: pessoa(), podeApagar: true });
+      await w.get(MAIS).trigger('click');
+      await w.get('[data-mais="juntar"]').trigger('click');
+      expect(w.emitted('maisAcao')[0]).toEqual(['juntar']);
+    });
+
+    it('quem só pode ver não tem "⋯" nem Alterar: sobra Novo card, na linha toda', () => {
+      const w = montar({ pessoa: pessoa(), podeEditar: false });
+      expect(w.find(MAIS).exists()).toBe(false);
+      expect(w.find(ALTERAR).exists()).toBe(false);
+      expect(
+        w.get('[data-relacionamentos="acoes-secundarias"]').findAll('button')
+      ).toHaveLength(1);
+      expect(grade(w)).toContain('grid-cols-1');
+    });
+
+    it('com uma escolha só não há menu: Apagar vira botão, que emite', async () => {
+      const w = montar({
+        pessoa: pessoa(),
+        podeEditar: false,
+        podeCriarCards: false,
+        podeApagar: true,
+      });
+      expect(w.find(MAIS).exists()).toBe(false);
+      await w.get('[data-relacionamentos="mais-apagar"]').trigger('click');
+      expect(w.emitted('maisAcao')[0]).toEqual(['apagar']);
+    });
+
+    it('sem poder criar card, o "⋯" fica sozinho, na ponta', () => {
+      const w = montar({ pessoa: pessoa(), podeCriarCards: false });
       expect(w.find(MAIS).exists()).toBe(true);
       expect(grade(w)).toEqual(
         expect.arrayContaining(['grid-cols-1', 'justify-items-end'])
       );
     });
+  });
 
-    it('sem poder criar card, quem não é cliente fica só com "Alterar informações", na linha toda', () => {
-      const w = montar({ pessoa: pessoa(), podeCriarCards: false });
-      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
-      expect(w.find(ALTERAR).exists()).toBe(true);
-      expect(grade(w)).toContain('grid-cols-1');
-      expect(grade(w)).not.toContain('justify-items-end');
+  describe('etiquetas', () => {
+    it('quem pode editar tem "Mudar etiquetas", que emite', async () => {
+      const w = montar({ pessoa: pessoa() });
+      const botao = w.get('[data-relacionamentos="mudar-etiquetas"]');
+      expect(botao.text()).toContain('ACOES.MUDAR_ETIQUETAS');
+      await botao.trigger('click');
+      expect(w.emitted('etiquetas')).toHaveLength(1);
     });
 
-    it('quem só pode ver não tem "⋯" nem "Alterar informações": sobra Novo card, na linha toda', () => {
-      const w = montar({ pessoa: pessoa(), podeEditar: false });
-      expect(w.find(MAIS).exists()).toBe(false);
-      expect(w.find(ALTERAR).exists()).toBe(false);
-      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
-      expect(grade(w)).toContain('grid-cols-1');
-      expect(grade(w)).not.toContain('justify-items-end');
-    });
-
-    it('quem só pode ver e não cria card fica sem grupo de ações; com conversa, só Conversar', () => {
-      const semNada = montar({
-        pessoa: pessoa(),
-        podeEditar: false,
-        podeCriarCards: false,
-      });
-      expect(semNada.find('[role="group"]').exists()).toBe(false);
-      const comConversa = montar({
-        pessoa: pessoa(),
-        podeEditar: false,
-        podeCriarCards: false,
-        podeConversar: true,
-      });
-      const grupo = comConversa.get('[role="group"]');
-      expect(grupo.findAll('button')).toHaveLength(1);
+    it('sem etiqueta, o botão diz "Pôr etiqueta"', () => {
+      const w = montar({ pessoa: pessoa({ labels: [] }) });
       expect(
-        grupo.find('[data-relacionamentos="acoes-secundarias"]').exists()
-      ).toBe(false);
+        w.get('[data-relacionamentos="mudar-etiquetas"]').text()
+      ).toContain('ACOES.POR_ETIQUETA');
+    });
+
+    it('quem só pode ver lê as etiquetas e não tem o botão', () => {
+      const w = montar({ pessoa: pessoa(), podeEditar: false });
+      expect(w.find('[data-relacionamentos="mudar-etiquetas"]').exists()).toBe(
+        false
+      );
+      expect(w.text()).toContain('feira');
+    });
+  });
+
+  describe('Ligar', () => {
+    const comLigar = {
+      ...stubs,
+      VoiceCallButton: {
+        props: ['phone', 'contactId', 'label'],
+        template: '<button data-ligar :data-fone="phone">{{ label }}</button>',
+      },
+    };
+
+    it('com `podeLigar`, fica ao lado de Conversar, com o telefone e a pessoa', () => {
+      const w = mount(CabecalhoDaPessoa, {
+        props: { pessoa: pessoa(), podeLigar: true },
+        global: { stubs: comLigar },
+      });
+      const ligar = w.get('[data-ligar]');
+      expect(ligar.attributes('data-fone')).toBe('+5511900001007');
+      expect(ligar.text()).toContain('ACOES.LIGAR');
+      expect(
+        w.get('[data-relacionamentos="conversar"]').element.parentElement
+      ).toBe(ligar.element.parentElement);
+    });
+
+    it('sem `podeLigar`, não tem Ligar', () => {
+      const w = mount(CabecalhoDaPessoa, {
+        props: { pessoa: pessoa() },
+        global: { stubs: comLigar },
+      });
+      expect(w.find('[data-ligar]').exists()).toBe(false);
     });
   });
 
@@ -247,29 +299,28 @@ describe('CabecalhoDaPessoa', () => {
     const w = montar({ pessoa: pessoa({ phone_number: null }) });
     expect(w.find('[data-copiar]').exists()).toBe(false);
   });
-
-  it('repassa a escolha do "⋯"', async () => {
-    const w = montar({ pessoa: pessoa(), naDemonstracao: true });
-    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-    const itens = w.findAll('.n-dropdown-item button');
-    await itens[1].trigger('click');
-    expect(w.emitted('maisAcao')[0]).toEqual(['juntar']);
-  });
-
-  it('de quem é cliente, o "⋯" tem "Não é mais cliente" e repassa a escolha', async () => {
-    const w = montar({ pessoa: pessoa({ contact_type: 'customer' }) });
-    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-    const itens = w.findAll('.n-dropdown-item button');
-    expect(itens[1].text()).toContain('ACOES.DESMARCAR_CLIENTE');
-    await itens[1].trigger('click');
-    expect(w.emitted('maisAcao')[0]).toEqual(['desmarcar']);
-  });
 });
 
 describe('MenuMais', () => {
-  it('na demonstração abre com 4 itens, anda pelas setas e fecha com Esc', async () => {
+  const ITENS = [
+    {
+      evento: 'alterar',
+      chave: 'ALTERAR_INFORMACOES',
+      icone: 'i-lucide-pencil',
+    },
+    { evento: 'juntar', chave: 'JUNTAR', icone: 'i-lucide-git-merge' },
+    { evento: 'bloquear', chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
+    {
+      evento: 'apagar',
+      chave: 'APAGAR',
+      icone: 'i-lucide-trash-2',
+      perigo: true,
+    },
+  ];
+
+  it('abre com os itens, anda pelas setas e fecha com Esc', async () => {
     const w = mount(MenuMais, {
-      props: { naDemonstracao: true },
+      props: { itens: ITENS },
       attachTo: document.body,
       global: { stubs },
     });
@@ -289,60 +340,19 @@ describe('MenuMais', () => {
   });
 
   it('emite a escolha e fecha', async () => {
-    const w = mount(MenuMais, { global: { stubs } });
+    const w = mount(MenuMais, { props: { itens: ITENS }, global: { stubs } });
     await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
     await w.findAll('.n-dropdown-item button')[0].trigger('click');
     expect(w.emitted('acao')[0]).toEqual(['alterar']);
     expect(w.find('.n-dropdown-item').exists()).toBe(false);
   });
 
-  const textosDoMenu = async props => {
-    const w = mount(MenuMais, { props, global: { stubs } });
+  it('cada item tem 44 px de alvo e o texto da chave', async () => {
+    const w = mount(MenuMais, { props: { itens: ITENS }, global: { stubs } });
     await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-    return w.findAll('.n-dropdown-item button').map(item => item.text());
-  };
-
-  it('"Não é mais cliente" vem logo depois de "Alterar informações", só para quem é cliente', async () => {
-    const deCliente = await textosDoMenu({
-      ehCliente: true,
-      naDemonstracao: true,
-    });
-    expect(deCliente).toHaveLength(5);
-    expect(deCliente[0]).toContain('ACOES.ALTERAR_INFORMACOES');
-    expect(deCliente[1]).toContain('ACOES.DESMARCAR_CLIENTE');
-    expect((await textosDoMenu({ ehCliente: false })).join(' ')).not.toContain(
-      'DESMARCAR_CLIENTE'
-    );
-    expect((await textosDoMenu()).join(' ')).not.toContain('DESMARCAR_CLIENTE');
-  });
-
-  it('quem só pode ver não tem "Não é mais cliente", mesmo com cliente', async () => {
-    const textos = await textosDoMenu({
-      ehCliente: true,
-      podeAlterar: false,
-      naDemonstracao: true,
-    });
-    expect(textos).toHaveLength(3);
-    expect(textos.join(' ')).not.toContain('DESMARCAR_CLIENTE');
-  });
-
-  // #2970 — Juntar, Bloquear e Apagar ainda só avisam: só na demonstração.
-  it('sem `naDemonstracao` não tem Juntar, Bloquear nem Apagar', async () => {
-    const deCliente = await textosDoMenu({ ehCliente: true });
-    expect(deCliente).toHaveLength(2);
-    expect(deCliente[0]).toContain('ACOES.ALTERAR_INFORMACOES');
-    expect(deCliente[1]).toContain('ACOES.DESMARCAR_CLIENTE');
-    expect(await textosDoMenu({ ehCliente: false })).toHaveLength(1);
-  });
-
-  it('escolher "Não é mais cliente" emite desmarcar', async () => {
-    const w = mount(MenuMais, {
-      props: { ehCliente: true },
-      global: { stubs },
-    });
-    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-    await w.findAll('.n-dropdown-item button')[1].trigger('click');
-    expect(w.emitted('acao')[0]).toEqual(['desmarcar']);
+    const itens = w.findAll('.n-dropdown-item button');
+    itens.forEach(item => expect(item.classes()).toContain('min-h-11'));
+    expect(itens[1].text()).toContain('ACOES.JUNTAR');
   });
 });
 
@@ -373,13 +383,9 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
   });
 
   it('em 390 px Conversar ocupa a linha e as outras três dividem a de baixo', () => {
-    const w = montar({
-      pessoa: pessoa(),
-      podeConversar: true,
-      naDemonstracao: true,
-    });
+    const w = montar({ pessoa: pessoa(), podeLembrete: true });
     expect(w.get('[data-relacionamentos="conversar"]').classes()).toContain(
-      'w-full'
+      'flex-1'
     );
     expect(
       w.get('[data-relacionamentos="acoes-secundarias"]').classes()
@@ -395,13 +401,12 @@ describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
 
   it('Conversar segue como botão principal, cheio e clicável, mesmo com a faixa de não quer', async () => {
     const normal = mount(CabecalhoDaPessoa, {
-      props: { pessoa: pessoa(), podeConversar: true },
+      props: { pessoa: pessoa() },
       global: { stubs },
     });
     const calada = mount(CabecalhoDaPessoa, {
       props: {
         pessoa: pessoa({ opted_out_at: SEGUNDOS }),
-        podeConversar: true,
       },
       global: { stubs },
     });
@@ -421,7 +426,7 @@ describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
 describe('botões de ação usam o Button da casa', () => {
   it('sem rounded-xl nem min-h-12 nos botões de ação do cabeçalho e das gavetas', () => {
     const pessoaW = mount(CabecalhoDaPessoa, {
-      props: { pessoa: pessoa(), podeConversar: true },
+      props: { pessoa: pessoa() },
       global: { stubs },
     });
     const empresaW = mount(CabecalhoDaEmpresa, {
@@ -629,16 +634,13 @@ describe('CabecalhoDaPessoa: terceira rodada', () => {
     mount(CabecalhoDaPessoa, { props, global: { stubs } });
 
   it('nenhum rótulo de botão do cabeçalho encolhe ou quebra', () => {
-    const w = montar({
-      pessoa: pessoa(),
-      podeConversar: true,
-      naDemonstracao: true,
-    });
+    const w = montar({ pessoa: pessoa(), podeLembrete: true });
     const botoes = [
       w.get('[data-relacionamentos="conversar"]'),
       ...w.get('[data-relacionamentos="acoes-secundarias"]').findAll('button'),
     ];
-    botoes.slice(0, 3).forEach(b => {
+    expect(botoes[0].classes()).toContain('whitespace-nowrap');
+    botoes.slice(1, 3).forEach(b => {
       expect(b.classes()).toEqual(
         expect.arrayContaining(['whitespace-nowrap', 'shrink-0'])
       );
@@ -673,6 +675,10 @@ describe('MenuMais: foco', () => {
     const w = mount(MenuMais, {
       attachTo: document.body,
       props: {
+        itens: [
+          { evento: 'alterar', chave: 'ALTERAR_INFORMACOES', icone: 'a' },
+          { evento: 'juntar', chave: 'JUNTAR', icone: 'b' },
+        ],
         onAcao: () => {
           focoNaHoraDeEmitir = document.activeElement;
         },
@@ -691,11 +697,14 @@ describe('MenuMais: foco', () => {
   it('fecha quando o foco sai para fora do menu, mas não quando anda dentro dele', async () => {
     const fora = document.createElement('button');
     document.body.appendChild(fora);
-    // #2970 — fora da demonstração o menu só existe com dois itens: é o de
-    // quem é cliente (Alterar informações e Não é mais cliente).
     const w = mount(MenuMais, {
       attachTo: document.body,
-      props: { ehCliente: true },
+      props: {
+        itens: [
+          { evento: 'alterar', chave: 'ALTERAR_INFORMACOES', icone: 'a' },
+          { evento: 'desmarcar', chave: 'DESMARCAR_CLIENTE', icone: 'b' },
+        ],
+      },
       global: { stubs },
     });
     const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
@@ -889,8 +898,9 @@ describe('SecaoConversas', () => {
     const w = mount(SecaoConversas, {
       props: { conversas: [conversa(1)], agora: AGORA },
     });
-    expect(w.get('li p').classes()).toContain('line-clamp-2');
-    const tempo = w.findAll('li p')[1];
+    const linhas = w.findAll('li span.block');
+    expect(linhas[1].classes()).toContain('line-clamp-2');
+    const tempo = linhas[2];
     expect(tempo.get('span').classes()).toContain('md:hidden');
     expect(tempo.text()).toContain('SITUACAO.aberta');
   });
@@ -900,6 +910,55 @@ describe('SecaoConversas', () => {
     expect(w.get('[data-vazio]').text()).toContain('CONVERSAS.VAZIO');
     expect(w.find('button').exists()).toBe(false);
     expect(w.text()).not.toContain('VER_TODAS');
+  });
+
+  // #3071 — na ficha da pessoa (`podeAbrir`) é de verdade.
+  describe('com `podeAbrir`', () => {
+    const montar = quantas =>
+      mount(SecaoConversas, {
+        props: {
+          conversas: Array.from({ length: quantas }, (_, i) => conversa(i + 1)),
+          agora: AGORA,
+          podeAbrir: true,
+        },
+      });
+
+    it('cada conversa é um botão que emite o número dela', async () => {
+      const w = montar(2);
+      const botoes = w.findAll('button[data-conversa]');
+      expect(botoes).toHaveLength(2);
+      expect(botoes[0].classes()).toContain('min-h-11');
+      await botoes[1].trigger('click');
+      expect(w.emitted('abrir')[0]).toEqual([2]);
+    });
+
+    it('com até 3 conversas não há "Ver todas"', () => {
+      expect(
+        montar(3).find('[data-relacionamentos="ver-todas"]').exists()
+      ).toBe(false);
+    });
+
+    it('"Ver todas" mostra todas ali mesmo, e "Ver menos" volta às 3', async () => {
+      const w = montar(5);
+      const ver = w.get('[data-relacionamentos="ver-todas"]');
+      expect(ver.attributes('aria-expanded')).toBe('false');
+      expect(w.findAll('li')).toHaveLength(3);
+      await ver.trigger('click');
+      expect(w.findAll('li')).toHaveLength(5);
+      expect(ver.attributes('aria-expanded')).toBe('true');
+      expect(ver.text()).toContain('CONVERSAS.VER_MENOS');
+      expect(w.emitted('verTodas')).toBeUndefined();
+      await ver.trigger('click');
+      expect(w.findAll('li')).toHaveLength(3);
+    });
+
+    it('com 25 conversas (o teto do servidor), diz que são as mais recentes', async () => {
+      const w = montar(25);
+      await w.get('[data-relacionamentos="ver-todas"]').trigger('click');
+      expect(w.get('[data-relacionamentos="mais-recentes"]').text()).toContain(
+        'MAIS_RECENTES'
+      );
+    });
   });
 
   it('na empresa, cada linha diz de quem é', () => {
@@ -945,6 +1004,23 @@ describe('SecaoNotas', () => {
       'Pediu retorno.'
     );
     expect(w.text()).toContain('"autor":"Sônia"');
+  });
+
+  // #3071 — apagar nota.
+  it('quem pode escrever tem a lixeira em cada nota, com o texto no rótulo, e ela emite', async () => {
+    const w = mount(SecaoNotas, { props: { notas, agora: AGORA } });
+    const lixeira = w.get('[data-relacionamentos="apagar-nota"]');
+    expect(lixeira.classes()).toContain('size-11');
+    expect(lixeira.attributes('aria-label')).toContain('Pediu retorno.');
+    await lixeira.trigger('click');
+    expect(w.emitted('apagar')[0][0]).toMatchObject({ id: 'a' });
+  });
+
+  it('quem só pode ver não tem a lixeira', () => {
+    const w = mount(SecaoNotas, {
+      props: { notas, agora: AGORA, podeEscrever: false },
+    });
+    expect(w.find('[data-relacionamentos="apagar-nota"]').exists()).toBe(false);
   });
 
   it('Salvar nunca fica desligado: vazio, o clique diz o que falta e leva o foco à caixa', async () => {
@@ -1119,13 +1195,12 @@ describe('GavetaDeInformacoes', () => {
     const w = montar();
     await w.get('[data-foco]').setValue('Ana Maria');
     await w.get('[data-relacionamentos="salvar-informacoes"]').trigger('click');
-    const [dados] = w.emitted('salvar')[0];
-    expect(dados.name).toBe('Ana Maria');
-    expect(dados.additional_attributes.city).toBe('Santos');
-    expect(dados.custom_attributes).toMatchObject({
-      cpf: '52998224725',
-      melhor_horario: 'Tarde',
-    });
+    const [pedido] = w.emitted('salvar')[0];
+    expect(pedido.contato.name).toBe('Ana Maria');
+    expect(pedido.contato.additional_attributes.city).toBe('Santos');
+    // #3075 — o que ninguém mexeu não vai de novo (o servidor junta).
+    expect(pedido.contato.custom_attributes).toEqual({});
+    expect(pedido).toMatchObject({ empresaNova: null, foto: null, apagar: [] });
   });
 
   it('Cancelar e Esc fecham', async () => {
@@ -1222,11 +1297,10 @@ describe('ficha da empresa: celular', () => {
     expect(baixo.get('span.tabular-nums').classes()).toContain(
       'whitespace-nowrap'
     );
-    const site = baixo.get('[title]');
-    expect(site.attributes('title')).toBe(empresa.domain);
-    expect(site.classes()).toEqual(
-      expect.arrayContaining(['truncate', 'whitespace-nowrap'])
-    );
+    // #3078 — o site é um link ("Visitar site"); o texto é uma linha só.
+    const site = baixo.get('[data-relacionamentos="site-da-empresa"]');
+    expect(site.attributes('href')).toBe(`https://${empresa.domain}/`);
+    expect(site.get('span').classes()).toContain('truncate');
     expect(site.classes()).not.toContain('break-all');
     expect(w.findAllComponents({ name: 'Avatar' })).toHaveLength(2);
   });
@@ -1250,8 +1324,10 @@ describe('ficha da empresa: celular', () => {
     expect(
       w.get('[data-relacionamentos="selos-da-pessoa"]').classes()
     ).toContain('col-start-2');
+    // #3078 — os ícones da linha (conversar e tirar) ficam juntos no canto.
     expect(
-      w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
+      w.get('[data-relacionamentos="conversar-com-pessoa"]').element
+        .parentElement.className
     ).toContain('absolute');
     expect(linha.classes()).toEqual(
       expect.arrayContaining(['pe-14', 'md:pe-2'])
@@ -1290,15 +1366,31 @@ describe('SecaoPessoasDaEmpresa: quem não quer mensagens', () => {
     expect(email.html()).toContain('ana<wbr>@padaria.com.br');
   });
 
-  it('sem e-mail, mostra o telefone inteiro', () => {
+  it('sem e-mail, mostra o telefone inteiro, como a lista mostra', () => {
     const w = mount(SecaoPessoasDaEmpresa, {
       props: {
         pessoas: [pessoa({ email: '', phone_number: '+5511999990000' })],
       },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
-    expect(email.text()).toBe('+5511999990000');
+    expect(email.text()).toBe('+55 11 99999-0000');
     expect(email.find('wbr').exists()).toBe(false);
+  });
+
+  // #3078 (revisão) — no celular só o ícone não diz o que faz: "Tirar" escrito
+  // ao lado; a partir do md, só o ícone (o nome vai no rótulo).
+  it('o botão de tirar diz "Tirar" no celular e tem alvo de 44 px', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa()], podeEditar: true },
+    });
+    const tirar = w.get('[data-relacionamentos="tirar-pessoa"]');
+    expect(tirar.get('span.md\\:hidden').text()).toBe(
+      'RELACIONAMENTOS_FICHA.EMPRESA.TIRAR.CURTO'
+    );
+    expect(tirar.classes()).toEqual(
+      expect.arrayContaining(['h-11', 'md:w-11', 'shrink-0'])
+    );
+    expect(tirar.attributes('aria-label')).toContain('Ana');
   });
 
   it('o botão de conversar tem alvo de 44 px e não encolhe', () => {
@@ -1581,9 +1673,7 @@ describe('quem só pode ver não tem os botões de escrita', () => {
     expect(com.find('[data-relacionamentos="novo-card"]').exists()).toBe(true);
     const sem = montar(false);
     expect(sem.find('[data-relacionamentos="novo-card"]').exists()).toBe(false);
-    expect(
-      sem.find('[data-relacionamentos="alterar-informacoes"]').exists()
-    ).toBe(true);
+    expect(sem.find('[data-relacionamentos="mais-acoes"]').exists()).toBe(true);
     expect(sem.find('[data-relacionamentos="marcar-cliente"]').exists()).toBe(
       true
     );

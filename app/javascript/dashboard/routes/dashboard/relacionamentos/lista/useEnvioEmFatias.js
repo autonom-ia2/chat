@@ -40,7 +40,9 @@ export const resumoDoQueFoiFeito =
 //    aviso (`resumo(resultado)`), para nada acontecer calado;
 //  - `recomecar`: o diálogo abriu. Devolve `false` se ainda há fatia em voo:
 //    nesse caso retoma o mesmo envio em vez de começar outro por cima.
-// `contagem` é o nome da contagem da ação na fonte (criados, aplicadas, apagadas).
+// `contagem` é o nome da contagem da ação na fonte (criados, aplicadas, apagadas)
+// ou, quando o diálogo faz mais de uma ação, uma função que diz qual vale agora
+// (#3062: as etiquetas são "aplicadas" ou "tiradas").
 export const useEnvioEmFatias = ({
   contagem,
   mensagemDeErro,
@@ -56,8 +58,11 @@ export const useEnvioEmFatias = ({
     () => Boolean(resultado.value) && !resultado.value.erro
   );
 
+  const nomeDaContagem = () =>
+    typeof contagem === 'function' ? contagem() : contagem;
+
   const somado = novo => ({
-    feitas: (resultado.value?.feitas ?? 0) + novo[contagem],
+    feitas: (resultado.value?.feitas ?? 0) + novo[nomeDaContagem()],
     deFora: [...(resultado.value?.deFora ?? []), ...novo.deFora],
     faltam: novo.faltam,
     erro: novo.erro,

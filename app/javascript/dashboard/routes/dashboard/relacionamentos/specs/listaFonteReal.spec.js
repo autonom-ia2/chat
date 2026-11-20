@@ -132,7 +132,9 @@ describe('listar', () => {
     });
   });
 
-  it('na aba Empresas pede empresas e nunca manda filtros', async () => {
+  // #3078 — Empresas manda só os filtros que a empresa tem: cidade e quando
+  // chegou (o servidor responde 422 para os outros).
+  it('na aba Empresas pede empresas e manda só cidade e quando chegou', async () => {
     responde('empresas', { itens: [PADARIA], total: 1, tem_mais: false });
     expect(
       await real().listar({
@@ -149,6 +151,8 @@ describe('listar', () => {
       busca: 'padaria',
       ordem: 'mais_novos',
       pagina: 3,
+      'filtros[cidade]': FILTROS_CHEIOS.cidade,
+      'filtros[chegou_em]': FILTROS_CHEIOS.chegouEm,
     });
     expect(RelacionamentosAPI.pessoas).not.toHaveBeenCalled();
   });
@@ -170,7 +174,7 @@ describe('contagens', () => {
     });
   });
 
-  it('conta os grupos de empresas sem mandar filtros', async () => {
+  it('conta os grupos de empresas só com os filtros que a empresa tem', async () => {
     const contagens = { todas: 3, com_clientes: 1 };
     responde('contagensDeEmpresas', contagens);
     expect(
@@ -181,6 +185,8 @@ describe('contagens', () => {
     ).toEqual(contagens);
     expect(RelacionamentosAPI.contagensDeEmpresas).toHaveBeenCalledWith({
       busca: 'padaria',
+      'filtros[cidade]': FILTROS_CHEIOS.cidade,
+      'filtros[chegou_em]': FILTROS_CHEIOS.chegouEm,
     });
     expect(RelacionamentosAPI.contagensDePessoas).not.toHaveBeenCalled();
   });

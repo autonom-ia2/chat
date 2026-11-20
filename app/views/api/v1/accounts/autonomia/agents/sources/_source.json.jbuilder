@@ -6,6 +6,7 @@ json.kind source.kind
 json.source_type source.source_type
 json.reference source.reference
 json.external_link source.external_link
+json.file_attached source.file.attached?
 json.status source.status
 json.sync_status source.sync_status
 json.error source.error

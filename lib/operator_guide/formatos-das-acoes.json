@@ -412,8 +412,8 @@
     "controller": "api/v1/accounts/companies#destroy",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:57",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:59",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": true
   },
@@ -422,8 +422,8 @@
     "controller": "api/v1/accounts/companies#avatar",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:62",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:69",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": true
   },
@@ -4797,8 +4797,8 @@
     "modelo": "Company",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:43",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:93",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -8475,6 +8475,35 @@
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:12",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:16",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH ritmo_de_envio": {
+    "campos": {
+      "horario": {
+        "campos": {
+          "dias_da_semana": {
+            "tipo": "lista"
+          },
+          "fim": {},
+          "inicio": {}
+        },
+        "tipo": "objeto"
+      },
+      "limite": {
+        "campos": {
+          "dias": {},
+          "mensagens": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/ritmo_de_envio#update",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
     ],
     "sem_corpo": false
   },
@@ -14217,7 +14246,7 @@
     "modelo": "Company",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:38",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:93"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -14252,9 +14281,9 @@
     "modelo": "Company",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:47",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:119",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:120",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:126",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:127",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false
   },
@@ -20678,7 +20707,9 @@
   },
   "POST relacionamentos/etiqueta": {
     "campos": {
-      "etiqueta": {},
+      "etiquetas": {
+        "tipo": "lista"
+      },
       "pessoa_ids": {
         "tipo": "lista"
       }
@@ -20687,8 +20718,51 @@
     "controller": "api/v1/accounts/relacionamentos/etiqueta#create",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:5",
-      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:7"
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/etiqueta/tirar": {
+    "campos": {
+      "etiquetas": {
+        "tipo": "lista"
+      },
+      "pessoa_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/etiqueta#tirar",
+    "modelo": "Contact",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/pessoas/exportar": {
+    "campos": {
+      "busca": {},
+      "filtros": {
+        "campos": {
+          "chegou_em": {},
+          "cidade": {},
+          "empresa": {},
+          "etiqueta": {}
+        },
+        "tipo": "objeto"
+      },
+      "grupo": {},
+      "ordem": {},
+      "pagina": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:33",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:72"
     ],
     "sem_corpo": false
   },
@@ -25085,8 +25159,8 @@
     "modelo": "Company",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:43",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:93",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100",
+      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -28634,6 +28708,35 @@
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:12",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:16",
       "app/controllers/api/v1/accounts/relationships/configurations_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
+  "PUT ritmo_de_envio": {
+    "campos": {
+      "horario": {
+        "campos": {
+          "dias_da_semana": {
+            "tipo": "lista"
+          },
+          "fim": {},
+          "inicio": {}
+        },
+        "tipo": "objeto"
+      },
+      "limite": {
+        "campos": {
+          "dias": {},
+          "mensagens": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/ritmo_de_envio#update",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
     ],
     "sem_corpo": false
   },

@@ -10,7 +10,11 @@
       "MOSTRANDO_PARTE": "Mostrando {mostradas} de {total} pessoas.",
       "INFORMACOES": {
         "PESSOAS": "Pessoas",
-        "CLIENTES": "Clientes"
+        "CLIENTES": "Clientes",
+        "CIDADE": "Cidade",
+        "SOBRE": "O que a empresa faz",
+        "DESDE": "Chegou em",
+        "ULTIMA_CONVERSA": "Última conversa"
       },
       "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",
@@ -24,6 +28,63 @@
         "AVISO": "Vou abrir a mensagem para essas pessoas.",
         "SEM_PESSOAS": "Esta empresa ainda não tem pessoas.",
         "ENTENDI": "Entendi"
+      },
+      "VISITAR_SITE": "Abrir o site {site} numa aba nova",
+      "GAVETA": {
+        "SOBRE": "O que a empresa faz",
+        "SOBRE_EXEMPLO": "Ex.: padaria do bairro, atende de segunda a sábado.",
+        "SOBRE_AJUDA": "O que aconteceu em cada conversa vai nas notas de cada pessoa."
+      },
+      "NOTAS": {
+        "EXPLICACAO": "Aqui ficam as notas das pessoas desta empresa. Para escrever uma nota, abra a ficha da pessoa.",
+        "VAZIO": "Ninguém desta empresa tem nota ainda."
+      },
+      "MIDIAS": {
+        "TITULO": "Arquivos",
+        "VER_TODAS": "Ver todas ({total})",
+        "VAZIO": "Nada foi trocado nas conversas com esta empresa ainda."
+      },
+      "POR": {
+        "BOTAO": "Pôr pessoa",
+        "TITULO": "Pôr pessoa em {empresa}",
+        "AVISO": "Procure pelo nome, telefone ou e-mail. Aparece só quem ainda não está nesta empresa.",
+        "PLACEHOLDER": "Nome, telefone ou e-mail",
+        "BUSCA": "Procurar pessoa",
+        "PROCURANDO": "Procurando...",
+        "ERRO_BUSCA": "Não consegui procurar agora.",
+        "DIGITE": "Escreva pelo menos 2 letras ou números.",
+        "NINGUEM": "Ninguém encontrado com “{termo}”.",
+        "RESULTADOS": "Pessoas encontradas",
+        "SEM_CONTATO": "Sem telefone e sem e-mail",
+        "ESTA_EM": "Está em {empresa}",
+        "SEM_EMPRESA": "Sem empresa",
+        "MUDA": "{nome} sai de {de} e entra em {para}. Uma pessoa fica numa empresa só.",
+        "ESCOLHA": "Toque numa pessoa da lista para escolher.",
+        "CONFIRMAR": "Pôr na empresa",
+        "ERRO": "Não consegui pôr a pessoa na empresa. Tente de novo.",
+        "ENTROU": "{nome} entrou em {empresa}.",
+        "MUDOU": "{nome} saiu de {de} e entrou em {empresa}.",
+        "DESFEITO": "Pronto. {nome} saiu de {empresa} de novo.",
+        "MUDOU_DESFEITO": "Pronto. {nome} voltou para {de}."
+      },
+      "TIRAR": {
+        "BOTAO": "Tirar da empresa",
+        "CURTO": "Tirar",
+        "ROTULO": "Tirar {nome} da empresa",
+        "SAIU": "{nome} saiu de {empresa}. A pessoa continua na sua lista.",
+        "VOLTOU": "Pronto. {nome} voltou para {empresa}.",
+        "ERRO": "Não consegui tirar {nome} da empresa. Tente de novo."
+      },
+      "APAGAR": {
+        "TITULO": "Apagar {nome}?",
+        "PESSOAS": "{count} pessoa continua na sua lista, com as conversas, mas sem empresa. | As {count} pessoas continuam na sua lista, com as conversas, mas sem empresa.",
+        "LEMBRETES": "Os lembretes e os arquivos desta empresa são apagados.",
+        "SEGUROS": "Os seguros desta empresa continuam guardados, mas sem a empresa ligada a eles.",
+        "NAO_VOLTA": "Isto não volta.",
+        "CONFIRMAR": "Apagar",
+        "ERRO": "Não consegui apagar {nome}. Tente de novo.",
+        "APAGADA": "{nome} foi apagada.",
+        "NA_FILA": "{nome} tem muitas pessoas e sai da lista em alguns minutos."
       }
     },
     "VOLTAR": {
@@ -63,16 +124,18 @@
       "DESMARCAR_CLIENTE": "Não é mais cliente",
       "JUNTAR": "Juntar com outra pessoa",
       "BLOQUEAR": "Bloquear",
-      "APAGAR": "Apagar"
+      "APAGAR": "Apagar",
+      "NAO_QUER": "Marcar que não quer mensagens",
+      "DESBLOQUEAR": "Desbloquear",
+      "LIGAR": "Ligar",
+      "MUDAR_ETIQUETAS": "Mudar etiquetas",
+      "POR_ETIQUETA": "Pôr etiqueta",
+      "LEMBRETE_TITULO": "Falar com {nome}",
+      "APAGAR_EMPRESA": "Apagar empresa"
     },
     "AVISOS": {
-      "CONVERSAR": "Aqui abre a conversa com {nome}.",
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",
-      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}.",
-      "VER_TODAS": "Aqui abrem todas as conversas com {nome}.",
-      "JUNTAR": "Aqui você escolhe com quem juntar {nome}.",
-      "BLOQUEAR": "Aqui você confirma que quer bloquear {nome}.",
-      "APAGAR": "Aqui você confirma que quer apagar {nome}."
+      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}."
     },
     "FAIXA": {
       "TEXTO": "Não quer receber mensagens desde {data}. {origem}",
@@ -85,7 +148,7 @@
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
-        "manual": "Alguém da equipe marcou aqui.",
+        "manual": "Marcado pela equipe nesta ficha.",
         "campaign_reply": "Pediu ao responder uma campanha.",
         "follow_up_reply": "Pediu ao responder uma mensagem automática.",
         "email_unsubscribe": "Pediu por e-mail.",
@@ -111,7 +174,9 @@
         "resolvida": "Resolvida",
         "adiada": "Adiada",
         "outra": "Outra situação"
-      }
+      },
+      "VER_MENOS": "Ver menos",
+      "MAIS_RECENTES": "Estas são as {count} conversas mais recentes."
     },
     "CARDS": {
       "TITULO": "Cards",
@@ -143,7 +208,14 @@
       "ERRO": "Não consegui salvar a nota. Tente de novo.",
       "VAZIO": "Nenhuma nota ainda.",
       "POR": "{autor} · {quando}",
-      "ESCREVA_ANTES": "Escreva a nota antes de salvar."
+      "ESCREVA_ANTES": "Escreva a nota antes de salvar.",
+      "APAGAR": "Apagar nota",
+      "APAGAR_ROTULO": "Apagar a nota “{texto}”",
+      "APAGAR_TITULO": "Apagar esta nota?",
+      "APAGAR_AVISO": "“{texto}” sai da ficha de {nome}. Não dá para desfazer.",
+      "APAGAR_CONFIRMAR": "Apagar nota",
+      "APAGADA": "Nota apagada.",
+      "ERRO_APAGAR": "Não consegui apagar a nota. Tente de novo."
     },
     "ARQUIVOS": {
       "TITULO": "Arquivos",
@@ -165,7 +237,13 @@
       "CNPJ": "CNPJ",
       "SITE": "Site",
       "PESSOAS": "Pessoas",
-      "CLIENTES": "Clientes"
+      "CLIENTES": "Clientes",
+      "PAIS": "País",
+      "SOBRE": "Sobre a pessoa",
+      "SIM": "Sim",
+      "NAO": "Não",
+      "SO_LEITURA": "Você pode ver estas informações, mas não pode mudar.",
+      "ESCOLHER_CAMPOS": "Escolher campos da ficha"
     },
     "ORIGEM": {
       "TITULO": "De onde veio",
@@ -194,11 +272,22 @@
       "SALVAR": "Salvar",
       "SALVO": "Informações salvas.",
       "ERRO_AO_SALVAR": "Não consegui salvar. Tente de novo.",
+      "SALVOU_EM_PARTE": "As informações foram salvas, mas uma parte não entrou: a foto ou um campo para limpar. Toque em Salvar de novo.",
       "ERRO": {
         "NOME": "Escreva o nome.",
         "EMAIL": "Confira o e-mail. Parece que falta algo.",
         "CPF": "Confira o CPF. São 11 números.",
-        "CNPJ": "Confira o CNPJ. São 14 números."
+        "CNPJ": "Confira o CNPJ. São 14 números.",
+        "EMAIL_REPETIDO": "Este e-mail já está na ficha de outra pessoa. Procure esse e-mail na busca da lista ou apague o e-mail daqui.",
+        "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui.",
+        "LINK": "Este endereço de site não está certo. Escreva assim: seusite.com.br",
+        "EMPRESA_SEM_ESCOLHA": "Toque no nome da empresa na lista para escolher. Se o nome não estiver lá, toque em “Cadastrar como empresa nova”."
+      },
+      "SAIR": {
+        "TITULO": "Sair sem salvar?",
+        "AVISO": "O que você escreveu não fica guardado.",
+        "CONFIRMAR": "Sair sem salvar",
+        "VOLTAR": "Continuar escrevendo"
       },
       "REDE": {
         "linkedin": "LinkedIn",
@@ -211,7 +300,119 @@
         "github": "GitHub"
       },
       "CNPJ": "CNPJ",
-      "SITE": "Site"
+      "SITE": "Site",
+      "PAIS_ONDE_MORA": "País",
+      "PAIS_NENHUM": "Não informado",
+      "PAIS_ESCOLHA": "Escolha o país",
+      "SOBRE": "Sobre a pessoa",
+      "SOBRE_EXEMPLO": "Ex.: prefere conversar pelo WhatsApp à tarde.",
+      "SOBRE_AJUDA": "O jeito da pessoa. O que aconteceu em cada conversa vai em Notas.",
+      "MAIS_CAMPOS": "Mais campos ({count})",
+      "ATRIBUTO": {
+        "SIM": "Sim",
+        "NAO": "Não",
+        "ESCOLHA": "Escolha uma opção",
+        "LIMPAR": "Limpar",
+        "LIMPAR_O": "Limpar o que está em {campo}",
+        "LINK_EXEMPLO": "Ex.: seusite.com.br",
+        "VAI_SAIR": "Este campo fica em branco quando você salvar."
+      },
+      "FOTO": {
+        "POR": "Pôr foto",
+        "TROCAR": "Trocar foto",
+        "TIRAR": "Remover foto",
+        "MANTER": "Voltar como estava",
+        "VAI_SAIR": "A foto sai quando você salvar. No lugar ficam as iniciais do nome.",
+        "VAI_ENTRAR": "A foto nova entra quando você salvar.",
+        "ERRO_TIPO": "Esta foto não serve. Escolha uma foto JPG, PNG, GIF ou WEBP.",
+        "ERRO_TAMANHO": "Esta foto é grande demais. Escolha uma de até 15 MB."
+      },
+      "EMPRESA_ESCOLHA": {
+        "ROTULO": "Empresa",
+        "PLACEHOLDER": "Escreva o nome da empresa",
+        "DIGITE": "Escreva o nome para procurar entre as empresas cadastradas.",
+        "PROCURANDO": "Procurando…",
+        "ERRO": "Não consegui procurar agora. Tente de novo.",
+        "NENHUMA": "Nenhuma empresa cadastrada com “{termo}”.",
+        "ACHADAS": "Empresas encontradas",
+        "CADASTRAR": "Cadastrar “{nome}” como empresa nova",
+        "NOVA": "Empresa nova: o cadastro é feito quando você salvar.",
+        "SO_NOME": "Aqui só tem o nome escrito. Ligue a uma empresa cadastrada para abrir a ficha da empresa.",
+        "LIGAR": "Ligar a uma empresa",
+        "TROCAR": "Trocar",
+        "TIRAR": "Tirar da empresa",
+        "MANTER": "Manter {empresa}",
+        "VAI_SAIR": "Esta pessoa sai de {empresa} quando você salvar. Para pôr em outra, procure o nome acima e toque nele."
+      }
+    },
+    "APAGAR": {
+      "TITULO": "Apagar {nome}?",
+      "AVISO": "A ficha de {nome} sai do sistema, com as conversas, as mensagens e as notas.",
+      "CONFIRMAR": "Apagar {nome}",
+      "APAGADA": "A ficha de {nome} foi apagada.",
+      "ERRO": "Não consegui apagar {nome}. Tente de novo daqui a pouco.",
+      "SEGUROS": "O seguro de {nome} também sai, com o PDF. | Os {count} seguros de {nome} também saem, com o PDF.",
+      "CARDS": "Os cards continuam no funil, sem a pessoa.",
+      "CARDS_SEM_DADOS": "Os cards continuam no funil, sem os dados da pessoa, e as reuniões marcadas são canceladas.",
+      "NAO_VOLTA": "Não dá para desfazer."
+    },
+    "BLOQUEIO": {
+      "TITULO": "Bloquear {nome}?",
+      "AVISO": "Se {nome} mandar mensagem, a mensagem fica guardada e ninguém da equipe é avisado. Também sai das campanhas. Dá para desbloquear quando quiser.",
+      "CONFIRMAR": "Bloquear",
+      "BLOQUEADA": "Pronto. A ficha de {nome} está bloqueada.",
+      "ERRO_BLOQUEAR": "Não consegui bloquear. Tente de novo.",
+      "DESBLOQUEADA": "Pronto. A ficha de {nome} está desbloqueada.",
+      "ERRO_DESBLOQUEAR": "Não consegui desbloquear. Tente de novo.",
+      "FAIXA": "A ficha de {nome} está bloqueada.",
+      "FAIXA_APOIO": "Se {nome} mandar mensagem, a mensagem fica guardada e ninguém é avisado."
+    },
+    "NAO_QUER": {
+      "TITULO": "Marcar que {nome} não quer mensagens?",
+      "AVISO": "{nome} sai das campanhas e não recebe mais mensagens automáticas. Se {nome} escrever, você responde normalmente.",
+      "CONFIRMAR": "Marcar que não quer",
+      "MARCADO": "Pronto. {nome} não vai mais receber campanhas nem mensagens automáticas.",
+      "ERRO": "Não consegui marcar. Tente de novo."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Etiquetas de {nome}",
+      "AVISO": "Marque as que {nome} deve ter. Desmarque para tirar.",
+      "SALVAR": "Salvar etiquetas",
+      "ERRO": "Não consegui salvar as etiquetas. Tente de novo.",
+      "SEM_ETIQUETAS": "A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.",
+      "NAO_CARREGOU": "Não consegui mostrar as etiquetas. Tente de novo.",
+      "APAGADA_DA_CONTA": "não existe mais na conta",
+      "VOLTARAM": "Pronto. As etiquetas voltaram a ser como antes.",
+      "PRONTO": "Pronto.",
+      "ENTROU": "Entrou: {etiquetas}.",
+      "SAIU": "Saiu: {etiquetas}."
+    },
+    "JUNTAR": {
+      "TITULO": "Juntar {nome} com outra pessoa",
+      "AVISO": "Use quando a mesma pessoa tem duas fichas. A ficha de {nome} fica; a que você escolher deixa de existir. Procure pelo nome, telefone ou e-mail.",
+      "BUSCA": "Procurar a outra ficha",
+      "PLACEHOLDER": "Nome, telefone ou e-mail",
+      "DIGITE": "Digite o nome, o telefone ou o e-mail da outra ficha.",
+      "PROCURANDO": "Procurando…",
+      "NINGUEM": "Não achei ninguém com “{termo}”. Confira o que você digitou.",
+      "ERRO_BUSCA": "Não consegui procurar agora. Tente de novo.",
+      "RESULTADOS": "Fichas encontradas",
+      "ESCOLHA": "Escolha a outra ficha na lista.",
+      "SEM_CONTATO": "Sem telefone e sem e-mail",
+      "CONTINUAR": "Continuar",
+      "CONFIRMA_TITULO": "Juntar as duas fichas?",
+      "FICA": "Fica",
+      "SAI": "Deixa de existir",
+      "O_QUE_PASSA": "Tudo o que é de {sai} passa para {fica}: conversas, notas, etiquetas e cards.",
+      "O_QUE_FICA": "O nome, o telefone e o e-mail de {fica} continuam. O que faltar vem de {sai}.",
+      "NAO_VOLTA": "A ficha de {sai} deixa de existir. Não dá para desfazer.",
+      "CONFIRMAR": "Juntar fichas",
+      "VOLTAR": "Voltar",
+      "JUNTADAS": "Pronto. Tudo de {sai} agora está na ficha de {fica}.",
+      "ERRO": "Não consegui juntar as fichas. Tente de novo.",
+      "O_QUE_PASSA_COM_SEGUROS": "Tudo o que é de {sai} passa para {fica}: conversas, notas, etiquetas, cards e seguros.",
+      "PERDE_TELEFONE": "O telefone {telefone} de {sai} não fica na ficha. Anote antes, se precisar.",
+      "PERDE_EMAIL": "O e-mail {email} de {sai} não fica na ficha. Anote antes, se precisar."
     }
   }
 }

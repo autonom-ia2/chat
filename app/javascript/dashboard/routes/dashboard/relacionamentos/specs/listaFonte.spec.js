@@ -104,6 +104,7 @@ describe('contagens', () => {
       sumiu_mais_de_3_meses: 71,
       nunca_conversou: 71,
       nao_quer_mensagens: 9,
+      ativos_agora: 3,
     });
   });
 
@@ -256,6 +257,34 @@ describe('listar: ordem', () => {
     });
     const criados = itens.map(p => p.created_at);
     expect(criados).toEqual([...criados].sort((a, b) => b - a));
+  });
+
+  // #3062 — as ordens da lista de contatos de hoje, também na demonstração.
+  it('ordena pelo outro sentido: nome de Z a A e quem chegou primeiro', async () => {
+    const porNome = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'nome_z_a' })
+    ).map(p => p.name);
+    expect(porNome).toEqual(
+      [...porNome].sort((a, b) => b.localeCompare(a, 'pt-BR'))
+    );
+    const criados = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'mais_antigos' })
+    ).map(p => p.created_at);
+    expect(criados).toEqual([...criados].sort((a, b) => a - b));
+  });
+
+  it('ordena por cidade de A a Z, com quem não tem cidade no fim', async () => {
+    const cidades = (
+      await todasAsPaginas(cheia(), { aba: 'pessoas', ordem: 'cidade_a_z' })
+    ).map(p => p.additional_attributes?.city || '');
+    const comCidade = cidades.filter(Boolean);
+    expect(comCidade.length).toBeGreaterThan(0);
+    expect(cidades.slice(0, comCidade.length)).toEqual(comCidade);
+    expect(comCidade).toEqual(
+      [...comCidade].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+      )
+    );
   });
 
   it('usa a última conversa quando a ordem não vem', async () => {
@@ -428,12 +457,59 @@ describe('listar: filtros de "Mais filtros" (#2894)', () => {
     );
   });
 
-  it('não filtra empresas por filtro de pessoa', async () => {
+  // #3078 — Empresas filtra pela cidade e por quando chegou; os filtros que
+  // só pessoa tem (empresa, etiqueta) não mudam a lista de empresas.
+  it('não filtra empresas por filtro que só pessoa tem', async () => {
+    const { total } = await cheia().listar({
+      aba: 'empresas',
+      filtros: { empresa: 1, etiqueta: 'vip' },
+    });
+    expect(total).toBe(38);
+  });
+
+  it('filtra empresas pela cidade e por quando chegou', async () => {
+    const todas = await todasAsPaginas(cheia(), { aba: 'empresas' });
+    const cidade = todas[0].city;
+    const daCidade = await todasAsPaginas(cheia(), {
+      aba: 'empresas',
+      filtros: { cidade },
+    });
+    expect(daCidade.length).toBeGreaterThan(0);
+    expect(daCidade.length).toBeLessThan(todas.length);
+    expect(daCidade.every(e => e.city === cidade)).toBe(true);
     const { total } = await cheia().listar({
       aba: 'empresas',
       filtros: { cidade: 'Inexistente' },
     });
-    expect(total).toBe(38);
+    expect(total).toBe(0);
+    const recentes = await todasAsPaginas(cheia(), {
+      aba: 'empresas',
+      filtros: { chegouEm: 'ultimos_90' },
+    });
+    expect(recentes.length).toBeGreaterThan(0);
+    expect(recentes.length).toBeLessThan(todas.length);
+  });
+
+  it('ordena empresas por site e por número de pessoas, nos dois sentidos', async () => {
+    const mais = await todasAsPaginas(cheia(), {
+      aba: 'empresas',
+      ordem: 'mais_pessoas',
+    });
+    const contagens = mais.map(e => e.contacts_count);
+    expect(contagens).toEqual([...contagens].sort((a, b) => b - a));
+    const menos = await todasAsPaginas(cheia(), {
+      aba: 'empresas',
+      ordem: 'menos_pessoas',
+    });
+    expect(menos.map(e => e.contacts_count)).toEqual(
+      [...contagens].sort((a, b) => a - b)
+    );
+    const sites = await todasAsPaginas(cheia(), {
+      aba: 'empresas',
+      ordem: 'site_z_a',
+    });
+    const comSite = sites.map(e => e.domain).filter(Boolean);
+    expect(comSite).toEqual([...comSite].sort().reverse());
   });
 });
 
@@ -473,6 +549,7 @@ describe('opcoesDeFiltro', () => {
 
   it('não oferece nada na conta vazia', async () => {
     expect(await vazia().opcoesDeFiltro()).toEqual({
+      cidades_das_empresas: [],
       empresas: [],
       etiquetas: [],
       cidades: [],

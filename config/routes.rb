@@ -266,6 +266,8 @@ Rails.application.routes.draw do
               get :people_sheet, to: 'campaign_import_audiences#people_sheet'
             end
           end
+          # #3063: limite de mensagens por cliente e horário de envio da conta (campanhas e Automação livre).
+          resource :ritmo_de_envio, only: [:show, :update], controller: 'ritmo_de_envio'
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
             # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).
@@ -677,6 +679,7 @@ Rails.application.routes.draw do
               end
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
+                resource :file, only: [:show], controller: 'agents/source_files'
               end
               # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
               get 'material', to: 'agents/material#show'
@@ -1129,6 +1132,8 @@ Rails.application.routes.draw do
               collection do
                 get :contagens
                 get :todas
+                # #3062 — "Baixar planilha": a consulta da tela vai por e-mail (Account::ContactsExportJob).
+                post :exportar
               end
               member do
                 get :conversas
@@ -1154,6 +1159,8 @@ Rails.application.routes.draw do
             get :funis, to: 'funis#index'
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
+            # #3062 — "Tirar etiquetas" das pessoas marcadas.
+            post 'etiqueta/tirar', to: 'etiqueta#tirar'
             post :apagar, to: 'apagar#create'
             # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
             # consertar ou deixar de fora uma linha, trazer, as listas já trazidas, o andamento de uma e o desfazer de
@@ -1194,7 +1201,7 @@ Rails.application.routes.draw do
                 end
               end
             end
-            # #2897 — carteira de seguros (só em conta corretora de seguros, Carteira::Acesso; 404 fora dela): a aba
+            # #2897 — carteira de seguros (só em conta de seguros, Carteira::Acesso; 404 fora dela): a aba
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
             # #2898 (E5.3) — "Apólice nova" feita à mão, a partir do seguro que ela renovou.
             post 'seguros', to: 'seguros/apolices_novas#create'

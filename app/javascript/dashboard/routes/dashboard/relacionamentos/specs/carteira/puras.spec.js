@@ -36,7 +36,9 @@ import {
 import {
   VENCE_LOGO_EM_DIAS,
   chaveDoSelo,
+  chaveDoSeloDaPessoa,
   tomDoSelo,
+  venceLogo,
 } from '../../carteira/tomDoSelo';
 import {
   GRUPOS_DE_SEGUROS,
@@ -130,6 +132,26 @@ describe('selo do seguro', () => {
     expect(tomDoSelo(SELOS.ATIVO, VENCE_LOGO_EM_DIAS + 1)).toBe('verde');
     expect(tomDoSelo(SELOS.VENCIDO, -3)).toBe('vermelho');
     expect(tomDoSelo(SELOS.CANCELADO, 5)).toBe('neutro');
+  });
+
+  // #3057 — "Ativo" em âmbar não dizia por que pedia atenção.
+  it('o ativo que vence logo diz "Vence logo" (na lista de pessoas, "Seguro vence logo")', () => {
+    expect(venceLogo(SELOS.ATIVO, VENCE_LOGO_EM_DIAS)).toBe(true);
+    expect(venceLogo(SELOS.ATIVO, 0)).toBe(true);
+    expect(venceLogo(SELOS.ATIVO, VENCE_LOGO_EM_DIAS + 1)).toBe(false);
+    expect(venceLogo(SELOS.ATIVO)).toBe(false);
+    expect(venceLogo(SELOS.ATIVO, Number.NaN)).toBe(false);
+    expect(venceLogo(SELOS.EM_RENOVACAO, 3)).toBe(false);
+
+    const chave = chaveDoSelo(SELOS.ATIVO, 17);
+    const daPessoa = chaveDoSeloDaPessoa(SELOS.ATIVO, 17);
+    expect(doCatalogo(ptBR, chave)).toBe('Vence logo');
+    expect(doCatalogo(en, chave)).toBe('Ends soon');
+    expect(doCatalogo(ptBR, daPessoa)).toBe('Seguro vence logo');
+    expect(doCatalogo(en, daPessoa)).toBe('Policy ends soon');
+    expect(doCatalogo(ptBR, chaveDoSelo(SELOS.ATIVO, 31))).toBe('Ativo');
+    expect(doCatalogo(ptBR, chaveDoSelo(SELOS.ATIVO))).toBe('Ativo');
+    expect(doCatalogo(ptBR, chaveDoSelo(SELOS.VENCIDO, -3))).toBe('Vencido');
   });
 });
 
@@ -404,6 +426,77 @@ describe('o rodapé da gaveta', () => {
       DO_RODAPE.MARCAR_CANCELADO,
       DO_RODAPE.APAGAR_DE_FORA,
     ]);
+  });
+
+  // #3057 — onde a gaveta conversa (a aba Seguros e a ficha).
+  describe('o seguro que vence logo, sem renovação aberta', () => {
+    const conversa = (seguro, opcoes) =>
+      rodape(seguro, { podeConversar: true, ...opcoes });
+
+    it('o azul é conversar, o PDF fica ao lado e "Corrigir" desce para o "⋯"', () => {
+      expect(conversa(comPdf)).toEqual({
+        azul: DO_RODAPE.CONVERSAR,
+        secundario: DO_RODAPE.VER_PDF,
+        menu: [
+          DO_RODAPE.CORRIGIR,
+          DO_RODAPE.GUARDAR_OUTRO_PDF,
+          DO_RODAPE.APAGAR_PDF,
+          DO_RODAPE.MARCAR_CANCELADO,
+        ],
+      });
+    });
+
+    it('sem PDF, "Guardar o PDF" fica ao lado', () => {
+      expect(conversa(semPdf)).toEqual({
+        azul: DO_RODAPE.CONVERSAR,
+        secundario: DO_RODAPE.GUARDAR_PDF,
+        menu: [DO_RODAPE.CORRIGIR, DO_RODAPE.MARCAR_CANCELADO],
+      });
+    });
+
+    it('quem só pode ver também conversa, com o PDF ao lado quando há', () => {
+      expect(conversa(comPdf, { podeEditar: false })).toEqual({
+        azul: DO_RODAPE.CONVERSAR,
+        secundario: DO_RODAPE.VER_PDF,
+        menu: [],
+      });
+      expect(conversa(semPdf, { podeEditar: false })).toEqual({
+        azul: DO_RODAPE.CONVERSAR,
+        secundario: null,
+        menu: [],
+      });
+    });
+
+    it('só até 30 dias, e nunca no vencido nem no cancelado', () => {
+      expect(conversa(terminaEm(30, { temPdf: true })).azul).toBe(
+        DO_RODAPE.CONVERSAR
+      );
+      expect(conversa(terminaEm(31, { temPdf: true })).azul).toBe(
+        DO_RODAPE.VER_PDF
+      );
+      expect(conversa(terminaEm(-1, { temPdf: true })).azul).toBe(
+        DO_RODAPE.VER_PDF
+      );
+      expect(
+        conversa(terminaEm(5, { temPdf: true, canceladoEm: 1700000000 })).azul
+      ).toBe(DO_RODAPE.VER_PDF);
+    });
+
+    it('com a renovação aberta, o rodapé é o da renovação', () => {
+      const emRenovacao = terminaEm(18, {
+        temPdf: true,
+        renovacao: { cardId: 88, desfecho: null },
+      });
+
+      expect(conversa(emRenovacao).azul).toBe(DO_RODAPE.RENOVOU);
+    });
+
+    it('sem `podeConversar` (o painel da conversa), nada muda', () => {
+      expect(rodape(comPdf).azul).toBe(DO_RODAPE.VER_PDF);
+      expect(rodape(comPdf, { podeEditar: false }).azul).toBe(
+        DO_RODAPE.VER_PDF
+      );
+    });
   });
 
   it('quem só pode ver fica só com "Ver PDF", e só quando há PDF', () => {

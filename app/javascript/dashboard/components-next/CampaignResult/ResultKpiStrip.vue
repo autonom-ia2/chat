@@ -1,6 +1,7 @@
 <script setup>
 // Summary band of a result (#1007, PRD §7): first number on navy, the others in a grid.
-// item: { key, label, value, display?, note?, details?: [{ key, label, value }] }
+// item: { key, label, value, display?, note?, wide?, details?: [{ key, label, value }] }
+// `wide`: takes the whole row on a phone (a long value, like money in two currencies).
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -48,11 +49,12 @@ const toggle = key => {
         v-for="item in items.slice(1)"
         :key="item.key"
         class="min-w-0"
+        :class="{ 'col-span-2 sm:col-span-1': item.wide }"
         :data-kpi="item.key"
       >
         <dt class="text-xs text-n-slate-11">{{ item.label }}</dt>
         <dd
-          class="m-0 mt-1.5 text-2xl font-semibold tabular-nums text-n-slate-12"
+          class="m-0 mt-1.5 break-words text-2xl font-semibold tabular-nums text-n-slate-12"
         >
           {{ item.display ?? format(item.value) }}
         </dd>

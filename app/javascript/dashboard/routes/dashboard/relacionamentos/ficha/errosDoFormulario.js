@@ -3,10 +3,29 @@
 // Devolve a chave de tradução do problema (dentro de RELACIONAMENTOS_FICHA.GAVETA.ERRO).
 import { soDigitos } from '../fonte/texto';
 import { cpfValido, emailValido } from './validacao';
+import { linkCompleto, temValor } from './atributos';
 
 const mudou = (inicial, atual, campo) => inicial[campo] !== atual[campo];
 
-export const errosDoFormulario = (inicial, atual) => {
+// #3075 — o campo personalizado do tipo link aceita o endereço com ou sem o
+// "https://" (ficha/atributos.js#linkCompleto); o erro, só quando nem assim é
+// um endereço de site. O erro fica em `atributo:<chave>`.
+// A empresa escrita na busca e não escolhida da lista (`empresaPendente`) trava
+// o "Salvar": sem isso, o nome escrito se perderia calado.
+const errosDosLinks = (inicial, atual, tipos) =>
+  Object.fromEntries(
+    Object.entries(atual.atributos ?? {})
+      .filter(
+        ([chave, valor]) =>
+          tipos[chave] === 'link' &&
+          temValor(valor) &&
+          valor !== inicial.atributos?.[chave] &&
+          !linkCompleto(valor)
+      )
+      .map(([chave]) => [`atributo:${chave}`, 'LINK'])
+  );
+
+export const errosDoFormulario = (inicial, atual, tipos = {}) => {
   const erros = {};
   if (!atual.nome.trim()) erros.nome = 'NOME';
   const email = atual.email.trim();
@@ -16,13 +35,19 @@ export const errosDoFormulario = (inicial, atual) => {
   if (atual.cpf && mudou(inicial, atual, 'cpf') && !cpfValido(atual.cpf)) {
     erros.cpf = 'CPF';
   }
-  return erros;
+  if (String(atual.empresaPendente ?? '').trim()) {
+    erros.empresa = 'EMPRESA_SEM_ESCOLHA';
+  }
+  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
 };
 
 const TAMANHO_CNPJ = 14;
 
-// Só cobra o CNPJ se a pessoa mexeu nele; vazio é permitido (limpar).
-export const errosDaEmpresa = (inicial, atual) => {
+// Só cobra o CNPJ e o site se a pessoa mexeu neles; vazio é permitido (limpar).
+// #3078 — o site aceita "padaria.com.br" ou "https://padaria.com.br" (quem
+// confere é atributos.js#linkCompleto), e os campos do tipo link da empresa
+// seguem a regra da pessoa.
+export const errosDaEmpresa = (inicial, atual, tipos = {}) => {
   const erros = {};
   if (!atual.nome.trim()) erros.nome = 'NOME';
   const digitos = soDigitos(atual.cnpj);
@@ -33,5 +58,9 @@ export const errosDaEmpresa = (inicial, atual) => {
   ) {
     erros.cnpj = 'CNPJ';
   }
-  return erros;
+  const site = atual.site.trim();
+  if (site && mudou(inicial, atual, 'site') && !linkCompleto(site)) {
+    erros.site = 'LINK';
+  }
+  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
 };

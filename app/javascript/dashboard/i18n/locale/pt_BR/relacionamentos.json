@@ -29,9 +29,49 @@
       },
       "ORDENAR": {
         "ROTULO": "Ordenar",
+        "NO_BOTAO": "Ordem: {ordem}",
         "ULTIMA_CONVERSA": "Última conversa",
         "NOME": "Nome",
-        "MAIS_NOVOS": "Mais novos"
+        "MAIS_NOVOS": "Mais novos",
+        "CAMPOS": {
+          "ULTIMA_CONVERSA": "Última conversa",
+          "NOME": "Nome",
+          "EMAIL": "E-mail",
+          "EMPRESA": "Empresa",
+          "CIDADE": "Cidade",
+          "PAIS": "País",
+          "CHEGADA": "Quando chegou",
+          "SITE": "Site",
+          "PESSOAS": "Número de pessoas"
+        },
+        "SENTIDOS": {
+          "RECENTE": "Mais recente primeiro",
+          "ANTIGA": "Mais antiga primeiro",
+          "A_Z": "De A a Z",
+          "Z_A": "De Z a A",
+          "MAIS": "Mais pessoas primeiro",
+          "MENOS": "Menos pessoas primeiro"
+        },
+        "ESCOLHIDA": {
+          "ULTIMA_CONVERSA_RECENTE": "Conversa mais recente",
+          "ULTIMA_CONVERSA_ANTIGA": "Conversa mais antiga",
+          "NOME_A_Z": "Nome, de A a Z",
+          "NOME_Z_A": "Nome, de Z a A",
+          "EMAIL_A_Z": "E-mail, de A a Z",
+          "EMAIL_Z_A": "E-mail, de Z a A",
+          "EMPRESA_A_Z": "Empresa, de A a Z",
+          "EMPRESA_Z_A": "Empresa, de Z a A",
+          "CIDADE_A_Z": "Cidade, de A a Z",
+          "CIDADE_Z_A": "Cidade, de Z a A",
+          "PAIS_A_Z": "País, de A a Z",
+          "PAIS_Z_A": "País, de Z a A",
+          "CHEGADA_RECENTE": "Quem chegou por último",
+          "CHEGADA_ANTIGA": "Quem chegou primeiro",
+          "SITE_A_Z": "Site, de A a Z",
+          "SITE_Z_A": "Site, de Z a A",
+          "PESSOAS_MAIS": "Mais pessoas primeiro",
+          "PESSOAS_MENOS": "Menos pessoas primeiro"
+        }
       },
       "FILTROS": {
         "BOTAO": "Mais filtros",
@@ -50,6 +90,33 @@
         "VER_RESULTADO": "Ver resultado",
         "LIMPAR": "Limpar"
       },
+      "TOPO": {
+        "NOVA_PESSOA": "Nova pessoa",
+        "BAIXAR": "Baixar planilha",
+        "BAIXAR_NO_FIM": "Baixar esta lista em planilha",
+        "NOVA_EMPRESA": "Nova empresa"
+      },
+      "NOVA_PESSOA": {
+        "TITULO": "Nova pessoa",
+        "SALVAR": "Salvar pessoa",
+        "CRIADA": "{nome} está na sua lista.",
+        "ERRO": "Não consegui guardar. Tente de novo."
+      },
+      "EDITAR": {
+        "SALVO": "Informações de {nome} salvas."
+      },
+      "PLANILHA": {
+        "TITULO": "Receber esta lista em planilha",
+        "TEXTO": "Vou montar uma planilha com {count} pessoa e mandar o link para {email}. | Vou montar uma planilha com {count} pessoas e mandar o link para {email}.",
+        "O_QUE_VAI": "Vai nome, e-mail, telefone e etiquetas, na ordem que está na tela.",
+        "QUAL_LISTA": "Lista: {lista}",
+        "BUSCA": "busca “{busca}”",
+        "FILTROS": "{count} filtro | {count} filtros",
+        "CONFIRMAR": "Mandar por e-mail",
+        "ENVIADA": "Pronto. A planilha chega em {email} em alguns minutos.",
+        "ESPERAR": "Você acabou de pedir uma planilha. Dá para pedir outra daqui a alguns minutos.",
+        "ERRO": "Não consegui pedir a planilha. Tente de novo."
+      },
       "EXEMPLO": {
         "LEGENDA": "Sua lista vai ficar assim:"
       },
@@ -63,7 +130,9 @@
         "PESSOAS_DA_EMPRESA": "Ninguém ainda | {count} pessoa | {count} pessoas",
         "MARCAR": "Marcar {nome}",
         "CONVERSAR_COM": "Conversar com {nome}",
-        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}"
+        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}",
+        "EDITAR": "Alterar informações de {nome}",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Mostrar mais",
@@ -79,7 +148,7 @@
         "ROTULO": "O que fazer com quem você marcou",
         "MANDAR_MENSAGEM": "Mandar mensagem",
         "CRIAR_CARDS": "Criar cards",
-        "ETIQUETA": "Etiqueta",
+        "ETIQUETA": "Etiquetas",
         "MAIS": "Mais ações",
         "APAGAR": "Apagar"
       },
@@ -122,13 +191,24 @@
         "ABRIR_CRM": "Abrir o CRM"
       },
       "ETIQUETA": {
-        "TITULO": "Colocar etiqueta",
-        "PERGUNTA": "Qual etiqueta?",
-        "ESCOLHA": "Escolha uma etiqueta",
-        "APLICAR": "Colocar etiqueta",
-        "APLICADA": "Etiqueta “{etiqueta}” colocada em {count} pessoa. | Etiqueta “{etiqueta}” colocada em {count} pessoas.",
-        "ERRO": "Não consegui colocar a etiqueta. Tente de novo.",
-        "FALTA_ESCOLHER": "Escolha uma etiqueta."
+        "TITULO": "Etiquetas",
+        "PARA_QUEM": "Para a pessoa que você marcou. | Para as {count} pessoas que você marcou.",
+        "MODO": "O que fazer com as etiquetas?",
+        "COLOCAR": "Colocar",
+        "TIRAR": "Tirar",
+        "PERGUNTA_COLOCAR": "Quais etiquetas colocar?",
+        "PERGUNTA_TIRAR": "Quais etiquetas tirar?",
+        "BOTAO_COLOCAR": "Colocar em {count} pessoa | Colocar em {count} pessoas",
+        "BOTAO_TIRAR": "Tirar de {count} pessoa | Tirar de {count} pessoas",
+        "QUANTAS": "· {count} pessoa | · {count} pessoas",
+        "APLICADA": "Ninguém mudou: quem você marcou já tinha {etiquetas}. | Pronto: coloquei {etiquetas} em {count} pessoa. | Pronto: coloquei {etiquetas} em {count} pessoas.",
+        "TIRADA": "Ninguém mudou: quem você marcou não tinha {etiquetas}. | Pronto: tirei {etiquetas} de {count} pessoa. | Pronto: tirei {etiquetas} de {count} pessoas.",
+        "DEVOLVIDAS": "Pronto: as etiquetas voltaram para quem tinha.",
+        "ERRO_AO_DEVOLVER": "Não consegui devolver as etiquetas. Tente de novo.",
+        "ERRO": "Não consegui mexer nas etiquetas. Tente de novo.",
+        "FALTA_ESCOLHER": "Escolha pelo menos uma etiqueta.",
+        "SEM_ETIQUETAS": "A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.",
+        "NINGUEM_TEM": "Ninguém que você marcou tem etiqueta."
       },
       "APAGAR": {
         "TITULO": "Apagar {count} pessoa? | Apagar {count} pessoas?",
@@ -149,7 +229,25 @@
         "FILTROS_SEM_RESULTADO": "Não achei ninguém com esses filtros.",
         "LIMPAR_FILTROS": "Limpar filtros"
       },
-      "ERRO_DA_TELA": "Não consegui mostrar as pessoas."
+      "ERRO_DA_TELA": "Não consegui mostrar as pessoas.",
+      "NOVA_EMPRESA": {
+        "TITULO": "Nova empresa",
+        "SALVAR": "Criar empresa",
+        "CRIADA": "{nome} foi criada.",
+        "ERRO": "Não consegui criar a empresa. Tente de novo.",
+        "JA_CRIADA": "Já criada: {nome}. Toque em Criar empresa para completar.",
+        "EM_PARTE": "A empresa foi criada, mas a foto ou um campo não entrou. Toque em Criar empresa de novo."
+      },
+      "APAGAR_EMPRESAS": {
+        "TITULO": "Apagar {count} empresa? | Apagar {count} empresas?",
+        "AVISO": "As pessoas dessas empresas continuam na sua lista, com as conversas, mas sem empresa. Os lembretes e os arquivos dessas empresas são apagados.",
+        "SEGUROS": "Os seguros dessas empresas continuam guardados, mas sem a empresa ligada a eles.",
+        "NAO_VOLTA": "Isto não volta.",
+        "CONFIRMAR": "Apagar",
+        "APAGADAS": "{count} empresa apagada. | {count} empresas apagadas.",
+        "NA_FILA": "{nomes} tem muitas pessoas e sai da lista em alguns minutos. | {nomes} têm muitas pessoas e saem da lista em alguns minutos.",
+        "ERRO": "Não consegui apagar. Tente de novo."
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Tentar de novo",
@@ -166,7 +264,8 @@
       "CONVERSAR": "Conversar",
       "GRUPOS": "Grupos",
       "ERRO_DA_TELA": "Não consegui carregar.",
-      "ENTENDI": "Entendi"
+      "ENTENDI": "Entendi",
+      "FECHAR_AVISO": "Fechar aviso"
     },
     "GRUPOS": {
       "TODOS": {
@@ -196,6 +295,10 @@
       "NAO_QUER_MENSAGENS": {
         "NOME": "Não quer mensagens",
         "EXPLICACAO": "Quem pediu para não receber. Ninguém daqui recebe campanha."
+      },
+      "ATIVOS_AGORA": {
+        "NOME": "No site agora",
+        "EXPLICACAO": "Quem está com o chat do seu site aberto agora."
       },
       "EMPRESAS_TODAS": {
         "NOME": "Todas",

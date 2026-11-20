@@ -15,6 +15,8 @@ import MenuMaisAcoes from './MenuMaisAcoes.vue';
 // demonstração). Sem ele a barra não fala de quem recebe, fica numa linha só no
 // celular ("N marcadas", "⋯" e ×) e, de `sm` para cima, mostra Criar cards e
 // Etiqueta lado a lado, sem botão preenchido.
+// #3078 — quando "Apagar" é a única ação (a aba Empresas, ou quem só pode
+// apagar), ele fica à vista como botão: ninguém abre um menu para uma escolha.
 const props = defineProps({
   quantas: { type: Number, required: true },
   // A conta de quem recebe (`contaDaMensagem`); sem ela, só "N marcadas".
@@ -90,6 +92,18 @@ const itensDoMenu = computed(() =>
     },
   ].filter(item => item.pode)
 );
+// #3078 — com "Apagar" sozinho (a aba Empresas) tudo cabe numa linha também no
+// celular: "2 marcadas", "Apagar" e o "×" encostado no fim. No celular a barra
+// abre espaço à esquerda para o botão do menu do app (ListaPage), então o
+// espaço entre eles e a folga do "Apagar" e do "×" encolhem (o "×" segue com
+// 44 px). Com três dígitos marcados o "×" desce para a linha de baixo.
+const soApagar = computed(
+  () =>
+    props.podeApagar &&
+    !props.podeMandarMensagem &&
+    !props.podeCriarCards &&
+    !props.podeEtiquetar
+);
 // Sem "Apagar", o que sobra no menu só existe no celular: de `sm` para cima o
 // "⋯" abriria vazio, então some junto.
 const menuSoNoCelular = computed(() =>
@@ -102,11 +116,13 @@ const menuSoNoCelular = computed(() =>
     data-relacionamentos="barra"
     role="region"
     :aria-label="t('RELACIONAMENTOS.LISTA.BARRA.ROTULO')"
-    class="flex flex-wrap items-center gap-2 p-3 shadow-xl rounded-2xl bg-n-solid-1 ring-1 ring-n-weak sm:gap-3 sm:px-4"
+    class="flex flex-wrap items-center p-3 shadow-xl rounded-2xl bg-n-solid-1 ring-1 ring-n-weak sm:gap-3 sm:px-4"
+    :class="soApagar ? 'gap-1.5' : 'gap-2'"
   >
     <p
       aria-live="polite"
-      class="order-1 flex-1 m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:order-1 sm:me-1 sm:flex-none"
+      class="order-1 m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:order-1 sm:me-1 sm:flex-none"
+      :class="soApagar ? 'whitespace-nowrap' : 'flex-1'"
     >
       {{ frase }}
     </p>
@@ -141,8 +157,19 @@ const menuSoNoCelular = computed(() =>
       :label="t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA')"
       @click="emit('etiqueta')"
     />
+    <Button
+      v-if="soApagar"
+      slate
+      faded
+      size="lg"
+      class="order-2 sm:order-5 !text-n-ruby-11 max-sm:!px-3"
+      icon="i-lucide-trash-2"
+      data-relacionamentos="apagar"
+      :label="t('RELACIONAMENTOS.LISTA.BARRA.APAGAR')"
+      @click="emit('apagar')"
+    />
     <MenuMaisAcoes
-      v-if="itensDoMenu.length"
+      v-else-if="itensDoMenu.length"
       class="order-2 sm:order-5"
       :class="{ 'sm:hidden': menuSoNoCelular }"
       :itens="itensDoMenu"
@@ -152,7 +179,8 @@ const menuSoNoCelular = computed(() =>
       ghost
       slate
       size="lg"
-      class="order-2 sm:order-6 sm:ms-auto"
+      class="order-2 sm:order-6"
+      :class="soApagar ? 'ms-auto max-sm:!w-11' : 'sm:ms-auto'"
       icon="i-lucide-x"
       :aria-label="t('RELACIONAMENTOS.LISTA.MARCADAS.DESMARCAR')"
       @click="emit('fechar')"

@@ -11,8 +11,12 @@ import { FILTROS_VAZIOS, PERIODOS_DE_CHEGADA } from '../../lista/filtros';
 // mesma da gaveta de Nova conversa), Esc fecha e o foco volta ao botão que
 // abriu. "Ver resultado" aplica; "Limpar" tira todos e fecha. Campo que só
 // teria "Todas" (Empresa numa conta sem empresas) não aparece.
+// #3078 — na aba Empresas (`deEmpresas`) a gaveta tem só os filtros que a
+// empresa tem: a cidade (as cidades das empresas, `cidades_das_empresas`) e
+// quando chegou.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
+  deEmpresas: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
   opcoes: {
     type: Object,
@@ -62,25 +66,35 @@ const periodos = computed(() => [
 
 const temOQueEscolher = campo => campo.opcoes.length > 1;
 
+const cidade = lista => ({
+  chave: 'cidade',
+  rotulo: 'CIDADE',
+  opcoes: comTodas(lista ?? []),
+});
+const chegouEm = () => ({
+  chave: 'chegouEm',
+  rotulo: 'CHEGOU_EM',
+  opcoes: periodos.value,
+});
+
 const campos = computed(() =>
-  [
-    {
-      chave: 'empresa',
-      rotulo: 'EMPRESA',
-      opcoes: comTodas(props.opcoes.empresas),
-    },
-    {
-      chave: 'etiqueta',
-      rotulo: 'ETIQUETA',
-      opcoes: comTodas(props.opcoes.etiquetas),
-    },
-    {
-      chave: 'cidade',
-      rotulo: 'CIDADE',
-      opcoes: comTodas(props.opcoes.cidades),
-    },
-    { chave: 'chegouEm', rotulo: 'CHEGOU_EM', opcoes: periodos.value },
-  ].filter(temOQueEscolher)
+  (props.deEmpresas
+    ? [cidade(props.opcoes.cidades_das_empresas), chegouEm()]
+    : [
+        {
+          chave: 'empresa',
+          rotulo: 'EMPRESA',
+          opcoes: comTodas(props.opcoes.empresas ?? []),
+        },
+        {
+          chave: 'etiqueta',
+          rotulo: 'ETIQUETA',
+          opcoes: comTodas(props.opcoes.etiquetas ?? []),
+        },
+        cidade(props.opcoes.cidades),
+        chegouEm(),
+      ]
+  ).filter(temOQueEscolher)
 );
 
 const escolher = (chave, valor) => {
@@ -133,7 +147,7 @@ const aoTeclar = evento => {
             :id="idDoTitulo"
             data-view-title
             tabindex="-1"
-            class="m-0 text-2xl font-bold tracking-tight text-n-slate-12"
+            class="m-0 text-lg font-semibold text-n-slate-12"
           >
             {{ t('RELACIONAMENTOS.LISTA.FILTROS.TITULO') }}
           </h2>

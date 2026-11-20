@@ -1,7 +1,11 @@
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
+import { apagarEmpresas } from './apagarEmpresas';
 import { emFatias } from './emFatias';
-import { ATRASO_DA_DEMO_MS, esperar } from './listaFonte';
+import { criarEmpresa } from './gravarEmpresa';
+import { alterarPessoa, buscarEmpresas, criarPessoa } from './gravarPessoa';
+import { normalizado } from './texto';
+import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
 
 // #2894 — de onde as ações em grupo da lista de Relacionamentos escrevem (criar
 // cards, etiquetar, apagar). Mesmo desenho de listaFonte.js: fora da
@@ -10,7 +14,24 @@ import { ATRASO_DA_DEMO_MS, esperar } from './listaFonte';
 //
 // As três escritas recebem { pessoas, aoAndar, deveParar } (mais o que a ação
 // pede) e devolvem o mesmo formato nas duas fontes (ver emFatias.js):
-//   { criados | aplicadas | apagadas, deFora: [{ id, nome, motivo }], faltam, erro }
+//   { criados | aplicadas | tiradas | apagadas, deFora: [{ id, nome, motivo }], faltam, erro }
+//
+// #3062 — e o que a lista ganhou da lista de contatos de hoje:
+//   - etiquetas: várias de uma vez (`etiquetas`), para pôr ou tirar;
+//   - exportar(consulta): "Baixar planilha" da lista na tela. Devolve
+//     { email }, para onde a planilha vai;
+//   - criarPessoa(pedido) e salvarPessoa(id, pedido): "Nova pessoa" e "Editar"
+//     da linha, com o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar,
+//     gravado por fonte/gravarPessoa.js). O que o servidor recusa sobe como
+//     veio (lista/recusaDoContato.js lê o 422);
+//   - #3075 — buscarEmpresas(termo): as empresas da conta, para a gaveta.
+//
+// #3078 — e o que a lista antiga de Empresas fazia:
+//   - apagarEmpresas(lote): as empresas marcadas, uma a uma
+//     (fonte/apagarEmpresas.js), no formato das outras ações em grupo;
+//   - criarEmpresa(pedido, retomada): "Nova empresa", com o pedido da gaveta
+//     da empresa (ficha/informacoesDaEmpresa.js#pedidoDaEmpresa), gravado por
+//     fonte/gravarEmpresa.js.
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/acoesDaLista.js')
   : null;
@@ -54,7 +75,41 @@ const fonteDemo = ({ carregarDemo, atraso }) => {
       );
     },
     aplicarEtiqueta: lote => simular(lote, 'aplicadas'),
+    tirarEtiqueta: lote => simular(lote, 'tiradas'),
     apagar: lote => simular(lote, 'apagadas'),
+    // A lista da demonstração deixa de mostrar as apagadas, como a real.
+    async apagarEmpresas(lote) {
+      const feito = await simular(lote, 'apagadas');
+      const faltam = new Set(feito.faltam.map(({ id }) => id));
+      const { apagarEmpresaDaDemo } = await carregarDemo();
+      lote.pessoas
+        .filter(({ id }) => !faltam.has(id))
+        .forEach(({ id }) => apagarEmpresaDaDemo(id));
+      return { ...feito, naFila: [] };
+    },
+    async criarEmpresa({ empresa }) {
+      await esperar(atraso);
+      return { id: Date.now(), name: empresa.name };
+    },
+    async exportar() {
+      await esperar(atraso);
+      return { email: 'voce@exemplo.com.br' };
+    },
+    async criarPessoa({ contato }) {
+      await esperar(atraso);
+      return { id: Date.now(), name: contato.name };
+    },
+    async salvarPessoa(id, { contato }) {
+      await esperar(atraso);
+      return { id, name: contato.name };
+    },
+    async buscarEmpresas(termo) {
+      await esperar(atraso);
+      const { EMPRESAS_DA_BUSCA } = await carregarDemo();
+      return EMPRESAS_DA_BUSCA.filter(item =>
+        normalizado(item.nome).includes(normalizado(termo))
+      );
+    },
   };
 };
 
@@ -78,13 +133,13 @@ const fonteReal = () => ({
   async funis() {
     return (await RelacionamentosAPI.funis()).data;
   },
-  // As etiquetas da conta, pelo mesmo cliente (com cache) e na mesma ordem que
-  // o resto do painel usa (store/modules/labels.js).
+  // As etiquetas da conta, com a cor, pelo mesmo cliente (com cache) e na
+  // mesma ordem que o resto do painel usa (store/modules/labels.js).
   async etiquetas() {
     const { data } = await LabelsAPI.get(true);
     return data.payload
-      .map(({ title }) => title)
-      .sort((a, b) => a.localeCompare(b));
+      .map(({ title, color }) => ({ nome: title, cor: color }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   },
   criarCards: ({ funilId, etapaId, ...lote }) =>
     noServidor(lote, 'criados', ids =>
@@ -94,14 +149,28 @@ const fonteReal = () => ({
         etapa_id: etapaId,
       })
     ),
-  aplicarEtiqueta: ({ etiqueta, ...lote }) =>
+  aplicarEtiqueta: ({ etiquetas, ...lote }) =>
     noServidor(lote, 'aplicadas', ids =>
-      RelacionamentosAPI.aplicarEtiqueta({ pessoa_ids: ids, etiqueta })
+      RelacionamentosAPI.aplicarEtiqueta({ pessoa_ids: ids, etiquetas })
+    ),
+  tirarEtiqueta: ({ etiquetas, ...lote }) =>
+    noServidor(lote, 'tiradas', ids =>
+      RelacionamentosAPI.tirarEtiqueta({ pessoa_ids: ids, etiquetas })
     ),
   apagar: lote =>
     noServidor(lote, 'apagadas', ids =>
       RelacionamentosAPI.apagar({ pessoa_ids: ids })
     ),
+  // A consulta da tela sem a página: a planilha leva todo mundo dela.
+  async exportar(consulta) {
+    const params = paramsDoPedido({ ...consulta, pagina: undefined });
+    return (await RelacionamentosAPI.exportarPessoas(params)).data;
+  },
+  criarPessoa,
+  salvarPessoa: alterarPessoa,
+  buscarEmpresas,
+  apagarEmpresas,
+  criarEmpresa,
 });
 
 export const acoesDaListaFonte = ({

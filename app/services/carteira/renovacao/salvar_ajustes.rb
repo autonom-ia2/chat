@@ -5,7 +5,9 @@
 # dias ou as mensagens não, e quem tira a escolha tira também quem escolheu.
 #
 # As escolhas da cotação da renovação (E8, #2901: quem cota, quem envia, quem responde e a caixa) são conferidas em
-# Carteira::Cotacao::Escolhas e entram na mesma gravação.
+# Carteira::Cotacao::Escolhas e entram na mesma gravação. Gravada a caixa nova, ou quem cota (que abre ou fecha a
+# cotação), o sistema pede à Meta os 2 modelos da cotação nessa caixa (Carteira::Cotacao::Modelos.pedir, #3055), se a
+# cotação está aberta e o dono ligou o Aviso de serviço. Erro ao pedir não desfaz o que foi gravado.
 #
 # Cada coisa que não dá para guardar vira a recusa dela (CustomExceptions::CarteiraRecusa), que nunca repete o que foi
 # mandado. Os cards não nascem aqui: a rotina (Carteira::Renovacao::RotinaJob) os cria na próxima passada.
@@ -34,6 +36,7 @@ class Carteira::Renovacao::SalvarAjustes
   def guardar(novos)
     config = Carteira::RenovacaoConfig.find_or_initialize_by(account_id: @account.id)
     Carteira::RenovacaoConfig.transaction(requires_new: true) { config.update!(novos) } unless novos.empty?
+    Carteira::Cotacao::Modelos.pedir(config) if config.saved_change_to_inbox_id? || config.saved_change_to_quem_cota?
     config
   end
 

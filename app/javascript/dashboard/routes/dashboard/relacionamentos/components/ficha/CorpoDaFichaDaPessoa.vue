@@ -1,11 +1,8 @@
 <script setup>
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import Button from 'dashboard/components-next/button/Button.vue';
 import { FALHA_DA_PARTE } from '../../ficha/falhas';
-import CartaoDaSecao from './CartaoDaSecao.vue';
+import CartaoDeInformacoes from './CartaoDeInformacoes.vue';
 import DeOndeVeio from './DeOndeVeio.vue';
-import ListaDeInformacoes from './ListaDeInformacoes.vue';
 import SecaoArquivos from './SecaoArquivos.vue';
 import SecaoCards from './SecaoCards.vue';
 import SecaoConversas from './SecaoConversas.vue';
@@ -19,9 +16,15 @@ import SecaoNotas from './SecaoNotas.vue';
 // leitor de tela percorrem. A parte que quem está olhando não pode ver some; a
 // que não carregou fica, com "Tentar de novo" (`falhas`, ficha/falhas.js). Quem
 // só pode ver o contato (`podeEditar` falso) não tem "Alterar" nem a caixa de
-// nota. "Ver todas" das conversas ainda só avisa: só com `podeVerTodas` (#2970).
+// nota. #3071 — com `podeAbrirConversas`, cada conversa abre (`abrirConversa`)
+// e "Ver todas" mostra todas ali mesmo; sem ele (a demonstração), "Ver todas"
+// só avisa (`verTodas`). Apagar uma nota emite `apagarNota` com ela.
 // #2897 — o slot `antes` abre a coluna principal: é onde a ficha põe o bloco
 // Seguros (o que a pessoa tem com a corretora vem antes da conversa).
+// #3075 — quem só pode ver lê em Informações que não pode mudar nada (a ficha
+// antiga dizia o mesmo, RecordReadOnly). Quem pode mudar os campos da ficha
+// (`podeEscolherCampos`) tem "Escolher campos" embaixo das informações. O slot
+// `lado` vem depois de Informações: é onde a ficha põe "Este contato é".
 const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -35,6 +38,8 @@ const props = defineProps({
   falhas: { type: Object, default: () => ({}) },
   podeEditar: { type: Boolean, default: true },
   podeVerTodas: { type: Boolean, default: false },
+  podeAbrirConversas: { type: Boolean, default: false },
+  podeEscolherCampos: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'verTodas',
@@ -42,12 +47,14 @@ const emit = defineEmits([
   'guardarNota',
   'alterar',
   'tentar',
+  'abrirConversa',
+  'apagarNota',
+  'escolherCampos',
 ]);
 
 const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
 const falhou = parte => props.falhas[parte] === FALHA_DA_PARTE.ERRO;
 
-const { t } = useI18n();
 const caixaDeNotas = ref(null);
 
 // A tela chama depois de guardar a nota com sucesso.
@@ -69,7 +76,9 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
         :agora="agora"
         :falhou="falhou('conversas')"
         :pode-ver-todas="podeVerTodas"
+        :pode-abrir="podeAbrirConversas"
         @ver-todas="emit('verTodas')"
+        @abrir="conversaId => emit('abrirConversa', conversaId)"
         @tentar="emit('tentar', 'conversas')"
       />
       <SecaoCards
@@ -88,6 +97,7 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
         :pode-escrever="podeEditar"
         :falhou="falhou('notas')"
         @guardar="texto => emit('guardarNota', texto)"
+        @apagar="nota => emit('apagarNota', nota)"
         @tentar="emit('tentar', 'notas')"
       />
       <SecaoArquivos
@@ -99,21 +109,15 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       />
     </div>
     <div data-relacionamentos="coluna-lado" class="flex flex-col min-w-0 gap-6">
-      <CartaoDaSecao
-        :titulo="t('RELACIONAMENTOS_FICHA.INFORMACOES.TITULO')"
-        data-relacionamentos="informacoes"
-      >
-        <template v-if="podeEditar" #acao>
-          <Button
-            data-relacionamentos="alterar"
-            slate
-            faded
-            :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ALTERAR')"
-            @click="emit('alterar')"
-          />
-        </template>
-        <ListaDeInformacoes :linhas="linhas" :redes="redes" />
-      </CartaoDaSecao>
+      <CartaoDeInformacoes
+        :linhas="linhas"
+        :redes="redes"
+        :pode-editar="podeEditar"
+        :pode-escolher-campos="podeEscolherCampos"
+        @alterar="emit('alterar')"
+        @escolher-campos="emit('escolherCampos')"
+      />
+      <slot name="lado" />
       <DeOndeVeio
         v-if="podeVer('origem')"
         :origem="origem"

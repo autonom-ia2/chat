@@ -170,12 +170,12 @@ ja_vem:
   - fonte: cpf
     usar_quando: "Use quando receber o CPF de um viajante para validar o número. Anote o resultado na ficha dessa pessoa para a equipe; não recite nem peça confirmação do resultado. CPF inválido: peça para conferir só o número. Não comprova identidade nem traz nome ou nascimento. Se a consulta falhar ou não achar, anote a pendência para a equipe sem dizer ao cliente que não achou."
   - fonte: cep
-    usar_quando: "Use com CEP brasileiro para completar rua, bairro, cidade e UF, ou com endereço brasileiro já enviado para obter o CEP. Anote na ficha para a equipe, sem recitar nem pedir confirmação. Peça apenas número e complemento que faltarem. CEP com formato inválido: peça para conferir o CEP. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+    usar_quando: "Use com CEP brasileiro para completar rua, bairro, cidade e UF, ou com endereço brasileiro já enviado para obter o CEP. Anote na ficha para a equipe, sem recitar nem pedir confirmação. Peça apenas número e complemento que faltarem. CEP com formato inválido: peça para conferir o CEP. Se a consulta falhar ou não achar, anote a pendência para a equipe e siga, sem dizer ao cliente que não achou."
 tambem:
   - fonte: cidades
-    usar_quando: "Use com cidade mencionada para padronizar cidade e UF no roteiro nacional. Anote para a equipe no lugar correspondente, sem inferir partida pela residência, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+    usar_quando: "Use com cidade mencionada para padronizar cidade e UF no roteiro nacional. Anote para a equipe no lugar correspondente, sem inferir partida pela residência, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência para a equipe e siga, sem dizer ao cliente que não achou."
   - fonte: localizacao
-    usar_quando: "Use quando receber localização para identificar a cidade do lugar a que a mensagem se refere. Anote para a equipe nesse contexto, sem deduzir o roteiro, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+    usar_quando: "Use quando receber localização para identificar a cidade do lugar a que a mensagem se refere. Anote para a equipe nesse contexto, sem deduzir o roteiro, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência para a equipe e siga, sem dizer ao cliente que não achou."
 premium: []
 teste:
   - "Tô com pressa, quanto fica o seguro da viagem?"

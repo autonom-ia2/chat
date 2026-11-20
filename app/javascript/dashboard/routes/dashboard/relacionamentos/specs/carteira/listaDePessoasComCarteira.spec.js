@@ -41,9 +41,18 @@ vi.mock('../../lista/usePermissoesDaLista', async () => {
       podeEtiquetar: ref(false),
       podeApagar: ref(false),
       podeTrazer: ref(false),
+      podeEditar: ref(false),
+      podeExportar: ref(false),
     }),
   };
 });
+// #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: { value: {} },
+    updateUISettings: vi.fn(),
+  }),
+}));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
@@ -183,7 +192,8 @@ describe('na conta com a carteira de seguros', () => {
     const [ana, bruno, carla] = linhas(w);
     expect(seloDaLinha(ana).text()).toBe('Seguro vencido');
     expect(seloDaLinha(ana).attributes('data-selo')).toBe('vermelho');
-    expect(seloDaLinha(bruno).text()).toBe('Seguro ativo');
+    // #3057 — o ativo que vence logo diz isso, em âmbar.
+    expect(seloDaLinha(bruno).text()).toBe('Seguro vence logo');
     expect(seloDaLinha(bruno).attributes('data-selo')).toBe('ambar');
     expect(seloDaLinha(carla).exists()).toBe(false);
   });

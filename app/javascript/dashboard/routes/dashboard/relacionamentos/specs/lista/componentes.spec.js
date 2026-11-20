@@ -245,6 +245,20 @@ describe('AbasDaLista', () => {
     );
   });
 
+  // #3057 — abas sublinhadas: a escolhida tem o texto forte e o traço da marca.
+  it('a escolhida é a sublinhada, com o texto forte', () => {
+    const w = mount(AbasDaLista, {
+      props: { modelValue: 'seguros', comSeguros: true },
+    });
+    const [pessoas, , seguros] = w.findAll('[role="tab"]');
+    expect(seguros.classes()).toEqual(
+      expect.arrayContaining(['font-semibold', 'after:bg-n-brand'])
+    );
+    expect(pessoas.classes()).toContain('after:bg-transparent');
+    expect(w.get('[role="tablist"]').classes()).toContain('border-b');
+    expect(w.get('[role="tablist"]').classes()).not.toContain('bg-n-alpha-1');
+  });
+
   it('troca de aba ao clicar', async () => {
     const w = mount(AbasDaLista, { props: { modelValue: 'pessoas' } });
     await w.get('[data-relacionamentos="aba-empresas"]').trigger('click');
@@ -382,7 +396,7 @@ describe('BarraDeControles', () => {
     expect(rotulo.classes()).toEqual(
       expect.arrayContaining(['sr-only', 'sm:not-sr-only'])
     );
-    expect(rotulo.element.parentElement.classList).toContain('flex-1');
+    expect(w.getComponent(ChoiceSelect).classes()).toContain('flex-1');
     expect(w.get('[data-relacionamentos="mais-filtros"]').classes()).toEqual(
       expect.arrayContaining(['shrink-0', 'whitespace-nowrap'])
     );
@@ -401,17 +415,25 @@ describe('BarraDeControles', () => {
     expect(w.get('input').classes()).not.toContain('min-h-11');
   });
 
-  it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
+  it('no celular a busca divide a linha com "Mais filtros" e a ordem ganha a de baixo inteira', () => {
     const w = mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
     });
-    expect(
-      w.get('[data-relacionamentos="busca"]').element.parentElement.classList
-    ).toContain('w-full');
-    const grupo = w.get('[data-relacionamentos="mais-filtros"]').element
-      .parentElement;
-    expect(grupo.classList).toContain('w-full');
-    expect(grupo.querySelector('label')).not.toBeNull();
+    const filtros = w.get('[data-relacionamentos="mais-filtros"]').element;
+    const barra = filtros.parentElement;
+    const busca = w.get('[data-relacionamentos="busca"]').element;
+    expect(barra.contains(busca)).toBe(true);
+    const ordem = w.getComponent(ChoiceSelect).element.parentElement;
+    expect(ordem.parentElement).toBe(barra);
+    expect([...ordem.classList]).toEqual(
+      expect.arrayContaining([
+        'order-last',
+        'w-full',
+        'md:order-none',
+        'md:w-auto',
+      ])
+    );
+    expect(ordem.querySelector('label')).not.toBeNull();
   });
 
   const montar = (props = {}) =>
@@ -456,6 +478,39 @@ describe('BarraDeControles', () => {
 });
 
 describe('LinhaDePessoa', () => {
+  // #3057 — no celular, no máximo 2 selos à vista; o resto vira "+N". O
+  // leitor de tela continua lendo todos (os de fora ficam só fora da vista).
+  it('com 3 selos, o menos importante sai da vista no celular e vira "+1"', () => {
+    const w = mount(LinhaDePessoa, {
+      props: {
+        pessoa: pessoa({
+          contact_type: 'customer',
+          opted_out_at: diasAtras(1),
+        }),
+        agora: AGORA,
+      },
+      slots: { selos: '<span data-selo-do-seguro>Seguro vence logo</span>' },
+    });
+    const cliente = w.findAll('span').find(selo => selo.text() === 'Cliente');
+    expect(cliente.classes()).toContain('max-sm:sr-only');
+    expect(
+      w.get('[data-selo-do-seguro]').element.parentElement.className
+    ).not.toContain('max-sm:sr-only');
+    const mais = w.get('[data-relacionamentos="mais-selos"]');
+    expect(mais.text()).toBe('+1');
+    expect(mais.classes()).toContain('sm:hidden');
+    expect(mais.attributes('aria-hidden')).toBe('true');
+  });
+
+  it('com até 2 selos, todos à vista e sem "+N"', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa({ contact_type: 'customer' }), agora: AGORA },
+      slots: { selos: '<span>Seguro ativo</span>' },
+    });
+    expect(w.find('[data-relacionamentos="mais-selos"]').exists()).toBe(false);
+    expect(w.html()).not.toContain('max-sm:sr-only');
+  });
+
   it('mostra nome, telefone, empresa e quando falou', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
@@ -463,11 +518,14 @@ describe('LinhaDePessoa', () => {
     expect(w.attributes('data-relacionamentos')).toBe('linha');
     expect(w.text()).toContain('Ana Albuquerino');
     expect(w.text()).toContain(
-      '+55 11 91031-0001 · Padaria Brandolim · Falou há 3 dias'
+      '+55 11 91031-0001 · Falou há 3 dias · Padaria Brandolim'
     );
   });
 
-  it('cada informação é um bloco no celular; o "·" só aparece de sm para cima, entre blocos', () => {
+  // #3057 (revisão) — no celular, 2 linhas e não 4: o telefone numa linha;
+  // "Falou…" e a empresa na de baixo, a empresa cortada com "…". O "·" só
+  // aparece entre partes da mesma linha: nunca pendurado no fim de uma.
+  it('no celular o telefone fica numa linha e "Falou…" e a empresa na outra; de sm para cima, uma linha com "·"', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
     });
@@ -475,23 +533,21 @@ describe('LinhaDePessoa', () => {
     expect(filhos.map(f => f.text())).toEqual([
       '+55 11 91031-0001',
       '·',
-      'Padaria Brandolim',
-      '·',
       'Falou há 3 dias',
+      '·',
+      'Padaria Brandolim',
     ]);
-    const separadores = filhos.filter(f => f.text() === '·');
-    separadores.forEach(f =>
-      expect(f.classes()).toEqual(
-        expect.arrayContaining(['hidden', 'sm:inline'])
-      )
+    const [telefone, depoisDoTelefone, falou, antesDaEmpresa, empresa] = filhos;
+    expect(telefone.classes()).toEqual([
+      'max-sm:basis-full',
+      'max-sm:truncate',
+    ]);
+    expect(depoisDoTelefone.classes()).toEqual(['hidden', 'sm:inline']);
+    expect(falou.classes()).toEqual(['max-sm:whitespace-nowrap']);
+    expect(antesDaEmpresa.classes()).toEqual(['whitespace-pre']);
+    expect(empresa.classes()).toEqual(
+      expect.arrayContaining(['max-sm:flex-1', 'max-sm:truncate'])
     );
-    filhos
-      .filter(f => f.text() !== '·')
-      .forEach(f =>
-        expect(f.classes()).toEqual(
-          expect.arrayContaining(['block', 'sm:inline'])
-        )
-      );
   });
 
   it('sem empresa, sobra um "·" só entre o telefone e o "Falou há…"', () => {
@@ -670,12 +726,18 @@ describe('LinhaDeEmpresa', () => {
     });
     expect(w.text()).toContain('Padaria Brandolim');
     expect(w.text()).toContain('3 pessoas · Falou há 1 mês');
-    expect(
-      w
-        .get('[data-segunda-linha]')
-        .findAll('span')
-        .map(f => f.text())
-    ).toEqual(['3 pessoas', '·', 'Falou há 1 mês']);
+    // #3078 (revisão) — o "·" vai dentro da parte seguinte: a linha quebra
+    // antes dele, e cada parte fica inteira (sem quebrar no meio).
+    const partes = w.get('[data-segunda-linha]').findAll(':scope > span');
+    expect(partes.map(f => f.text())).toEqual([
+      '3 pessoas',
+      '· Falou há 1 mês',
+    ]);
+    // Nenhuma quebra no meio; a com o "·" guarda o espaço do começo.
+    expect(partes.map(parte => parte.classes())).toEqual([
+      ['max-sm:whitespace-nowrap'],
+      ['max-sm:whitespace-pre'],
+    ]);
     expect(w.get('[data-selo="cliente"]').text()).toBe('Cliente');
   });
 
@@ -1639,6 +1701,8 @@ describe('DialogoCriarCards', () => {
 
 describe('DialogoEtiqueta', () => {
   comRelogioFalso();
+  const FEIRA = { nome: 'feira', cor: '#1F6FEB' };
+  const SITE = { nome: 'site', cor: '#0F766E' };
   const montar = (pessoas = lote(3)) =>
     mount(DialogoEtiqueta, {
       props: {
@@ -1650,6 +1714,22 @@ describe('DialogoEtiqueta', () => {
     w.vm.abrir();
     await assentar();
   };
+  const marcar = async (w, nome) => {
+    await w.get(`[data-etiqueta="${nome}"] input`).setValue(true);
+  };
+  const escolherModo = async (w, modo) => {
+    await w.get(`[data-modo="${modo}"]`).setValue(true);
+  };
+
+  it('no celular os botões ficam um embaixo do outro, o de confirmar em cima', async () => {
+    const w = montar();
+    await abrir(w);
+    const rodape = w.get('[data-confirmar]').element.parentElement;
+    expect(rodape.contains(w.get('[data-cancelar]').element)).toBe(true);
+    expect([...rodape.classList]).toEqual(
+      expect.arrayContaining(['flex-col-reverse', 'sm:flex-row'])
+    );
+  });
 
   it('sem etiqueta escolhida o botão não fica desligado: o clique diz o que falta e não fecha', async () => {
     const aplicarEtiqueta = vi.fn();
@@ -1657,39 +1737,239 @@ describe('DialogoEtiqueta', () => {
       attachTo: document.body,
       props: {
         pessoas: lote(3),
-        acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+        acoes: { etiquetas: async () => [FEIRA, SITE], aplicarEtiqueta },
       },
     });
     await abrir(w);
     expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
-    expect(w.get('label').text()).toBe('Qual etiqueta?');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 3 pessoas');
+    expect(w.get('legend:not(.sr-only)').text()).toBe(
+      'Quais etiquetas colocar?'
+    );
     const aviso = w.get('[data-relacionamentos="etiqueta-falta"]');
     expect(aviso.attributes('role')).toBe('alert');
     expect(aviso.text()).toBe('');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
-    expect(aviso.text()).toBe('Escolha uma etiqueta.');
+    expect(aviso.text()).toBe('Escolha pelo menos uma etiqueta.');
     expect(aplicarEtiqueta).not.toHaveBeenCalled();
     expect(w.find('[data-dialogo-falso]').exists()).toBe(true);
     expect(w.emitted('concluido')).toBeUndefined();
-    expect(document.activeElement).toBe(w.get('button[aria-haspopup]').element);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    expect(document.activeElement).toBe(
+      w.get('[data-etiqueta="feira"] input').element
+    );
+    await marcar(w, 'feira');
     expect(aviso.text()).toBe('');
     w.unmount();
   });
 
-  it('coloca a etiqueta, avisa com a contagem, fecha e conclui', async () => {
+  // #3062 (diretor de arte) — quantas pessoas, no alto e no botão, contando
+  // quem veio de "Marcar todas".
+  it('cada etiqueta é uma caixa de marcar com a cor dela; o alto e o botão dizem para quantas pessoas', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(240),
+        acoes: { etiquetas: async () => [FEIRA, SITE] },
+      },
+    });
+    await abrir(w);
+    expect(w.text()).toContain('Para as 240 pessoas que você marcou.');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual(['feira', 'site']);
+    expect(
+      linhas[0].get('span[aria-hidden="true"]').attributes('style')
+    ).toContain('background-color');
+    await marcar(w, 'feira');
+    await marcar(w, 'site');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 240 pessoas');
+  });
+
+  it('para uma pessoa só, o texto fica no singular', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(1),
+        acoes: { etiquetas: async () => [FEIRA] },
+      },
+    });
+    await abrir(w);
+    expect(w.text()).toContain('Para a pessoa que você marcou.');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 1 pessoa');
+  });
+
+  it('coloca várias etiquetas, avisa com a contagem, fecha e conclui', async () => {
     const w = montar();
     await abrir(w);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    await marcar(w, 'feira');
+    await marcar(w, 'site');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
     expect(useAlert).toHaveBeenCalledWith(
-      'Etiqueta “feira” colocada em 3 pessoas.'
+      'Pronto: coloquei “feira” e “site” em 3 pessoas.'
     );
     expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+  });
+
+  it('em "Tirar", pergunta quais tirar, mostra só as que as marcadas têm e tira as escolhidas', async () => {
+    const tirarEtiqueta = vi.fn().mockResolvedValue({
+      tiradas: 2,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const aplicarEtiqueta = vi.fn();
+    const pessoas = lote(3, i => ({ labels: i < 2 ? ['site'] : [] }));
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas,
+        acoes: {
+          etiquetas: async () => [FEIRA, SITE],
+          aplicarEtiqueta,
+          tirarEtiqueta,
+        },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    expect(w.get('legend:not(.sr-only)').text()).toBe('Quais etiquetas tirar?');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual(['site· 2 pessoas']);
+    await marcar(w, 'site');
+    expect(w.get('[data-confirmar]').text()).toBe('Tirar de 3 pessoas');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(aplicarEtiqueta).not.toHaveBeenCalled();
+    expect(tirarEtiqueta.mock.calls[0][0]).toMatchObject({
+      pessoas,
+      etiquetas: ['site'],
+    });
+    // O aviso vai para a página, com "Desfazer": quem tinha "site" (1 e 2).
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(w.emitted('tirou')).toEqual([
+      [
+        {
+          frase: 'Pronto: tirei “site” de 2 pessoas.',
+          devolver: [{ etiqueta: 'site', ids: [1, 2] }],
+        },
+      ],
+    ]);
+    expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+  });
+
+  it('"Tirar" mostra a etiqueta que a conta já apagou, com quantas têm; ela não volta no "Desfazer"', async () => {
+    const tirarEtiqueta = vi.fn().mockResolvedValue({
+      tiradas: 1,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const pessoas = lote(2, i => ({ labels: i ? ['antiga'] : ['feira'] }));
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas,
+        acoes: { etiquetas: async () => [FEIRA, SITE], tirarEtiqueta },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual([
+      'antiga· 1 pessoa',
+      'feira· 1 pessoa',
+    ]);
+    expect(
+      linhas[0].get('span[aria-hidden="true"]').attributes('style')
+    ).toBeUndefined();
+    await marcar(w, 'antiga');
+    await marcar(w, 'feira');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(w.emitted('tirou')[0][0].devolver).toEqual([
+      { etiqueta: 'feira', ids: [1] },
+    ]);
+  });
+
+  it('"Tirar" sem ninguém com etiqueta diz isso e o botão só fecha', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(2),
+        acoes: { etiquetas: async () => [FEIRA] },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    expect(w.get('[data-relacionamentos="sem-opcoes"]').text()).toBe(
+      'Ninguém que você marcou tem etiqueta.'
+    );
+    expect(w.get('[data-confirmar]').text()).toBe('Fechar');
+  });
+
+  // #3062 (diretor de arte, crítico) — a etiqueta marcada em "Colocar" não
+  // pode ir junto para "Tirar" sem a pessoa ver.
+  it('trocar entre Colocar e Tirar zera a escolha', async () => {
+    const pessoas = lote(2, () => ({ labels: ['feira'] }));
+    const w = mount(DialogoEtiqueta, {
+      props: { pessoas, acoes: { etiquetas: async () => [FEIRA, SITE] } },
+    });
+    await abrir(w);
+    await marcar(w, 'feira');
+    await escolherModo(w, 'tirar');
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+    await marcar(w, 'feira');
+    await escolherModo(w, 'colocar');
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+  });
+
+  it('ninguém mudou: o aviso diz isso, sem "Pronto"', async () => {
+    const aplicarEtiqueta = vi.fn().mockResolvedValue({
+      aplicadas: 0,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(2),
+        acoes: { etiquetas: async () => [FEIRA], aplicarEtiqueta },
+      },
+    });
+    await abrir(w);
+    await marcar(w, 'feira');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Ninguém mudou: quem você marcou já tinha “feira”.'
+    );
+  });
+
+  it('abre sempre em "Colocar" e sem nada escolhido', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(3, () => ({ labels: ['feira'] })),
+        acoes: { etiquetas: async () => [FEIRA, SITE] },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    await marcar(w, 'feira');
+    w.getComponent({ name: 'DialogoFalso' }).vm.$emit('close');
+    await abrir(w);
+    expect(w.get('[data-modo="colocar"]').element.checked).toBe(true);
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+  });
+
+  it('conta sem etiquetas: diz onde criar, e o botão só fecha', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: { pessoas: lote(3), acoes: { etiquetas: async () => [] } },
+    });
+    await abrir(w);
+    expect(w.get('[data-relacionamentos="sem-etiquetas"]').text()).toBe(
+      'A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.'
+    );
+    expect(w.find('[data-cancelar]').exists()).toBe(false);
+    expect(w.get('[data-confirmar]').text()).toBe('Fechar');
+    await w.get('[data-confirmar]').trigger('click');
     expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
   });
 
@@ -1699,12 +1979,11 @@ describe('DialogoEtiqueta', () => {
       const w = mount(DialogoEtiqueta, {
         props: {
           pessoas: todas,
-          acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+          acoes: { etiquetas: async () => [FEIRA], aplicarEtiqueta },
         },
       });
       await abrir(w);
-      w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-      await w.vm.$nextTick();
+      await marcar(w, 'feira');
       await w.get('[data-confirmar]').trigger('click');
       await assentar();
       return w;
@@ -1723,9 +2002,9 @@ describe('DialogoEtiqueta', () => {
           )
       );
       expect(useAlert).not.toHaveBeenCalled();
-      expect(texto(w)).toContain('Etiqueta “feira” colocada em 119 pessoas.');
+      expect(texto(w)).toContain('Pronto: coloquei “feira” em 119 pessoas.');
       expect(texto(w)).toContain('Pessoa sem nome · Não existe mais');
-      expect(texto(w)).not.toContain('Qual etiqueta?');
+      expect(texto(w)).not.toContain('Quais etiquetas colocar?');
       expect(w.find('[data-cancelar]').exists()).toBe(false);
       expect(w.get('[data-confirmar]').text()).toBe('Pronto');
       await w.get('[data-confirmar]').trigger('click');
@@ -1733,13 +2012,13 @@ describe('DialogoEtiqueta', () => {
       expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
     });
 
-    it('parou no meio: diz o que fez e o que falta; tentar de novo manda só quem falta, com a mesma etiqueta', async () => {
+    it('parou no meio: diz o que fez e o que falta; tentar de novo manda só quem falta, com as mesmas etiquetas', async () => {
       const aplicarEtiqueta = vi
         .fn()
         .mockResolvedValueOnce(parouNoMeio('aplicadas', 50, todas.slice(50)))
         .mockResolvedValueOnce(inteiro('aplicadas', 70));
       const w = await escolherEAplicar(aplicarEtiqueta);
-      expect(texto(w)).toContain('Etiqueta “feira” colocada em 50 pessoas.');
+      expect(texto(w)).toContain('Pronto: coloquei “feira” em 50 pessoas.');
       expect(w.get('[data-relacionamentos="ainda-nao"]').text()).toBe(
         '70 ainda não. Deu erro no meio do caminho.'
       );
@@ -1751,10 +2030,10 @@ describe('DialogoEtiqueta', () => {
       await assentar();
       expect(aplicarEtiqueta.mock.calls[1][0]).toMatchObject({
         pessoas: todas.slice(50),
-        etiqueta: 'feira',
+        etiquetas: ['feira'],
       });
       expect(useAlert).toHaveBeenCalledWith(
-        'Etiqueta “feira” colocada em 120 pessoas.'
+        'Pronto: coloquei “feira” em 120 pessoas.'
       );
       expect(w.emitted('concluido')).toEqual([[[]]]);
       expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
@@ -1776,17 +2055,16 @@ describe('DialogoEtiqueta', () => {
 
   it('se a fonte falha, avisa e não conclui', async () => {
     const acoes = {
-      etiquetas: async () => ['feira'],
+      etiquetas: async () => [FEIRA],
       aplicarEtiqueta: vi.fn().mockRejectedValue(new Error('x')),
     };
     const w = mount(DialogoEtiqueta, { props: { pessoas: lote(1), acoes } });
     await abrir(w);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    await marcar(w, 'feira');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
     expect(useAlert).toHaveBeenCalledWith(
-      'Não consegui colocar a etiqueta. Tente de novo.'
+      'Não consegui mexer nas etiquetas. Tente de novo.'
     );
     expect(w.emitted('concluido')).toBeUndefined();
   });
@@ -1830,6 +2108,50 @@ describe('DialogoApagar', () => {
     await assentar();
     expect(useAlert).toHaveBeenCalledWith('2 pessoas apagadas.');
     expect(w.emitted('concluido')).toEqual([[[]]]);
+  });
+
+  // #3078 (revisão) — empresas: o que se perde primeiro, os seguros só na conta
+  // com a carteira. #3079 — a empresa que o servidor põe na fila sai em minutos.
+  describe('de empresas', () => {
+    const empresas = [
+      { id: 1, name: 'Padaria Bom Dia' },
+      { id: 2, name: 'Oficina Rota Sul' },
+    ];
+    const montarEmpresas = (acoes, extra = {}) =>
+      mount(DialogoApagar, {
+        props: { pessoas: empresas, acoes, deEmpresas: true, ...extra },
+      });
+
+    it('diz o que acontece; os seguros só na conta de seguros', async () => {
+      const sem = montarEmpresas({});
+      sem.vm.abrir();
+      await sem.vm.$nextTick();
+      expect(sem.get('p').text()).toBe(
+        'As pessoas dessas empresas continuam na sua lista, com as conversas, mas sem empresa. Os lembretes e os arquivos dessas empresas são apagados. Isto não volta.'
+      );
+      const com = montarEmpresas({}, { comSeguros: true });
+      com.vm.abrir();
+      await com.vm.$nextTick();
+      expect(com.get('p').text()).toContain(
+        'Os seguros dessas empresas continuam guardados, mas sem a empresa ligada a eles. Isto não volta.'
+      );
+    });
+
+    it('a que o servidor pôs na fila: o aviso do fim diz que sai em alguns minutos', async () => {
+      const apagarEmpresas = vi.fn().mockResolvedValue({
+        ...inteiro('apagadas', 2),
+        naFila: [{ id: 2, nome: 'Oficina Rota Sul' }],
+      });
+      const w = montarEmpresas({ apagarEmpresas });
+      w.vm.abrir();
+      await w.vm.$nextTick();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      expect(useAlert).toHaveBeenCalledWith(
+        '2 empresas apagadas. Oficina Rota Sul tem muitas pessoas e sai da lista em alguns minutos.'
+      );
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
   });
 
   describe('com gente de fora ou parando no meio', () => {

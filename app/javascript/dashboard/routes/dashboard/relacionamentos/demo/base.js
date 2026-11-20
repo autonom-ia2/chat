@@ -9,8 +9,9 @@
 //
 // Distribuição das pessoas: 120 clientes · 96 falaram nos últimos 30 dias · 42
 // sumiram há 1 a 3 meses · 71 há mais de 3 meses · 71 nunca conversaram · 9 não
-// querem mensagens · 4 sem telefone. Cliente e "não quer mensagens" cruzam com
-// os quatro grupos de conversa. Empresas: 14 com cliente, 5 sem ninguém.
+// querem mensagens · 4 sem telefone · 3 no site agora (#3062). Cliente e "não
+// quer mensagens" cruzam com os quatro grupos de conversa. Empresas: 14 com
+// cliente, 5 sem ninguém.
 import { cnpjFalso, cpfFalso } from './documentosFalsos';
 import { embaralhadoFixo, sorteioFixo } from './sorteioFixo';
 import { DIA_EM_MS } from '../fonte/grupos';
@@ -24,6 +25,8 @@ const TOTAL_QUE_SUMIU_1_A_3_MESES = 42;
 const TOTAL_QUE_SUMIU_MAIS_DE_3_MESES = 71;
 const TOTAL_NAO_QUER_MENSAGENS = 9;
 const TOTAL_SEM_TELEFONE = 4;
+// #3062 — "No site agora": quem falou há pouco e está com o chat aberto.
+const TOTAL_ATIVOS_AGORA = 3;
 const EMPRESAS_COM_CLIENTE = 14;
 const EMPRESAS_SEM_PESSOAS = 5;
 const CHANCE_DE_CLIENTE_TER_EMPRESA = 0.45;
@@ -42,6 +45,7 @@ const SEMENTES = {
   clientes: 37,
   recusa: 41,
   semTelefone: 53,
+  ativos: 59,
   detalhes: 67,
   empresas: 79,
   tiposDeEmpresa: 83,
@@ -266,6 +270,16 @@ const planejarPessoas = agora => {
       .filter(i => !recusaram.has(i))
       .slice(0, TOTAL_SEM_TELEFONE)
   );
+  const ativos = new Set(
+    embaralhadoFixo(TOTAL_DE_PESSOAS, SEMENTES.ativos)
+      .filter(
+        i =>
+          ultimas[i] !== null &&
+          (agora / 1000 - ultimas[i]) / (DIA_EM_MS / 1000) <=
+            FAIXAS_DE_CONVERSA.poucoDias.ate
+      )
+      .slice(0, TOTAL_ATIVOS_AGORA)
+  );
   const nomes = embaralhadoFixo(TOTAL_DE_PESSOAS, SEMENTES.nomes);
   // Uma pessoa bloqueada, no grupo "Sumiu há 1 a 3 meses": já conversou, tem
   // telefone e não pediu para parar. Bloqueio não muda nenhum total de grupo.
@@ -284,13 +298,15 @@ const planejarPessoas = agora => {
     ehCliente,
     recusaram,
     semTelefone,
+    ativos,
     nomes,
     bloqueada,
   };
 };
 
 const pessoaDoPlano = (plano, agora, i, empresaDaPessoa) => {
-  const { sorteio, ultimas, ehCliente, recusaram, semTelefone, nomes } = plano;
+  const { sorteio, ultimas, ehCliente, recusaram, semTelefone, ativos, nomes } =
+    plano;
   const bloqueada = plano.bloqueada === i;
   const nome = nomeDaPessoa(nomes[i]);
   const cliente = ehCliente.has(i);
@@ -302,7 +318,7 @@ const pessoaDoPlano = (plano, agora, i, empresaDaPessoa) => {
     email: `${apelido(nome, '.')}@${DOMINIO_DE_EMAIL}`,
     phone_number: semTelefone.has(i) ? null : telefoneFalso(i),
     thumbnail: '',
-    availability_status: 'offline',
+    availability_status: ativos.has(i) ? 'online' : 'offline',
     blocked: bloqueada,
     identifier: null,
     contact_type: cliente ? 'customer' : 'lead',
@@ -349,6 +365,9 @@ const esqueletoDasEmpresas = agora => {
       name: nome,
       domain: `${apelido(nome, '-')}.${DOMINIO_DE_EMAIL}`,
       cnpj: cnpjFalso(k + 1),
+      // #3078 — a cidade da empresa, para o "Mais filtros" da aba Empresas.
+      city: CIDADES[k % CIDADES.length],
+      thumbnail: '',
       created_at: diasAtras(agora, 30 + k * 11),
       papel,
     };
@@ -419,7 +438,23 @@ const montarBase = agora => {
 
 export const pessoas = (agora = Date.now()) => montarBase(agora).pessoas;
 
-export const empresas = (agora = Date.now()) => montarBase(agora).empresas;
+// #3078 — as empresas apagadas na demonstração (pela ficha ou pela lista). Na
+// conta de verdade quem tira a empresa é o servidor; aqui ela só deixa de
+// aparecer até a página recarregar.
+let empresasApagadas = new Set();
+
+export const apagarEmpresaDaDemo = id => {
+  empresasApagadas = new Set([...empresasApagadas, id]);
+};
+
+export const esquecerEmpresasApagadas = () => {
+  empresasApagadas = new Set();
+};
+
+export const empresas = (agora = Date.now()) =>
+  montarBase(agora).empresas.filter(
+    empresa => !empresasApagadas.has(empresa.id)
+  );
 
 export const pessoaPorId = (id, agora = Date.now()) =>
   pessoas(agora).find(pessoa => pessoa.id === id) ?? null;

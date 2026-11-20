@@ -213,6 +213,83 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     it 'os mais novos primeiro' do
       expect(nomes(ordem: 'mais_novos')).to eq(%w[Bruno Ana ana Érica])
     end
+
+    it 'os sentidos contrários (#3062): conversa mais antiga, nome de Z a A e os mais antigos primeiro' do
+      expect(nomes(ordem: 'conversa_mais_antiga')).to eq(%w[Érica Ana ana Bruno])
+      expect(nomes(ordem: 'nome_z_a')).to eq(%w[Érica Bruno ana Ana])
+      expect(nomes(ordem: 'mais_antigos')).to eq(%w[Érica ana Ana Bruno])
+    end
+  end
+
+  # #3062 — as ordens da lista de contatos de hoje que a nova não tinha: e-mail, empresa, país e cidade, nos dois sentidos,
+  # sem diferença de acento nem de maiúscula. Quem não tem o dado (ou tem texto vazio) fica no fim nos dois sentidos.
+  describe 'ordem por e-mail, empresa, país e cidade' do
+    before do
+      pessoa('Carla', email: 'carla@exemplo.com.br',
+                      additional_attributes: { company_name: 'Ótica Sol', country: 'Brasil', city: 'São Paulo' })
+      pessoa('Ana', email: 'Ana@exemplo.com.br',
+                    additional_attributes: { company_name: 'padaria Lua', country: 'Argentina', city: 'Campinas' })
+      pessoa('Bruno', additional_attributes: { company_name: '', city: '' })
+    end
+
+    {
+      'email_a_z' => %w[Ana Carla Bruno], 'email_z_a' => %w[Carla Ana Bruno],
+      'empresa_a_z' => %w[Carla Ana Bruno], 'empresa_z_a' => %w[Ana Carla Bruno],
+      'pais_a_z' => %w[Ana Carla Bruno], 'pais_z_a' => %w[Carla Ana Bruno],
+      'cidade_a_z' => %w[Ana Carla Bruno], 'cidade_z_a' => %w[Carla Ana Bruno]
+    }.each do |ordem, esperado|
+      it "ordena por #{ordem}" do
+        expect(nomes(ordem: ordem)).to eq(esperado)
+      end
+    end
+
+    it 'a consulta inteira para a planilha sai na mesma ordem, sem página' do
+      stub_const('Relacionamentos::Consulta::POR_PAGINA', 1)
+
+      expect(consulta(ordem: 'cidade_z_a', pagina: '1').para_exportar.map(&:name)).to eq(%w[Carla Ana Bruno])
+    end
+  end
+
+  # #3062 — "No site agora": quem está com o chat do site aberto, a mesma presença que a lista de contatos de hoje lê.
+  describe 'grupo no site agora' do
+    it 'traz só quem está online agora, na lista e na contagem' do
+      ana = pessoa('Ana Albuquerino')
+      pessoa('Bruno Brandolim')
+      OnlineStatusTracker.update_presence(account.id, 'Contact', ana.id)
+
+      expect(nomes(grupo: 'ativos_agora')).to eq(['Ana Albuquerino'])
+      expect(consulta.contagens).to include('todos' => 2, 'ativos_agora' => 1)
+    end
+
+    it 'sem ninguém online, o grupo vem vazio' do
+      pessoa('Ana Albuquerino')
+
+      expect(nomes(grupo: 'ativos_agora')).to be_empty
+      expect(consulta.contagens).to include('ativos_agora' => 0)
+    end
+
+    # Paridade com ContactsController#active, que lê a conta inteira: o visitante do chat do site, ainda sem e-mail nem
+    # telefone, aparece neste grupo (e só nele).
+    it 'mostra o visitante anônimo do chat do site, como a lista de hoje' do
+      visitante = create(:contact, account: account, name: 'Visitante do site')
+      visitante.update_columns(contact_type: 0) # rubocop:disable Rails/SkipsModelValidations
+      pessoa('Ana Albuquerino')
+      OnlineStatusTracker.update_presence(account.id, 'Contact', visitante.id)
+
+      expect(nomes(grupo: 'ativos_agora')).to eq(['Visitante do site'])
+      expect(consulta.contagens).to include('todos' => 1, 'ativos_agora' => 1)
+      expect(consulta(grupo: 'ativos_agora').total).to eq(1)
+      expect(consulta(grupo: 'ativos_agora').todos.pluck(:name)).to eq(['Visitante do site'])
+    end
+
+    it 'não mostra quem está online em outra conta' do
+      de_la = create(:contact, account: create(:account), name: 'De outra conta', email: 'outra@example.com')
+      OnlineStatusTracker.update_presence(de_la.account_id, 'Contact', de_la.id)
+      OnlineStatusTracker.update_presence(account.id, 'Contact', de_la.id)
+
+      expect(nomes(grupo: 'ativos_agora')).to be_empty
+      expect(consulta.contagens).to include('ativos_agora' => 0)
+    end
   end
 
   describe 'página' do
@@ -257,7 +334,19 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       todas = consulta(ordem: 'nome', pagina: '2').todos
 
       expect(todas.pluck(:name)).to eq(%w[Ana Bruno Carla Diego Elisa])
-      expect(todas.first.keys).to eq(%i[id name phone_number blocked opted_out_at])
+      expect(todas.first.keys).to eq(%i[id name phone_number blocked opted_out_at labels])
+    end
+
+    # #3062 — "Tirar etiquetas" mostra quantas das marcadas têm cada etiqueta, também depois de "Marcar todas".
+    it '"todas" traz as etiquetas de cada pessoa, numa consulta só' do
+      Contact.find_by!(name: 'Ana').update_labels(%w[feira site])
+      Contact.find_by!(name: 'Bruno').update_labels(%w[site])
+      lendo = consulta(ordem: 'nome')
+      todas = nil
+
+      expect(consultas_feitas { todas = lendo.todos }).to eq(1)
+      expect(todas.to_h { |pessoa| [pessoa[:name], pessoa[:labels].sort] })
+        .to eq('Ana' => %w[feira site], 'Bruno' => %w[site], 'Carla' => [], 'Diego' => [], 'Elisa' => [])
     end
   end
 
@@ -265,7 +354,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     let(:pedido) { { busca: 'brandolim', filtros: { cidade: 'Campinas' } } }
     let(:esperado) do
       { 'todos' => 5, 'clientes' => 2, 'falou_ha_pouco' => 1, 'sumiu_1_a_3_meses' => 2, 'sumiu_mais_de_3_meses' => 1,
-        'nunca_conversou' => 1, 'nao_quer_mensagens' => 1 }
+        'nunca_conversou' => 1, 'nao_quer_mensagens' => 1, 'ativos_agora' => 0 }
     end
 
     before do
@@ -444,7 +533,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     end
 
     describe 'com a carteira desligada' do
-      # A conta já tem seguros gravados; sair do nicho corretora tem de devolver a lista de antes, inteira.
+      # A conta já tem seguros gravados; sair do nicho seguros tem de devolver a lista de antes, inteira.
       before do
         com_seguros('Marina Exemplo', { numero: 'EX-001234', bem: 'Carro Exemplo 2022' })
         sem_a_carteira!(account)

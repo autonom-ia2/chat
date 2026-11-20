@@ -24,6 +24,18 @@ import {
 // de verdade: `carregarPecas` as carrega antes, e a montagem fica só por conta
 // do relógio falso.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3062 — "Baixar planilha" diz para qual e-mail vai: o de quem está no painel.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMapGetter: chave =>
+      ref(
+        chave === 'getCurrentUser'
+          ? { email: 'voce@exemplo.com.br' }
+          : undefined
+      ),
+  };
+});
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./apoio')).DialogoFalso,
 }));
@@ -36,6 +48,10 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
+// #3071 — o "Ligar" é o VoiceCallButton da casa (ele decide se aparece).
+vi.mock('dashboard/components-next/Contacts/VoiceCallButton.vue', () => ({
+  default: { props: ['phone'], template: '<button data-ligar />' },
+}));
 vi.mock('dashboard/composables/useAccount', async () => {
   const { ref } = await import('vue');
   return {
@@ -53,9 +69,18 @@ vi.mock('../../lista/usePermissoesDaLista', async () => {
       podeEtiquetar: ref(false),
       podeApagar: ref(false),
       podeTrazer: ref(false),
+      podeEditar: ref(false),
+      podeExportar: ref(false),
     }),
   };
 });
+// #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: { value: {} },
+    updateUISettings: vi.fn(),
+  }),
+}));
 vi.mock('../../ficha/usePermissoesDaFicha', async () => {
   const { ref } = await import('vue');
   return {
@@ -64,9 +89,15 @@ vi.mock('../../ficha/usePermissoesDaFicha', async () => {
       podeCriarCards: ref(false),
       podeExportar: ref(false),
       podeAjustarRenovacoes: ref(false),
+      podeApagar: ref(false),
+      podeCriarLembrete: ref(false),
     }),
   };
 });
+// #3071 — a "Nova conversa" da ficha lê o contato do store: aqui não abre.
+vi.mock('../../components/carteira/ConversaNova.vue', () => ({
+  default: { render: () => null, methods: { abrir: async () => false } },
+}));
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
     pessoa: vi.fn(),
@@ -79,6 +110,14 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     pessoasDaEmpresa: vi.fn(),
     conversasDaEmpresa: vi.fn(),
     cardsDaEmpresa: vi.fn(),
+  },
+}));
+// #3078 — a ficha da empresa lê as notas das pessoas dela pela rota de
+// empresas: aqui não há nenhuma.
+vi.mock('dashboard/api/companies', () => ({
+  default: {
+    listNotes: async () => ({ data: { payload: [] } }),
+    listMedia: async () => ({ data: { payload: [], meta: { total: 0 } } }),
   },
 }));
 vi.mock('dashboard/api/relacionamentosSeguros', () => ({
@@ -319,8 +358,10 @@ describe('a aba Seguros na lista de Relacionamentos', () => {
 
     await clicar(w, daCarteira('heroi-trazer'));
 
+    // A aba de origem vai junto: a volta de "Como trazer" leva de novo a ela.
     expect(roteador.push).toHaveBeenLastCalledWith({
       name: 'relacionamentos_trazer',
+      query: { aba: 'seguros' },
     });
   });
 
@@ -382,7 +423,11 @@ describe('o bloco Seguros nas fichas', () => {
 
       const w = await abrirFicha();
 
-      expect(w.find('[data-carteira]').exists()).toBe(false);
+      // #3071 — a ficha da pessoa usa o aviso com "Desfazer" da carteira (a
+      // região viva dele, vazia, fica na tela): ele não é peça de seguro.
+      expect(
+        w.find('[data-carteira]:not([data-carteira="aviso-vivo"])').exists()
+      ).toBe(false);
       expect(SegurosAPI.daPessoa).not.toHaveBeenCalled();
       expect(SegurosAPI.daEmpresa).not.toHaveBeenCalled();
       // A ficha abriu inteira: o título é o nome de quem ela mostra.

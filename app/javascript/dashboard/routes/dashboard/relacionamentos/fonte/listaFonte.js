@@ -14,7 +14,12 @@ import {
   esperarParaSempre,
 } from './modoDemo';
 import { doServidor } from './doServidor';
-import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
+import {
+  FILTROS_DAS_EMPRESAS,
+  empresaPassaNosFiltros,
+  pessoaPassaNosFiltros,
+  preenchido,
+} from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
 // autonomia/prospecting/achar/utils/acharFonte.js). A tela recebe sempre o mesmo
@@ -104,10 +109,52 @@ const maisRecentePrimeiro = campo => (a, b) => {
 const porNome = (a, b) =>
   a.name.localeCompare(b.name, LOCALE_DA_ORDEM_ALFABETICA);
 
+// #3062 — os dois sentidos das ordens da aba Pessoas (lista/ordens.js), como
+// o servidor ordena: sem acento nem maiúscula, e quem não tem o dado no fim nos
+// dois sentidos.
+const ausente = valor => valor === null || valor === undefined || valor === '';
+
+const maisAntigoPrimeiro = campo => (a, b) => {
+  const x = a[campo];
+  const y = b[campo];
+  if (ausente(x)) return ausente(y) ? 0 : 1;
+  if (ausente(y)) return -1;
+  return x - y;
+};
+
+const porTexto = (ler, sentido) => (a, b) => {
+  const x = normalizado(ler(a));
+  const y = normalizado(ler(b));
+  if (!x) return y ? 1 : 0;
+  if (!y) return -1;
+  if (x === y) return 0;
+  return (x < y ? -1 : 1) * sentido;
+};
+
+const CRESCENTE = 1;
+const DECRESCENTE = -1;
+const adicional = chave => pessoa => pessoa.additional_attributes?.[chave];
+
 const ORDENADORES = {
   [ORDENS.ULTIMA_CONVERSA]: maisRecentePrimeiro('last_activity_at'),
   [ORDENS.NOME]: porNome,
   [ORDENS.MAIS_NOVOS]: maisRecentePrimeiro('created_at'),
+  conversa_mais_antiga: maisAntigoPrimeiro('last_activity_at'),
+  nome_z_a: porTexto(pessoa => pessoa.name, DECRESCENTE),
+  email_a_z: porTexto(pessoa => pessoa.email, CRESCENTE),
+  email_z_a: porTexto(pessoa => pessoa.email, DECRESCENTE),
+  empresa_a_z: porTexto(adicional('company_name'), CRESCENTE),
+  empresa_z_a: porTexto(adicional('company_name'), DECRESCENTE),
+  cidade_a_z: porTexto(adicional('city'), CRESCENTE),
+  cidade_z_a: porTexto(adicional('city'), DECRESCENTE),
+  pais_a_z: porTexto(adicional('country'), CRESCENTE),
+  pais_z_a: porTexto(adicional('country'), DECRESCENTE),
+  mais_antigos: maisAntigoPrimeiro('created_at'),
+  // #3078 — as da aba Empresas (lista/ordens.js), como o servidor ordena.
+  site_a_z: porTexto(empresa => empresa.domain, CRESCENTE),
+  site_z_a: porTexto(empresa => empresa.domain, DECRESCENTE),
+  mais_pessoas: (a, b) => b.contacts_count - a.contacts_count,
+  menos_pessoas: (a, b) => a.contacts_count - b.contacts_count,
 };
 
 // ---- demonstração ----------------------------------------------------------
@@ -117,11 +164,13 @@ const REGRAS_DA_ABA = {
     daBase: (base, agora) => base.pessoas(agora),
     pertence: pertenceAoGrupo,
     campos: camposDaPessoa,
+    passaNosFiltros: pessoaPassaNosFiltros,
   },
   [ABAS.EMPRESAS]: {
     daBase: (base, agora) => base.empresas(agora),
     pertence: empresaPertenceAoGrupo,
     campos: camposDaEmpresa,
+    passaNosFiltros: empresaPassaNosFiltros,
   },
 };
 
@@ -133,7 +182,7 @@ const passaNaConsulta =
   (aba, { busca = '', filtros = {} }, agora, regras) =>
   item =>
     combinaComBusca(busca, regras.campos(item)) &&
-    (aba !== ABAS.PESSOAS || pessoaPassaNosFiltros(item, filtros, agora));
+    regras.passaNosFiltros(item, filtros, agora);
 
 // #2897 — as regras da aba Pessoas com o que a carteira de seguros soma: os
 // grupos dela (`extra.grupos`: id -> quem pertence) e mais lugares onde a busca
@@ -258,9 +307,10 @@ const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
       const gente = base.pessoas(Date.now());
       const unicos = lista => [...new Set(lista.filter(Boolean))].sort();
       const comoOpcao = valor => ({ value: valor, label: valor });
+      const daBase = base.empresas(Date.now());
       return {
-        empresas: base
-          .empresas(Date.now())
+        cidades_das_empresas: unicos(daBase.map(e => e.city)).map(comoOpcao),
+        empresas: daBase
           .map(({ id, name }) => ({ value: id, label: name }))
           .sort((a, b) => porNome({ name: a.label }, { name: b.label })),
         etiquetas: unicos(gente.flatMap(p => p.labels || [])).map(comoOpcao),
@@ -289,16 +339,24 @@ const filtrosDoPedido = (filtros = {}) =>
     filtros[daTela],
   ]);
 
-// O que vai na URL: só o que está preenchido. `filtros` é só de Pessoas: em
-// Empresas o servidor responde 422 para qualquer filtro, então nunca vai.
-const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
+// #3078 — em Empresas vão só a cidade e o período de chegada: o servidor
+// responde 422 para os filtros que a empresa não tem.
+const filtrosDaAba = (aba, filtros = {}) =>
+  aba === ABAS.EMPRESAS
+    ? Object.fromEntries(
+        FILTROS_DAS_EMPRESAS.map(chave => [chave, filtros[chave]])
+      )
+    : filtros;
+
+// O que vai na URL: só o que está preenchido.
+export const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
   Object.fromEntries(
     [
       ['grupo', grupo],
       ['busca', busca],
       ['ordem', ordem],
       ['pagina', pagina],
-      ...(aba === ABAS.EMPRESAS ? [] : filtrosDoPedido(filtros)),
+      ...filtrosDoPedido(filtrosDaAba(aba, filtros)),
     ].filter(([, valor]) => preenchido(valor))
   );
 

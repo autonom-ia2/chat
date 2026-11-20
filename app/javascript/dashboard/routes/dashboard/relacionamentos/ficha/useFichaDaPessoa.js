@@ -2,7 +2,13 @@
 // composable fala com a fonte e guarda o resultado. Cada ação devolve `true` se
 // deu certo e `false` se falhou; quem chama decide o aviso. Só a leitura da
 // pessoa decide o estado da ficha; as outras partes falham sozinhas (`falhas`).
+// #3071 — e as ações que vieram da ficha antiga. `motivo` guarda a frase que o
+// servidor mandou na última falha (o DELETE do contato diz por que não apagou,
+// por exemplo), ou vazio: quem chama mostra a frase dele no lugar da genérica.
+// `ocupadoEm(nome)` diz se aquela ação está gravando (ficha/useAcoesComOcupado.js).
 import { computed, ref } from 'vue';
+import { GRAVOU_EM_PARTE } from '../fonte/gravarPessoa';
+import { useAcoesComOcupado } from './useAcoesComOcupado';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
 import { usePartesDaFicha } from './usePartesDaFicha';
 
@@ -17,7 +23,6 @@ const PARTES_VAZIAS = {
 export const useFichaDaPessoa = (fonte, id) => {
   const { estado, carregar, geracao } = useEstadoDaFicha();
   const pessoa = ref(null);
-  const ocupado = ref('');
   const partes = usePartesDaFicha({
     leitores: Object.fromEntries(
       Object.keys(PARTES_VAZIAS).map(nome => [
@@ -41,21 +46,10 @@ export const useFichaDaPessoa = (fonte, id) => {
     return true;
   };
 
-  // `acao` recebe `aindaVale()`: se a ficha trocou de pessoa durante a escrita,
-  // o que foi gravado ficou gravado, mas a resposta velha não entra na pessoa
-  // que está na tela.
-  const executar = async (nome, acao) => {
-    ocupado.value = nome;
-    const geracaoDoPedido = geracao();
-    try {
-      await acao(() => geracaoDoPedido === geracao());
-      return true;
-    } catch {
-      return false;
-    } finally {
-      ocupado.value = '';
-    }
-  };
+  const { executar, motivo, ocupadoEm, algumOcupado } = useAcoesComOcupado({
+    geracao,
+    tela: 'relacionamentos_ficha_pessoa',
+  });
 
   const marcarCliente = () =>
     executar('marcarCliente', async aindaVale => {
@@ -78,16 +72,77 @@ export const useFichaDaPessoa = (fonte, id) => {
       partes.trocar('notas', [nota, ...partes.valores.value.notas]);
     });
 
-  const salvar = dados =>
-    executar('salvar', async aindaVale => {
-      const salva = await fonte.salvar(id.value, dados);
-      if (aindaVale()) pessoa.value = salva;
+  // #3075 — `retomada` guarda o que a última tentativa de salvar já gravou
+  // (fonte/gravarPessoa.js): a próxima repete só o que faltou. Se a pessoa
+  // ficou gravada e a foto (ou um campo que sai) falhou, a ficha já mostra a
+  // pessoa como ficou, e a tela avisa que uma parte não entrou. Um segundo
+  // "Salvar" enquanto o primeiro está no ar não faz nada.
+  const retomada = ref(null);
+  const guardarRetomada = (falha, aindaVale) => {
+    if (falha?.name !== GRAVOU_EM_PARTE || !aindaVale()) return;
+    const { pessoaNaFicha, ...feito } = falha.retomada;
+    retomada.value = feito;
+    if (pessoaNaFicha) pessoa.value = pessoaNaFicha;
+  };
+  const salvar = async dados => {
+    if (ocupadoEm('salvar')) return false;
+    return executar('salvar', async aindaVale => {
+      try {
+        const salva = await fonte.salvar(id.value, dados, retomada.value);
+        if (!aindaVale()) return;
+        pessoa.value = salva;
+        retomada.value = null;
+      } catch (falha) {
+        guardarRetomada(falha, aindaVale);
+        throw falha;
+      }
     });
+  };
 
   const liberar = () =>
     executar('liberar', async aindaVale => {
       const liberada = await fonte.liberarMensagens(id.value);
       if (aindaVale()) pessoa.value = liberada;
+    });
+
+  // As escritas que devolvem a pessoa como ficou.
+  const trocarPessoa = (nome, escrever) =>
+    executar(nome, async aindaVale => {
+      const nova = await escrever();
+      if (aindaVale()) pessoa.value = nova;
+    });
+
+  const marcarNaoQuer = () =>
+    trocarPessoa('marcarNaoQuer', () => fonte.marcarNaoQuer(id.value));
+  const bloquear = () =>
+    trocarPessoa('bloquear', () => fonte.bloquear(id.value));
+  const desbloquear = () =>
+    trocarPessoa('desbloquear', () => fonte.desbloquear(id.value));
+  // { por, tirar }: só o que mudou.
+  const alterarEtiquetas = mudanca =>
+    trocarPessoa('etiquetas', () => fonte.alterarEtiquetas(id.value, mudanca));
+
+  // Depois de apagar, a página sai da ficha: não há o que guardar.
+  const apagar = () => executar('apagar', () => fonte.apagar(id.value));
+
+  // A outra pessoa trouxe conversas, notas, cards e arquivos: a ficha relê tudo.
+  const juntar = outraId =>
+    executar('juntar', async aindaVale => {
+      const junta = await fonte.juntar(id.value, outraId);
+      if (!aindaVale()) return;
+      pessoa.value = junta;
+      const lidas = await partes.lerTodas();
+      if (aindaVale()) partes.guardarTodas(lidas);
+    });
+
+  const apagarNota = notaId =>
+    executar('apagarNota', async aindaVale => {
+      await fonte.apagarNota(id.value, notaId);
+      if (!aindaVale()) return;
+      partes.trocar(
+        'notas',
+        partes.valores.value.notas.filter(nota => nota.id !== notaId)
+      );
     });
 
   return {
@@ -99,13 +154,26 @@ export const useFichaDaPessoa = (fonte, id) => {
     arquivos: computed(() => partes.valores.value.arquivos),
     origem: computed(() => partes.valores.value.origem),
     falhas: partes.falhas,
-    ocupado,
+    ocupadoEm,
+    algumOcupado,
+    motivo,
     carregar: () => carregar(buscar),
     relerParte: partes.reler,
     marcarCliente,
     desmarcarCliente,
     guardarNota,
     salvar,
+    retomada,
+    esquecerRetomada: () => {
+      retomada.value = null;
+    },
     liberar,
+    marcarNaoQuer,
+    bloquear,
+    desbloquear,
+    alterarEtiquetas,
+    apagar,
+    juntar,
+    apagarNota,
   };
 };

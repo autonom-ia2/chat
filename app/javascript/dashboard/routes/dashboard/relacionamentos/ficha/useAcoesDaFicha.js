@@ -19,6 +19,9 @@ export const useAcoesDaFicha = () => {
       irPara('relationships_home', undefined, aba ? { aba } : undefined),
     abrirPessoa: contactId => irPara('relacionamentos_pessoa', { contactId }),
     abrirEmpresa: companyId => irPara('relacionamentos_empresa', { companyId }),
+    // #3078 — a tela de mídias da empresa (a mesma da ficha antiga).
+    verMidiasDaEmpresa: companyId =>
+      irPara('relationships_company_media', { companyId }),
     // A conversa pelo número dela, na mesma rota da caixa de entrada.
     abrirConversa: conversationId =>
       irPara('inbox_conversation', { conversation_id: conversationId }),

@@ -10,7 +10,11 @@
       "MOSTRANDO_PARTE": "Showing {mostradas} of {total} people.",
       "INFORMACOES": {
         "PESSOAS": "People",
-        "CLIENTES": "Customers"
+        "CLIENTES": "Customers",
+        "CIDADE": "City",
+        "SOBRE": "What the company does",
+        "DESDE": "Arrived on",
+        "ULTIMA_CONVERSA": "Last conversation"
       },
       "CONVERSAR": "This opens a conversation with someone at {nome}.",
       "NOVO_CARD": "This opens a new card for {nome}.",
@@ -24,6 +28,63 @@
         "AVISO": "I will open the message for these people.",
         "SEM_PESSOAS": "This company has no people yet.",
         "ENTENDI": "Got it"
+      },
+      "VISITAR_SITE": "Open the {site} website in a new tab",
+      "GAVETA": {
+        "SOBRE": "What the company does",
+        "SOBRE_EXEMPLO": "E.g.: neighborhood bakery, open Monday to Saturday.",
+        "SOBRE_AJUDA": "What happened in each conversation goes in each person’s notes."
+      },
+      "NOTAS": {
+        "EXPLICACAO": "These are the notes of the people in this company. To write a note, open the person’s profile.",
+        "VAZIO": "No one in this company has a note yet."
+      },
+      "MIDIAS": {
+        "TITULO": "Files",
+        "VER_TODAS": "See all ({total})",
+        "VAZIO": "Nothing has been shared in conversations with this company yet."
+      },
+      "POR": {
+        "BOTAO": "Add person",
+        "TITULO": "Add a person to {empresa}",
+        "AVISO": "Search by name, phone or email. Only people not in this company show up.",
+        "PLACEHOLDER": "Name, phone or email",
+        "BUSCA": "Search for a person",
+        "PROCURANDO": "Searching...",
+        "ERRO_BUSCA": "I couldn’t search right now.",
+        "DIGITE": "Type at least 2 letters or numbers.",
+        "NINGUEM": "No one found with “{termo}”.",
+        "RESULTADOS": "People found",
+        "SEM_CONTATO": "No phone and no email",
+        "ESTA_EM": "In {empresa}",
+        "SEM_EMPRESA": "No company",
+        "MUDA": "{nome} leaves {de} and joins {para}. A person belongs to one company only.",
+        "ESCOLHA": "Tap a person on the list to choose.",
+        "CONFIRMAR": "Add to company",
+        "ERRO": "I couldn’t add the person to the company. Try again.",
+        "ENTROU": "{nome} joined {empresa}.",
+        "MUDOU": "{nome} left {de} and joined {empresa}.",
+        "DESFEITO": "Done. {nome} left {empresa} again.",
+        "MUDOU_DESFEITO": "Done. {nome} is back at {de}."
+      },
+      "TIRAR": {
+        "BOTAO": "Remove from company",
+        "CURTO": "Remove",
+        "ROTULO": "Remove {nome} from the company",
+        "SAIU": "{nome} left {empresa}. The person stays on your list.",
+        "VOLTOU": "Done. {nome} is back in {empresa}.",
+        "ERRO": "I couldn’t remove {nome} from the company. Try again."
+      },
+      "APAGAR": {
+        "TITULO": "Delete {nome}?",
+        "PESSOAS": "{count} person stays on your list, with their conversations, but without a company. | The {count} people stay on your list, with their conversations, but without a company.",
+        "LEMBRETES": "This company’s reminders and files are deleted.",
+        "SEGUROS": "This company’s policies stay saved, but no longer linked to the company.",
+        "NAO_VOLTA": "This can’t be undone.",
+        "CONFIRMAR": "Delete",
+        "ERRO": "I couldn’t delete {nome}. Try again.",
+        "APAGADA": "{nome} was deleted.",
+        "NA_FILA": "{nome} has many people and leaves the list in a few minutes."
       }
     },
     "VOLTAR": {
@@ -63,16 +124,18 @@
       "DESMARCAR_CLIENTE": "No longer a customer",
       "JUNTAR": "Merge with another person",
       "BLOQUEAR": "Block",
-      "APAGAR": "Delete"
+      "APAGAR": "Delete",
+      "NAO_QUER": "Mark as not wanting messages",
+      "DESBLOQUEAR": "Unblock",
+      "LIGAR": "Call",
+      "MUDAR_ETIQUETAS": "Change labels",
+      "POR_ETIQUETA": "Add label",
+      "LEMBRETE_TITULO": "Talk to {nome}",
+      "APAGAR_EMPRESA": "Delete company"
     },
     "AVISOS": {
-      "CONVERSAR": "This opens the conversation with {nome}.",
       "NOVO_CARD": "This opens a new card for {nome}.",
-      "LEMBRETE": "This is where you set a reminder about {nome}.",
-      "VER_TODAS": "This opens all conversations with {nome}.",
-      "JUNTAR": "This is where you choose who to merge {nome} with.",
-      "BLOQUEAR": "This is where you confirm blocking {nome}.",
-      "APAGAR": "This is where you confirm deleting {nome}."
+      "LEMBRETE": "This is where you set a reminder about {nome}."
     },
     "FAIXA": {
       "TEXTO": "Does not want messages since {data}. {origem}",
@@ -85,7 +148,7 @@
       "LIBERADO": "Done. {nome} can receive messages again.",
       "ERRO": "I could not allow it. Try again.",
       "ORIGEM": {
-        "manual": "Someone on the team marked it here.",
+        "manual": "Marked by the team on this record.",
         "campaign_reply": "Asked by replying to a campaign.",
         "follow_up_reply": "Asked by replying to an automatic message.",
         "email_unsubscribe": "Asked by e-mail.",
@@ -111,7 +174,9 @@
         "resolvida": "Resolved",
         "adiada": "Snoozed",
         "outra": "Other status"
-      }
+      },
+      "VER_MENOS": "See less",
+      "MAIS_RECENTES": "These are the {count} most recent conversations."
     },
     "CARDS": {
       "TITULO": "Cards",
@@ -143,7 +208,14 @@
       "ERRO": "I could not save the note. Try again.",
       "VAZIO": "No notes yet.",
       "POR": "{autor} · {quando}",
-      "ESCREVA_ANTES": "Write the note before saving."
+      "ESCREVA_ANTES": "Write the note before saving.",
+      "APAGAR": "Delete note",
+      "APAGAR_ROTULO": "Delete the note “{texto}”",
+      "APAGAR_TITULO": "Delete this note?",
+      "APAGAR_AVISO": "“{texto}” leaves {nome}'s record. This can't be undone.",
+      "APAGAR_CONFIRMAR": "Delete note",
+      "APAGADA": "Note deleted.",
+      "ERRO_APAGAR": "Couldn't delete the note. Try again."
     },
     "ARQUIVOS": {
       "TITULO": "Files",
@@ -165,7 +237,13 @@
       "CNPJ": "Company tax ID",
       "SITE": "Website",
       "PESSOAS": "People",
-      "CLIENTES": "Customers"
+      "CLIENTES": "Customers",
+      "PAIS": "Country",
+      "SOBRE": "About this person",
+      "SIM": "Yes",
+      "NAO": "No",
+      "SO_LEITURA": "You can see this information, but you cannot change it.",
+      "ESCOLHER_CAMPOS": "Choose profile fields"
     },
     "ORIGEM": {
       "TITULO": "Where they came from",
@@ -194,11 +272,22 @@
       "SALVAR": "Save",
       "SALVO": "Details saved.",
       "ERRO_AO_SALVAR": "I could not save. Try again.",
+      "SALVOU_EM_PARTE": "The details were saved, but one part did not go through: the photo or a field to clear. Tap Save again.",
       "ERRO": {
         "NOME": "Write the name.",
         "EMAIL": "Check the e-mail. Something seems to be missing.",
         "CPF": "Check the personal tax ID. It has 11 numbers.",
-        "CNPJ": "Check the company tax ID. It has 14 numbers."
+        "CNPJ": "Check the company tax ID. It has 14 numbers.",
+        "EMAIL_REPETIDO": "This email is already on another person's profile. Look for it in the list search or remove the email here.",
+        "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here.",
+        "LINK": "This website address is not right. Write it like this: yoursite.com",
+        "EMPRESA_SEM_ESCOLHA": "Tap the company name in the list to choose it. If it is not there, tap “Register as a new company”."
+      },
+      "SAIR": {
+        "TITULO": "Leave without saving?",
+        "AVISO": "What you wrote will not be saved.",
+        "CONFIRMAR": "Leave without saving",
+        "VOLTAR": "Keep writing"
       },
       "REDE": {
         "linkedin": "LinkedIn",
@@ -211,7 +300,119 @@
         "github": "GitHub"
       },
       "CNPJ": "Company tax ID",
-      "SITE": "Website"
+      "SITE": "Website",
+      "PAIS_ONDE_MORA": "Country",
+      "PAIS_NENHUM": "Not provided",
+      "PAIS_ESCOLHA": "Choose the country",
+      "SOBRE": "About this person",
+      "SOBRE_EXEMPLO": "E.g.: prefers to talk on WhatsApp in the afternoon.",
+      "SOBRE_AJUDA": "How the person is. What happened in each conversation goes in Notes.",
+      "MAIS_CAMPOS": "More fields ({count})",
+      "ATRIBUTO": {
+        "SIM": "Yes",
+        "NAO": "No",
+        "ESCOLHA": "Choose an option",
+        "LIMPAR": "Clear",
+        "LIMPAR_O": "Clear what is in {campo}",
+        "LINK_EXEMPLO": "E.g.: yoursite.com",
+        "VAI_SAIR": "This field will be blank when you save."
+      },
+      "FOTO": {
+        "POR": "Add photo",
+        "TROCAR": "Change photo",
+        "TIRAR": "Remove photo",
+        "MANTER": "Undo",
+        "VAI_SAIR": "The photo is removed when you save. The initials of the name show instead.",
+        "VAI_ENTRAR": "The new photo is used when you save.",
+        "ERRO_TIPO": "This photo does not work. Choose a JPG, PNG, GIF or WEBP photo.",
+        "ERRO_TAMANHO": "This photo is too big. Choose one up to 15 MB."
+      },
+      "EMPRESA_ESCOLHA": {
+        "ROTULO": "Company",
+        "PLACEHOLDER": "Type the company name",
+        "DIGITE": "Type the name to search the registered companies.",
+        "PROCURANDO": "Searching…",
+        "ERRO": "Could not search right now. Try again.",
+        "NENHUMA": "No registered company matches “{termo}”.",
+        "ACHADAS": "Companies found",
+        "CADASTRAR": "Register “{nome}” as a new company",
+        "NOVA": "New company: it is registered when you save.",
+        "SO_NOME": "Only the name is written here. Link it to a registered company to open the company profile.",
+        "LIGAR": "Link to a company",
+        "TROCAR": "Change",
+        "TIRAR": "Remove from company",
+        "MANTER": "Keep {empresa}",
+        "VAI_SAIR": "This person leaves {empresa} when you save. To add another one, search for the name above and tap it."
+      }
+    },
+    "APAGAR": {
+      "TITULO": "Delete {nome}?",
+      "AVISO": "{nome}'s record leaves the system, with the conversations, messages and notes.",
+      "CONFIRMAR": "Delete {nome}",
+      "APAGADA": "{nome}'s record was deleted.",
+      "ERRO": "Couldn't delete {nome}. Try again in a moment.",
+      "SEGUROS": "{nome}'s policy also leaves, with the PDF. | {nome}'s {count} policies also leave, with the PDF.",
+      "CARDS": "The cards stay in the pipeline, without the person.",
+      "CARDS_SEM_DADOS": "The cards stay in the pipeline, without the person's data, and the scheduled meetings are canceled.",
+      "NAO_VOLTA": "This can't be undone."
+    },
+    "BLOQUEIO": {
+      "TITULO": "Block {nome}?",
+      "AVISO": "If {nome} sends a message, the message is kept and nobody on the team is notified. They also leave campaigns. You can unblock whenever you want.",
+      "CONFIRMAR": "Block",
+      "BLOQUEADA": "Done. {nome}'s record is blocked.",
+      "ERRO_BLOQUEAR": "Couldn't block. Try again.",
+      "DESBLOQUEADA": "Done. {nome}'s record is unblocked.",
+      "ERRO_DESBLOQUEAR": "Couldn't unblock. Try again.",
+      "FAIXA": "{nome}'s record is blocked.",
+      "FAIXA_APOIO": "If {nome} sends a message, the message is kept and nobody is notified."
+    },
+    "NAO_QUER": {
+      "TITULO": "Mark that {nome} doesn't want messages?",
+      "AVISO": "{nome} leaves campaigns and no longer gets automatic messages. If {nome} writes, you reply as usual.",
+      "CONFIRMAR": "Mark as not wanting",
+      "MARCADO": "Done. {nome} will no longer get campaigns or automatic messages.",
+      "ERRO": "Couldn't mark. Try again."
+    },
+    "ETIQUETAS": {
+      "TITULO": "{nome}'s labels",
+      "AVISO": "Check the ones {nome} should have. Uncheck to remove.",
+      "SALVAR": "Save labels",
+      "ERRO": "Couldn't save the labels. Try again.",
+      "SEM_ETIQUETAS": "The account has no labels yet. An admin creates them in Settings, Labels.",
+      "NAO_CARREGOU": "Couldn't show the labels. Try again.",
+      "APAGADA_DA_CONTA": "no longer exists in the account",
+      "VOLTARAM": "Done. The labels are back to how they were.",
+      "PRONTO": "Done.",
+      "ENTROU": "Added: {etiquetas}.",
+      "SAIU": "Removed: {etiquetas}."
+    },
+    "JUNTAR": {
+      "TITULO": "Merge {nome} with another person",
+      "AVISO": "Use it when the same person has two records. {nome}'s record stays; the one you pick stops existing. Look by name, phone or e-mail.",
+      "BUSCA": "Look for the other record",
+      "PLACEHOLDER": "Name, phone or e-mail",
+      "DIGITE": "Type the name, phone or e-mail of the other record.",
+      "PROCURANDO": "Looking…",
+      "NINGUEM": "Nobody found for “{termo}”. Check what you typed.",
+      "ERRO_BUSCA": "Couldn't search right now. Try again.",
+      "RESULTADOS": "Records found",
+      "ESCOLHA": "Pick the other record in the list.",
+      "SEM_CONTATO": "No phone and no e-mail",
+      "CONTINUAR": "Continue",
+      "CONFIRMA_TITULO": "Merge the two records?",
+      "FICA": "Stays",
+      "SAI": "Stops existing",
+      "O_QUE_PASSA": "Everything that belongs to {sai} moves to {fica}: conversations, notes, labels and cards.",
+      "O_QUE_FICA": "{fica}'s name, phone and e-mail stay. Whatever is missing comes from {sai}.",
+      "NAO_VOLTA": "{sai}'s record stops existing. This can't be undone.",
+      "CONFIRMAR": "Merge records",
+      "VOLTAR": "Back",
+      "JUNTADAS": "Done. Everything from {sai} is now in {fica}'s record.",
+      "ERRO": "Couldn't merge the records. Try again.",
+      "O_QUE_PASSA_COM_SEGUROS": "Everything that belongs to {sai} moves to {fica}: conversations, notes, labels, cards and policies.",
+      "PERDE_TELEFONE": "{sai}'s phone {telefone} doesn't stay on the record. Write it down first, if you need it.",
+      "PERDE_EMAIL": "{sai}'s e-mail {email} doesn't stay on the record. Write it down first, if you need it."
     }
   }
 }

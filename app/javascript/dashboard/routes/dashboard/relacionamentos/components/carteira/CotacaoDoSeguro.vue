@@ -1,13 +1,11 @@
 <script setup>
 import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Button from 'dashboard/components-next/button/Button.vue';
 import { useIdioma } from '../../ficha/idioma';
 import {
   SITUACOES_DA_COTACAO as S,
   VARIACOES as V,
   emReais,
-  enviaDeNovo,
   equipeFoiAvisada,
   mostraAProposta,
   situacaoDaCotacao,
@@ -23,12 +21,13 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // tem "Enviar proposta": nada vai ao cliente antes desse clique. Quem manda é
 // a gaveta, que diz o que houve no rodapé. Só existe no seguro que tem
 // cotação: quem a usa só a monta quando há etapa (`cotacao.etapa`).
+// #3057 (2ª rodada) — o botão "Enviar proposta" saiu daqui: ele é o azul do
+// rodapé da gaveta (carteira/rodapeDoSeguro.js). Aqui fica só a linha que diz
+// que nada vai ao cliente antes do toque.
 const props = defineProps({
   seguro: { type: Object, required: true },
   podeEnviar: { type: Boolean, default: false },
-  enviando: { type: Boolean, default: false },
 });
-const emit = defineEmits(['enviar']);
 
 const { t } = useI18n();
 const textos = useTextosDoSeguro();
@@ -189,11 +188,6 @@ const variacao = computed(() => {
     : '';
 });
 const avisada = computed(() => equipeFoiAvisada(situacao.value));
-const rotuloDoEnvio = computed(() =>
-  enviaDeNovo(cotacao.value)
-    ? t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR_DE_NOVO')
-    : t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR')
-);
 </script>
 
 <template>
@@ -247,22 +241,12 @@ const rotuloDoEnvio = computed(() =>
     >
       {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.AVISADA') }}
     </p>
-    <div v-if="podeEnviar" class="flex flex-col items-start gap-2">
-      <!-- `faded`, como os botões das outras partes da gaveta: o único azul
-           cheio é o do rodapé. -->
-      <Button
-        faded
-        size="lg"
-        icon="i-lucide-send"
-        class="w-full sm:w-auto"
-        data-carteira="enviar-proposta"
-        :is-loading="enviando"
-        :label="rotuloDoEnvio"
-        @click="emit('enviar')"
-      />
-      <p class="m-0 text-sm text-n-slate-11">
-        {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR_APOIO') }}
-      </p>
-    </div>
+    <p
+      v-if="podeEnviar"
+      data-carteira="enviar-apoio"
+      class="m-0 text-sm text-n-slate-11"
+    >
+      {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR_APOIO') }}
+    </p>
   </section>
 </template>

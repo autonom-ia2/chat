@@ -16,12 +16,33 @@ const companyId = computed(() => Number(route.params.companyId));
 const companyUrl = computed(
   () => `/api/v1/accounts/${accountId.value}/companies/${companyId.value}`
 );
-const backToCompany = computed(() => ({
-  name: 'companies_dashboard_show',
-  params: { accountId: accountId.value, companyId: companyId.value },
-  // A truthy media query reopens the media tab, including on a direct visit.
-  query: { ...route.query, media: route.query.media || '{}' },
-}));
+// #3078 — com o menu novo de Relacionamentos, Empresas é a aba da lista nova
+// e a empresa é a ficha nova (que mostra as mídias num bloco, sem aba).
+const backToCompany = computed(() =>
+  navigationEnabled.value
+    ? {
+        name: 'relacionamentos_empresa',
+        params: { accountId: accountId.value, companyId: companyId.value },
+      }
+    : {
+        name: 'companies_dashboard_show',
+        params: { accountId: accountId.value, companyId: companyId.value },
+        // A truthy media query reopens the media tab, including on a direct visit.
+        query: { ...route.query, media: route.query.media || '{}' },
+      }
+);
+const companiesList = computed(() =>
+  navigationEnabled.value
+    ? {
+        name: 'relationships_home',
+        params: { accountId: accountId.value },
+        query: { aba: 'empresas' },
+      }
+    : {
+        name: 'companies_dashboard_index',
+        params: { accountId: accountId.value },
+      }
+);
 let generation = 0;
 const loadCompany = async () => {
   generation += 1;
@@ -65,17 +86,15 @@ onBeforeUnmount(() => {
         <RouterLink
           :to="{ name: 'relationships_home', params: { accountId } }"
           class="text-n-blue-11 hover:underline"
-          >{{ $t('RELATIONSHIPS.TITLE') }}</RouterLink
         >
+          {{ $t('RELATIONSHIPS.TITLE') }}
+        </RouterLink>
         <span
           class="i-lucide-chevron-right size-4 shrink-0"
           aria-hidden="true"
         />
       </template>
-      <RouterLink
-        :to="{ name: 'companies_dashboard_index', params: { accountId } }"
-        class="text-n-blue-11 hover:underline"
-      >
+      <RouterLink :to="companiesList" class="text-n-blue-11 hover:underline">
         {{ $t('RELATIONSHIPS.COMPANIES') }}
       </RouterLink>
       <span class="i-lucide-chevron-right size-4 shrink-0" aria-hidden="true" />
