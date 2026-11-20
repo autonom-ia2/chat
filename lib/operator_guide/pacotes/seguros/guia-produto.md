@@ -216,15 +216,15 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `contacts_dashboard_index`
 - highlight: `contacts-more-actions`
 
-### Importar contatos por CSV
-- intent: Como importo contatos?; Onde subo uma planilha CSV de contatos?; Como faco importacao nativa de contatos?
-- onde_fica: Contatos > Todos os contatos > menu de acoes > Importar contatos
-- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
-- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
-- pre_requisitos: arquivo CSV no formato esperado; dados minimos de contato
-- passos: 1. Abra Contatos; 2. Clique em Importar contatos; 3. Baixe o CSV de exemplo se precisar; 4. Escolha o arquivo CSV; 5. Confirme a importacao e aguarde notificacao por email.
-- gotchas: este e o import nativo de contatos por CSV; nao confundir com Importar base de campanha, que e recurso custom controlado por `CAMPAIGN_IMPORT_ENABLED`.
-- nav_target: `contacts_dashboard_index`
+### Importar contatos por planilha (CSV ou Excel)
+- intent: Como importo contatos?; Onde subo uma planilha CSV de contatos?; Como faco importacao nativa de contatos?; Como trago meus clientes de uma planilha?
+- onde_fica: Relacionamentos > botão Trazer minha lista (no topo da lista de pessoas)
+- rota: `relacionamentos_trazer` - `/app/accounts/:accountId/relacionamentos/trazer`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `contact_manage`
+- pre_requisitos: a navegação de Relacionamentos ligada na conta; administrador ou função com gestão de contatos; planilha Excel (.xlsx) ou CSV com nome e telefone (celular com DDD) ou e-mail
+- passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha; 3. Responda às perguntas e confira o que a tela achou; 4. Clique em Trazer e acompanhe a barra até o Pronto; 5. A lista aparece em Listas que você já trouxe, embaixo da tela, com o Desfazer.
+- gotchas: o passo a passo completo, com perguntas, linhas para conferir e Desfazer, está no fluxo Trazer minha lista; nada entra antes de clicar em Trazer; quem já estava aqui não é duplicado, só ganha o que faltava; com a navegação de Relacionamentos desligada, o caminho antigo continua em Contatos > menu de ações > Importar contatos; não confundir com Importar base de campanha, que fica em Campanhas e é controlado por `CAMPAIGN_IMPORT_ENABLED`.
+- nav_target: `relacionamentos_trazer`
 
 ### Importar contatos com colunas, atributos e empresas
 - intent: Como importo uma planilha de contatos com empresa?; As colunas extras da planilha viram atributos do contato?; Por que a importação pediu para escolher as colunas?; Como importo contatos de um Excel?
@@ -236,15 +236,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
 - nav_target: `contacts_import_journey`
 
-### Ver as importações de contatos (planilha e automação)
-- intent: Onde vejo as listas de contatos que importei?; A lista que a automação leu entrou nos contatos?; Quem ficou de fora da importação?; Onde vejo o resultado de uma importação antiga?
-- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importações (com a jornada de campanhas ligada)
-- rota: `contacts_imports_list` - `/app/accounts/:accountId/contacts/imports`
-- gate: feature flag `crm`; papel `administrator` ou `contact_manage`
-- pre_requisitos: administrador ou função com gestão de contatos
-- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importações; 3. Veja cada lista, a origem (Planilha ou Automação), a data, quem importou, quantos entraram e quantos ficaram de fora; 4. Clique numa importação para ver o resultado e quem ficou de fora.
-- gotchas: a origem Automação é a lista que o passo "Para cada item" leu na conversa, importada em nome de quem ligou a automação; quem ficou de fora aparece com o celular mascarado e o motivo; os públicos e as bases de campanha não aparecem aqui; uma planilha que ainda espera conferência abre na etapa em que parou.
-- nav_target: `contacts_imports_list`
+### Ver as listas de contatos que entraram (planilha e automação)
+- intent: Onde vejo as listas de contatos que importei?; A lista que a automação leu entrou nos contatos?; Quem ficou de fora da importação?; Onde vejo o resultado de uma importação antiga?; Onde vejo a lista que a automação trouxe?
+- onde_fica: Relacionamentos > Trazer minha lista > Listas que você já trouxe (embaixo da tela). A tela antiga, Contatos > menu de ações (três pontos) > Importações, continua mostrando as mesmas importações.
+- rota: `relacionamentos_trazer` - `/app/accounts/:accountId/relacionamentos/trazer`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `contact_manage`
+- cobre: contacts_imports_list
+- pre_requisitos: a navegação de Relacionamentos ligada na conta; administrador ou função com gestão de contatos
+- passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Desça até Listas que você já trouxe; 3. Veja em cada linha o nome da planilha (ou da automação), a data, quem trouxe, quantas pessoas e a situação; 4. A lista que veio por outro caminho tem um selo ao lado da situação: Pela automação ou Planilha antiga; 5. Com mais de 100 listas, clique em Ver mais no fim para ver as mais antigas.
+- gotchas: Pela automação é a lista que o passo "Para cada item" leu na conversa, em nome de quem ligou a automação: aparece com o nome da automação e não tem Desfazer; Planilha antiga é a que entrou pela tela antiga de Importar contatos e também não tem Desfazer, porque ela não guarda o que preencheu e o Desfazer não tiraria ninguém (só o desfazer que já tinha sido pedido e parou no meio mostra Continuar, para terminar); só a planilha trazida por Trazer minha lista pode ser desfeita; quem ficou de fora de uma importação, linha por linha, com o celular mascarado e o motivo, ainda se vê na tela antiga de Importações; os públicos e as bases de campanha não aparecem aqui (ficam em Campanhas > Público); a planilha que ainda espera conferência não aparece na lista.
+- nav_target: `relacionamentos_trazer`
 
 ### Convidar e gerenciar agentes
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
@@ -2854,7 +2855,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `relationships_navigation`; papel `administrator` ou `contact_manage`
 - pre_requisitos: a navegação de Relacionamentos ligada na conta; poder trazer contatos; uma planilha Excel ou CSV com nome e telefone (celular, com o DDD junto do número) ou e-mail
 - passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha (Excel ou CSV); 3. Responda às perguntas, uma por vez (por exemplo, se essas pessoas já são clientes e de quem é o telefone). Se só algumas são clientes, você aponta a coluna e escolhe quais valores dela querem dizer cliente: nada vem marcado, quem decide é você; 4. Confira: quantas pessoas achei, as linhas que precisam de você e o que vou guardar de cada coluna; 5. Conserte ou deixe de fora as linhas com problema; 6. Clique em Trazer e acompanhe a barra até o Pronto; 7. A lista trazida aparece embaixo da tela, com a data e quantas pessoas vieram; 8. Para voltar atrás, clique em Desfazer nela: a tela mostra quantas pessoas saem, quantas ficam e quantas voltam a ser como eram, e você confirma.
-- gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; pode sair da tela enquanto a lista entra, ela aparece embaixo quando terminar; Desfazer não tem prazo; no Desfazer sai só quem a lista trouxe e em quem ninguém tocou: quem já tem conversa, card, nota, etiqueta, campanha, agendamento ou seguro fica, quem teve a ficha mudada depois da lista (nome, telefone, e-mail, cidade, empresa ou outra informação) também, e ainda quem veio em outra lista, recusou mensagens ou está bloqueado; a lista que não foi trazida por esta tela (a de Importar contatos) não tira ninguém no Desfazer, porque não dá para saber se alguém mexeu nas pessoas dela: a tela mostra 0 saem antes de você confirmar; se o Desfazer não conseguir tirar alguém, a lista fica Desfeito e a linha diz quantas pessoas ficaram na base; enquanto uma lista é desfeita, Trazer outra é recusado com "Tem uma lista sendo desfeita agora.": espere o Desfazer terminar e traga de novo; em quem já estava aqui, volta a vazio só o que a lista preencheu e ninguém mudou depois; o telefone e o e-mail que a lista pôs não voltam se você já falou com a pessoa desde a lista; a lista que parou no meio também pode ser desfeita, e depois de pedir o Desfazer ela não pode mais ser continuada com Tentar de novo; se a linha disser "O desfazer parou no meio.", clique em Continuar nela e confirme: ele segue de onde parou; o telefone precisa vir com o DDD junto do número, na mesma coluna: DDD em outra coluna não é juntado, o número sem DDD vira linha para você conferir; a pessoa que também tem e-mail entra só com o e-mail, a tela avisa quantas são antes de você trazer, e a planilha corrigida, enviada de novo, completa o telefone delas; planilha sem telefone nem e-mail que dê para usar não é aceita e a tela diz o que falta.
+- gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; pode sair da tela enquanto a lista entra, ela aparece embaixo quando terminar; Desfazer não tem prazo; no Desfazer sai só quem a lista trouxe e em quem ninguém tocou: quem já tem conversa, card, nota, etiqueta, campanha, agendamento ou seguro fica, quem teve a ficha mudada depois da lista (nome, telefone, e-mail, cidade, empresa ou outra informação) também, e ainda quem veio em outra lista, recusou mensagens ou está bloqueado; a lista que não foi trazida por esta tela aparece embaixo com um selo e sem Desfazer: Planilha antiga (a de Importar contatos, porque não dá para saber se alguém mexeu nas pessoas dela) e Pela automação (a do passo Para cada item); com mais de 100 listas, Ver mais no fim mostra as mais antigas; se o Desfazer não conseguir tirar alguém, a lista fica Desfeito e a linha diz quantas pessoas ficaram na base; enquanto uma lista é desfeita, Trazer outra é recusado com "Tem uma lista sendo desfeita agora.": espere o Desfazer terminar e traga de novo; em quem já estava aqui, volta a vazio só o que a lista preencheu e ninguém mudou depois; o telefone e o e-mail que a lista pôs não voltam se você já falou com a pessoa desde a lista; a lista que parou no meio também pode ser desfeita, e depois de pedir o Desfazer ela não pode mais ser continuada com Tentar de novo; se a linha disser "O desfazer parou no meio.", clique em Continuar nela e confirme: ele segue de onde parou; o telefone precisa vir com o DDD junto do número, na mesma coluna: DDD em outra coluna não é juntado, o número sem DDD vira linha para você conferir; a pessoa que também tem e-mail entra só com o e-mail, a tela avisa quantas são antes de você trazer, e a planilha corrigida, enviada de novo, completa o telefone delas; planilha sem telefone nem e-mail que dê para usar não é aceita e a tela diz o que falta.
 - nav_target: `relacionamentos_trazer`
 
 ### Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)
