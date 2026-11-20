@@ -1414,7 +1414,7 @@
 # motor dos seis passos ficar completo; o Rodrigo mandou ligar em todas em 13/11, e a Orquestração ligou nas contas
 # existentes (Hub2You e Autonom.ia) com backup. O padrão das contas novas em produção muda pela migration
 # 20261120100000_ligar_automacao_passos_novos_em_todas (o ConfigLoader não sobrescreve o `false` já gravado); o
-# `enabled: true` aqui vale para instalação nova e para o banco de teste. Estado: docs/automacao/estado-2414.md.
+# `enabled: true` aqui vale para instalação nova. Estado: docs/automacao/estado-2414.md.
 - name: automacao_passos_novos
   display_name: Automação › passos novos (aprovação, para cada, outra automação, outro sistema, reunião, pesquisa)
   enabled: true
