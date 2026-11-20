@@ -759,6 +759,7 @@ watch(naAbaDeSeguros, estaNela => {
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
       :de-empresas="ehEmpresas"
+      :com-seguros="temSeguros"
       @concluido="acoesEmGrupo.depoisDeAgir"
     />
     <DialogoPlanilha

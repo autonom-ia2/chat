@@ -726,12 +726,18 @@ describe('LinhaDeEmpresa', () => {
     });
     expect(w.text()).toContain('Padaria Brandolim');
     expect(w.text()).toContain('3 pessoas · Falou há 1 mês');
-    expect(
-      w
-        .get('[data-segunda-linha]')
-        .findAll('span')
-        .map(f => f.text())
-    ).toEqual(['3 pessoas', '·', 'Falou há 1 mês']);
+    // #3078 (revisão) — o "·" vai dentro da parte seguinte: a linha quebra
+    // antes dele, e cada parte fica inteira (sem quebrar no meio).
+    const partes = w.get('[data-segunda-linha]').findAll(':scope > span');
+    expect(partes.map(f => f.text())).toEqual([
+      '3 pessoas',
+      '· Falou há 1 mês',
+    ]);
+    // Nenhuma quebra no meio; a com o "·" guarda o espaço do começo.
+    expect(partes.map(parte => parte.classes())).toEqual([
+      ['max-sm:whitespace-nowrap'],
+      ['max-sm:whitespace-pre'],
+    ]);
     expect(w.get('[data-selo="cliente"]').text()).toBe('Cliente');
   });
 
@@ -2102,6 +2108,50 @@ describe('DialogoApagar', () => {
     await assentar();
     expect(useAlert).toHaveBeenCalledWith('2 pessoas apagadas.');
     expect(w.emitted('concluido')).toEqual([[[]]]);
+  });
+
+  // #3078 (revisão) — empresas: o que se perde primeiro, os seguros só na conta
+  // com a carteira. #3079 — a empresa que o servidor põe na fila sai em minutos.
+  describe('de empresas', () => {
+    const empresas = [
+      { id: 1, name: 'Padaria Bom Dia' },
+      { id: 2, name: 'Oficina Rota Sul' },
+    ];
+    const montarEmpresas = (acoes, extra = {}) =>
+      mount(DialogoApagar, {
+        props: { pessoas: empresas, acoes, deEmpresas: true, ...extra },
+      });
+
+    it('diz o que acontece; os seguros só na conta de seguros', async () => {
+      const sem = montarEmpresas({});
+      sem.vm.abrir();
+      await sem.vm.$nextTick();
+      expect(sem.get('p').text()).toBe(
+        'As pessoas dessas empresas continuam na sua lista, com as conversas, mas sem empresa. Os lembretes e os arquivos dessas empresas são apagados. Isto não volta.'
+      );
+      const com = montarEmpresas({}, { comSeguros: true });
+      com.vm.abrir();
+      await com.vm.$nextTick();
+      expect(com.get('p').text()).toContain(
+        'Os seguros dessas empresas continuam guardados, mas sem a empresa ligada a eles. Isto não volta.'
+      );
+    });
+
+    it('a que o servidor pôs na fila: o aviso do fim diz que sai em alguns minutos', async () => {
+      const apagarEmpresas = vi.fn().mockResolvedValue({
+        ...inteiro('apagadas', 2),
+        naFila: [{ id: 2, nome: 'Oficina Rota Sul' }],
+      });
+      const w = montarEmpresas({ apagarEmpresas });
+      w.vm.abrir();
+      await w.vm.$nextTick();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      expect(useAlert).toHaveBeenCalledWith(
+        '2 empresas apagadas. Oficina Rota Sul tem muitas pessoas e sai da lista em alguns minutos.'
+      );
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
   });
 
   describe('com gente de fora ou parando no meio', () => {

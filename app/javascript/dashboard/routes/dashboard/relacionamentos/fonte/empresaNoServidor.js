@@ -5,19 +5,20 @@
 //    novas, como a aba Notas da ficha antiga), com de quem é cada uma;
 //  - as mídias trocadas nas conversas das pessoas (GET companies/:id/media,
 //    chave relationships_company_media), as mais novas e o total;
-//  - salvar (fonte/gravarEmpresa.js) e apagar a empresa. Apagar é um job no
-//    servidor (Companies::DeleteJob): a empresa entra em empresasApagadas.js
-//    para a lista não a mostrar enquanto o job não termina;
+//  - salvar (fonte/gravarEmpresa.js) e apagar a empresa. #3079 — o servidor
+//    apaga na hora a empresa pequena (200) e põe na fila a que tem mais pessoas
+//    que um lote do Companies::DeleteJob (202). Apagar devolve { naFila }: a
+//    tela avisa que a empresa da fila sai da lista em alguns minutos;
 //  - procurar quem pôr na empresa (GET companies/:id/contacts/search, só quem
 //    ainda não está nela, com a empresa de hoje), pôr (POST) e tirar (DELETE).
 // `noServidor`, `comNome` e `lerEmpresa` vêm da fichaFonte: a recusa ganha o
 // mesmo nome lá e aqui.
 import CompanyAPI from 'dashboard/api/companies';
-import { lembrarApagada } from './empresasApagadas';
 import { GRAVOU_EM_PARTE } from './gravarPessoa';
 import { alterarEmpresa } from './gravarEmpresa';
 
 export const MIDIAS_NA_FICHA = 5;
+const ACEITO = 202;
 const MS_POR_SEGUNDO = 1000;
 
 const TIPO_DA_MIDIA = { image: 'imagem', audio: 'audio', video: 'video' };
@@ -79,8 +80,12 @@ export const empresaNoServidor = ({ noServidor, comNome, lerEmpresa }) => ({
     return lerEmpresa(id);
   },
   async apagarEmpresa(id) {
-    await noServidor(() => CompanyAPI.delete(id));
-    lembrarApagada(id);
+    try {
+      const resposta = await CompanyAPI.delete(id);
+      return { naFila: resposta?.status === ACEITO };
+    } catch (falha) {
+      throw comNome(falha);
+    }
   },
   async buscarPessoasParaEmpresa(id, termo) {
     const { payload } = await noServidor(() =>

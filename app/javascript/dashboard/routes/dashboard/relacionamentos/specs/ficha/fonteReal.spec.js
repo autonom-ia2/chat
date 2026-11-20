@@ -6,7 +6,6 @@ import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { fichaFonte } from '../../fonte/fichaFonte';
-import { esquecerApagadas, foiApagada } from '../../fonte/empresasApagadas';
 
 // A fonte real da ficha (#2895): lê pelas leituras novas de Relacionamentos e
 // escreve pelos endpoints que o painel já tem. Depois de escrever, relê a
@@ -470,7 +469,6 @@ describe('escrita da empresa', () => {
     ...extra,
   });
   beforeEach(() => {
-    esquecerApagadas();
     CompanyAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
     RelacionamentosAPI.empresa.mockResolvedValue({ data: relida });
   });
@@ -517,11 +515,23 @@ describe('escrita da empresa', () => {
     });
   });
 
-  it('apagar chama o DELETE e lembra da empresa para a lista não a mostrar', async () => {
-    CompanyAPI.delete.mockResolvedValue({});
-    await real().apagarEmpresa(9);
+  // #3079 — a empresa pequena sai na hora (200); a grande vai para a fila
+  // do servidor (202), e a ficha avisa.
+  it('apagar chama o DELETE e diz se a empresa ficou na fila do servidor', async () => {
+    CompanyAPI.delete.mockResolvedValue({ status: 200 });
+    expect(await real().apagarEmpresa(9)).toEqual({ naFila: false });
     expect(CompanyAPI.delete).toHaveBeenCalledWith(9);
-    expect(foiApagada(9)).toBe(true);
+    CompanyAPI.delete.mockResolvedValue({ status: 202 });
+    expect(await real().apagarEmpresa(9)).toEqual({ naFila: true });
+  });
+
+  it('apagar empresa que não existe mais dá NAO_ACHEI', async () => {
+    CompanyAPI.delete.mockRejectedValue(
+      Object.assign(new Error('x'), { response: { status: 404 } })
+    );
+    await expect(real().apagarEmpresa(9)).rejects.toMatchObject({
+      name: 'NAO_ACHEI',
+    });
   });
 });
 

@@ -4,7 +4,6 @@ import { useAlert } from 'dashboard/composables';
 import CompanyAPI from 'dashboard/api/companies';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import FichaDaEmpresaPage from '../../pages/FichaDaEmpresaPage.vue';
-import { esquecerApagadas, foiApagada } from '../../fonte/empresasApagadas';
 
 // #3078 — a ficha da empresa com tudo o que a ficha antiga de Empresas fazia,
 // fora da demonstração: cada ação escreve pelo endpoint de empresas que a
@@ -15,7 +14,6 @@ const pode = vi.hoisted(() => ({
   apagar: true,
   lembrete: true,
   editar: true,
-  midias: true,
 }));
 const conta = vi.hoisted(() => ({ flags: [] }));
 
@@ -52,7 +50,6 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
     podeExportar: { value: false },
     podeApagar: valor('apagar'),
     podeCriarLembrete: valor('lembrete'),
-    podeVerMidias: valor('midias'),
   }),
 }));
 vi.mock(
@@ -181,7 +178,6 @@ const confirmar = async (w, pergunta) => {
 
 beforeEach(() => {
   Object.assign(pode, { apagar: true, lembrete: true, editar: true });
-  pode.midias = true;
   conta.flags = ['companies', MIDIAS];
   servidorResponde();
 });
@@ -190,7 +186,6 @@ afterEach(() => {
   aberta?.unmount();
   aberta = null;
   vi.resetAllMocks();
-  esquecerApagadas();
 });
 
 describe('cabeçalho e informações', () => {
@@ -233,24 +228,39 @@ describe('cabeçalho e informações', () => {
 
 describe('apagar a empresa', () => {
   it('pergunta, diz o que acontece com as pessoas e volta para a aba Empresas', async () => {
-    CompanyAPI.delete.mockResolvedValue({});
+    CompanyAPI.delete.mockResolvedValue({ status: 200 });
     const w = await abrirEmpresa();
     await escolherNoMais(w, 'apagar');
     const pergunta = w.get('[data-carteira="confirmar-apagar-empresa"]');
     expect(pergunta.text()).toContain('Apagar Padaria Bom Dia?');
+    // A perda primeiro, em frases curtas; sem a frase óbvia de que sai da lista.
     expect(pergunta.text()).toContain(
-      'A 1 pessoa desta empresa continua na lista, sem empresa, com as conversas.'
+      'Os lembretes e os arquivos desta empresa são apagados. 1 pessoa continua na sua lista, com as conversas, mas sem empresa. Isto não volta.'
     );
-    expect(pergunta.text()).toContain('Isto não volta.');
+    expect(pergunta.text()).not.toContain('sai da sua lista');
     await confirmar(w, 'confirmar-apagar-empresa');
     expect(CompanyAPI.delete).toHaveBeenCalledWith(9);
-    expect(foiApagada(9)).toBe(true);
     expect(useAlert).toHaveBeenCalledWith('Padaria Bom Dia foi apagada.');
     expect(contexto.empurrar).toHaveBeenCalledWith({
       name: 'relationships_home',
       params: undefined,
       query: { aba: 'empresas' },
     });
+  });
+
+  // #3079 — a empresa com muitas pessoas o servidor apaga em alguns minutos
+  // (202): o aviso diz isso, sem fingir que ela já saiu.
+  it('empresa que o servidor põe na fila: avisa que sai da lista em alguns minutos', async () => {
+    CompanyAPI.delete.mockResolvedValue({ status: 202 });
+    const w = await abrirEmpresa();
+    await escolherNoMais(w, 'apagar');
+    await confirmar(w, 'confirmar-apagar-empresa');
+    expect(useAlert).toHaveBeenCalledWith(
+      'Padaria Bom Dia tem muitas pessoas e sai da lista em alguns minutos.'
+    );
+    expect(contexto.empurrar).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { aba: 'empresas' } })
+    );
   });
 
   it('sem poder apagar, o cabeçalho só tem "Alterar informações", como botão', async () => {
@@ -323,11 +333,18 @@ describe('pôr e tirar pessoa', () => {
       contact_id: 8,
     });
     expect(w.find(marca('dialogo-por-pessoa')).exists()).toBe(false);
-    // Quem veio de outra empresa não volta para lá com um clique: sem "Desfazer".
+    // "Desfazer" devolve quem veio de outra empresa para lá.
     expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
       'Bruno Dornelaz saiu de Farmácia Central e entrou em Padaria Bom Dia.'
     );
-    expect(w.find('[data-carteira="desfazer"]').exists()).toBe(false);
+    await w.get('[data-carteira="desfazer"]').trigger('click');
+    await flushPromises();
+    expect(CompanyAPI.createContact).toHaveBeenLastCalledWith(2, {
+      contact_id: 8,
+    });
+    expect(w.get('[data-carteira="aviso-vivo"]').text()).toContain(
+      'Pronto. Bruno Dornelaz voltou para Farmácia Central.'
+    );
   });
 
   it('se o servidor recusa, o diálogo fica aberto e diz por quê', async () => {
@@ -393,10 +410,12 @@ describe('notas, histórico, mídias e lembrete', () => {
     expect(CompanyAPI.listMedia).not.toHaveBeenCalled();
   });
 
-  it('quem não chega na tela de mídias não tem "Ver todas"', async () => {
-    pode.midias = false;
+  // #3078 (revisão) — quem lê a ficha lê a empresa no servidor, e a tela de
+  // mídias pede o mesmo: quem só pode ver também tem "Ver todas".
+  it('quem só pode ver também tem "Ver todas"', async () => {
+    Object.assign(pode, { editar: false, apagar: false, lembrete: false });
     const w = await abrirEmpresa();
-    expect(w.find(marca('ver-todas-as-midias')).exists()).toBe(false);
+    expect(w.find(marca('ver-todas-as-midias')).exists()).toBe(true);
   });
 
   it('"Lembrete" abre a gaveta do calendário já com a empresa', async () => {

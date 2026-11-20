@@ -417,14 +417,32 @@ RSpec.describe 'Companies API', type: :request do
       let(:admin) { create(:user, account: account, role: :administrator) }
       let(:company) { create(:company, account: account) }
 
-      it 'enqueues company deletion' do
+      it 'deletes a small company right away and clears its contacts' do
+        contact = create(:contact, account: account, company: company)
+
+        expect do
+          delete "/api/v1/accounts/#{account.id}/companies/#{company.id}",
+                 headers: admin.create_new_auth_token,
+                 as: :json
+        end.not_to have_enqueued_job(Companies::DeleteJob)
+
+        expect(response).to have_http_status(:ok)
+        expect(Company.exists?(company.id)).to be(false)
+        expect(contact.reload.company_id).to be_nil
+      end
+
+      it 'enqueues deletion of a company with more contacts than one batch and answers accepted' do
+        stub_const('Companies::DeleteJob::BATCH_SIZE', 1)
+        create_list(:contact, 2, account: account, company: company)
+
         expect do
           delete "/api/v1/accounts/#{account.id}/companies/#{company.id}",
                  headers: admin.create_new_auth_token,
                  as: :json
         end.to have_enqueued_job(Companies::DeleteJob).with(company_id: company.id)
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:accepted)
+        expect(Company.exists?(company.id)).to be(true)
       end
     end
 

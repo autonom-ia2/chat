@@ -6,7 +6,14 @@
 // cliente tem ao menos um card ganho. Os textos são inventados e neutros.
 // As escritas ficam na memória deste módulo para a tela refletir o que foi feito,
 // e devolvem uma cópia nova: nada que chega é alterado.
-import { empresaPorId, empresas, pessoaPorId, pessoas } from './base';
+import {
+  apagarEmpresaDaDemo,
+  empresaPorId,
+  empresas,
+  esquecerEmpresasApagadas,
+  pessoaPorId,
+  pessoas,
+} from './base';
 import { sorteioFixo } from './sorteioFixo';
 import { DIA_EM_MS } from '../fonte/grupos';
 import { normalizado, semAcento } from '../fonte/texto';
@@ -101,9 +108,8 @@ const memoria = {
   // id de quem ficou -> ids de quem foi absorvido.
   juntadas: new Map(),
   // #3078 — a empresa de cada pessoa depois de pôr ou tirar (null: sem
-  // empresa), e as empresas apagadas.
+  // empresa). As empresas apagadas ficam em demo/base.js, que a lista lê.
   vinculos: new Map(),
-  empresasApagadas: new Set(),
 };
 
 export const esquecerEscritas = () => {
@@ -120,7 +126,7 @@ export const esquecerEscritas = () => {
   memoria.apagadas.clear();
   memoria.juntadas.clear();
   memoria.vinculos.clear();
-  memoria.empresasApagadas.clear();
+  esquecerEmpresasApagadas();
 };
 
 // Quem foi absorvido por esta pessoa num "Juntar", e quem os absorvidos já tinham absorvido.
@@ -539,7 +545,7 @@ const pessoasDaEmpresaBase = id =>
     .filter(item => empresaDaPessoa(item) === id);
 
 export const empresa = id => {
-  const base = memoria.empresasApagadas.has(id) ? null : empresaPorId(id);
+  const base = empresaPorId(id);
   if (!base) return null;
   const gente = pessoasDaEmpresaBase(id).map(item => pessoaCompleta(item));
   return copia({
@@ -586,9 +592,11 @@ export const salvarEmpresa = (
   return empresa(id);
 };
 
+// Na demonstração a empresa sai na hora, como a pequena no servidor.
 export const apagarEmpresa = id => {
   exigirEmpresa(id);
-  memoria.empresasApagadas.add(id);
+  apagarEmpresaDaDemo(id);
+  return { naFila: false };
 };
 
 export const pessoasDaEmpresa = id =>

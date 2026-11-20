@@ -165,6 +165,15 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
       )
     end
 
+    it 'numa conta grande, a gaveta traz só as primeiras cidades das empresas, em ordem de nome' do
+      stub_const('Enterprise::Relacionamentos::OpcoesDeFiltro::LIMITE_DE_CIDADES', 2)
+      %w[Santos Campinas Americana].each { |cidade| empresa("Padaria #{cidade}", additional_attributes: { city: cidade }) }
+
+      ler('opcoes_de_filtro')
+
+      expect(response.parsed_body['cidades_das_empresas'].pluck('value')).to eq(%w[Americana Campinas])
+    end
+
     it 'sem Empresas ligado na conta, o resumo e a gaveta vêm sem empresa nenhuma' do
       account.disable_features!('companies')
 

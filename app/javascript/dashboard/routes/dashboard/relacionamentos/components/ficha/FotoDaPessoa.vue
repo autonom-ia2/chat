@@ -91,7 +91,13 @@ const manter = () => {
 </script>
 
 <template>
-  <div :data-relacionamentos="marca" class="flex items-start min-w-0 gap-4">
+  <!-- #3078 — o aviso e o erro da foto vão embaixo, da borda esquerda da
+       gaveta (no celular os botões empilham e o aviso ao lado deles ficava
+       solto, recuado). -->
+  <div
+    :data-relacionamentos="marca"
+    class="flex flex-wrap items-start min-w-0 gap-x-4 gap-y-2"
+  >
     <Avatar
       :name="nome"
       :src="naTela"
@@ -133,22 +139,22 @@ const manter = () => {
           @click="manter"
         />
       </div>
-      <p
-        v-if="aviso"
-        data-relacionamentos="aviso-da-foto"
-        class="m-0 text-sm text-n-slate-11"
-      >
-        {{ aviso }}
-      </p>
-      <p
-        v-if="erro"
-        role="alert"
-        data-relacionamentos="erro-da-foto"
-        class="m-0 text-sm text-n-ruby-11"
-      >
-        {{ erro }}
-      </p>
     </div>
+    <p
+      v-if="aviso"
+      data-relacionamentos="aviso-da-foto"
+      class="m-0 text-sm basis-full text-n-slate-11"
+    >
+      {{ aviso }}
+    </p>
+    <p
+      v-if="erro"
+      role="alert"
+      data-relacionamentos="erro-da-foto"
+      class="m-0 text-sm basis-full text-n-ruby-11"
+    >
+      {{ erro }}
+    </p>
     <input
       ref="arquivo"
       type="file"

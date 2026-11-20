@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { GRAVOU_EM_PARTE } from '../../fonte/gravarPessoa';
@@ -13,9 +13,11 @@ import GavetaDaEmpresa from '../ficha/GavetaDaEmpresa.vue';
 // emite `criada` com a empresa (a página abre a ficha dela, o próximo passo
 // de quem acabou de cadastrar).
 // Se a empresa ficou gravada e só a foto (ou um campo) falhou, a gaveta fica
-// aberta e guarda a `retomada`: o próximo "Salvar" altera a empresa que já foi
-// criada, sem criar outra. A frase que o servidor manda (site ou CNPJ já
-// usados por outra empresa) vira o aviso.
+// aberta e guarda a `retomada` até completar: o próximo "Criar empresa" altera
+// a empresa que já foi criada, sem criar outra. Fechar e abrir de novo não
+// esquece: a gaveta volta com o nome dela e diz "Já criada: …". A frase que o
+// servidor manda (site já usado por outra empresa; o CNPJ não é único) vira o
+// aviso.
 const props = defineProps({
   acoes: { type: Object, required: true },
 });
@@ -30,9 +32,19 @@ const aberta = ref(false);
 const salvando = ref(false);
 const retomada = ref(null);
 const VAZIA = Object.freeze({});
+const jaCriada = computed(() => retomada.value?.empresa ?? null);
+const empresaDaGaveta = computed(() =>
+  jaCriada.value ? { name: jaCriada.value.name } : VAZIA
+);
+const aviso = computed(() =>
+  jaCriada.value
+    ? t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.JA_CRIADA', {
+        nome: jaCriada.value.name,
+      })
+    : ''
+);
 
 const abrir = () => {
-  retomada.value = null;
   aberta.value = true;
 };
 
@@ -44,7 +56,7 @@ const fraseDoServidor = falha => {
 const aoFalhar = falha => {
   if (falha?.name === GRAVOU_EM_PARTE) {
     retomada.value = falha.retomada;
-    useAlert(t('RELACIONAMENTOS_FICHA.GAVETA.SALVOU_EM_PARTE'));
+    useAlert(t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.EM_PARTE'));
     return;
   }
   useAlert(
@@ -77,7 +89,8 @@ defineExpose({ abrir });
   <GavetaDaEmpresa
     marca="gaveta-nova-empresa"
     :aberta="aberta"
-    :empresa="VAZIA"
+    :empresa="empresaDaGaveta"
+    :aviso="aviso"
     :salvando="salvando"
     :titulo="t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.TITULO')"
     :rotulo-salvar="t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.SALVAR')"

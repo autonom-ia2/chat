@@ -1366,15 +1366,31 @@ describe('SecaoPessoasDaEmpresa: quem não quer mensagens', () => {
     expect(email.html()).toContain('ana<wbr>@padaria.com.br');
   });
 
-  it('sem e-mail, mostra o telefone inteiro', () => {
+  it('sem e-mail, mostra o telefone inteiro, como a lista mostra', () => {
     const w = mount(SecaoPessoasDaEmpresa, {
       props: {
         pessoas: [pessoa({ email: '', phone_number: '+5511999990000' })],
       },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
-    expect(email.text()).toBe('+5511999990000');
+    expect(email.text()).toBe('+55 11 99999-0000');
     expect(email.find('wbr').exists()).toBe(false);
+  });
+
+  // #3078 (revisão) — no celular só o ícone não diz o que faz: "Tirar" escrito
+  // ao lado; a partir do md, só o ícone (o nome vai no rótulo).
+  it('o botão de tirar diz "Tirar" no celular e tem alvo de 44 px', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa()], podeEditar: true },
+    });
+    const tirar = w.get('[data-relacionamentos="tirar-pessoa"]');
+    expect(tirar.get('span.md\\:hidden').text()).toBe(
+      'RELACIONAMENTOS_FICHA.EMPRESA.TIRAR.CURTO'
+    );
+    expect(tirar.classes()).toEqual(
+      expect.arrayContaining(['h-11', 'md:w-11', 'shrink-0'])
+    );
+    expect(tirar.attributes('aria-label')).toContain('Ana');
   });
 
   it('o botão de conversar tem alvo de 44 px e não encolhe', () => {

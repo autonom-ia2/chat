@@ -438,7 +438,23 @@ const montarBase = agora => {
 
 export const pessoas = (agora = Date.now()) => montarBase(agora).pessoas;
 
-export const empresas = (agora = Date.now()) => montarBase(agora).empresas;
+// #3078 — as empresas apagadas na demonstração (pela ficha ou pela lista). Na
+// conta de verdade quem tira a empresa é o servidor; aqui ela só deixa de
+// aparecer até a página recarregar.
+let empresasApagadas = new Set();
+
+export const apagarEmpresaDaDemo = id => {
+  empresasApagadas = new Set([...empresasApagadas, id]);
+};
+
+export const esquecerEmpresasApagadas = () => {
+  empresasApagadas = new Set();
+};
+
+export const empresas = (agora = Date.now()) =>
+  montarBase(agora).empresas.filter(
+    empresa => !empresasApagadas.has(empresa.id)
+  );
 
 export const pessoaPorId = (id, agora = Date.now()) =>
   pessoas(agora).find(pessoa => pessoa.id === id) ?? null;

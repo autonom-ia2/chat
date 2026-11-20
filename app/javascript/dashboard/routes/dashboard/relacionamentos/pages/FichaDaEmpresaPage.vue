@@ -103,10 +103,9 @@ const comMidias = computed(
     (isCloudFeatureEnabled(FEATURE_FLAGS.COMPANIES) &&
       isCloudFeatureEnabled(FEATURE_FLAGS.RELATIONSHIPS_COMPANY_MEDIA))
 );
-// Na demonstração a tela de mídias não teria o que mostrar.
-const podeVerTodasAsMidias = computed(
-  () => !fonte.usaDemo && permissoes.podeVerMidias.value
-);
+// Na demonstração a tela de mídias não teria o que mostrar. Fora dela, quem vê
+// a ficha chega na tela de mídias (a mesma regra de leitura no servidor).
+const podeVerTodasAsMidias = !fonte.usaDemo;
 const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id, {
   comMidias: () => comMidias.value,
@@ -192,20 +191,19 @@ const alterar = () => {
   gavetaAberta.value = true;
 };
 
-// O que o DELETE companies/:id faz de verdade (Companies::DeleteJob): as
-// pessoas saem da empresa e continuam na conta, com as conversas; os
-// lembretes e documentos da empresa saem junto; os seguros ficam sem ela.
+// O que o DELETE companies/:id faz de verdade (Companies::DeleteJob), a perda
+// primeiro: os lembretes e arquivos da empresa são apagados; as pessoas saem
+// da empresa e continuam na conta, com as conversas; os seguros ficam sem ela.
 const avisoDeApagar = () => {
   const pessoas = ficha.empresa.value?.contacts_count ?? 0;
   return [
-    fe('APAGAR.AVISO', { nome: nome.value }),
+    fe('APAGAR.LEMBRETES'),
     pessoas > 0 &&
       t(
         'RELACIONAMENTOS_FICHA.EMPRESA.APAGAR.PESSOAS',
         { count: pessoas },
         pessoas
       ),
-    fe('APAGAR.LEMBRETES'),
     comSeguros.value && fe('APAGAR.SEGUROS'),
     fe('APAGAR.NAO_VOLTA'),
   ]
@@ -214,6 +212,8 @@ const avisoDeApagar = () => {
 };
 
 // Depois de apagar não há ficha: volta para a aba Empresas, e o aviso vai junto.
+// A empresa com muitas pessoas o servidor apaga em alguns minutos (#3079): o
+// aviso diz isso, e a lista a mostra até lá.
 const perguntarApagar = () => {
   desfazer.limpar();
   perguntar({
@@ -225,8 +225,11 @@ const perguntarApagar = () => {
     erro: fe('APAGAR.ERRO', { nome: nome.value }),
     agir: async () => {
       const qual = nome.value;
-      if (!(await ficha.apagar())) return false;
-      useAlert(fe('APAGAR.APAGADA', { nome: qual }));
+      const apagada = await ficha.apagar();
+      if (!apagada) return false;
+      useAlert(
+        fe(apagada.naFila ? 'APAGAR.NA_FILA' : 'APAGAR.APAGADA', { nome: qual })
+      );
       acoes.voltarParaLista(ABAS.EMPRESAS);
       return true;
     },
@@ -239,8 +242,8 @@ const abrirPor = () => {
   dialogoPorPessoa.value?.abrir();
 };
 
-// Quem estava em outra empresa sai de lá: "Desfazer" não a devolve para a
-// outra, então só existe para quem não estava em nenhuma.
+// "Desfazer" devolve a pessoa para onde estava: sem empresa (tira desta) ou
+// para a empresa de antes (põe de volta lá).
 const porPessoa = async pessoa => {
   alertaDoPor.value = '';
   if (!(await ficha.porPessoa(pessoa.id))) {
@@ -250,7 +253,17 @@ const porPessoa = async pessoa => {
   dialogoPorPessoa.value?.fechar();
   const valores = { nome: pessoa.name, empresa: nome.value };
   if (pessoa.empresa) {
-    desfazer.mostrar(fe('POR.MUDOU', { ...valores, de: pessoa.empresa.nome }));
+    const de = pessoa.empresa.nome;
+    desfazer.mostrar(fe('POR.MUDOU', { ...valores, de }), async () => {
+      const certo = await ficha.devolverPessoa(pessoa.id, pessoa.empresa.id);
+      return {
+        certo,
+        frase: fe(certo ? 'POR.MUDOU_DESFEITO' : 'POR.ERRO', {
+          ...valores,
+          de,
+        }),
+      };
+    });
     return;
   }
   desfazer.mostrar(fe('POR.ENTROU', valores), async () => {

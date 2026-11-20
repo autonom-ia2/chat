@@ -44,7 +44,18 @@ export const emFatias = async ({
     try {
       resposta = await mandar(fatia);
     } catch (erro) {
-      return { ...antes, parou: true, erro };
+      // #3078 — quem manda uma por uma (apagarEmpresas.js) diz, na falha, o que
+      // a fatia já tinha feito (`erro.parcial`): isso conta, e só o resto falta.
+      const parcial = erro?.parcial;
+      if (!parcial) return { ...antes, parou: true, erro };
+      return {
+        ...antes,
+        feitas: antes.feitas + parcial.feitas,
+        deFora: [...antes.deFora, ...parcial.deFora],
+        tentadas: antes.tentadas + parcial.tentadas,
+        parou: true,
+        erro,
+      };
     }
     const tentadas = antes.tentadas + fatia.length;
     aoAndar({ feitas: tentadas, total });

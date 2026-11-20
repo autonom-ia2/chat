@@ -13,7 +13,7 @@
         "CLIENTES": "Clientes",
         "CIDADE": "Cidade",
         "SOBRE": "O que a empresa faz",
-        "DESDE": "Cadastrada em",
+        "DESDE": "Chegou em",
         "ULTIMA_CONVERSA": "Última conversa"
       },
       "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
@@ -40,9 +40,9 @@
         "VAZIO": "Ninguém desta empresa tem nota ainda."
       },
       "MIDIAS": {
-        "TITULO": "Mídias",
+        "TITULO": "Arquivos",
         "VER_TODAS": "Ver todas ({total})",
-        "VAZIO": "Nenhuma foto, documento, áudio ou vídeo foi trocado com esta empresa ainda."
+        "VAZIO": "Nada foi trocado nas conversas com esta empresa ainda."
       },
       "POR": {
         "BOTAO": "Pôr pessoa",
@@ -64,10 +64,12 @@
         "ERRO": "Não consegui pôr a pessoa na empresa. Tente de novo.",
         "ENTROU": "{nome} entrou em {empresa}.",
         "MUDOU": "{nome} saiu de {de} e entrou em {empresa}.",
-        "DESFEITO": "Pronto. {nome} saiu de {empresa} de novo."
+        "DESFEITO": "Pronto. {nome} saiu de {empresa} de novo.",
+        "MUDOU_DESFEITO": "Pronto. {nome} voltou para {de}."
       },
       "TIRAR": {
         "BOTAO": "Tirar da empresa",
+        "CURTO": "Tirar",
         "ROTULO": "Tirar {nome} da empresa",
         "SAIU": "{nome} saiu de {empresa}. A pessoa continua na sua lista.",
         "VOLTOU": "Pronto. {nome} voltou para {empresa}.",
@@ -75,14 +77,14 @@
       },
       "APAGAR": {
         "TITULO": "Apagar {nome}?",
-        "AVISO": "A empresa {nome} sai da sua lista.",
-        "PESSOAS": "A {count} pessoa desta empresa continua na lista, sem empresa, com as conversas. | As {count} pessoas desta empresa continuam na lista, sem empresa, com as conversas.",
-        "LEMBRETES": "Os lembretes e os documentos guardados na empresa saem junto.",
+        "PESSOAS": "{count} pessoa continua na sua lista, com as conversas, mas sem empresa. | As {count} pessoas continuam na sua lista, com as conversas, mas sem empresa.",
+        "LEMBRETES": "Os lembretes e os arquivos desta empresa são apagados.",
         "SEGUROS": "Os seguros desta empresa continuam guardados, mas sem a empresa ligada a eles.",
         "NAO_VOLTA": "Isto não volta.",
         "CONFIRMAR": "Apagar",
         "ERRO": "Não consegui apagar {nome}. Tente de novo.",
-        "APAGADA": "{nome} foi apagada."
+        "APAGADA": "{nome} foi apagada.",
+        "NA_FILA": "{nome} tem muitas pessoas e sai da lista em alguns minutos."
       }
     },
     "VOLTAR": {

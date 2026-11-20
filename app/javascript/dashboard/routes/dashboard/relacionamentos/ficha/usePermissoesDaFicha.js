@@ -6,8 +6,6 @@ import {
   usePermissoesDaLista,
 } from '../lista/usePermissoesDaLista';
 
-export const QUEM_VE_AS_MIDIAS = ['administrator', 'agent'];
-
 // #2895 — quem vê os botões de escrita da ficha. Nenhuma regra nova: são as que
 // a lista já usa (lista/usePermissoesDaLista.js) e o servidor cobra. Esconder é
 // só conforto; quem decide de verdade é o servidor.
@@ -22,9 +20,6 @@ export const QUEM_VE_AS_MIDIAS = ['administrator', 'agent'];
 //    regra do "Apagar" da lista e do ContactPolicy#destroy?);
 //  - Lembrete: a regra do "Novo lembrete" da ficha antiga
 //    (crm/components/lembrete/usePodeCriarLembrete.js).
-// #3078 — "Ver todas" as mídias da empresa: quem chega na tela de mídias (a
-// rota relationships_company_media pede administrador ou agente;
-// QUEM_VE_AS_MIDIAS).
 export const usePermissoesDaFicha = () => {
   const { checkPermissions } = usePolicy();
   const { podeCriarCards, podeExportar, podeAjustarRenovacoes, podeApagar } =
@@ -39,6 +34,5 @@ export const usePermissoesDaFicha = () => {
     podeExportar,
     // #2898 — "Ajustar renovações" e o convite para escolher o funil.
     podeAjustarRenovacoes,
-    podeVerMidias: computed(() => checkPermissions(QUEM_VE_AS_MIDIAS)),
   };
 };

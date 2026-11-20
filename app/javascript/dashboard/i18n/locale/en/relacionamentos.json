@@ -234,13 +234,18 @@
         "TITULO": "New company",
         "SALVAR": "Create company",
         "CRIADA": "{nome} was created.",
-        "ERRO": "I couldn’t create the company. Try again."
+        "ERRO": "I couldn’t create the company. Try again.",
+        "JA_CRIADA": "Already created: {nome}. Tap Create company to finish.",
+        "EM_PARTE": "The company was created, but the photo or a field didn’t go in. Tap Create company again."
       },
       "APAGAR_EMPRESAS": {
         "TITULO": "Delete {count} company? | Delete {count} companies?",
-        "AVISO": "The people in these companies stay on the list, without a company. This can’t be undone.",
+        "AVISO": "The people in these companies stay on your list, with their conversations, but without a company. These companies’ reminders and files are deleted.",
+        "SEGUROS": "These companies’ policies stay saved, but without the company linked to them.",
+        "NAO_VOLTA": "This can’t be undone.",
         "CONFIRMAR": "Delete",
         "APAGADAS": "{count} company deleted. | {count} companies deleted.",
+        "NA_FILA": "{nomes} has many people and leaves the list in a few minutes. | {nomes} have many people and leave the list in a few minutes.",
         "ERRO": "I couldn’t delete. Try again."
       }
     },

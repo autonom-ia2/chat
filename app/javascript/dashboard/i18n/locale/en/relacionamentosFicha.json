@@ -13,7 +13,7 @@
         "CLIENTES": "Customers",
         "CIDADE": "City",
         "SOBRE": "What the company does",
-        "DESDE": "Added on",
+        "DESDE": "Arrived on",
         "ULTIMA_CONVERSA": "Last conversation"
       },
       "CONVERSAR": "This opens a conversation with someone at {nome}.",
@@ -40,9 +40,9 @@
         "VAZIO": "No one in this company has a note yet."
       },
       "MIDIAS": {
-        "TITULO": "Media",
+        "TITULO": "Files",
         "VER_TODAS": "See all ({total})",
-        "VAZIO": "No photo, document, audio or video has been exchanged with this company yet."
+        "VAZIO": "Nothing has been shared in conversations with this company yet."
       },
       "POR": {
         "BOTAO": "Add person",
@@ -64,10 +64,12 @@
         "ERRO": "I couldn’t add the person to the company. Try again.",
         "ENTROU": "{nome} joined {empresa}.",
         "MUDOU": "{nome} left {de} and joined {empresa}.",
-        "DESFEITO": "Done. {nome} left {empresa} again."
+        "DESFEITO": "Done. {nome} left {empresa} again.",
+        "MUDOU_DESFEITO": "Done. {nome} is back at {de}."
       },
       "TIRAR": {
         "BOTAO": "Remove from company",
+        "CURTO": "Remove",
         "ROTULO": "Remove {nome} from the company",
         "SAIU": "{nome} left {empresa}. The person stays on your list.",
         "VOLTOU": "Done. {nome} is back in {empresa}.",
@@ -75,14 +77,14 @@
       },
       "APAGAR": {
         "TITULO": "Delete {nome}?",
-        "AVISO": "The company {nome} leaves your list.",
-        "PESSOAS": "The {count} person in this company stays on the list, without a company, with the conversations. | The {count} people in this company stay on the list, without a company, with the conversations.",
-        "LEMBRETES": "Reminders and documents saved in the company are deleted too.",
+        "PESSOAS": "{count} person stays on your list, with their conversations, but without a company. | The {count} people stay on your list, with their conversations, but without a company.",
+        "LEMBRETES": "This company’s reminders and files are deleted.",
         "SEGUROS": "This company’s policies stay saved, but no longer linked to the company.",
         "NAO_VOLTA": "This can’t be undone.",
         "CONFIRMAR": "Delete",
         "ERRO": "I couldn’t delete {nome}. Try again.",
-        "APAGADA": "{nome} was deleted."
+        "APAGADA": "{nome} was deleted.",
+        "NA_FILA": "{nome} has many people and leaves the list in a few minutes."
       }
     },
     "VOLTAR": {

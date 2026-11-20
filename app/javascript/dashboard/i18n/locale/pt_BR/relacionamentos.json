@@ -234,13 +234,18 @@
         "TITULO": "Nova empresa",
         "SALVAR": "Criar empresa",
         "CRIADA": "{nome} foi criada.",
-        "ERRO": "Não consegui criar a empresa. Tente de novo."
+        "ERRO": "Não consegui criar a empresa. Tente de novo.",
+        "JA_CRIADA": "Já criada: {nome}. Toque em Criar empresa para completar.",
+        "EM_PARTE": "A empresa foi criada, mas a foto ou um campo não entrou. Toque em Criar empresa de novo."
       },
       "APAGAR_EMPRESAS": {
         "TITULO": "Apagar {count} empresa? | Apagar {count} empresas?",
-        "AVISO": "As pessoas dessas empresas continuam na lista, sem empresa. Isto não volta.",
+        "AVISO": "As pessoas dessas empresas continuam na sua lista, com as conversas, mas sem empresa. Os lembretes e os arquivos dessas empresas são apagados.",
+        "SEGUROS": "Os seguros dessas empresas continuam guardados, mas sem a empresa ligada a eles.",
+        "NAO_VOLTA": "Isto não volta.",
         "CONFIRMAR": "Apagar",
         "APAGADAS": "{count} empresa apagada. | {count} empresas apagadas.",
+        "NA_FILA": "{nomes} tem muitas pessoas e sai da lista em alguns minutos. | {nomes} têm muitas pessoas e saem da lista em alguns minutos.",
         "ERRO": "Não consegui apagar. Tente de novo."
       }
     },

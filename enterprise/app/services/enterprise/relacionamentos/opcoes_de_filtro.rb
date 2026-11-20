@@ -2,6 +2,8 @@
 # #3078 — e as cidades das empresas, para o "Mais filtros" da aba Empresas: só as que existem nas empresas da conta.
 module Enterprise::Relacionamentos::OpcoesDeFiltro
   CIDADE_DA_EMPRESA = Arel.sql("companies.additional_attributes->>'city'")
+  # A gaveta mostra uma escolha por cidade; numa conta grande, as primeiras 200 em ordem de nome.
+  LIMITE_DE_CIDADES = 200
 
   def call
     return super unless @account.feature_enabled?('companies')
@@ -19,6 +21,7 @@ module Enterprise::Relacionamentos::OpcoesDeFiltro
   end
 
   def cidades_das_empresas
-    @account.companies.where("#{CIDADE_DA_EMPRESA} <> ''").distinct.pluck(CIDADE_DA_EMPRESA)
+    @account.companies.where("#{CIDADE_DA_EMPRESA} <> ''").distinct
+            .order(CIDADE_DA_EMPRESA).limit(LIMITE_DE_CIDADES).pluck(CIDADE_DA_EMPRESA)
   end
 end

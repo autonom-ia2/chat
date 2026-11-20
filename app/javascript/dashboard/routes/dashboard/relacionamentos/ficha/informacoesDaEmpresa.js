@@ -73,9 +73,9 @@ export const siteParaGravar = texto => {
 
 // O pedido que a fonte grava (fonte/gravarEmpresa.js): `empresa` no formato do
 // servidor e, à parte, a foto e os campos personalizados que saem (`apagar`).
-// Site, CNPJ, cidade e descrição apagados vão como `null`: no banco o site e o
-// CNPJ são únicos por conta quando não são nulos, e texto vazio em duas
-// empresas bateria uma na outra. `inicial` é o formulário de quando a gaveta
+// Site, CNPJ, cidade e descrição apagados vão como `null`: no banco o site é
+// único por conta quando não é nulo (o CNPJ não é), e site vazio em duas
+// empresas bateria um no outro. `inicial` é o formulário de quando a gaveta
 // abriu; `tipos` ({ chave: tipo }) diz quais campos são link.
 export const pedidoDaEmpresa = (
   formulario,

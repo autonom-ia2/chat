@@ -19,15 +19,20 @@ import {
 // trabalho para depois da fatia em andamento.
 // #3078 — o mesmo diálogo apaga empresas marcadas (`deEmpresas`): as frases
 // dizem empresa e o que acontece com as pessoas dela, e quem apaga é
-// `acoes.apagarEmpresas`. `pessoas` são então as empresas marcadas.
+// `acoes.apagarEmpresas`. `pessoas` são então as empresas marcadas. #3079 — a
+// empresa com muitas pessoas o servidor apaga em alguns minutos (`naFila`): o
+// aviso do fim diz quais, e a lista as mostra até lá.
 const props = defineProps({
   pessoas: { type: Array, required: true },
   acoes: { type: Object, required: true },
   deEmpresas: { type: Boolean, default: false },
+  // Conta com a carteira de seguros: o aviso de apagar empresas diz que os
+  // seguros delas ficam guardados, sem a empresa (como a ficha da empresa).
+  comSeguros: { type: Boolean, default: false },
 });
 const emit = defineEmits(['concluido']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const dialogo = useTemplateRef('dialogo');
 const raiz = computed(
   () =>
@@ -36,6 +41,13 @@ const raiz = computed(
 const ta = (chave, valores, quantas) =>
   t(`${raiz.value}.${chave}`, valores, quantas);
 const apagadas = count => ta('APAGADAS', { count }, count);
+const aviso = computed(() =>
+  props.deEmpresas
+    ? [ta('AVISO'), props.comSeguros && ta('SEGUROS'), ta('NAO_VOLTA')]
+        .filter(Boolean)
+        .join(' ')
+    : ta('AVISO')
+);
 const {
   enviando,
   andamento,
@@ -51,19 +63,32 @@ const {
   resumo: resumoDoQueFoiFeito(t, apagadas),
 });
 
+let naFila = [];
+const apagarEmpresas = async lote => {
+  const feito = await props.acoes.apagarEmpresas(lote);
+  naFila = [...naFila, ...(feito.naFila ?? [])];
+  return feito;
+};
+const fraseDaFila = () => {
+  if (!naFila.length) return '';
+  const nomes = new Intl.ListFormat(locale.value.replace('_', '-'), {
+    type: 'conjunction',
+  }).format(naFila.map(empresa => empresa.nome));
+  return ta('NA_FILA', { nomes }, naFila.length);
+};
+
 const abrir = () => {
+  naFila = [];
   recomecar();
   dialogo.value?.open();
 };
 
 const apagar = async () => {
   const feito = await enviarOQueFalta(props.pessoas, lote =>
-    props.deEmpresas
-      ? props.acoes.apagarEmpresas(lote)
-      : props.acoes.apagar(lote)
+    props.deEmpresas ? apagarEmpresas(lote) : props.acoes.apagar(lote)
   );
   if (!feito || feito.erro || feito.deFora.length) return;
-  useAlert(apagadas(feito.feitas));
+  useAlert([apagadas(feito.feitas), fraseDaFila()].filter(Boolean).join(' '));
   dialogo.value?.close();
 };
 
@@ -89,7 +114,7 @@ defineExpose({ abrir });
       <TituloDoDialogo
         v-if="!resultado"
         :titulo="ta('TITULO', { count: pessoas.length }, pessoas.length)"
-        :aviso="ta('AVISO')"
+        :aviso="aviso"
       />
       <ResultadoDaAcao
         :andamento="andamento"

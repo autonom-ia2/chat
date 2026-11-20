@@ -91,7 +91,6 @@ vi.mock('../../ficha/usePermissoesDaFicha', async () => {
       podeAjustarRenovacoes: ref(false),
       podeApagar: ref(false),
       podeCriarLembrete: ref(false),
-      podeVerMidias: ref(false),
     }),
   };
 });

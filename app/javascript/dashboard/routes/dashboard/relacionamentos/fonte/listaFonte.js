@@ -14,7 +14,6 @@ import {
   esperarParaSempre,
 } from './modoDemo';
 import { doServidor } from './doServidor';
-import { semAsApagadas } from './empresasApagadas';
 import {
   FILTROS_DAS_EMPRESAS,
   empresaPassaNosFiltros,
@@ -291,12 +290,11 @@ const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
       const { pagina = PRIMEIRA_PAGINA } = pedido;
       const achados = await achar(pedido);
       const inicio = (pagina - PRIMEIRA_PAGINA) * POR_PAGINA;
-      const resposta = {
+      return {
         itens: achados.slice(inicio, inicio + POR_PAGINA),
         total: achados.length,
         temMais: inicio + POR_PAGINA < achados.length,
       };
-      return pedido.aba === ABAS.EMPRESAS ? semAsApagadas(resposta) : resposta;
     },
     // Todos os que a consulta acha, sem paginar ("Marcar todas as 42").
     async listarTodos(pedido = {}) {
@@ -385,13 +383,7 @@ const fonteReal = () => ({
         ? RelacionamentosAPI.empresas(params)
         : RelacionamentosAPI.pessoas(params)
     );
-    const pagina = {
-      itens: data.itens,
-      total: data.total,
-      temMais: data.tem_mais,
-    };
-    // #3078 — a empresa apagada daqui sai da lista já (empresasApagadas.js).
-    return pedido.aba === ABAS.EMPRESAS ? semAsApagadas(pagina) : pagina;
+    return { itens: data.itens, total: data.total, temMais: data.tem_mais };
   },
   // "Marcar todas as N" só existe em Pessoas. De cada uma vem só o que as ações
   // em grupo leem: id, nome, telefone, bloqueio e se pediu para não receber.

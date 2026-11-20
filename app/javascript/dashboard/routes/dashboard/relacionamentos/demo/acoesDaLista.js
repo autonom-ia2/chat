@@ -48,3 +48,7 @@ export const EMPRESAS_DA_BUSCA = [
   { id: 3, nome: 'Fontanela Transportes' },
   { id: 4, nome: 'Quintanilha Móveis' },
 ];
+
+// #3078 — "Apagar" das empresas marcadas: a lista da demonstração deixa de
+// mostrá-las (demo/base.js), como o servidor faz com a empresa pequena.
+export { apagarEmpresaDaDemo } from './base';

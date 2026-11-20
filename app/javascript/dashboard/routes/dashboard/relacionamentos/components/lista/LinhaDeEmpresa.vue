@@ -12,7 +12,8 @@ import { falouHa } from '../../lista/tempoRelativo';
 // botão do nome estica a área de clique pela linha toda e abre a ficha.
 // #3078 — com a foto da empresa (quando tem) e a cidade na segunda linha,
 // como a lista antiga de Empresas. A caixa de marcar (`podeMarcar`, a página
-// liga para quem pode apagar empresa) fica por cima e não abre a ficha.
+// liga para quem pode apagar empresa) fica por cima e não abre a ficha. No
+// celular ela ocupa os 44 px do toque sem somar espaço em volta (-mx-2).
 const props = defineProps({
   empresa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
@@ -52,7 +53,7 @@ const partes = computed(() =>
   >
     <label
       v-if="podeMarcar"
-      class="relative z-10 flex items-center justify-center cursor-pointer size-11 shrink-0"
+      class="relative z-10 flex items-center justify-center cursor-pointer size-11 shrink-0 max-sm:-mx-2"
     >
       <span class="sr-only">
         {{ t('RELACIONAMENTOS.LISTA.LINHA.MARCAR', { nome: empresa.name }) }}

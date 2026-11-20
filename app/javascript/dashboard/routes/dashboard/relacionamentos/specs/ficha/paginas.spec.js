@@ -65,7 +65,6 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
     podeExportar: { value: false },
     podeApagar: { value: true },
     podeCriarLembrete: { value: true },
-    podeVerMidias: { value: true },
   }),
 }));
 // #3071 — as caixas da conta (para "Ligar") vêm do store; aqui não há voz.

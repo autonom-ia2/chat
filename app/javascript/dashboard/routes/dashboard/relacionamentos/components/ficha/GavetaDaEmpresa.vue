@@ -28,6 +28,8 @@ const props = defineProps({
   marca: { type: String, default: 'gaveta-empresa' },
   definicoes: { type: Array, default: () => [] },
   escolhidos: { type: Array, default: () => [] },
+  // #3078 — uma frase no topo da gaveta ("Já criada: …" da Nova empresa).
+  aviso: { type: String, default: '' },
 });
 const emit = defineEmits(['fechar', 'salvar']);
 
@@ -123,6 +125,14 @@ const salvar = () => {
       novalidate
       @submit.prevent
     >
+      <p
+        v-if="aviso"
+        data-relacionamentos="aviso-da-gaveta"
+        role="status"
+        class="m-0 rounded-xl bg-n-amber-2 px-4 py-3 text-base text-n-amber-11"
+      >
+        {{ aviso }}
+      </p>
       <FotoDaPessoa
         marca="foto-da-empresa"
         :redonda="false"

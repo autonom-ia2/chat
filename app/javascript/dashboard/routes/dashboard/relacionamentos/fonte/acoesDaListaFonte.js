@@ -2,7 +2,6 @@ import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { apagarEmpresas } from './apagarEmpresas';
 import { emFatias } from './emFatias';
-import { lembrarApagada } from './empresasApagadas';
 import { criarEmpresa } from './gravarEmpresa';
 import { alterarPessoa, buscarEmpresas, criarPessoa } from './gravarPessoa';
 import { normalizado } from './texto';
@@ -82,10 +81,11 @@ const fonteDemo = ({ carregarDemo, atraso }) => {
     async apagarEmpresas(lote) {
       const feito = await simular(lote, 'apagadas');
       const faltam = new Set(feito.faltam.map(({ id }) => id));
+      const { apagarEmpresaDaDemo } = await carregarDemo();
       lote.pessoas
         .filter(({ id }) => !faltam.has(id))
-        .forEach(({ id }) => lembrarApagada(id));
-      return feito;
+        .forEach(({ id }) => apagarEmpresaDaDemo(id));
+      return { ...feito, naFila: [] };
     },
     async criarEmpresa({ empresa }) {
       await esperar(atraso);

@@ -263,6 +263,28 @@ describe('empresa', () => {
     expect(quandos).toEqual([...quandos].sort((a, b) => b - a));
   });
 
+  // #3078 — tirar e pôr pessoa mudam a lista de Pessoas e o número da empresa.
+  it('tirar pessoa a tira de Pessoas e do número de pessoas', async () => {
+    const [primeira, ...resto] =
+      await fonte.pessoasDaEmpresa(ID_EMPRESA_COM_GENTE);
+    await fonte.tirarPessoaDaEmpresa(ID_EMPRESA_COM_GENTE, primeira.id);
+    const depois = await fonte.pessoasDaEmpresa(ID_EMPRESA_COM_GENTE);
+    expect(depois.map(item => item.id)).toEqual(resto.map(item => item.id));
+    expect((await fonte.empresa(ID_EMPRESA_COM_GENTE)).contacts_count).toBe(
+      resto.length
+    );
+  });
+
+  it('pôr pessoa a põe em Pessoas, mesmo vinda de outra empresa', async () => {
+    const [achada] = await fonte.buscarPessoasParaEmpresa(
+      ID_EMPRESA_COM_GENTE,
+      'a'
+    );
+    await fonte.porPessoaNaEmpresa(ID_EMPRESA_COM_GENTE, achada.id);
+    const depois = await fonte.pessoasDaEmpresa(ID_EMPRESA_COM_GENTE);
+    expect(depois.map(item => item.id)).toContain(achada.id);
+  });
+
   it('não acha empresa que não existe', async () => {
     expect(await fonte.empresa(ID_QUE_NAO_EXISTE)).toBeNull();
   });

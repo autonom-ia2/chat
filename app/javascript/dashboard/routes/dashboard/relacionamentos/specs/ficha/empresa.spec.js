@@ -9,12 +9,6 @@ import {
 } from '../../ficha/informacoesDaEmpresa';
 import { useFichaDaEmpresa } from '../../ficha/useFichaDaEmpresa';
 import { apagarEmpresas } from '../../fonte/apagarEmpresas';
-import {
-  esquecerApagadas,
-  foiApagada,
-  lembrarApagada,
-  semAsApagadas,
-} from '../../fonte/empresasApagadas';
 import { criarEmpresa } from '../../fonte/gravarEmpresa';
 import { GRAVOU_EM_PARTE } from '../../fonte/gravarPessoa';
 import { empresaPassaNosFiltros } from '../../lista/filtros';
@@ -27,7 +21,8 @@ import {
 } from '../../lista/ordens';
 
 // #3078 — a lógica da Empresa com tudo o que a tela antiga de Empresas fazia:
-// as informações e o pedido da gaveta, o apagar (um job no servidor), as
+// as informações e o pedido da gaveta, o apagar (na hora, ou na fila do
+// servidor quando a empresa tem muitas pessoas, #3079), as
 // ordens e os filtros da aba Empresas e as ações da ficha.
 vi.mock('dashboard/api/companies', () => ({
   default: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
@@ -43,7 +38,6 @@ const erroHttp = status =>
 
 afterEach(() => {
   vi.resetAllMocks();
-  esquecerApagadas();
 });
 
 describe('linhasDaEmpresa', () => {
@@ -219,24 +213,6 @@ describe('formulário e pedido da gaveta da empresa', () => {
   });
 });
 
-describe('empresas apagadas por esta aba', () => {
-  it('a lista deixa de fora a empresa apagada e desconta do total', () => {
-    lembrarApagada(2, AGORA);
-    const pagina = { itens: [{ id: 1 }, { id: 2 }], total: 10, temMais: true };
-    expect(semAsApagadas(pagina, AGORA)).toEqual({
-      itens: [{ id: 1 }],
-      total: 9,
-      temMais: true,
-    });
-  });
-
-  it('passados 5 minutos o servidor já apagou: a lembrança vence', () => {
-    lembrarApagada('2', AGORA);
-    expect(foiApagada(2, AGORA)).toBe(true);
-    expect(foiApagada(2, AGORA + 5 * 60 * 1000)).toBe(false);
-  });
-});
-
 describe('apagarEmpresas (as marcadas na lista)', () => {
   const empresas = [
     { id: 1, name: 'A' },
@@ -247,7 +223,7 @@ describe('apagarEmpresas (as marcadas na lista)', () => {
   it('apaga uma a uma; a que não existe mais fica de fora com o motivo', async () => {
     CompanyAPI.delete.mockImplementation(async id => {
       if (id === 2) throw erroHttp(404);
-      return {};
+      return { status: 200 };
     });
     const aoAndar = vi.fn();
     const feito = await apagarEmpresas({ pessoas: empresas, aoAndar });
@@ -257,25 +233,43 @@ describe('apagarEmpresas (as marcadas na lista)', () => {
       deFora: [{ id: 2, nome: 'B', motivo: 'nao_existe_mais' }],
       faltam: [],
       erro: null,
+      naFila: [],
     });
-    expect(foiApagada(1)).toBe(true);
-    expect(foiApagada(3)).toBe(true);
     expect(aoAndar).toHaveBeenCalledWith({ feitas: 3, total: 3 });
   });
 
-  it('outra falha para ali; tentar de novo não pede de novo a que já saiu', async () => {
+  // #3079 — a empresa com muitas pessoas o servidor põe na fila (202): conta
+  // como apagada e volta em `naFila`, para a tela avisar.
+  it('a que o servidor põe na fila (202) conta como apagada e vem em naFila', async () => {
+    CompanyAPI.delete.mockImplementation(async id => ({
+      status: id === 3 ? 202 : 200,
+    }));
+    const feito = await apagarEmpresas({ pessoas: empresas });
+    expect(feito).toMatchObject({
+      apagadas: 3,
+      faltam: [],
+      erro: null,
+      naFila: [{ id: 3, nome: 'C' }],
+    });
+  });
+
+  // #3078 (revisão) — a falha no meio da fatia não apaga o que já foi feito:
+  // a contagem diz quantas saíram, e só o resto continua marcado.
+  it('outra falha para ali com o que já saiu contado; tentar de novo pede só o resto', async () => {
     CompanyAPI.delete
-      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ status: 202 })
       .mockRejectedValueOnce(erroHttp(500));
     const feito = await apagarEmpresas({ pessoas: empresas });
     expect(feito.erro).toBeTruthy();
-    expect(feito.faltam).toEqual(empresas);
-    CompanyAPI.delete.mockResolvedValue({});
+    expect(feito.apagadas).toBe(1);
+    expect(feito.faltam).toEqual(empresas.slice(1));
+    expect(feito.naFila).toEqual([{ id: 1, nome: 'A' }]);
+    CompanyAPI.delete.mockResolvedValue({ status: 200 });
     const deNovo = await apagarEmpresas({ pessoas: feito.faltam });
     expect(CompanyAPI.delete.mock.calls.map(([id]) => id)).toEqual([
       1, 2, 2, 3,
     ]);
-    expect(deNovo).toMatchObject({ apagadas: 3, faltam: [], erro: null });
+    expect(deNovo).toMatchObject({ apagadas: 2, faltam: [], erro: null });
   });
 });
 
@@ -377,7 +371,7 @@ describe('useFichaDaEmpresa: as ações que vieram da ficha antiga', () => {
     porPessoaNaEmpresa: vi.fn().mockResolvedValue(),
     tirarPessoaDaEmpresa: vi.fn().mockResolvedValue(),
     salvarEmpresa: vi.fn(),
-    apagarEmpresa: vi.fn().mockResolvedValue(),
+    apagarEmpresa: vi.fn().mockResolvedValue({ naFila: false }),
     ...extra,
   });
 
@@ -403,6 +397,50 @@ describe('useFichaDaEmpresa: as ações que vieram da ficha antiga', () => {
     expect(ficha.empresa.value.contacts_count).toBe(2);
     expect(ficha.pessoas.value).toEqual([{ id: 7 }]);
     expect(fonte.notasDaEmpresa).toHaveBeenCalledTimes(2);
+  });
+
+  // #3078 (revisão) — "Desfazer" de quem veio de outra empresa: volta para lá.
+  it('devolver pessoa a põe de volta na empresa de antes e relê esta', async () => {
+    const fonte = fonteDe();
+    const ficha = useFichaDaEmpresa(fonte, ref(1));
+    await ficha.carregar();
+    expect(await ficha.devolverPessoa(7, 12)).toBe(true);
+    expect(fonte.porPessoaNaEmpresa).toHaveBeenCalledWith(12, 7);
+    expect(fonte.pessoasDaEmpresa).toHaveBeenCalledTimes(2);
+  });
+
+  // #3079 — apagar diz se a empresa saiu na hora ou ficou na fila do servidor.
+  it('apagar devolve { naFila } e null quando falha', async () => {
+    const fonte = fonteDe();
+    const ficha = useFichaDaEmpresa(fonte, ref(1));
+    await ficha.carregar();
+    expect(await ficha.apagar()).toEqual({ naFila: false });
+    fonte.apagarEmpresa.mockResolvedValue({ naFila: true });
+    expect(await ficha.apagar()).toEqual({ naFila: true });
+    fonte.apagarEmpresa.mockRejectedValue(erroHttp(500));
+    expect(await ficha.apagar()).toBeNull();
+  });
+
+  // #3078 (revisão) — pôr e logo tirar: a resposta atrasada da primeira
+  // releitura não troca a da segunda.
+  it('releitura atrasada da mesma parte não troca a mais nova', async () => {
+    const fonte = fonteDe();
+    const ficha = useFichaDaEmpresa(fonte, ref(1));
+    await ficha.carregar();
+    let soltarAntiga;
+    fonte.pessoasDaEmpresa
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            soltarAntiga = () => resolve([{ id: 'antiga' }]);
+          })
+      )
+      .mockResolvedValueOnce([{ id: 'nova' }]);
+    const antiga = ficha.relerParte('pessoas');
+    await ficha.relerParte('pessoas');
+    soltarAntiga();
+    await antiga;
+    expect(ficha.pessoas.value).toEqual([{ id: 'nova' }]);
   });
 
   it('tirar pessoa que já saiu continua certo mesmo se a releitura da empresa falhar', async () => {

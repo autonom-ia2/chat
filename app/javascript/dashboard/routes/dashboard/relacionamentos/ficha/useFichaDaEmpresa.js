@@ -81,8 +81,17 @@ export const useFichaDaEmpresa = (
     });
   };
 
-  // Depois de apagar, a página sai da ficha: não há o que guardar.
-  const apagar = () => executar('apagar', () => fonte.apagarEmpresa(id.value));
+  // Depois de apagar, a página sai da ficha: não há o que guardar. Devolve
+  // null se falhou, ou { naFila }: a empresa com muitas pessoas o servidor
+  // apaga em alguns minutos (#3079), e a tela diz isso.
+  const apagar = async () => {
+    let naFila = false;
+    const certo = await executar('apagar', async () => {
+      const resposta = await fonte.apagarEmpresa(id.value);
+      naFila = Boolean(resposta?.naFila);
+    });
+    return certo ? { naFila } : null;
+  };
 
   const releituraDasPessoas = async aindaVale => {
     const [relida, lidas] = await Promise.all([
@@ -97,6 +106,14 @@ export const useFichaDaEmpresa = (
   const porPessoa = pessoaId =>
     executar('porPessoa', async aindaVale => {
       await fonte.porPessoaNaEmpresa(id.value, pessoaId);
+      await releituraDasPessoas(aindaVale);
+    });
+
+  // "Desfazer" de quem veio de outra empresa: a pessoa volta para a empresa
+  // de antes (e sai desta, porque uma pessoa fica numa empresa só).
+  const devolverPessoa = (pessoaId, empresaDeAntesId) =>
+    executar('porPessoa', async aindaVale => {
+      await fonte.porPessoaNaEmpresa(empresaDeAntesId, pessoaId);
       await releituraDasPessoas(aindaVale);
     });
 
@@ -124,6 +141,7 @@ export const useFichaDaEmpresa = (
     salvar,
     apagar,
     porPessoa,
+    devolverPessoa,
     tirarPessoa,
     buscarPessoas: termo => fonte.buscarPessoasParaEmpresa(id.value, termo),
   };

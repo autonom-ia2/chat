@@ -147,7 +147,7 @@ const aoTeclar = evento => {
             :id="idDoTitulo"
             data-view-title
             tabindex="-1"
-            class="m-0 text-2xl font-bold tracking-tight text-n-slate-12"
+            class="m-0 text-lg font-semibold text-n-slate-12"
           >
             {{ t('RELACIONAMENTOS.LISTA.FILTROS.TITULO') }}
           </h2>

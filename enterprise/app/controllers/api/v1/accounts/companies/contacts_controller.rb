@@ -18,7 +18,7 @@ class Api::V1::Accounts::Companies::ContactsController < Api::V1::Accounts::Comp
   end
 
   def search
-    if params[:q].blank?
+    if termo_da_busca.blank?
       return render json: { error: 'Specify search string with parameter q' },
                     status: :unprocessable_entity
     end
@@ -57,8 +57,13 @@ class Api::V1::Accounts::Companies::ContactsController < Api::V1::Accounts::Comp
   def contact_search_scope
     Current.account.contacts
            .where('contacts.company_id IS NULL OR contacts.company_id != ?', @company.id)
-           .where(CONTACT_SEARCH_QUERY, search: "%#{params[:q].strip}%")
+           .where(CONTACT_SEARCH_QUERY, search: "%#{ActiveRecord::Base.sanitize_sql_like(termo_da_busca)}%")
            .order(:name, :id)
+  end
+
+  # #3078 — `q` só vale como texto (q[]=… ou q[a]=… não chega ao LIKE), e % e _ escritos são letras, não curingas.
+  def termo_da_busca
+    @termo_da_busca ||= params[:q].is_a?(String) ? params[:q].strip : ''
   end
 
   def membership_service
