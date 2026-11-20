@@ -1,11 +1,8 @@
 <script setup>
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import Button from 'dashboard/components-next/button/Button.vue';
 import { FALHA_DA_PARTE } from '../../ficha/falhas';
-import CartaoDaSecao from './CartaoDaSecao.vue';
+import CartaoDeInformacoes from './CartaoDeInformacoes.vue';
 import DeOndeVeio from './DeOndeVeio.vue';
-import ListaDeInformacoes from './ListaDeInformacoes.vue';
 import SecaoArquivos from './SecaoArquivos.vue';
 import SecaoCards from './SecaoCards.vue';
 import SecaoConversas from './SecaoConversas.vue';
@@ -58,7 +55,6 @@ const emit = defineEmits([
 const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
 const falhou = parte => props.falhas[parte] === FALHA_DA_PARTE.ERRO;
 
-const { t } = useI18n();
 const caixaDeNotas = ref(null);
 
 // A tela chama depois de guardar a nota com sucesso.
@@ -113,42 +109,14 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       />
     </div>
     <div data-relacionamentos="coluna-lado" class="flex flex-col min-w-0 gap-6">
-      <CartaoDaSecao
-        :titulo="t('RELACIONAMENTOS_FICHA.INFORMACOES.TITULO')"
-        data-relacionamentos="informacoes"
-      >
-        <template v-if="podeEditar" #acao>
-          <Button
-            data-relacionamentos="alterar"
-            slate
-            faded
-            :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ALTERAR')"
-            @click="emit('alterar')"
-          />
-        </template>
-        <p
-          v-if="!podeEditar"
-          data-relacionamentos="so-leitura"
-          class="flex items-start gap-2 p-3 m-0 mb-4 text-sm rounded-xl bg-n-alpha-1 text-n-slate-11"
-        >
-          <span
-            class="mt-0.5 i-lucide-eye size-4 shrink-0 text-n-blue-11"
-            aria-hidden="true"
-          />
-          {{ t('RELACIONAMENTOS_FICHA.INFORMACOES.SO_LEITURA') }}
-        </p>
-        <ListaDeInformacoes :linhas="linhas" :redes="redes" />
-        <Button
-          v-if="podeEditar && podeEscolherCampos"
-          data-relacionamentos="escolher-campos"
-          slate
-          ghost
-          icon="i-lucide-settings-2"
-          class="!h-11 mt-4 -ms-3"
-          :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ESCOLHER_CAMPOS')"
-          @click="emit('escolherCampos')"
-        />
-      </CartaoDaSecao>
+      <CartaoDeInformacoes
+        :linhas="linhas"
+        :redes="redes"
+        :pode-editar="podeEditar"
+        :pode-escolher-campos="podeEscolherCampos"
+        @alterar="emit('alterar')"
+        @escolher-campos="emit('escolherCampos')"
+      />
       <slot name="lado" />
       <DeOndeVeio
         v-if="podeVer('origem')"

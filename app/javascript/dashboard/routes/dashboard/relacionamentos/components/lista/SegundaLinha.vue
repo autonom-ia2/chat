@@ -13,6 +13,9 @@ import { SEPARADOR } from '../comum/ponto';
 //   `corta` ocupa o resto dessa linha, cortada com "…" (a empresa).
 // O "·" só aparece no celular entre duas partes da mesma linha: nunca fica
 // pendurado no fim de uma linha. De `sm` para cima nada muda.
+// #3078 (revisão) — quando a parte seguinte é comum (nem `sozinha` nem
+// `corta`), o "·" vai dentro dela, e a linha quebra antes do "·", não depois
+// (a linha da empresa: "4 pessoas · Campinas · Falou há 2 dias").
 const props = defineProps({
   partes: { type: Array, required: true },
 });
@@ -24,12 +27,26 @@ const itens = computed(() =>
 );
 const separadorNoCelular = indice =>
   !itens.value[indice].sozinha && !itens.value[indice - 1].sozinha;
-const classeDaParte = parte => {
+const separadorJunto = indice =>
+  indice > 0 &&
+  separadorNoCelular(indice) &&
+  !itens.value[indice].sozinha &&
+  !itens.value[indice].corta;
+const separadorSolto = indice => indice > 0 && !separadorJunto(indice);
+const classeDoSeparador = indice =>
+  separadorNoCelular(indice) ? 'whitespace-pre' : 'hidden sm:inline';
+// A parte comum não quebra no celular; com o "·" dentro, guarda os espaços
+// dele (sem `pre` o espaço do começo some).
+const classe = (parte, indice) => {
   if (parte.sozinha) return 'max-sm:basis-full max-sm:truncate';
   if (parte.corta)
     return 'max-sm:min-w-0 max-sm:flex-1 max-sm:basis-0 max-sm:truncate';
-  return 'max-sm:whitespace-nowrap';
+  return separadorJunto(indice)
+    ? 'max-sm:whitespace-pre'
+    : 'max-sm:whitespace-nowrap';
 };
+const texto = (parte, indice) =>
+  separadorJunto(indice) ? `${SEPARADOR}${parte.texto}` : parte.texto;
 </script>
 
 <template>
@@ -38,14 +55,10 @@ const classeDaParte = parte => {
     class="min-w-0 m-0 text-sm text-n-slate-11 max-sm:flex max-sm:flex-wrap sm:break-words"
   >
     <template v-for="(parte, indice) in itens" :key="indice">
-      <span
-        v-if="indice > 0"
-        :class="
-          separadorNoCelular(indice) ? 'whitespace-pre' : 'hidden sm:inline'
-        "
-        >{{ SEPARADOR }}</span
-      >
-      <span :class="classeDaParte(parte)">{{ parte.texto }}</span>
+      <template v-if="separadorSolto(indice)">
+        <span :class="classeDoSeparador(indice)">{{ SEPARADOR }}</span>
+      </template>
+      <span :class="classe(parte, indice)">{{ texto(parte, indice) }}</span>
     </template>
   </p>
 </template>

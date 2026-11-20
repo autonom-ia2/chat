@@ -112,6 +112,14 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     cardsDaEmpresa: vi.fn(),
   },
 }));
+// #3078 — a ficha da empresa lê as notas das pessoas dela pela rota de
+// empresas: aqui não há nenhuma.
+vi.mock('dashboard/api/companies', () => ({
+  default: {
+    listNotes: async () => ({ data: { payload: [] } }),
+    listMedia: async () => ({ data: { payload: [], meta: { total: 0 } } }),
+  },
+}));
 vi.mock('dashboard/api/relacionamentosSeguros', () => ({
   default: {
     daPessoa: vi.fn(),

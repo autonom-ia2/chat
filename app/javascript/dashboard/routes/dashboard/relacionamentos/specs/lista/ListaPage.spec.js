@@ -3,6 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
 import { DEMO_FORA_DO_SEGMENTO, usarDemo } from '../../fonte/modoDemo';
+import { esquecerEmpresasApagadas } from '../../demo/base';
 import MarcarTodas from '../../components/lista/MarcarTodas.vue';
 import ListaPage from '../../pages/ListaPage.vue';
 
@@ -99,7 +100,12 @@ vi.mock('vue-router', async () => {
 });
 // A demonstração sem o atraso de 300 ms (os testes esperam as respostas).
 // `trocas.listar` deixa um teste responder a lista de um jeito só dele.
-const trocas = vi.hoisted(() => ({ listar: null, listarTodos: null }));
+// `trocas.criarEmpresa` faz o mesmo com o "Nova empresa".
+const trocas = vi.hoisted(() => ({
+  listar: null,
+  listarTodos: null,
+  criarEmpresa: null,
+}));
 vi.mock('../../fonte/listaFonte', async importOriginal => {
   const real = await importOriginal();
   return {
@@ -122,8 +128,16 @@ vi.mock('../../fonte/acoesDaListaFonte', async importOriginal => {
   const real = await importOriginal();
   return {
     ...real,
-    acoesDaListaFonte: opcoes =>
-      real.acoesDaListaFonte({ ...opcoes, atraso: 0 }),
+    acoesDaListaFonte: opcoes => {
+      const base = real.acoesDaListaFonte({ ...opcoes, atraso: 0 });
+      return {
+        ...base,
+        criarEmpresa: (pedido, retomada) =>
+          trocas.criarEmpresa
+            ? trocas.criarEmpresa(pedido, retomada)
+            : base.criarEmpresa(pedido, retomada),
+      };
+    },
   };
 });
 
@@ -199,7 +213,9 @@ afterEach(() => {
   aberta = null;
   trocas.listar = null;
   trocas.listarTodos = null;
+  trocas.criarEmpresa = null;
   vi.clearAllMocks();
+  esquecerEmpresasApagadas();
   expect(carteira.pecasBaixadas).toEqual([]);
 });
 
@@ -787,11 +803,123 @@ describe('ListaPage: aba Empresas', () => {
     expect(w.text()).toContain('Mostrando 25 de 38');
   });
 
-  it('não tem caixa de marcar, barra nem "Mais filtros"', async () => {
+  // #3078 — o que a lista antiga de Empresas tinha, mais apagar em grupo.
+  it('marca empresas para apagar: a barra só tem "Apagar", à vista, e o diálogo fala de empresa', async () => {
     const w = await montar({ query: { aba: 'empresas' } });
-    expect(w.findAll(marca('marcar'))).toHaveLength(0);
-    expect(w.find(marca('mais-filtros')).exists()).toBe(false);
+    expect(w.findAll(marca('marcar'))).toHaveLength(25);
     expect(w.find(marca('barra')).exists()).toBe(false);
+    await w.findAll(marca('marcar'))[0].find('input').setValue(true);
+    await w.findAll(marca('marcar'))[1].find('input').setValue(true);
+    const barra = w.get(marca('barra'));
+    expect(barra.text()).toContain('2 marcadas');
+    expect(barra.find(marca('mandar-mensagem')).exists()).toBe(false);
+    expect(barra.find(marca('criar-cards')).exists()).toBe(false);
+    expect(barra.find(marca('etiqueta')).exists()).toBe(false);
+    expect(barra.find(marca('mais-acoes')).exists()).toBe(false);
+    await barra.get(marca('apagar')).trigger('click');
+    expect(w.get('[data-dialogo-falso] h3').text()).toBe('Apagar 2 empresas?');
+    expect(w.get('[data-dialogo-falso] p').text()).toBe(
+      'As pessoas dessas empresas continuam na sua lista, com as conversas, mas sem empresa. Os lembretes e os arquivos dessas empresas são apagados. Isto não volta.'
+    );
+  });
+
+  it('tem "Mais filtros" com cidade e quando chegou, e "Nova empresa"', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    expect(w.find(marca('mais-filtros')).exists()).toBe(true);
+    expect(w.find(marca('nova-empresa')).exists()).toBe(true);
+    expect(w.find(marca('nova-pessoa')).exists()).toBe(false);
+    expect(w.find(marca('baixar-planilha')).exists()).toBe(false);
+  });
+
+  it('"Mais filtros" tem só a cidade (das empresas) e quando chegou, e filtra', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('mais-filtros')).trigger('click');
+    await assentar();
+    const gaveta = w.get(marca('gaveta-filtros'));
+    expect(gaveta.findAll('label').map(l => l.text())).toEqual([
+      'Cidade',
+      'Chegou em',
+    ]);
+    const campos = gaveta.findAllComponents({ name: 'ChoiceSelect' });
+    const cidades = campos[0].props('options');
+    expect(cidades.length).toBeGreaterThan(1);
+    campos[0].vm.$emit('update:modelValue', cidades[1].value);
+    await w.vm.$nextTick();
+    await gaveta
+      .findAll('button')
+      .find(b => b.text() === 'Ver resultado')
+      .trigger('click');
+    await assentar();
+    expect(textoDe(w, marca('mais-filtros'))).toBe('Mais filtros · 1');
+    expect(w.text()).not.toContain('de 38');
+    expect(linhas(w).length).toBeGreaterThan(0);
+    linhas(w).forEach(linha =>
+      expect(linha.text()).toContain(cidades[1].label)
+    );
+  });
+
+  it('"Nova empresa" abre a gaveta vazia; criar avisa e abre a ficha nova', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('nova-empresa')).trigger('click');
+    await w.vm.$nextTick();
+    const gaveta = w.get(marca('gaveta-nova-empresa'));
+    expect(gaveta.text()).toContain('Nova empresa');
+    await gaveta.get('[data-foco]').setValue('Padaria Nova');
+    await w.get(marca('salvar-empresa')).trigger('click');
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith('Padaria Nova foi criada.');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'relacionamentos_empresa',
+      params: { companyId: expect.any(Number) },
+    });
+  });
+
+  // #3078 (revisão) — a empresa ficou gravada e só a foto falhou: fechar e
+  // abrir de novo não esquece; a gaveta diz "Já criada" e completa a mesma.
+  it('"Nova empresa" gravada em parte: reabrir mostra "Já criada" e completa a mesma', async () => {
+    const criada = { id: 77, name: 'Padaria Nova' };
+    const retomada = { empresa: criada };
+    trocas.criarEmpresa = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error('foto'), { name: 'GravouEmParte', retomada })
+      )
+      .mockResolvedValueOnce(criada);
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('nova-empresa')).trigger('click');
+    await w.vm.$nextTick();
+    const gaveta = () => w.get(marca('gaveta-nova-empresa'));
+    await gaveta().get('[data-foco]').setValue('Padaria Nova');
+    await w.get(marca('salvar-empresa')).trigger('click');
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith(
+      'A empresa foi criada, mas a foto ou um campo não entrou. Toque em Criar empresa de novo.'
+    );
+    await gaveta().get('button[aria-label="Fechar"]').trigger('click');
+    await assentar();
+    await w.get(marca('nova-empresa')).trigger('click');
+    await assentar();
+    expect(gaveta().get(marca('aviso-da-gaveta')).text()).toBe(
+      'Já criada: Padaria Nova. Toque em Criar empresa para completar.'
+    );
+    expect(gaveta().get('[data-foco]').element.value).toBe('Padaria Nova');
+    await w.get(marca('salvar-empresa')).trigger('click');
+    await assentar();
+    expect(trocas.criarEmpresa).toHaveBeenCalledTimes(2);
+    expect(trocas.criarEmpresa.mock.calls[1][1]).toEqual(retomada);
+    expect(useAlert).toHaveBeenCalledWith('Padaria Nova foi criada.');
+  });
+
+  it('apagar as marcadas tira as empresas da lista', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    const primeira = linhas(w)[0].get('button').text();
+    await w.findAll(marca('marcar'))[0].find('input').setValue(true);
+    await w.get(`${marca('barra')} ${marca('apagar')}`).trigger('click');
+    await w.get('[data-dialogo-falso] [data-confirmar]').trigger('click');
+    await assentar();
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith('1 empresa apagada.');
+    expect(linhas(w).map(l => l.get('button').text())).not.toContain(primeira);
   });
 
   it('sair da página (a rota deixa de ser a lista) não dispara carga', async () => {

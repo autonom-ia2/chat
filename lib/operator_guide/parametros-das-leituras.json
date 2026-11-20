@@ -2340,6 +2340,7 @@
     "controller": "api/v1/accounts/relacionamentos/empresas#index",
     "parametros": [
       "busca",
+      "filtros",
       "grupo",
       "ordem",
       "pagina"
@@ -2369,6 +2370,7 @@
     "controller": "api/v1/accounts/relacionamentos/empresas#contagens",
     "parametros": [
       "busca",
+      "filtros",
       "grupo",
       "ordem",
       "pagina"

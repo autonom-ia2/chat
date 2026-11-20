@@ -552,7 +552,13 @@ describe('FichaDaEmpresaPage', () => {
   it('Alterar abre a gaveta com título de título, e salvar troca o nome', async () => {
     const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
     expect(marca(w, 'gaveta-empresa').exists()).toBe(false);
-    await marca(w, 'alterar-empresa').trigger('click');
+    // #3078 — com "Apagar" no cabeçalho, "Alterar informações" vai para o
+    // "⋯"; o "Alterar" de Informações abre a mesma gaveta.
+    await w
+      .get(
+        '[data-relacionamentos="informacoes"] [data-relacionamentos="alterar"]'
+      )
+      .trigger('click');
     const gaveta = marca(w, 'gaveta-empresa');
     expect(gaveta.get('h2').classes()).toEqual(
       expect.arrayContaining(['text-lg', 'font-semibold'])

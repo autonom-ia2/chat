@@ -55,6 +55,11 @@ class CompanyAPI extends ApiClient {
     });
   }
 
+  // #3078 — as mídias da empresa (Relacionamentos, chave relationships_company_media).
+  listMedia(id, params = {}) {
+    return axios.get(`${this.url}/${id}/media?${buildParams(params)}`);
+  }
+
   destroyAvatar(id) {
     return axios.delete(`${this.url}/${id}/avatar`);
   }

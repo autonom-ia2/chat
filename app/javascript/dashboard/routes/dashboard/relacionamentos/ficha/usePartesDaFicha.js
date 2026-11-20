@@ -37,10 +37,17 @@ export const usePartesDaFicha = ({ leitores, vazias, geracao }) => {
   };
 
   // "Tentar de novo" de uma parte só. Nunca rejeita: a falha fica na parte.
+  // #3078 — a mesma parte pode ser relida duas vezes seguidas (pôr e logo tirar
+  // pessoa): só a resposta do último pedido daquela parte entra, para uma
+  // resposta atrasada não trocar a mais nova.
+  let ultimoPedido = {};
   const reler = async nome => {
     const geracaoDoPedido = geracao();
+    const pedido = (ultimoPedido[nome] ?? 0) + 1;
+    ultimoPedido = { ...ultimoPedido, [nome]: pedido };
     const lida = await ler(nome);
     if (geracaoDoPedido !== geracao()) return;
+    if (ultimoPedido[nome] !== pedido) return;
     trocar(nome, lida.valor);
     falhas.value = { ...falhas.value, [nome]: lida.falha };
   };

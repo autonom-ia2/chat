@@ -14,13 +14,15 @@
 //      #3075 — salvar grava o pedido inteiro da gaveta (fonte/gravarPessoa.js:
 //      empresa nova, foto e campos que saem) e `buscarEmpresas` acha as
 //      empresas da conta para a escolha da gaveta;
+//      #3078 — e a empresa como a ficha antiga de Empresas: notas das pessoas,
+//      mídias, salvar com foto e campos, apagar, e pôr e tirar pessoa
+//      (fonte/empresaNoServidor.js);
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/ficha.js), a escrita só
 //      fica na memória e tudo demora um instante, como a rede.
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e os
 // dados fictícios nem entram no pacote.
 import AccountActionsAPI from 'dashboard/api/accountActions';
-import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
 import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
@@ -28,6 +30,7 @@ import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
 import { GRAVOU_EM_PARTE, alterarPessoa, buscarEmpresas } from './gravarPessoa';
+import { empresaNoServidor } from './empresaNoServidor';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 
 const CARREGAR_DEMO = import.meta.env.DEV
@@ -52,6 +55,9 @@ const LEITURAS = {
   etiquetasDaConta: [],
   buscarPessoas: [],
   buscarEmpresas: [],
+  notasDaEmpresa: [],
+  midiasDaEmpresa: { itens: [], total: 0 },
+  buscarPessoasParaEmpresa: [],
 };
 const ESCRITAS = [
   'salvar',
@@ -67,6 +73,9 @@ const ESCRITAS = [
   'juntar',
   'alterarEtiquetas',
   'apagarNota',
+  'apagarEmpresa',
+  'porPessoaNaEmpresa',
+  'tirarPessoaDaEmpresa',
 ];
 const METODOS = [...Object.keys(LEITURAS), ...ESCRITAS];
 
@@ -146,17 +155,6 @@ const notaDaTela = nota => ({
   autor: nota.user?.name ?? null,
   quando: nota.created_at,
   texto: nota.content,
-});
-
-// O CNPJ mora em `additional_attributes` (o servidor junta com o que já havia).
-// Site e CNPJ apagados vão como `null`: no banco os dois são únicos por conta
-// quando não são nulos, e texto vazio em duas empresas bateria uma na outra.
-const corpoDaEmpresa = ({ name, cnpj, domain }) => ({
-  company: {
-    name,
-    domain: domain || null,
-    additional_attributes: { cnpj: cnpj || null },
-  },
 });
 
 // Para escolher com quem juntar: a busca da lista nova (nome, telefone, e-mail,
@@ -258,10 +256,7 @@ const fonteReal = () => ({
       await noServidor(() => ContactNotesAPI.create(id, texto))
     );
   },
-  async salvarEmpresa(id, dados) {
-    await noServidor(() => CompanyAPI.update(id, corpoDaEmpresa(dados)));
-    return lerEmpresa(id);
-  },
+  ...empresaNoServidor({ noServidor, comNome, lerEmpresa }),
 });
 
 export const fichaFonte = ({

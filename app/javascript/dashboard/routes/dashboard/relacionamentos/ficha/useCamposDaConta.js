@@ -10,6 +10,8 @@
 //    aparecem pela ordem da conta.
 // `podeEscolher`: quem pode mudar os campos da ficha ("Escolher campos"), a
 // mesma regra do botão "Configurar" da ficha antiga (can_manage do servidor).
+// #3078 — a ficha da empresa usa o mesmo, com os campos da empresa
+// (`company_attribute`) e a área `company_details`, a da ficha antiga dela.
 import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -17,16 +19,22 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
 
-const AREA_DA_FICHA = 'contact_details';
-const MODELO = 'contact_attribute';
+export const DA_PESSOA = {
+  modelo: 'contact_attribute',
+  area: 'contact_details',
+};
+export const DA_EMPRESA = {
+  modelo: 'company_attribute',
+  area: 'company_details',
+};
 
-const daConfiguracao = () => {
+const daConfiguracao = area => {
   const { attributesEnabled, state } = useRelationships();
   const escolhidos = computed(() =>
     selectDefinitions(
       state.value.definitions,
       state.value.configuration,
-      AREA_DA_FICHA
+      area
     ).map(definicao => definicao.id)
   );
   const podeEscolher = computed(
@@ -40,12 +48,15 @@ const semConfiguracao = () => ({
   podeEscolher: computed(() => false),
 });
 
-export const useCamposDaConta = ({ comConfiguracao = true } = {}) => {
-  // Todas as da conta, já sem as internas da WAHA; aqui ficam as da pessoa.
+export const useCamposDaConta = ({
+  comConfiguracao = true,
+  de = DA_PESSOA,
+} = {}) => {
+  // Todas as da conta, já sem as internas da WAHA; aqui ficam as do registro.
   const daConta = useMapGetter('attributes/getAttributes');
   const definicoes = computed(() =>
     (daConta.value ?? []).filter(
-      definicao => definicao.attribute_model === MODELO
+      definicao => definicao.attribute_model === de.modelo
     )
   );
   const { isCloudFeatureEnabled } = useAccount();
@@ -54,7 +65,7 @@ export const useCamposDaConta = ({ comConfiguracao = true } = {}) => {
     isCloudFeatureEnabled(FEATURE_FLAGS.RELATIONSHIPS_ATTRIBUTES) &&
     isCloudFeatureEnabled(FEATURE_FLAGS.CUSTOM_ATTRIBUTES);
   const { escolhidos, podeEscolher } = comConfigurador
-    ? daConfiguracao()
+    ? daConfiguracao(de.area)
     : semConfiguracao();
   return { definicoes, escolhidos, podeEscolher };
 };

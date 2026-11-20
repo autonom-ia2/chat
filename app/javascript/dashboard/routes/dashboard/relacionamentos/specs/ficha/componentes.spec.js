@@ -1297,11 +1297,10 @@ describe('ficha da empresa: celular', () => {
     expect(baixo.get('span.tabular-nums').classes()).toContain(
       'whitespace-nowrap'
     );
-    const site = baixo.get('[title]');
-    expect(site.attributes('title')).toBe(empresa.domain);
-    expect(site.classes()).toEqual(
-      expect.arrayContaining(['truncate', 'whitespace-nowrap'])
-    );
+    // #3078 — o site é um link ("Visitar site"); o texto é uma linha só.
+    const site = baixo.get('[data-relacionamentos="site-da-empresa"]');
+    expect(site.attributes('href')).toBe(`https://${empresa.domain}/`);
+    expect(site.get('span').classes()).toContain('truncate');
     expect(site.classes()).not.toContain('break-all');
     expect(w.findAllComponents({ name: 'Avatar' })).toHaveLength(2);
   });
@@ -1325,8 +1324,10 @@ describe('ficha da empresa: celular', () => {
     expect(
       w.get('[data-relacionamentos="selos-da-pessoa"]').classes()
     ).toContain('col-start-2');
+    // #3078 — os ícones da linha (conversar e tirar) ficam juntos no canto.
     expect(
-      w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
+      w.get('[data-relacionamentos="conversar-com-pessoa"]').element
+        .parentElement.className
     ).toContain('absolute');
     expect(linha.classes()).toEqual(
       expect.arrayContaining(['pe-14', 'md:pe-2'])
@@ -1365,15 +1366,31 @@ describe('SecaoPessoasDaEmpresa: quem não quer mensagens', () => {
     expect(email.html()).toContain('ana<wbr>@padaria.com.br');
   });
 
-  it('sem e-mail, mostra o telefone inteiro', () => {
+  it('sem e-mail, mostra o telefone inteiro, como a lista mostra', () => {
     const w = mount(SecaoPessoasDaEmpresa, {
       props: {
         pessoas: [pessoa({ email: '', phone_number: '+5511999990000' })],
       },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
-    expect(email.text()).toBe('+5511999990000');
+    expect(email.text()).toBe('+55 11 99999-0000');
     expect(email.find('wbr').exists()).toBe(false);
+  });
+
+  // #3078 (revisão) — no celular só o ícone não diz o que faz: "Tirar" escrito
+  // ao lado; a partir do md, só o ícone (o nome vai no rótulo).
+  it('o botão de tirar diz "Tirar" no celular e tem alvo de 44 px', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa()], podeEditar: true },
+    });
+    const tirar = w.get('[data-relacionamentos="tirar-pessoa"]');
+    expect(tirar.get('span.md\\:hidden').text()).toBe(
+      'RELACIONAMENTOS_FICHA.EMPRESA.TIRAR.CURTO'
+    );
+    expect(tirar.classes()).toEqual(
+      expect.arrayContaining(['h-11', 'md:w-11', 'shrink-0'])
+    );
+    expect(tirar.attributes('aria-label')).toContain('Ana');
   });
 
   it('o botão de conversar tem alvo de 44 px e não encolhe', () => {

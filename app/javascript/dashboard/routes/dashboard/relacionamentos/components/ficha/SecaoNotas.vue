@@ -14,14 +14,21 @@ import FalhaDaParte from './FalhaDaParte.vue';
 // `falhou`: a leitura das notas não veio.
 // #3071 — quem pode escrever também apaga: cada nota tem a lixeira, que emite
 // `apagar` com a nota (a página pergunta antes).
+// #3078 — a ficha da empresa mostra as notas das pessoas dela (como a aba
+// Notas da ficha antiga de Empresas): cada nota diz de quem é (`pessoa`, que
+// abre a ficha dela, `abrirPessoa`), não tem caixa nem lixeira
+// (`podeEscrever` falso) e `explicacao` diz onde se escreve. `vazio` troca a
+// frase da lista vazia.
 const props = defineProps({
   notas: { type: Array, required: true },
   guardando: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
   podeEscrever: { type: Boolean, default: true },
   falhou: { type: Boolean, default: false },
+  explicacao: { type: String, default: '' },
+  vazio: { type: String, default: '' },
 });
-const emit = defineEmits(['guardar', 'tentar', 'apagar']);
+const emit = defineEmits(['guardar', 'tentar', 'apagar', 'abrirPessoa']);
 
 // O texto da nota no rótulo da lixeira, curto: o leitor de tela diz qual é.
 const TAMANHO_DO_TRECHO = 60;
@@ -69,6 +76,13 @@ const assinatura = nota => {
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="notas">
+    <p
+      v-if="explicacao"
+      data-relacionamentos="explicacao-das-notas"
+      class="m-0 mb-4 text-sm text-n-slate-11"
+    >
+      {{ explicacao }}
+    </p>
     <form
       v-if="podeEscrever"
       class="flex flex-col gap-3 mb-5"
@@ -108,7 +122,7 @@ const assinatura = nota => {
     </form>
     <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
     <p v-else-if="!notas.length" class="m-0 text-base text-n-slate-11">
-      {{ ra('VAZIO') }}
+      {{ vazio || ra('VAZIO') }}
     </p>
     <ul v-else class="flex flex-col gap-4 p-0 m-0 list-none">
       <li
@@ -118,6 +132,16 @@ const assinatura = nota => {
         class="flex items-start gap-3 pb-4 border-b border-n-weak last:border-b-0 last:pb-0"
       >
         <div class="flex-1 min-w-0">
+          <button
+            v-if="nota.pessoa"
+            type="button"
+            data-relacionamentos="pessoa-da-nota"
+            class="inline-flex items-center gap-1 p-0 mb-1 -my-2 text-sm font-semibold bg-transparent border-0 min-h-11 text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            @click="emit('abrirPessoa', nota.pessoa.id)"
+          >
+            <span class="i-lucide-user size-4 shrink-0" aria-hidden="true" />
+            {{ nota.pessoa.nome }}
+          </button>
           <p class="m-0 text-base break-words text-n-slate-12">
             {{ nota.texto }}
           </p>

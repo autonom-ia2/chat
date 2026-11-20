@@ -10,7 +10,11 @@
       "MOSTRANDO_PARTE": "Showing {mostradas} of {total} people.",
       "INFORMACOES": {
         "PESSOAS": "People",
-        "CLIENTES": "Customers"
+        "CLIENTES": "Customers",
+        "CIDADE": "City",
+        "SOBRE": "What the company does",
+        "DESDE": "Arrived on",
+        "ULTIMA_CONVERSA": "Last conversation"
       },
       "CONVERSAR": "This opens a conversation with someone at {nome}.",
       "NOVO_CARD": "This opens a new card for {nome}.",
@@ -24,6 +28,63 @@
         "AVISO": "I will open the message for these people.",
         "SEM_PESSOAS": "This company has no people yet.",
         "ENTENDI": "Got it"
+      },
+      "VISITAR_SITE": "Open the {site} website in a new tab",
+      "GAVETA": {
+        "SOBRE": "What the company does",
+        "SOBRE_EXEMPLO": "E.g.: neighborhood bakery, open Monday to Saturday.",
+        "SOBRE_AJUDA": "What happened in each conversation goes in each person’s notes."
+      },
+      "NOTAS": {
+        "EXPLICACAO": "These are the notes of the people in this company. To write a note, open the person’s profile.",
+        "VAZIO": "No one in this company has a note yet."
+      },
+      "MIDIAS": {
+        "TITULO": "Files",
+        "VER_TODAS": "See all ({total})",
+        "VAZIO": "Nothing has been shared in conversations with this company yet."
+      },
+      "POR": {
+        "BOTAO": "Add person",
+        "TITULO": "Add a person to {empresa}",
+        "AVISO": "Search by name, phone or email. Only people not in this company show up.",
+        "PLACEHOLDER": "Name, phone or email",
+        "BUSCA": "Search for a person",
+        "PROCURANDO": "Searching...",
+        "ERRO_BUSCA": "I couldn’t search right now.",
+        "DIGITE": "Type at least 2 letters or numbers.",
+        "NINGUEM": "No one found with “{termo}”.",
+        "RESULTADOS": "People found",
+        "SEM_CONTATO": "No phone and no email",
+        "ESTA_EM": "In {empresa}",
+        "SEM_EMPRESA": "No company",
+        "MUDA": "{nome} leaves {de} and joins {para}. A person belongs to one company only.",
+        "ESCOLHA": "Tap a person on the list to choose.",
+        "CONFIRMAR": "Add to company",
+        "ERRO": "I couldn’t add the person to the company. Try again.",
+        "ENTROU": "{nome} joined {empresa}.",
+        "MUDOU": "{nome} left {de} and joined {empresa}.",
+        "DESFEITO": "Done. {nome} left {empresa} again.",
+        "MUDOU_DESFEITO": "Done. {nome} is back at {de}."
+      },
+      "TIRAR": {
+        "BOTAO": "Remove from company",
+        "CURTO": "Remove",
+        "ROTULO": "Remove {nome} from the company",
+        "SAIU": "{nome} left {empresa}. The person stays on your list.",
+        "VOLTOU": "Done. {nome} is back in {empresa}.",
+        "ERRO": "I couldn’t remove {nome} from the company. Try again."
+      },
+      "APAGAR": {
+        "TITULO": "Delete {nome}?",
+        "PESSOAS": "{count} person stays on your list, with their conversations, but without a company. | The {count} people stay on your list, with their conversations, but without a company.",
+        "LEMBRETES": "This company’s reminders and files are deleted.",
+        "SEGUROS": "This company’s policies stay saved, but no longer linked to the company.",
+        "NAO_VOLTA": "This can’t be undone.",
+        "CONFIRMAR": "Delete",
+        "ERRO": "I couldn’t delete {nome}. Try again.",
+        "APAGADA": "{nome} was deleted.",
+        "NA_FILA": "{nome} has many people and leaves the list in a few minutes."
       }
     },
     "VOLTAR": {
@@ -69,7 +130,8 @@
       "LIGAR": "Call",
       "MUDAR_ETIQUETAS": "Change labels",
       "POR_ETIQUETA": "Add label",
-      "LEMBRETE_TITULO": "Talk to {nome}"
+      "LEMBRETE_TITULO": "Talk to {nome}",
+      "APAGAR_EMPRESA": "Delete company"
     },
     "AVISOS": {
       "NOVO_CARD": "This opens a new card for {nome}.",

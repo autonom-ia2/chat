@@ -48,7 +48,19 @@ vi.mock('dashboard/api/accountActions', () => ({
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/companies', () => ({
-  default: { update: vi.fn(), create: vi.fn(), search: vi.fn() },
+  default: {
+    update: vi.fn(),
+    create: vi.fn(),
+    search: vi.fn(),
+    delete: vi.fn(),
+    destroyAvatar: vi.fn(),
+    destroyCustomAttributes: vi.fn(),
+    listNotes: vi.fn(),
+    listMedia: vi.fn(),
+    searchContacts: vi.fn(),
+    createContact: vi.fn(),
+    removeContact: vi.fn(),
+  },
 }));
 
 const real = () => fichaFonte({ demo: null });
@@ -79,7 +91,14 @@ const ESCRITAS = [
   ['desmarcarCliente', () => ContactAPI.removeCustomer, [7]],
   ['liberarMensagens', () => ContactAPI.removeOptOut, [7]],
   ['guardarNota', () => ContactNotesAPI.create, [7, 'Ligar amanhã.']],
-  ['salvarEmpresa', () => CompanyAPI.update, [9, { name: 'Padaria' }]],
+  [
+    'salvarEmpresa',
+    () => CompanyAPI.update,
+    [9, { empresa: { name: 'Padaria' } }],
+  ],
+  ['apagarEmpresa', () => CompanyAPI.delete, [9]],
+  ['porPessoaNaEmpresa', () => CompanyAPI.createContact, [9, 7]],
+  ['tirarPessoaDaEmpresa', () => CompanyAPI.removeContact, [9, 7]],
 ];
 
 afterEach(() => {
@@ -437,38 +456,169 @@ describe('ações da ficha antiga', () => {
 
 describe('escrita da empresa', () => {
   const relida = { ...PADARIA, name: 'Padaria Nova' };
+  const pedido = (extra = {}) => ({
+    empresa: {
+      name: 'Padaria Nova',
+      domain: 'padaria.exemplo.com.br',
+      description: null,
+      additional_attributes: { cnpj: '11222333000181', city: 'Campinas' },
+      custom_attributes: { porte: 'pequeno' },
+    },
+    foto: null,
+    apagar: [],
+    ...extra,
+  });
   beforeEach(() => {
-    CompanyAPI.update.mockResolvedValue({ data: { payload: {} } });
+    CompanyAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
     RelacionamentosAPI.empresa.mockResolvedValue({ data: relida });
   });
 
-  it('salvar manda nome e site, o CNPJ em additional_attributes, e relê a empresa', async () => {
-    const salva = await real().salvarEmpresa(9, {
-      name: 'Padaria Nova',
-      cnpj: '11222333000181',
-      domain: 'padaria.exemplo.com.br',
-    });
+  it('salvar manda a empresa do pedido como veio e relê a empresa', async () => {
+    const salva = await real().salvarEmpresa(9, pedido());
     expect(salva).toEqual(relida);
+    expect(CompanyAPI.update).toHaveBeenCalledTimes(1);
     expect(CompanyAPI.update).toHaveBeenCalledWith(9, {
-      company: {
-        name: 'Padaria Nova',
-        domain: 'padaria.exemplo.com.br',
-        additional_attributes: { cnpj: '11222333000181' },
-      },
+      company: pedido().empresa,
     });
+    expect(CompanyAPI.destroyAvatar).not.toHaveBeenCalled();
+    expect(CompanyAPI.destroyCustomAttributes).not.toHaveBeenCalled();
     expect(RelacionamentosAPI.empresa).toHaveBeenCalledWith(9);
   });
 
-  // No banco o site e o CNPJ são únicos por conta quando não são nulos: texto
-  // vazio em duas empresas bateria uma na outra.
-  it('site e CNPJ apagados vão como null, nunca como texto vazio', async () => {
-    await real().salvarEmpresa(9, { name: 'Padaria', cnpj: '', domain: '' });
-    expect(CompanyAPI.update).toHaveBeenCalledWith(9, {
-      company: {
-        name: 'Padaria',
-        domain: null,
-        additional_attributes: { cnpj: null },
+  it('a foto nova vai num PATCH só com o arquivo; tirar a foto é o DELETE do avatar', async () => {
+    const arquivo = new File(['x'], 'logo.png', { type: 'image/png' });
+    await real().salvarEmpresa(9, pedido({ foto: { arquivo } }));
+    const [, corpo] = CompanyAPI.update.mock.calls[1];
+    expect(corpo).toBeInstanceOf(FormData);
+    expect(corpo.get('company[avatar]')).toBe(arquivo);
+    await real().salvarEmpresa(9, pedido({ foto: { tirar: true } }));
+    expect(CompanyAPI.destroyAvatar).toHaveBeenCalledWith(9);
+  });
+
+  it('os campos esvaziados saem de verdade', async () => {
+    await real().salvarEmpresa(9, pedido({ apagar: ['porte'] }));
+    expect(CompanyAPI.destroyCustomAttributes).toHaveBeenCalledWith(9, [
+      'porte',
+    ]);
+  });
+
+  it('se só a foto falha, a falha diz que gravou em parte e traz a empresa relida', async () => {
+    CompanyAPI.update
+      .mockResolvedValueOnce({ data: { payload: { id: 9 } } })
+      .mockRejectedValueOnce(erroHttp(422));
+    const arquivo = new File(['x'], 'logo.png', { type: 'image/png' });
+    await expect(
+      real().salvarEmpresa(9, pedido({ foto: { arquivo } }))
+    ).rejects.toMatchObject({
+      name: 'GravouEmParte',
+      retomada: { empresa: { id: 9 }, empresaNaFicha: relida },
+    });
+  });
+
+  // #3079 — a empresa pequena sai na hora (200); a grande vai para a fila
+  // do servidor (202), e a ficha avisa.
+  it('apagar chama o DELETE e diz se a empresa ficou na fila do servidor', async () => {
+    CompanyAPI.delete.mockResolvedValue({ status: 200 });
+    expect(await real().apagarEmpresa(9)).toEqual({ naFila: false });
+    expect(CompanyAPI.delete).toHaveBeenCalledWith(9);
+    CompanyAPI.delete.mockResolvedValue({ status: 202 });
+    expect(await real().apagarEmpresa(9)).toEqual({ naFila: true });
+  });
+
+  it('apagar empresa que não existe mais dá NAO_ACHEI', async () => {
+    CompanyAPI.delete.mockRejectedValue(
+      Object.assign(new Error('x'), { response: { status: 404 } })
+    );
+    await expect(real().apagarEmpresa(9)).rejects.toMatchObject({
+      name: 'NAO_ACHEI',
+    });
+  });
+});
+
+describe('leituras e pessoas da empresa', () => {
+  it('notas: as das pessoas da empresa, com de quem é cada uma', async () => {
+    CompanyAPI.listNotes.mockResolvedValue({
+      data: {
+        payload: [
+          {
+            id: 1,
+            content: 'Ligar amanhã.',
+            created_at: 100,
+            user: { name: 'Sônia' },
+            contact: { id: 7, name: 'Ana' },
+          },
+          { id: 2, content: 'Sem autor.', created_at: 50, contact: null },
+        ],
       },
     });
+    expect(await real().notasDaEmpresa(9)).toEqual([
+      {
+        id: 1,
+        autor: 'Sônia',
+        quando: 100,
+        texto: 'Ligar amanhã.',
+        pessoa: { id: 7, nome: 'Ana' },
+      },
+      { id: 2, autor: null, quando: 50, texto: 'Sem autor.', pessoa: null },
+    ]);
+    expect(CompanyAPI.listNotes).toHaveBeenCalledWith(9);
+  });
+
+  it('mídias: as 5 mais novas, com o tipo da tela, de quem e quando, e o total', async () => {
+    CompanyAPI.listMedia.mockResolvedValue({
+      data: {
+        payload: [
+          {
+            id: 3,
+            filename: 'foto.jpg',
+            file_type: 'image',
+            created_at: '1970-01-01T00:01:40Z',
+            contact: { id: 7, name: 'Ana' },
+          },
+          { id: 4, filename: 'a.pdf', file_type: 'file', created_at: null },
+        ],
+        meta: { total: 12 },
+      },
+    });
+    const midias = await real().midiasDaEmpresa(9);
+    expect(CompanyAPI.listMedia).toHaveBeenCalledWith(9, {
+      per_page: 5,
+      page: 1,
+    });
+    expect(midias.total).toBe(12);
+    expect(midias.itens[0]).toEqual({
+      id: 3,
+      nome: 'foto.jpg',
+      tipo: 'imagem',
+      quando: 100,
+      pessoa: 'Ana',
+    });
+    expect(midias.itens[1]).toMatchObject({ tipo: 'documento', pessoa: '' });
+  });
+
+  it('procurar quem pôr: diz em que empresa cada pessoa está hoje', async () => {
+    CompanyAPI.searchContacts.mockResolvedValue({
+      data: {
+        payload: [
+          { id: 7, name: 'Ana', company: { id: 2, name: 'Outra' } },
+          { id: 8, name: 'Bia', company: null },
+        ],
+      },
+    });
+    const achadas = await real().buscarPessoasParaEmpresa(9, 'an');
+    expect(CompanyAPI.searchContacts).toHaveBeenCalledWith(9, 'an');
+    expect(achadas[0].empresa).toEqual({ id: 2, nome: 'Outra' });
+    expect(achadas[1].empresa).toBeNull();
+  });
+
+  it('pôr e tirar usam a rota de pessoas da empresa', async () => {
+    CompanyAPI.createContact.mockResolvedValue({});
+    CompanyAPI.removeContact.mockResolvedValue({});
+    await real().porPessoaNaEmpresa(9, 7);
+    await real().tirarPessoaDaEmpresa(9, 7);
+    expect(CompanyAPI.createContact).toHaveBeenCalledWith(9, {
+      contact_id: 7,
+    });
+    expect(CompanyAPI.removeContact).toHaveBeenCalledWith(9, 7);
   });
 });

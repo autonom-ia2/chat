@@ -6,7 +6,14 @@
 // cliente tem ao menos um card ganho. Os textos são inventados e neutros.
 // As escritas ficam na memória deste módulo para a tela refletir o que foi feito,
 // e devolvem uma cópia nova: nada que chega é alterado.
-import { empresaPorId, empresas, pessoaPorId, pessoas } from './base';
+import {
+  apagarEmpresaDaDemo,
+  empresaPorId,
+  empresas,
+  esquecerEmpresasApagadas,
+  pessoaPorId,
+  pessoas,
+} from './base';
 import { sorteioFixo } from './sorteioFixo';
 import { DIA_EM_MS } from '../fonte/grupos';
 import { normalizado, semAcento } from '../fonte/texto';
@@ -100,6 +107,9 @@ const memoria = {
   apagadas: new Set(),
   // id de quem ficou -> ids de quem foi absorvido.
   juntadas: new Map(),
+  // #3078 — a empresa de cada pessoa depois de pôr ou tirar (null: sem
+  // empresa). As empresas apagadas ficam em demo/base.js, que a lista lê.
+  vinculos: new Map(),
 };
 
 export const esquecerEscritas = () => {
@@ -115,6 +125,8 @@ export const esquecerEscritas = () => {
   memoria.notasApagadas.clear();
   memoria.apagadas.clear();
   memoria.juntadas.clear();
+  memoria.vinculos.clear();
+  esquecerEmpresasApagadas();
 };
 
 // Quem foi absorvido por esta pessoa num "Juntar", e quem os absorvidos já tinham absorvido.
@@ -188,9 +200,15 @@ const marcaDeCliente = id => {
     : { contact_type: 'lead', customer_since: null };
 };
 
+const empresaDaPessoa = pessoa =>
+  memoria.vinculos.has(pessoa.id)
+    ? memoria.vinculos.get(pessoa.id)
+    : pessoa.company_id;
+
 const comEscritas = pessoa => {
   const comCliente = {
     ...pessoa,
+    company_id: empresaDaPessoa(pessoa),
     ...memoria.edicoes.get(pessoa.id),
     ...marcaDeCliente(pessoa.id),
   };
@@ -499,29 +517,150 @@ export const juntar = (id, outraId) => {
 
 // ---- empresa ----------------------------------------------------------------
 
-export const empresa = id => {
-  const base = empresaPorId(id);
-  return base ? copia({ ...base, ...memoria.empresas.get(id) }) : null;
+// #3078 — a empresa da demonstração ganha o que a ficha antiga de Empresas
+// tinha: a descrição e os campos da conta (os de `porte` e `ramo`), para a
+// metade delas.
+const PORTES = ['Pequena', 'Média', 'Grande'];
+const RAMOS = ['Alimentação', 'Serviços', 'Comércio', 'Saúde'];
+const DESCRICOES = [
+  'Atende o bairro há mais de dez anos. Compra todo mês.',
+  'Prefere falar com a gerência pelo WhatsApp, de manhã.',
+];
+
+const extrasDaEmpresa = base => {
+  if (base.id % 2) return { description: null, custom_attributes: {} };
+  const sorteio = sorteioDe(base.id, 19);
+  return {
+    description: escolher(sorteio, DESCRICOES),
+    custom_attributes: {
+      porte: escolher(sorteio, PORTES),
+      ramo: escolher(sorteio, RAMOS),
+    },
+  };
 };
 
-export const salvarEmpresa = (id, dados) => {
-  if (!empresaPorId(id))
+const pessoasDaEmpresaBase = id =>
+  pessoas()
+    .filter(item => !memoria.apagadas.has(item.id))
+    .filter(item => empresaDaPessoa(item) === id);
+
+export const empresa = id => {
+  const base = empresaPorId(id);
+  if (!base) return null;
+  const gente = pessoasDaEmpresaBase(id).map(item => pessoaCompleta(item));
+  return copia({
+    ...base,
+    ...extrasDaEmpresa(base),
+    contacts_count: gente.length,
+    customers_count: gente.filter(item => item.contact_type === 'customer')
+      .length,
+    ...memoria.empresas.get(id),
+  });
+};
+
+const exigirEmpresa = id => {
+  if (!empresa(id))
     throw Object.assign(new Error('Empresa não encontrada.'), {
       name: 'NAO_ACHEI',
     });
+};
+
+// O pedido da gaveta (ficha/informacoesDaEmpresa.js#pedidoDaEmpresa). A foto
+// nova aparece pela prévia; "tirar" deixa as iniciais.
+export const salvarEmpresa = (
+  id,
+  { empresa: dados, foto, apagar: queSaem = [] }
+) => {
+  exigirEmpresa(id);
+  const atual = empresa(id);
+  const atributos = Object.fromEntries(
+    Object.entries({
+      ...atual.custom_attributes,
+      ...dados.custom_attributes,
+    }).filter(([chave]) => !queSaem.includes(chave))
+  );
+  const thumbnail = foto?.tirar ? '' : (foto?.previa ?? atual.thumbnail);
   memoria.empresas.set(id, {
     name: dados.name,
-    cnpj: dados.cnpj,
     domain: dados.domain,
+    description: dados.description,
+    cnpj: dados.additional_attributes.cnpj,
+    city: dados.additional_attributes.city,
+    custom_attributes: atributos,
+    thumbnail,
   });
   return empresa(id);
 };
 
-const pessoasDaEmpresaBase = id =>
-  pessoas().filter(item => item.company_id === id);
+// Na demonstração a empresa sai na hora, como a pequena no servidor.
+export const apagarEmpresa = id => {
+  exigirEmpresa(id);
+  apagarEmpresaDaDemo(id);
+  return { naFila: false };
+};
 
 export const pessoasDaEmpresa = id =>
   pessoasDaEmpresaBase(id).map(item => pessoaCompleta(item));
+
+// As notas das pessoas da empresa, das mais novas para trás (as 20 primeiras,
+// como no servidor), com de quem é cada uma.
+const NOTAS_DA_EMPRESA = 20;
+export const notasDaEmpresa = id =>
+  pessoasDaEmpresaBase(id)
+    .flatMap(item =>
+      notas(item.id).map(nota => ({
+        ...nota,
+        pessoa: { id: item.id, nome: item.name },
+      }))
+    )
+    .sort((a, b) => b.quando - a.quando)
+    .slice(0, NOTAS_DA_EMPRESA);
+
+const MIDIAS_DA_EMPRESA = 5;
+export const midiasDaEmpresa = id => {
+  const todas = pessoasDaEmpresaBase(id)
+    .flatMap(item =>
+      arquivos(item.id).map(arquivo => ({ ...arquivo, pessoa: item.name }))
+    )
+    .sort((a, b) => b.quando - a.quando);
+  return { itens: todas.slice(0, MIDIAS_DA_EMPRESA), total: todas.length };
+};
+
+// Quem pode entrar: quem não está nesta empresa, pelo nome, telefone ou e-mail.
+export const buscarPessoasParaEmpresa = (id, termo) => {
+  const procurado = normalizado(termo);
+  return pessoas()
+    .filter(item => !memoria.apagadas.has(item.id))
+    .filter(item => empresaDaPessoa(item) !== id)
+    .filter(item =>
+      [item.name, item.email, item.phone_number].some(campo =>
+        normalizado(campo).includes(procurado)
+      )
+    )
+    .slice(0, 15)
+    .map(item => {
+      const daPessoa = empresaDaPessoa(item);
+      const atual = daPessoa ? empresaPorId(daPessoa) : null;
+      return {
+        id: item.id,
+        name: item.name,
+        email: item.email,
+        phone_number: item.phone_number,
+        thumbnail: '',
+        empresa: atual ? { id: atual.id, nome: atual.name } : null,
+      };
+    });
+};
+
+export const porPessoaNaEmpresa = (id, pessoaId) => {
+  exigirEmpresa(id);
+  memoria.vinculos.set(pessoaId, id);
+};
+
+export const tirarPessoaDaEmpresa = (id, pessoaId) => {
+  exigirEmpresa(id);
+  memoria.vinculos.set(pessoaId, null);
+};
 
 const doMaisNovoAoMaisAntigo = campo => (a, b) => b[campo] - a[campo];
 
@@ -547,6 +686,12 @@ export const demoDaFicha = {
   origem,
   salvar,
   salvarEmpresa,
+  apagarEmpresa,
+  notasDaEmpresa,
+  midiasDaEmpresa,
+  buscarPessoasParaEmpresa,
+  porPessoaNaEmpresa,
+  tirarPessoaDaEmpresa,
   marcarCliente,
   desmarcarCliente,
   guardarNota,

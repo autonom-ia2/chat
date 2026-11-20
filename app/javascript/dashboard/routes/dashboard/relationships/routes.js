@@ -28,9 +28,11 @@ export const routes = [
     path: frontendURL('accounts/:accountId/companies/:companyId/media'),
     name: 'relationships_company_media',
     component: CompanyMediaView,
+    // #3078 — quem lê a empresa no servidor (CompanyPolicy#show?, que a rota de
+    // mídias cobra) chega aqui: a função com só ver contatos também.
     meta: {
       featureFlag: FEATURE_FLAGS.RELATIONSHIPS_COMPANY_MEDIA,
-      permissions: ['administrator', 'agent'],
+      permissions: ['administrator', 'agent', 'contact_view', 'contact_manage'],
       installationTypes: [
         INSTALLATION_TYPES.CLOUD,
         INSTALLATION_TYPES.ENTERPRISE,

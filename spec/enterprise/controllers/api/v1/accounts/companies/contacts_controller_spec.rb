@@ -58,6 +58,28 @@ RSpec.describe 'Company contacts API', type: :request do
         'name' => 'Other Company'
       )
     end
+
+    it 'treats % and _ in the search as plain characters' do
+      create(:contact, name: 'Jane Available', account: account)
+      percent_contact = create(:contact, name: '100% Jane', account: account)
+
+      get "/api/v1/accounts/#{account.id}/companies/#{company.id}/contacts/search",
+          params: { q: '%' },
+          headers: admin.create_new_auth_token,
+          as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['payload'].pluck('id')).to contain_exactly(percent_contact.id)
+    end
+
+    it 'rejects a search that is not a string' do
+      get "/api/v1/accounts/#{account.id}/companies/#{company.id}/contacts/search",
+          params: { q: { name: 'Jane' } },
+          headers: admin.create_new_auth_token,
+          as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
   end
 
   describe 'POST /api/v1/accounts/{account.id}/companies/{company.id}/contacts' do

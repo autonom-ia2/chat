@@ -14,8 +14,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 //  - "Voltar como estava" desfaz a troca ou o remover, antes de salvar.
 // A prévia da foto escolhida é solta da memória quando sai da tela (remover,
 // voltar como estava, outra foto ou a gaveta fechada).
+// #3078 — a gaveta da empresa usa a mesma peça: a foto da empresa é quadrada
+// (`redonda` falso), como no cabeçalho dela, e o `marca` muda o nome dela.
 const props = defineProps({
   nome: { type: String, default: '' },
+  redonda: { type: Boolean, default: true },
+  marca: { type: String, default: 'foto-da-pessoa' },
   // A foto gravada hoje (thumbnail).
   atual: { type: String, default: '' },
   // A troca pedida: { arquivo, previa }, { tirar: true } ou null.
@@ -87,15 +91,18 @@ const manter = () => {
 </script>
 
 <template>
+  <!-- #3078 — o aviso e o erro da foto vão embaixo, da borda esquerda da
+       gaveta (no celular os botões empilham e o aviso ao lado deles ficava
+       solto, recuado). -->
   <div
-    data-relacionamentos="foto-da-pessoa"
-    class="flex items-start min-w-0 gap-4"
+    :data-relacionamentos="marca"
+    class="flex flex-wrap items-start min-w-0 gap-x-4 gap-y-2"
   >
     <Avatar
       :name="nome"
       :src="naTela"
       :size="72"
-      rounded-full
+      :rounded-full="redonda"
       class="shrink-0"
     />
     <div class="flex flex-col min-w-0 gap-2">
@@ -132,22 +139,22 @@ const manter = () => {
           @click="manter"
         />
       </div>
-      <p
-        v-if="aviso"
-        data-relacionamentos="aviso-da-foto"
-        class="m-0 text-sm text-n-slate-11"
-      >
-        {{ aviso }}
-      </p>
-      <p
-        v-if="erro"
-        role="alert"
-        data-relacionamentos="erro-da-foto"
-        class="m-0 text-sm text-n-ruby-11"
-      >
-        {{ erro }}
-      </p>
     </div>
+    <p
+      v-if="aviso"
+      data-relacionamentos="aviso-da-foto"
+      class="m-0 text-sm basis-full text-n-slate-11"
+    >
+      {{ aviso }}
+    </p>
+    <p
+      v-if="erro"
+      role="alert"
+      data-relacionamentos="erro-da-foto"
+      class="m-0 text-sm basis-full text-n-ruby-11"
+    >
+      {{ erro }}
+    </p>
     <input
       ref="arquivo"
       type="file"

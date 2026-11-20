@@ -1,6 +1,7 @@
 # A aba Empresas da Lista nova de Relacionamentos (#2894): a página e o número de cada grupo. Vale o mesmo que a lista
 # de empresas de hoje: Empresas ligado na conta (403 sem) e permissão de ver empresas. E as leituras da ficha da empresa
 # (#2895), no formato que a tela lê: a empresa, as pessoas, as conversas e os cards dela.
+# #3078 — a lista ganha os filtros de "Mais filtros" (cidade e quando chegou); filtro que ela não tem responde 422.
 class Api::V1::Accounts::Relacionamentos::EmpresasController < Api::V1::Accounts::Relacionamentos::BaseController
   # A regra de "card da empresa" do quadro e do perfil de hoje (Crm::CompanyOpportunitiesController).
   include ::Crm::Cards::CompanyFilters
@@ -48,7 +49,8 @@ class Api::V1::Accounts::Relacionamentos::EmpresasController < Api::V1::Accounts
   end
 
   def consulta
-    ::Relacionamentos::ConsultaDeEmpresas.new(Current.account, conferido(params.permit(:grupo, :busca, :ordem, :pagina)))
+    pedido = params.permit(:grupo, :busca, :ordem, :pagina, filtros: %i[cidade chegou_em])
+    ::Relacionamentos::ConsultaDeEmpresas.new(Current.account, conferido(pedido))
   end
 
   def achar_empresa

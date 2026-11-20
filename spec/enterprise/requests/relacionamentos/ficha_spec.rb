@@ -141,15 +141,18 @@ RSpec.describe 'Ficha de Relacionamentos: empresa e funções', type: :request d
   end
 
   describe 'GET empresas/:id' do
-    it 'devolve a empresa com os campos da lista' do
+    # #3078 — e o que só a ficha mostra: a descrição e os campos personalizados.
+    it 'devolve a empresa com os campos da lista, a descrição e os campos personalizados' do
       pessoa_da(padaria)
+      padaria.update!(description: 'Pão de fermentação natural.', custom_attributes: { 'porte' => 'Pequena' })
 
       ler("empresas/#{padaria.id}")
 
       expect(response.parsed_body).to eq(
         'id' => padaria.id, 'name' => 'Padaria Bom Dia', 'domain' => 'padaria-bom-dia.exemplo.com.br',
-        'cnpj' => '12.345.678/0001-00', 'created_at' => (agora - 30.days).to_i, 'contacts_count' => 2,
-        'customers_count' => 1, 'last_activity_at' => (agora - 2.days).to_i
+        'cnpj' => '12.345.678/0001-00', 'city' => 'Campinas', 'thumbnail' => '', 'created_at' => (agora - 30.days).to_i,
+        'contacts_count' => 2, 'customers_count' => 1, 'last_activity_at' => (agora - 2.days).to_i,
+        'description' => 'Pão de fermentação natural.', 'custom_attributes' => { 'porte' => 'Pequena' }
       )
     end
   end

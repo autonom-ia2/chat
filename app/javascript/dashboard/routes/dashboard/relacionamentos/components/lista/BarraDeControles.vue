@@ -8,8 +8,8 @@ import { ORDENS } from '../../fonte/listaFonte';
 import CampoDeBusca from './CampoDeBusca.vue';
 
 // #2894 — a faixa de controles acima da lista: busca, ordem e "Mais filtros".
-// Na aba Empresas não há "Mais filtros" (empresa, etiqueta e cidade são de
-// pessoa).
+// `comFiltros` falso tira o "Mais filtros" (#3078: a aba Empresas também tem
+// os dela, cidade e quando chegou).
 // #3057 — busca, ordem e "Mais filtros" na mesma altura (h-10) e no mesmo
 // canto; a área de toque do botão continua com 44 px (o ::before).
 // #3062 — `gruposDeOrdem` (lista/ordens.js): a aba Pessoas ganha as sete ordens
