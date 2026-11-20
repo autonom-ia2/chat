@@ -1,5 +1,5 @@
 # As listas que a conta já trouxe (#2896), a mais nova primeiro, no formato da tela, de POR_PAGINA em POR_PAGINA
-# (`pagina`, a partir de 1; o que não é número vale 1). Recebe o escopo das importações de contatos da conta. O número de
+# (`pagina`, de 1 a ULTIMA_PAGINA; o que não é número vale 1). Recebe o escopo das importações de contatos da conta. O número de
 # consultas não cresce com o número de listas: quem trouxe e o arquivo conferido vêm juntos, e as linhas das listas que
 # ainda estão entrando (ou pararam) são contadas de uma vez.
 #
@@ -11,6 +11,8 @@
 class Relacionamentos::Trazer::Historico
   PASSARAM = Relacionamentos::Trazer::Andamento::PASSARAM
   POR_PAGINA = 100
+  # Um teto para a página pedida: o deslocamento da consulta não passa do que o banco aceita.
+  ULTIMA_PAGINA = 100_000
   FALHOU = 'falhou'.freeze
   # "Desfazer" aparece na lista pronta e na que quebrou depois de pôr gente na base. Enquanto ela entra ou sai, não; a
   # não ser que o desfazer tenha parado no meio (Relacionamentos::Trazer::Desfazer.parado?).
@@ -22,7 +24,7 @@ class Relacionamentos::Trazer::Historico
 
   def initialize(importacoes, pagina: 1)
     @importacoes = importacoes
-    @pagina = [pagina.to_i, 1].max
+    @pagina = pagina.to_i.clamp(1, ULTIMA_PAGINA)
   end
 
   def call

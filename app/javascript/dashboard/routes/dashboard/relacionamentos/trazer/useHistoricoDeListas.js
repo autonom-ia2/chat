@@ -24,10 +24,11 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // #3083 — o servidor manda as listas de página em página
 // (Relacionamentos::Trazer::Historico::POR_PAGINA, o mesmo número daqui). A
 // página cheia quer dizer que pode haver mais: "Ver mais" pede a próxima e a
-// junta embaixo. A carga de sempre (a que a tela pede e a da agenda) relê só a
-// primeira página: ela fica no topo e o que "Ver mais" já trouxe continua
-// embaixo, sem repetir lista. "Ver mais" que falha liga `erroDoMais` (a tela
-// diz e o botão continua lá); por falta de acesso, `semAcesso`.
+// junta embaixo. A carga de sempre (a que a tela pede e a da agenda) relê
+// todas as páginas que já estão na tela, para a lista de qualquer uma delas
+// que está sendo trazida ou desfeita ser acompanhada, sem repetir lista. "Ver
+// mais" que falha liga `erroDoMais` (a tela diz e o botão continua lá); por
+// falta de acesso, `semAcesso`.
 export const INTERVALO_DO_HISTORICO_MS = INTERVALO_INICIAL_MS;
 
 export const LISTAS_POR_PAGINA = 100;
@@ -91,15 +92,36 @@ const usePaginasDoHistorico = ({ fonte, listas, semAcesso, encerrou }) => {
     }
   };
 
-  // A primeira página lida de novo: sem "Ver mais" ainda, ela é o histórico e
-  // diz se há mais; depois dele, ela vai para o topo e o resto fica.
-  const comAPrimeira = recebidas => {
-    if (paginasLidas > 1) return semRepetir(recebidas, listas.value);
+  // As páginas que já estão na tela, lidas de novo. Sem "Ver mais" ainda, é só
+  // a primeira.
+  const lerAsPaginas = async () => {
+    const lidas = paginasLidas;
+    if (lidas === 1) return { lidas, recebidas: await fonte.historico() };
+    const paginas = await Promise.all(
+      Array.from({ length: lidas }, (_, i) => fonte.historico(i + 1))
+    );
+    return { lidas, recebidas: paginas.reduce(semRepetir, []) };
+  };
+
+  // Só a primeira página diz se há mais. Depois de "Ver mais", o que a tela já
+  // tinha e não voltou (a lista que uma nova empurrou para a página seguinte)
+  // fica embaixo.
+  const comAsPaginas = ({ lidas, recebidas }) => {
+    if (lidas > 1 || paginasLidas > 1) {
+      return semRepetir(recebidas, listas.value);
+    }
     temMais.value = recebidas.length >= LISTAS_POR_PAGINA;
     return recebidas;
   };
 
-  return { temMais, carregandoMais, erroDoMais, verMais, comAPrimeira };
+  return {
+    temMais,
+    carregandoMais,
+    erroDoMais,
+    verMais,
+    lerAsPaginas,
+    comAsPaginas,
+  };
 };
 
 // As listas que a conta já trouxe e a carga delas.
@@ -112,7 +134,7 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
   let encerrado = false;
   // Número da última carga pedida: resposta de carga mais velha é descartada.
   let ultimaCarga = 0;
-  const { comAPrimeira, ...paginas } = usePaginasDoHistorico({
+  const { lerAsPaginas, comAsPaginas, ...paginas } = usePaginasDoHistorico({
     fonte,
     listas,
     semAcesso,
@@ -131,10 +153,11 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
     if (daAgenda) agenda.cancelar();
     else agenda.recomecar();
     try {
-      const recebidas = await fonte.historico();
+      const lidas = await lerAsPaginas();
       if (!vale()) return;
+      const { recebidas } = lidas;
       if (desfazerQuebrou(listas.value, recebidas)) avisar(AVISO_ERRO_DESFAZER);
-      listas.value = comAPrimeira(recebidas);
+      listas.value = comAsPaginas(lidas);
       if (recebidas.some(emAndamento)) {
         agenda.agendar(() => carregar({ silencioso: true, daAgenda: true }));
       }

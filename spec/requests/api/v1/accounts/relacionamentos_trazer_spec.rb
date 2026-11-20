@@ -607,11 +607,14 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq([])
 
-      # A página que não é número, ou é menor que 1, é a primeira.
+      # A página que não é número, ou é menor que 1, é a primeira; a enorme não quebra a consulta.
       ['abc', '0', '-1', ''].each do |pagina|
         listas(pagina: pagina)
         expect(response.parsed_body.pluck('id')).to eq(ids.first(2)), pagina
       end
+      listas(pagina: '99999999999999999999')
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq([])
     end
 
     it 'diz a situação de cada lista e quando dá para tentar de novo' do

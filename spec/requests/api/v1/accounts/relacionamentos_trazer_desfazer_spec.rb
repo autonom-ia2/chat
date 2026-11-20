@@ -275,6 +275,7 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       end
       expect(da_automacao.reload.undo_status).to eq('pending')
       expect(account.contacts.count).to eq(3)
+      expect(ana.reload).to have_attributes(email: 'ana.albuquerino@exemplo.com.br', contact_type: 'customer')
       expect(Relacionamentos::CampoPreenchido.pendentes.count).to eq(Relacionamentos::CampoPreenchido.count)
     end
   end

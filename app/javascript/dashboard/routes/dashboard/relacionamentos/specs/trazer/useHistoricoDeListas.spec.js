@@ -657,25 +657,27 @@ describe('Ver mais', () => {
     expect(historicoDaFonte).toHaveBeenCalledTimes(2);
   });
 
-  it('a carga de sempre relê a primeira página e mantém embaixo o que "Ver mais" trouxe', async () => {
+  it('a carga de sempre relê todas as páginas na tela, sem repetir lista', async () => {
     const primeira = pagina('a', LISTAS_POR_PAGINA);
-    const nova = lista('nova', 'pronto');
-    const historicoDaFonte = vi
-      .fn()
-      .mockResolvedValueOnce(primeira)
-      .mockResolvedValueOnce(pagina('b', 2))
-      .mockResolvedValueOnce([nova, ...primeira.slice(0, -1)]);
+    const paginas = { 1: primeira, 2: pagina('b', 2) };
+    const historicoDaFonte = vi.fn(async (n = 1) => paginas[n]);
     const { historico, parar } = montar({ historico: historicoDaFonte });
     await historico.carregar();
     await historico.verMais();
+    // Uma lista nova empurra a última da primeira página para a segunda.
+    paginas[1] = [lista('nova', 'pronto'), ...primeira.slice(0, -1)];
+    paginas[2] = [primeira.at(-1), ...pagina('b', 2)];
+    historicoDaFonte.mockClear();
     await historico.carregar({ silencioso: true });
     parar();
 
+    expect(historicoDaFonte.mock.calls.map(([n]) => n)).toEqual([1, 2]);
     const ids = historico.listas.value.map(l => l.id);
     expect(ids[0]).toBe('nova');
     expect(ids.slice(-3)).toEqual([primeira.at(-1).id, 'b0', 'b1']);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toHaveLength(LISTAS_POR_PAGINA + 3);
+    expect(historico.temMais.value).toBe(false);
   });
 
   it('quando falha, liga `erroDoMais`, mantém as listas e deixa tentar de novo', async () => {
@@ -710,5 +712,37 @@ describe('Ver mais', () => {
     await historico.verMais();
     expect(historico.semAcesso.value).toBe(true);
     expect(historico.erroDoMais.value).toBe(false);
+  });
+});
+
+// #3083 — a lista de uma página que veio pelo "Ver mais" também é acompanhada
+// enquanto está sendo desfeita.
+describe('Ver mais e a lista sendo desfeita', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('pergunta de novo pelas páginas na tela até a lista da segunda ficar desfeita', async () => {
+    const paginas = {
+      1: Array.from({ length: LISTAS_POR_PAGINA }, (_, i) =>
+        lista(`a${i}`, 'pronto')
+      ),
+      2: [lista('velha', 'pronto', { podeDesfazer: true })],
+    };
+    const historicoDaFonte = vi.fn(async (n = 1) => paginas[n]);
+    const { historico, parar } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    paginas[2] = [lista('velha', 'desfazendo')];
+    await historico.carregar({ silencioso: true });
+    paginas[2] = [lista('velha', 'desfeito')];
+    historicoDaFonte.mockClear();
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+    expect(historicoDaFonte.mock.calls.map(([n]) => n)).toEqual([1, 2]);
+    expect(historico.listas.value.at(-1).situacao).toBe('desfeito');
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 3);
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+    parar();
   });
 });
