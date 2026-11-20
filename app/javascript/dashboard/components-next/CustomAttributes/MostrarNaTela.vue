@@ -6,8 +6,11 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 // #2435: ligado (o padrão), o campo aparece no card, no contato, na empresa e
 // na conversa. Desligado, ele some dessas telas e continua guardado, nos
 // filtros, na automação e nas IAs. A linha inteira é o alvo do toque.
+// #3082 — `ajuda` troca a explicação quando a tela onde se liga de novo é
+// outra (o configurador da ficha); sem ela, vale a de Configurações.
 defineProps({
   disabled: { type: Boolean, default: false },
+  ajuda: { type: String, default: '' },
 });
 
 const mostrar = defineModel({ type: Boolean, default: true });
@@ -38,7 +41,7 @@ const id = useId();
         :id="`${id}-ajuda`"
         class="mt-1 text-xs leading-relaxed text-n-slate-11"
       >
-        {{ t('ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.AJUDA') }}
+        {{ ajuda || t('ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.AJUDA') }}
       </span>
     </span>
   </label>

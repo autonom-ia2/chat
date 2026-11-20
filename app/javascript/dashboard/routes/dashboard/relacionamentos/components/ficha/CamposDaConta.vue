@@ -8,6 +8,8 @@ import CampoDoAtributo from './CampoDoAtributo.vue';
 // os outros ficam atrás de "Mais campos", que abre sozinho quando um deles tem
 // erro. #3078 — tirado de CamposDaPessoa para a gaveta da empresa usar o mesmo.
 // Não altera nada: cada mudança sobe por `mudar(chave, valor)`.
+// #3082 — vem logo depois do nome nas gavetas Nova e Alterar, num quadro com
+// o mesmo nome do bloco da ficha ("Seus campos").
 const props = defineProps({
   // ficha/atributos.js#camposDoRegistro.
   campos: { type: Array, required: true },
@@ -21,7 +23,6 @@ const emit = defineEmits(['mudar']);
 const { t } = useI18n();
 const maisAbertos = ref(false);
 const idDosMais = useId();
-const ra = chave => t(`RELACIONAMENTOS_FICHA.GAVETA.${chave}`);
 
 const principais = computed(() =>
   props.campos.filter(campo => campo.principal)
@@ -36,10 +37,10 @@ const abertos = computed(() => maisAbertos.value || erroNosOutros.value);
 <template>
   <div
     data-relacionamentos="campos-da-conta"
-    class="flex flex-col gap-5 pt-5 border-t border-n-weak"
+    class="flex flex-col gap-5 p-4 border rounded-xl border-n-weak bg-n-solid-1"
   >
     <h3 class="m-0 text-base font-semibold text-n-slate-12">
-      {{ ra('OUTRAS') }}
+      {{ t('RELACIONAMENTOS_FICHA.CAMPOS.TITULO') }}
     </h3>
     <CampoDoAtributo
       v-for="campo in principais"

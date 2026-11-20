@@ -83,6 +83,9 @@ const key = computed(
 const listOptions = ref('');
 let initialOptions = '';
 let initialDisplayOn = [];
+// #3082 — como as áreas estavam quando o diálogo abriu: "Voltar ao que era"
+// desfaz o que a pessoa mudou desde então, sem esvaziar a ficha.
+let initialSurfaces = {};
 
 const edit = definition => {
   draft.value = definition
@@ -115,7 +118,10 @@ const open = async (definition, create = false) => {
   directEntry.value = create || Boolean(definition?.id);
   selectedSurface.value = props.surface || surfaces.value[0] || '';
   revision.value = state.value.configuration.revision;
-  layout.value = JSON.parse(JSON.stringify(state.value.configuration.surfaces));
+  initialSurfaces = JSON.parse(
+    JSON.stringify(state.value.configuration.surfaces)
+  );
+  layout.value = JSON.parse(JSON.stringify(initialSurfaces));
   query.value = '';
   error.value = '';
   draft.value = null;
@@ -145,6 +151,20 @@ const toggle = (surface, id, checked) => {
   if (checked) ids.push(id);
   layout.value[surface] = { mode: 'custom', ids };
 };
+const changed = surface =>
+  JSON.stringify(layout.value[surface]) !==
+  JSON.stringify(initialSurfaces[surface]);
+const restore = surface => {
+  const others = Object.fromEntries(
+    Object.entries(layout.value).filter(([name]) => name !== surface)
+  );
+  layout.value = initialSurfaces[surface]
+    ? {
+        ...others,
+        [surface]: JSON.parse(JSON.stringify(initialSurfaces[surface])),
+      }
+    : others;
+};
 const invalidDraft = computed(() =>
   Boolean(
     draft.value &&
@@ -152,8 +172,17 @@ const invalidDraft = computed(() =>
         (!draft.value.id && !draft.value.attribute_description.trim()))
   )
 );
+// #3080 — aberto pela ficha (`surface` de ficha), o diálogo fala da ficha e
+// esconde a linha "Entidade" e a escolha do local: lá o lugar já está dado.
+const FICHAS = ['contact_details', 'company_details'];
+const fromRecord = computed(() => FICHAS.includes(props.surface));
 const dialogTitle = computed(() => {
-  if (!draft.value) return t('RELATIONSHIPS.CONFIGURE');
+  if (!draft.value)
+    return t(
+      fromRecord.value
+        ? 'RELATIONSHIPS.CONFIGURE_RECORD'
+        : 'RELATIONSHIPS.CONFIGURE'
+    );
   if (activeEntity.value === 'company')
     return t(
       draft.value.id
@@ -164,8 +193,25 @@ const dialogTitle = computed(() => {
     draft.value.id ? 'RELATIONSHIPS.EDIT_ATTRIBUTE' : 'RELATIONSHIPS.CREATE'
   );
 });
+// #3082 — o que falta para salvar, dito ao lado do botão apagado.
+const missingToSave = computed(() => {
+  if (!invalidDraft.value) return '';
+  const semNome = !draft.value.attribute_display_name.trim();
+  const semUso = !draft.value.id && !draft.value.attribute_description.trim();
+  if (semNome && semUso) return t('RELATIONSHIPS.SAVE_NEEDS.BOTH');
+  return t(
+    semNome
+      ? 'RELATIONSHIPS.SAVE_NEEDS.NAME'
+      : 'RELATIONSHIPS.SAVE_NEEDS.PURPOSE'
+  );
+});
 const dialogDescription = computed(() => {
-  if (!draft.value) return t('RELATIONSHIPS.CONFIGURE_DESCRIPTION');
+  if (!draft.value)
+    return t(
+      fromRecord.value
+        ? 'RELATIONSHIPS.CONFIGURE_RECORD_DESCRIPTION'
+        : 'RELATIONSHIPS.CONFIGURE_DESCRIPTION'
+    );
   return t(
     draft.value.id
       ? 'RELATIONSHIPS.EDIT_DESCRIPTION'
@@ -330,7 +376,7 @@ defineExpose({ open });
     >
       <fieldset
         :disabled="busy"
-        class="m-0 flex max-h-[65vh] min-w-0 flex-col gap-4 overflow-y-auto border-0 p-0"
+        class="m-0 flex max-h-[65vh] min-w-0 flex-col gap-4 overflow-y-auto border-0 p-0 [&>*]:shrink-0"
       >
         <div v-if="state.stale" class="rounded-lg bg-n-amber-3 p-3">
           <p role="alert" class="text-sm text-n-amber-11">
@@ -352,6 +398,7 @@ defineExpose({ open });
           {{ error }}
         </p>
         <div
+          v-if="!draft"
           class="flex items-start gap-3 rounded-lg bg-n-blue-3 p-3 text-n-blue-11"
         >
           <Icon icon="i-lucide-info" class="mt-0.5 size-5 shrink-0" />
@@ -359,7 +406,10 @@ defineExpose({ open });
             {{ t('RELATIONSHIPS.GLOBAL_NOTE') }}
           </p>
         </div>
-        <div class="flex items-center justify-between gap-3 text-sm">
+        <div
+          v-if="!fromRecord"
+          class="flex items-center justify-between gap-3 text-sm"
+        >
           <span class="text-n-slate-11">{{ t('RELATIONSHIPS.ENTITY') }}</span>
           <span
             class="flex items-center gap-2 rounded-lg bg-n-slate-3 px-3 py-2 font-medium text-n-slate-12"
@@ -399,29 +449,18 @@ defineExpose({ open });
               autofocus
               required
               type="text"
-            />
-          </label>
-          <label
-            :for="`${inputId}-description`"
-            class="flex flex-col gap-2 text-sm font-medium text-n-slate-12"
-          >
-            <span>{{ t('RELATIONSHIPS.DESCRIPTION') }}</span>
-            <TextArea
-              :id="`${inputId}-description`"
-              v-model="draft.attribute_description"
-              :required="!draft.id"
-              :placeholder="t('RELATIONSHIPS.DESCRIPTION_HINT')"
+              :placeholder="t('RELATIONSHIPS.NAME_EXAMPLE')"
             />
           </label>
           <div class="flex flex-col gap-2">
             <span class="text-sm font-medium text-n-slate-12">{{
-              t('RELATIONSHIPS.TYPE')
+              t('RELATIONSHIPS.FIELD_TYPE')
             }}</span>
             <ChoiceSelect
               v-model="draft.attribute_display_type"
               :options="types"
               :disabled="Boolean(draft.id) || busy"
-              :aria-label="t('RELATIONSHIPS.TYPE')"
+              :aria-label="t('RELATIONSHIPS.FIELD_TYPE')"
               class="w-full"
             />
             <p class="text-xs text-n-slate-11">
@@ -440,8 +479,38 @@ defineExpose({ open });
               :max-length="10000"
             />
           </label>
+          <label
+            :for="`${inputId}-description`"
+            class="flex flex-col gap-2 text-sm font-medium text-n-slate-12"
+          >
+            <span>{{
+              t(
+                draft.id
+                  ? 'RELATIONSHIPS.DESCRIPTION'
+                  : 'RELATIONSHIPS.DESCRIPTION_REQUIRED'
+              )
+            }}</span>
+            <TextArea
+              :id="`${inputId}-description`"
+              v-model="draft.attribute_description"
+              :required="!draft.id"
+              :placeholder="t('RELATIONSHIPS.DESCRIPTION_HINT')"
+            />
+            <!-- Dentro do rótulo: o leitor de tela lê a dica junto do nome. -->
+            <span
+              data-dica-da-ia
+              class="flex items-start gap-1.5 text-xs font-normal leading-relaxed text-n-slate-11"
+            >
+              <Icon
+                icon="i-lucide-sparkles"
+                class="mt-0.5 size-3.5 shrink-0 text-n-violet-11"
+              />
+              {{ t('RELATIONSHIPS.DESCRIPTION_AI') }}
+            </span>
+          </label>
           <MostrarNaTela
             :model-value="!draft.oculto_na_tela"
+            :ajuda="t('RELATIONSHIPS.SHOW_HELP')"
             :disabled="busy"
             class="border-t border-n-weak pt-4"
             @update:model-value="value => (draft.oculto_na_tela = !value)"
@@ -453,8 +522,9 @@ defineExpose({ open });
             <Icon icon="i-lucide-eye-off" class="size-4 shrink-0" />
             {{ t('ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.ESCONDIDO_DE_TODAS') }}
           </p>
+          <!-- Aberto pela ficha, o campo novo já entra nela: sem "Onde aparece". -->
           <section
-            v-else-if="surfaces.length"
+            v-else-if="surfaces.length && !fromRecord"
             class="flex flex-col gap-3 border-t border-n-weak pt-4"
           >
             <h4 class="text-sm font-medium text-n-slate-12">
@@ -504,7 +574,7 @@ defineExpose({ open });
           </div>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <ChoiceSelect
-              v-if="surfaces.length"
+              v-if="surfaces.length && !fromRecord"
               v-model="selectedSurface"
               :options="
                 surfaces.map(value => ({
@@ -519,6 +589,8 @@ defineExpose({ open });
             <Button
               type="button"
               sm
+              faded
+              slate
               icon="i-lucide-plus"
               :label="t('RELATIONSHIPS.CREATE')"
               @click="edit(null)"
@@ -541,10 +613,18 @@ defineExpose({ open });
                 xs
                 ghost
                 icon="i-lucide-rotate-ccw"
+                :disabled="busy || !changed(surfaceName)"
                 :label="t('RELATIONSHIPS.RESTORE')"
-                @click="layout[surfaceName] = { mode: 'legacy', ids: [] }"
+                @click="restore(surfaceName)"
               />
             </div>
+            <p
+              v-if="FICHAS.includes(surfaceName)"
+              data-regra-da-ficha
+              class="text-xs leading-relaxed text-n-slate-11"
+            >
+              {{ t('RELATIONSHIPS.RECORD_RULE') }}
+            </p>
             <div
               v-for="definition in definitions"
               :key="definition.id"
@@ -579,7 +659,7 @@ defineExpose({ open });
                 type="button"
                 xs
                 ghost
-                :label="t('RELATIONSHIPS.EDIT')"
+                :label="t('RELATIONSHIPS.EDIT_FIELD')"
                 @click="edit(definition)"
               />
             </div>
@@ -598,7 +678,13 @@ defineExpose({ open });
             v-if="!definitions.length"
             class="py-5 text-center text-sm text-n-slate-11"
           >
-            {{ t('RELATIONSHIPS.NO_DEFINITIONS') }}
+            {{
+              t(
+                query
+                  ? 'RELATIONSHIPS.NO_DEFINITIONS_FOUND'
+                  : 'RELATIONSHIPS.NO_DEFINITIONS'
+              )
+            }}
           </p>
         </template>
       </fieldset>
@@ -606,6 +692,13 @@ defineExpose({ open });
         <div
           class="flex flex-wrap items-center justify-end gap-3 border-t border-n-weak pt-4"
         >
+          <p
+            v-if="missingToSave"
+            data-falta-para-salvar
+            class="m-0 me-auto text-xs text-n-slate-11"
+          >
+            {{ missingToSave }}
+          </p>
           <Button
             type="button"
             faded

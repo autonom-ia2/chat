@@ -5,8 +5,8 @@
     "COMPANIES": "Companies",
     "ATTRIBUTES": "Custom attributes",
     "FIELDS": "Custom fields",
-    "CONFIGURE": "Configure fields",
-    "CREATE": "Create attribute",
+    "CONFIGURE": "Choose fields",
+    "CREATE": "New field",
     "GLOBAL": "Global in this account. Hiding a field does not delete its value or restrict access.",
     "SAVE": "Save",
     "SAVED": "Saved",
@@ -16,34 +16,34 @@
     "BACK": "Back",
     "NEXT": "Next",
     "RETRY": "Try again",
-    "ERROR": "Unable to save. Check the field format and options. An existing name or key requires a different name. Your draft was preserved.",
-    "CONFLICT": "Someone else changed these records. Reload and review before saving again.",
+    "ERROR": "Could not save. Check whether a field with this name already exists and whether the list options are different. What you wrote is still here.",
+    "CONFLICT": "Someone else just changed these fields. Close, open again and check before saving.",
     "NAME": "Name",
-    "DESCRIPTION": "Description",
+    "DESCRIPTION": "What it is for",
     "TYPE": "Type",
     "ENTITY": "Entity",
     "OPTIONS": "Options (one per line)",
-    "SEARCH": "Search attributes",
-    "RESTORE": "Restore default",
+    "SEARCH": "Find a field",
+    "RESTORE": "Go back to how it was",
     "EMPTY": "Not set",
     "YES": "Yes",
     "NO": "No",
     "LOADING": "Loading…",
     "VIEW": "Contact view",
     "SURFACES": {
-      "contact_sidebar": "Conversation sidebar",
-      "contact_details": "Contact details",
-      "company_details": "Company details"
+      "contact_sidebar": "Next to the conversation",
+      "contact_details": "Person profile",
+      "company_details": "Company profile"
     },
     "TYPES": {
       "text": "Text",
       "number": "Number",
-      "link": "Link",
+      "link": "Website address",
       "date": "Date",
-      "list": "List",
+      "list": "List of options",
       "checkbox": "Yes or no",
-      "currency": "Currency (legacy)",
-      "percent": "Percent (legacy)"
+      "currency": "Amount of money",
+      "percent": "Percentage"
     },
     "CARDS": {
       "CONTACTS": "Browse people, segments and labels.",
@@ -137,23 +137,32 @@
         "BASIC_DESCRIPTION": "Create and manage custom field definitions for your account."
       }
     },
-    "EDIT_ATTRIBUTE": "Edit attribute",
-    "CREATE_COMPANY_ATTRIBUTE": "Create company attribute",
-    "EDIT_COMPANY_ATTRIBUTE": "Edit company attribute",
-    "SAVE_ATTRIBUTE": "Save attribute",
-    "SAVE_CONFIGURATION": "Save configuration",
+    "EDIT_ATTRIBUTE": "Change field",
+    "CREATE_COMPANY_ATTRIBUTE": "New company field",
+    "EDIT_COMPANY_ATTRIBUTE": "Change company field",
+    "SAVE_ATTRIBUTE": "Save field",
+    "SAVE_CONFIGURATION": "Save",
     "CLOSE": "Close",
-    "CREATE_DESCRIPTION": "Create a definition shared within this account. Values are filled in for each record.",
-    "EDIT_DESCRIPTION": "Update the definition without changing its key or existing values.",
-    "CONFIGURE_DESCRIPTION": "Choose which fields your team sees in each location.",
+    "CREATE_DESCRIPTION": "The field goes on every profile. On each one, you write what belongs to that profile.",
+    "EDIT_DESCRIPTION": "What was already written on the profiles stays there.",
+    "CONFIGURE_DESCRIPTION": "Choose which fields show in each place.",
+    "CONFIGURE_RECORD_DESCRIPTION": "Choose what shows on the profile.",
+    "RECORD_RULE": "When off, the field only shows on the profile once it is filled in.",
+    "SHOW_HELP": "When off, the field disappears from every screen. What was written stays saved, and the AI keeps using it. To show it again, turn it on here.",
+    "DESCRIPTION_REQUIRED": "What it is for (required)",
+    "SAVE_NEEDS": {
+      "BOTH": "To save, write the name and what it is for.",
+      "NAME": "To save, write the name.",
+      "PURPOSE": "To save, write what the field is for."
+    },
     "GLOBAL_TITLE": "Configuration shared within this account",
-    "DESCRIPTION_HINT": "Describe the purpose of the field and how it should be filled in.",
-    "TYPE_HINT": "Choose the format of the information to be entered.",
-    "DISPLAY_TITLE": "Where to display this attribute",
+    "DESCRIPTION_HINT": "E.g.: the birthday, to send congratulations.",
+    "TYPE_HINT": "After you create it, the kind does not change.",
+    "DISPLAY_TITLE": "Where it shows",
     "SURFACE_HELP": {
-      "contact_sidebar": "Shows the field inside Contact attributes in the conversation panel.",
-      "contact_details": "Highlights the field in the contact details Custom fields section.",
-      "company_details": "Highlights the field in the company details Custom fields section."
+      "contact_sidebar": "Shows next to the conversation, while you help the customer.",
+      "contact_details": "Shows in Your fields, on the person profile.",
+      "company_details": "Shows in Your fields, on the company profile."
     },
     "ENTITY_LABELS": {
       "contact": "Contact",
@@ -163,10 +172,10 @@
     "FIELDS_DESCRIPTION": "Additional information about this record. Configure fields and enter their values below.",
     "FIELDS_EMPTY": "No fields highlighted in this record.",
     "FIELDS_EMPTY_DESCRIPTION": "Display selection does not delete data. Existing attributes remain available in the Attributes tab.",
-    "NO_DEFINITIONS": "No attributes found.",
-    "SELECTION_SUMMARY": "{selected} of {total} fields selected",
+    "NO_DEFINITIONS": "There are no fields yet. Use New field to create the first one.",
+    "SELECTION_SUMMARY": "{selected} of {total} show",
     "BREADCRUMB_LABEL": "Relationships navigation",
-    "GLOBAL_NOTE": "Shared with your team in this account. Hiding a field does not delete values or restrict access.",
+    "GLOBAL_NOTE": "This applies to the whole team. Hiding a field does not delete what was already written in it.",
     "MORE_ACTIONS": "More actions",
     "VISIT_SITE": "Visit website",
     "OPEN_PANEL": "Open relationship panel",
@@ -203,6 +212,12 @@
         }
       }
     },
-    "PANEL_TITLE": "Relationship activity"
+    "PANEL_TITLE": "Relationship activity",
+    "CONFIGURE_RECORD": "Choose profile fields",
+    "EDIT_FIELD": "Change",
+    "NAME_EXAMPLE": "E.g.: Birthday",
+    "FIELD_TYPE": "What kind of information",
+    "DESCRIPTION_AI": "The AI reads this to understand the field and fill it in right.",
+    "NO_DEFINITIONS_FOUND": "No field with that name."
   }
 }

@@ -242,8 +242,17 @@
       "SOBRE": "Sobre a pessoa",
       "SIM": "Sim",
       "NAO": "Não",
-      "SO_LEITURA": "Você pode ver estas informações, mas não pode mudar.",
-      "ESCOLHER_CAMPOS": "Escolher campos da ficha"
+      "SO_LEITURA": "Você pode ver estas informações, mas não pode mudar."
+    },
+    "CAMPOS": {
+      "TITULO": "Seus campos",
+      "ALTERAR": "Alterar seus campos",
+      "NOVO": "Novo campo",
+      "PRIMEIRO": "Criar o primeiro campo",
+      "ESCOLHER": "Escolher campos da ficha",
+      "NENHUM_NA_FICHA": "Nenhum campo aparece nesta ficha ainda.",
+      "SEM_CAMPOS_PESSOA": "Crie campos para anotar o que importa no seu negócio, como o aniversário ou quem indicou.",
+      "SEM_CAMPOS_EMPRESA": "Crie campos para anotar o que importa no seu negócio, como o número de funcionários."
     },
     "ORIGEM": {
       "TITULO": "De onde veio",
@@ -268,7 +277,6 @@
       "CIDADE": "Cidade",
       "EMPRESA": "Empresa",
       "REDES": "Redes sociais",
-      "OUTRAS": "Outras informações",
       "SALVAR": "Salvar",
       "SALVO": "Informações salvas.",
       "ERRO_AO_SALVAR": "Não consegui salvar. Tente de novo.",

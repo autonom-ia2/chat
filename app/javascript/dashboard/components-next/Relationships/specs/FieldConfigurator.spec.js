@@ -139,7 +139,7 @@ it('renames the legacy job_title without sending a replacement key, type or enti
     },
   });
   const wrapper = await mountEditor();
-  await click(wrapper, 'RELATIONSHIPS.EDIT');
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
   await wrapper.find('input[type="text"]').setValue('Cargo');
   axios.patch.mockResolvedValue({
     data: {
@@ -358,7 +358,7 @@ it('opens a hidden attribute with "Mostrar na tela" off', async () => {
     },
   });
   const wrapper = await mountEditor();
-  await click(wrapper, 'RELATIONSHIPS.EDIT');
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
   expect(mostrarNaTela(wrapper).attributes('aria-checked')).toBe('false');
   wrapper.unmount();
 });
@@ -421,5 +421,159 @@ it('marks a hidden attribute in the configure list and leaves it out of the coun
   expect(chave.attributes('aria-checked')).toBe('false');
   expect(chave.attributes('disabled')).toBeDefined();
   expect(plano.find('[role="switch"]').attributes('aria-checked')).toBe('true');
+  wrapper.unmount();
+});
+
+// #3080 e #3082 — aberto pela ficha: fala da ficha, sem "Entidade" nem a
+// escolha do local; o formulário pede nome, tipo e "Para que serve", nessa
+// ordem, com a dica de que a IA lê o "Para que serve".
+it('from a record: record title, no entity row or location, and name, type and purpose in order', async () => {
+  const wrapper = mount(FieldConfigurator, {
+    props: { entity: 'contact', surface: 'contact_details' },
+    global: { stubs: { teleport: true } },
+  });
+  await flushPromises();
+  await wrapper.find('button').trigger('click');
+  await flushPromises();
+  expect(wrapper.find('dialog h3').text()).toBe(
+    'RELATIONSHIPS.CONFIGURE_RECORD'
+  );
+  expect(wrapper.text()).not.toContain('RELATIONSHIPS.ENTITY');
+  expect(wrapper.find('[aria-label="RELATIONSHIPS.LOCATION"]').exists()).toBe(
+    false
+  );
+  expect(wrapper.text()).toContain('RELATIONSHIPS.NO_DEFINITIONS');
+  await click(wrapper, 'RELATIONSHIPS.CREATE');
+  const texto = wrapper.text();
+  const posicao = chave => texto.indexOf(chave);
+  expect(posicao('RELATIONSHIPS.NAME')).toBeLessThan(
+    posicao('RELATIONSHIPS.FIELD_TYPE')
+  );
+  expect(posicao('RELATIONSHIPS.FIELD_TYPE')).toBeLessThan(
+    posicao('RELATIONSHIPS.DESCRIPTION')
+  );
+  const proposito = wrapper.find('textarea');
+  const rotulo = wrapper.find(`label[for="${proposito.attributes('id')}"]`);
+  expect(rotulo.get('[data-dica-da-ia]').text()).toBe(
+    'RELATIONSHIPS.DESCRIPTION_AI'
+  );
+  wrapper.unmount();
+});
+
+it('says no field matched when a search finds nothing', async () => {
+  const wrapper = await mountEditor();
+  await wrapper.find('input[type="search"]').setValue('placa');
+  expect(wrapper.text()).toContain('RELATIONSHIPS.NO_DEFINITIONS_FOUND');
+  wrapper.unmount();
+});
+
+it('shows where to pick a place outside a record', async () => {
+  const wrapper = await mountEditor();
+  expect(wrapper.find('[aria-label="RELATIONSHIPS.LOCATION"]').exists()).toBe(
+    true
+  );
+  expect(wrapper.text()).toContain('RELATIONSHIPS.GLOBAL_NOTE');
+  wrapper.unmount();
+});
+
+// #3082 — criado pela ficha: entra na ficha sem perguntar onde, diz o que
+// falta para salvar e marca "Para que serve" como obrigatório.
+it('from a record: creates the field on that record and says what is missing to save', async () => {
+  const wrapper = mount(FieldConfigurator, {
+    props: { entity: 'contact', surface: 'contact_details' },
+    global: { stubs: { teleport: true } },
+  });
+  await flushPromises();
+  await wrapper.find('button').trigger('click');
+  await flushPromises();
+  await click(wrapper, 'RELATIONSHIPS.CREATE');
+  expect(wrapper.text()).not.toContain('RELATIONSHIPS.DISPLAY_TITLE');
+  expect(wrapper.text()).not.toContain('RELATIONSHIPS.GLOBAL_NOTE');
+  expect(wrapper.text()).toContain('RELATIONSHIPS.DESCRIPTION_REQUIRED');
+  expect(wrapper.find('[data-falta-para-salvar]').text()).toBe(
+    'RELATIONSHIPS.SAVE_NEEDS.BOTH'
+  );
+  await wrapper.find('input[type="text"]').setValue('Aniversário');
+  expect(wrapper.find('[data-falta-para-salvar]').text()).toBe(
+    'RELATIONSHIPS.SAVE_NEEDS.PURPOSE'
+  );
+  await wrapper.find('textarea').setValue('Para mandar parabéns.');
+  expect(wrapper.find('[data-falta-para-salvar]').exists()).toBe(false);
+  axios.patch.mockResolvedValue({
+    data: { configuration: { version: 1, revision: 5, surfaces: {} } },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.patch.mock.calls[0][1].configuration.display_on).toEqual([
+    'contact_details',
+  ]);
+  wrapper.unmount();
+});
+
+// #3082 — "Voltar ao que era" desfaz a mudança feita no diálogo, sem esvaziar
+// a ficha; a lista da ficha explica que campo preenchido sempre aparece.
+it('from a record: "Voltar ao que era" undoes the change made in the dialog', async () => {
+  axios.get.mockResolvedValue({
+    data: {
+      configuration: {
+        version: 1,
+        revision: 4,
+        surfaces: { contact_details: { mode: 'custom', ids: [1] } },
+      },
+      definitions: [
+        {
+          id: 1,
+          attribute_key: 'aniversario',
+          attribute_model: 'contact_attribute',
+          attribute_display_name: 'Aniversário',
+          attribute_display_type: 'date',
+        },
+      ],
+      can_manage: true,
+    },
+  });
+  const wrapper = mount(FieldConfigurator, {
+    props: { entity: 'contact', surface: 'contact_details' },
+    global: { stubs: { teleport: true } },
+  });
+  await flushPromises();
+  await wrapper.find('button').trigger('click');
+  await flushPromises();
+  expect(wrapper.find('[data-regra-da-ficha]').text()).toBe(
+    'RELATIONSHIPS.RECORD_RULE'
+  );
+  const voltar = () =>
+    wrapper
+      .findAll('button')
+      .find(button => button.text() === 'RELATIONSHIPS.RESTORE');
+  const chave = () => wrapper.find('[role="switch"][aria-label="Aniversário"]');
+  expect(voltar().attributes('disabled')).toBeDefined();
+  await chave().trigger('click');
+  expect(chave().attributes('aria-checked')).toBe('false');
+  expect(voltar().attributes('disabled')).toBeUndefined();
+  await voltar().trigger('click');
+  expect(chave().attributes('aria-checked')).toBe('true');
+  axios.patch.mockResolvedValue({
+    data: { configuration: { version: 1, revision: 5, surfaces: {} } },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.patch.mock.calls[0][1].configuration.surfaces).toEqual({
+    contact_details: { mode: 'custom', ids: [1] },
+  });
+  wrapper.unmount();
+});
+
+it('from the company record: record title', async () => {
+  const wrapper = mount(FieldConfigurator, {
+    props: { entity: 'company', surface: 'company_details' },
+    global: { stubs: { teleport: true } },
+  });
+  await flushPromises();
+  await wrapper.find('button').trigger('click');
+  await flushPromises();
+  expect(wrapper.find('dialog h3').text()).toBe(
+    'RELATIONSHIPS.CONFIGURE_RECORD'
+  );
   wrapper.unmount();
 });

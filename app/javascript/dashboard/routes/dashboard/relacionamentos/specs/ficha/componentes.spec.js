@@ -1499,6 +1499,40 @@ describe('gavetas: não apagam o que a pessoa digitou', () => {
     w.unmount();
   });
 
+  it('GavetaDaEmpresa: os campos da empresa vêm logo depois do nome (#3082)', () => {
+    const w = mount(GavetaDaEmpresa, {
+      props: {
+        aberta: true,
+        empresa,
+        definicoes: [
+          {
+            id: 9,
+            attribute_model: 'company_attribute',
+            attribute_key: 'porte',
+            attribute_display_name: 'Porte',
+            attribute_display_type: 'text',
+          },
+        ],
+        escolhidos: [9],
+      },
+      attachTo: document.body,
+      global: { stubs },
+    });
+    // A gaveta do teste anterior pode ainda estar saindo: vale a última.
+    const ultimo = seletor => [...document.querySelectorAll(seletor)].at(-1);
+    const nome = ultimo('[data-foco]');
+    const quadro = ultimo('[data-relacionamentos="campos-da-conta"]');
+    const cnpj = ultimo('[data-campo="cnpj"]');
+    // Na ordem do documento: quem vem antes na lista de todos os elementos.
+    const antes = (a, b) => {
+      const todos = [...document.querySelectorAll('*')];
+      return todos.indexOf(a) < todos.indexOf(b);
+    };
+    expect(antes(nome, quadro)).toBe(true);
+    expect(antes(quadro, cnpj)).toBe(true);
+    w.unmount();
+  });
+
   it('GavetaDeInformacoes também', async () => {
     const w = mount(GavetaDeInformacoes, {
       props: { aberta: true, pessoa: pessoa() },

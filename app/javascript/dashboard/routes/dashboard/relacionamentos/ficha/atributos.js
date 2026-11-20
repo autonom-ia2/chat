@@ -117,6 +117,25 @@ export const camposDaPessoa = dados =>
 export const camposDaEmpresa = dados =>
   camposDoRegistro({ ...dados, modelo: MODELOS.empresa });
 
+// #3082 — as linhas do bloco "Seus campos" da ficha (da pessoa e da empresa):
+// os campos que aparecem na ficha (`principal`), com o nome que a conta deu e o
+// tipo. O valor vai como está gravado (a lista formata pelo `tipo`); o vazio
+// vai como '' e a lista mostra "Não informado".
+export const linhasDosCampos = (campos = []) =>
+  campos
+    .filter(campo => campo.principal)
+    .map(campo => ({
+      chave: `conta:${campo.chave}`,
+      rotulo: campo.rotulo,
+      tipo: campo.tipo,
+      valor: temValor(campo.valor) ? campo.valor : '',
+    }));
+
+// O bloco "Seus campos" aparece quando há campo para mostrar ou quando quem
+// olha pode criar e escolher campos (`podeMexer`); sem nenhum dos dois, some.
+export const blocoDosCamposAparece = (campos = [], podeMexer = false) =>
+  podeMexer || campos.some(campo => campo.principal);
+
 // O link só vira link de verdade com http ou https (nada de javascript:).
 export const linkSeguro = valor => {
   try {

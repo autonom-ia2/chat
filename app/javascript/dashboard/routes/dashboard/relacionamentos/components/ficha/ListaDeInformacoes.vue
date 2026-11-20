@@ -16,17 +16,22 @@ import BotaoCopiar from './BotaoCopiar.vue';
 // gravado: a data sai no formato do idioma, o número com a pontuação dele, o
 // "sim ou não" escrito e o link abre numa aba nova (só http e https). Texto
 // longo (`longo`, "Sobre a pessoa") mantém as quebras de linha.
+// #3082 — o bloco "Seus campos" lista cada campo, mesmo todos vazios
+// (`comFraseDeVazio` falso): quem olha vê o que falta preencher.
 const props = defineProps({
   linhas: { type: Array, required: true },
   raiz: { type: String, default: 'RELACIONAMENTOS_FICHA.INFORMACOES' },
   redes: { type: Array, default: () => [] },
+  comFraseDeVazio: { type: Boolean, default: true },
 });
 
 const { t } = useI18n();
 const idioma = useIdioma();
 const semNada = computed(
   () =>
-    !props.redes.length && props.linhas.every(linha => !temValor(linha.valor))
+    props.comFraseDeVazio &&
+    !props.redes.length &&
+    props.linhas.every(linha => !temValor(linha.valor))
 );
 
 const rotuloDe = linha =>

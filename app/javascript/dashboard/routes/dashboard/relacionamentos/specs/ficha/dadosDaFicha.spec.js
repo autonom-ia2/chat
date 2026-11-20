@@ -104,6 +104,22 @@ describe('gaveta: campos personalizados com o tipo de cada um', () => {
     expect(w.find('select').exists()).toBe(false);
   });
 
+  it('os campos vêm logo depois do nome, antes do telefone, em "Seus campos"', () => {
+    const w = montar();
+    const quadro = w.get(marca('campos-da-conta'));
+    expect(quadro.get('h3').text()).toBe('RELACIONAMENTOS_FICHA.CAMPOS.TITULO');
+    const nome = w.get('[data-foco]').element;
+    const telefone = w.get('input[type="tel"]').element;
+    // Na ordem do documento: quem vem antes na lista de todos os elementos.
+    const antes = (a, b) => {
+      const todos = [...document.querySelectorAll('*')];
+      return todos.indexOf(a) < todos.indexOf(b);
+    };
+    expect(antes(nome, quadro.element)).toBe(true);
+    expect(antes(quadro.element, telefone)).toBe(true);
+    w.unmount();
+  });
+
   it('os campos sem valor e fora da ficha ficam atrás de "Mais campos"', async () => {
     const w = montar();
     const botao = w.get(marca('mais-campos'));
@@ -549,10 +565,95 @@ describe('Informações: o valor de cada tipo e quem só pode ver', () => {
     expect(w.get('[data-informacao="cidade"]').text()).toContain('Santos');
   });
 
-  it('quem pode escolher os campos da ficha tem "Escolher campos"', async () => {
-    const w = corpo({ podeEditar: true, podeEscolherCampos: true });
+  const PLACA = {
+    id: 1,
+    chave: 'placa',
+    rotulo: 'Placa do carro',
+    tipo: 'text',
+    valor: 'ABC1D23',
+    principal: true,
+  };
+  const CASAMENTO = {
+    id: 2,
+    chave: 'casamento',
+    rotulo: 'Aniversário de casamento',
+    tipo: 'date',
+    valor: '',
+    principal: true,
+  };
+
+  it('quem pode escolher os campos da ficha tem "Escolher campos" e "Novo campo" em "Seus campos"', async () => {
+    const w = corpo({
+      podeEditar: true,
+      podeEscolherCampos: true,
+      campos: [PLACA],
+    });
     expect(w.find(marca('so-leitura')).exists()).toBe(false);
-    await w.get(marca('escolher-campos')).trigger('click');
+    const bloco = w.get(marca('seus-campos'));
+    await bloco.get(marca('escolher-campos')).trigger('click');
     expect(w.emitted('escolherCampos')).toHaveLength(1);
+    await bloco.get(marca('criar-campo')).trigger('click');
+    expect(w.emitted('criarCampo')).toHaveLength(1);
+    expect(bloco.get(marca('criar-campo')).text()).toBe(
+      'RELACIONAMENTOS_FICHA.CAMPOS.NOVO'
+    );
+  });
+
+  it('"Seus campos" vem antes de Informações e mostra o vazio como "Não informado"', () => {
+    const w = corpo({ campos: [PLACA, CASAMENTO] });
+    const lado = w.get(marca('coluna-lado'));
+    const blocos = lado
+      .findAll('section')
+      .map(secao => secao.attributes('data-relacionamentos'));
+    expect(blocos.slice(0, 2)).toEqual(['seus-campos', 'informacoes']);
+    const valor = chave =>
+      w.get(`${marca('seus-campos')} [data-informacao="${chave}"] dd`).text();
+    expect(valor('conta:placa')).toBe('ABC1D23');
+    expect(valor('conta:casamento')).toBe(
+      'RELACIONAMENTOS.COMUM.NAO_INFORMADO'
+    );
+    // Os campos não se repetem em Informações.
+    expect(
+      w.find(`${marca('informacoes')} [data-informacao="conta:placa"]`).exists()
+    ).toBe(false);
+  });
+
+  it('"Seus campos" com todos vazios lista cada um, sem a frase de vazio', () => {
+    const w = corpo({ campos: [CASAMENTO] });
+    const bloco = w.get(marca('seus-campos'));
+    expect(bloco.find('[data-vazio]').exists()).toBe(false);
+    expect(bloco.get('[data-informacao="conta:casamento"]').exists()).toBe(
+      true
+    );
+  });
+
+  it('conta sem campos: quem pode cria o primeiro; quem não pode não vê o bloco', async () => {
+    const w = corpo({ podeEditar: true, podeEscolherCampos: true });
+    const bloco = w.get(marca('seus-campos'));
+    expect(bloco.get('[data-vazio]').text()).toBe(
+      'RELACIONAMENTOS_FICHA.CAMPOS.SEM_CAMPOS_PESSOA'
+    );
+    expect(bloco.find(marca('escolher-campos')).exists()).toBe(false);
+    await bloco.get(marca('criar-campo')).trigger('click');
+    expect(w.emitted('criarCampo')).toHaveLength(1);
+    expect(corpo({}).find(marca('seus-campos')).exists()).toBe(false);
+    expect(
+      corpo({ podeEditar: false, podeEscolherCampos: true })
+        .find(marca('seus-campos'))
+        .exists()
+    ).toBe(false);
+  });
+
+  it('campos que existem mas não aparecem: frase própria e "Escolher campos da ficha"', () => {
+    const w = corpo({
+      podeEditar: true,
+      podeEscolherCampos: true,
+      campos: [{ ...CASAMENTO, principal: false }],
+    });
+    const bloco = w.get(marca('seus-campos'));
+    expect(bloco.get('[data-vazio]').text()).toBe(
+      'RELACIONAMENTOS_FICHA.CAMPOS.NENHUM_NA_FICHA'
+    );
+    expect(bloco.find(marca('escolher-campos')).exists()).toBe(true);
   });
 });
