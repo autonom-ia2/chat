@@ -28,7 +28,8 @@ module EmailCampaigns
       @campaign.mark_sending! if @campaign.scheduled?
       sender = EmailCampaigns::Ses::Sender.new(@campaign.sender_identity)
 
-      @campaign.email_campaign_recipients.pending.find_each(batch_size: BATCH_SIZE) do |recipient|
+      # #3063: only who may go now; whoever waits for the limit or the sending hours keeps pending (RitmoDoDestinatario).
+      EmailCampaigns::RitmoDoDestinatario.pendentes_na_vez(@campaign).find_each(batch_size: BATCH_SIZE) do |recipient|
         break unless @campaign.reload.sending?
         break if @campaign.recipient_import_active? || @admission.park_if_blocked!
 
@@ -49,6 +50,9 @@ module EmailCampaigns
     end
 
     def deliver_one(recipient, sender, _suppressed = nil)
+      contato = EmailCampaigns::RitmoDoDestinatario.contato(@campaign, recipient)
+      return if EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato)
+
       gate = EmailCampaigns::DeliveryClaim.new(@campaign)
       return unless gate.prepare(recipient) == :ready
 
@@ -62,6 +66,7 @@ module EmailCampaigns
       # SES has ACCEPTED the message by here — never route a post-send failure through the
       # transient-retry path (that would re-queue + re-send a delivered message = duplicate email).
       persist_sent!(recipient, message_id)
+      EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, contato)
     rescue StandardError => e
       Rails.logger.error("[EmailCampaigns::DeliveryEngine] campaign=#{@campaign.id} recipient=#{recipient.id} #{e.message}")
       handle_send_failure(recipient, e) if claimed

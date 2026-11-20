@@ -333,5 +333,10 @@
   },
   "AUTOMACAO_MODELOS": {
     "DESTAQUE_RAMO": "Most used by insurance professionals"
+  },
+  "CAMPAIGN_JOURNEY": {
+    "RITMO": {
+      "FORA_DA_CONTA": "The limit doesn't apply to the insurance renewal notice, to replies to someone who just wrote to you, nor to your team's conversation with the customer."
+    }
   }
 }

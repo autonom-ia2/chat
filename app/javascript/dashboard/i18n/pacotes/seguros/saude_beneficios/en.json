@@ -1202,6 +1202,9 @@
     },
     "LIVE_CHAT": {
       "URL_PLACEHOLDER": "https://www.yourbrokerage.com/health-plans"
+    },
+    "RITMO": {
+      "FORA_DA_CONTA": "The limit doesn't apply to the plan renewal notice, to replies to someone who just wrote to you, nor to your team's conversation with the customer."
     }
   },
   "MACROS": {

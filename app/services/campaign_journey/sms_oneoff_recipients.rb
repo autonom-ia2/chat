@@ -32,8 +32,16 @@ module CampaignJourney::SmsOneoffRecipients
 
   NO_PHONE_REASON = 'Contact has no phone number'.freeze
   CHANNEL_DISABLED_REASON = 'Canal SMS desligado no público'.freeze
+  ORIGEM_DO_RITMO = 'campanha_sms'.freeze
 
   private
+
+  # The audience SMS badge is read again: turned off after the first run, the postponed are skipped like the others.
+  def retomar_destinatario(recipient)
+    return recipient.mark_skipped!(CHANNEL_DISABLED_REASON) if sms_audience_link.present? && !audience_sms_enabled?
+
+    process_sms_recipient(recipient)
+  end
 
   def process_audience(audience_labels)
     return super if sms_audience_link.blank?
@@ -71,6 +79,9 @@ module CampaignJourney::SmsOneoffRecipients
     content, missing = sms_message.render_for(contact)
     return recipient.mark_skipped!(CampaignJourney::SmsMessage.missing_reason(missing)) if missing.any?
 
+    # #3063: limit per customer and sending hours, right before the send.
+    return if adiado_pelo_ritmo?(recipient, contact)
+
     recipient.update!(message_content: content)
     deliver_sms(recipient, contact.phone_number, content)
   rescue StandardError => e
@@ -81,6 +92,7 @@ module CampaignJourney::SmsOneoffRecipients
     source_id = CampaignJourney::SmsSender.new(channel).deliver(to: to, body: content)
     accepted_by_provider << recipient.id
     mark_sms_sent(recipient, source_id)
+    contar_no_ritmo(recipient, ORIGEM_DO_RITMO)
     CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient).record_at_send(to)
   rescue CampaignJourney::SmsSender::Error => e
     recipient.mark_failed!(code: e.code, message: e.message)

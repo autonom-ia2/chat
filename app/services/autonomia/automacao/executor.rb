@@ -51,6 +51,8 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::EsperaDeResposta
   # O que impede a execução de andar agora (impedida?, impedimento), conferido no começo e antes de cada ação.
   include ::Autonomia::Automacao::ImpedimentoNoExecutor
+  # O limite de mensagens por cliente e o horário de envio da conta (#3063).
+  include ::Autonomia::Automacao::RitmoNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -171,9 +173,13 @@ class Autonomia::Automacao::Executor
     return if impedida?(passo['id'])
     return encerrar(passo['id'], 'parada', 'mensagens_desligadas') if mensagem && !::Autonomia::Automacao::Motor.mensagens?(@account)
 
-    resultado = classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar
-    # Robô do outro lado: para só nesta conversa, e a automação continua ligada (a nota já ficou). Quem ligou não vê a
-    # conversa em que o passo age: pausa a automação, como na ação.
+    envio = -> { classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar }
+    pelo_ritmo(passo, envio) { |resultado| depois_do_nativo(passo, resultado) }
+  end
+
+  # Robô do outro lado: para só nesta conversa, e a automação continua ligada (a nota já ficou). Quem ligou não vê a
+  # conversa em que o passo age: pausa a automação, como na ação.
+  def depois_do_nativo(passo, resultado)
     return encerrar(passo['id'], 'parada', motivo_da_parada(resultado), 'falhou') if %i[laco sem_acesso].include?(resultado.tipo)
 
     janela_fechada?(resultado) ? parar_na_janela(passo, resultado) : seguir_depois_da_acao(passo, resultado)

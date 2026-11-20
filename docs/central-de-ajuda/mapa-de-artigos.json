@@ -4458,6 +4458,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.35",
+     "titulo": "Limitar quantas mensagens cada cliente recebe e em que horário",
+     "para_que_serve": "Escolher quantas mensagens a mesma pessoa recebe num período e em que horário as campanhas e automações podem mandar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_ritmo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_ritmo",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: limite_de_mensagens_por_cliente"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

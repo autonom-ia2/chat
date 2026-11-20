@@ -26,7 +26,13 @@
 module CampaignJourney::WhatsappOneoffRecipients
   include CampaignJourney::RecipientTracking
 
+  ORIGEM_DO_RITMO = 'campanha_whatsapp'.freeze
+
   private
+
+  def retomar_destinatario(recipient)
+    process_recipient(recipient)
+  end
 
   def journey_send?
     audience_link.present? || CampaignJourney::Config.enabled?
@@ -62,9 +68,13 @@ module CampaignJourney::WhatsappOneoffRecipients
 
   # P2 (#1002): the message Meta accepted goes into the contact's existing conversation (audience
   # campaigns only; label campaigns keep Chatwoot's behaviour). No conversation is created.
+  # #3063: the limit per customer and the sending hours are checked right before the send, after every reason to skip.
   def send_whatsapp_template_message(recipient:, to:, template_params:)
+    return if journey_send? && adiado_pelo_ritmo?(recipient, recipient.contact)
+
     result = super
     record_sent_message(recipient, to, template_params)
+    contar_no_ritmo(recipient, ORIGEM_DO_RITMO) if accepted_by_provider.include?(recipient.id)
     result
   end
 

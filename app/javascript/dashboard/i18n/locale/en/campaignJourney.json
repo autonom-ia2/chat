@@ -3,7 +3,8 @@
     "SIDEBAR": {
       "GROUP": "Campaigns",
       "CAMPAIGNS": "Campaign",
-      "AUDIENCES": "Audience"
+      "AUDIENCES": "Audience",
+      "RITMO": "Message limit"
     },
     "CHANNELS": {
       "EMAIL": "Email",
@@ -748,6 +749,77 @@
       "nao_conferido": "could not check the template",
       "outro": "stopped before sending",
       "etiqueta_excluida_apagada": "excluded label deleted"
+    },
+    "RITMO": {
+      "BREADCRUMB": "Where you are",
+      "TITLE": "Message limit and hours",
+      "SUBTITLE": "Choose how many messages each customer gets and at what time. It applies to campaigns and automations.",
+      "LIMITE": {
+        "TITLE": "Limit per customer",
+        "HELP": "How many messages the same person can get in a period.",
+        "SEM_LIMITE": "No limit",
+        "MENSAGENS": "At most 1 message | At most {n} messages",
+        "MENSAGENS_LABEL": "Messages per customer",
+        "A_CADA": "every",
+        "DIAS": "1 day | {n} days",
+        "DIAS_LABEL": "Limit period"
+      },
+      "HORARIO": {
+        "TITLE": "Sending hours",
+        "HELP": "At what time messages can go out.",
+        "QUALQUER_HORA": "Any time",
+        "SO_EM_CERTOS": "Only at certain hours",
+        "QUANDO_LABEL": "When to send",
+        "DAS": "From",
+        "AS": "to",
+        "HORA": "{hora}:00",
+        "INICIO_LABEL": "Starts sending at",
+        "FIM_LABEL": "Stops sending at",
+        "DIAS_LABEL": "On these days",
+        "DIAS_DA_SEMANA": {
+          "0": "Sun",
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat"
+        },
+        "FUSO": "The time is each customer's local time. If their profile doesn't say, your account's time zone applies.",
+        "DIAS_LONGOS": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        },
+        "DIAS_RESUMO": {
+          "TODOS": "every day",
+          "UTEIS": "Monday to Friday"
+        }
+      },
+      "RESUMO": {
+        "LIMITE": "{mensagens} per customer every {dias}.",
+        "SEM_LIMITE": "No message limit per customer.",
+        "HORARIO": "Messages go out {dias}, from {inicio} to {fim}.",
+        "QUALQUER_HORA": "Messages go out at any time.",
+        "FALTA_HORARIO": "Fix the hours to be able to save."
+      },
+      "ESPERA": "If it goes over the limit or outside the hours, the message is kept: it waits and goes out on its own later.",
+      "FORA_DA_CONTA": "The limit doesn't apply to replies to someone who just wrote to you, nor to your team's conversation with the customer.",
+      "PROBLEMA": {
+        "FIM_ANTES": "The end ({fim}) must be after the start ({inicio}).",
+        "SEM_DIA": "Pick at least one day."
+      },
+      "SALVAR": "Save",
+      "SALVO": "Message limit saved.",
+      "ERRO_AO_SALVAR": "Couldn't save. Try again.",
+      "ERRO": "Couldn't open the message limit right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "SO_LEITURA": "You can see this but not change it. To change it, talk to whoever manages campaigns.",
+      "TUDO_SALVO": "All saved."
     }
   }
 }

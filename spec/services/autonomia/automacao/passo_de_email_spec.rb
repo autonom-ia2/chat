@@ -35,6 +35,23 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
   def conversas_de_email = Conversation.where(inbox: caixa)
 
+  # #3063: o e-mail da automação conta no limite por cliente da conta, com a origem dele; abre conversa nova, então nunca
+  # é resposta a quem está esperando.
+  describe 'o limite de mensagens por cliente' do
+    before do
+      account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => { 'limite' => { 'mensagens' => 2, 'dias' => 7 } })) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'conta o e-mail que saiu com a origem automacao_email, mesmo com o cliente esperando na outra conversa', :aggregate_failures do
+      create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'oi')
+
+      rodar(conversa)
+
+      expect(conversas_de_email.count).to eq(1)
+      expect(Autonomia::EnvioAoCliente.where(contact: contato).pluck(:origem)).to eq(['automacao_email'])
+    end
+  end
+
   # #2780: o assunto lê pelos valores da execução (NaConversa#valores), com quem ligou e o gatilho da receita.
   describe 'o assunto' do
     it 'com um valor comum, sai com o valor' do

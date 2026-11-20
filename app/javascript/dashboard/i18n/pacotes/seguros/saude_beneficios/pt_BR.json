@@ -1202,6 +1202,9 @@
     },
     "LIVE_CHAT": {
       "URL_PLACEHOLDER": "https://www.suacorretora.com.br/planos-de-saude"
+    },
+    "RITMO": {
+      "FORA_DA_CONTA": "O limite não vale para o aviso de renovação do plano, para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente."
     }
   },
   "MACROS": {

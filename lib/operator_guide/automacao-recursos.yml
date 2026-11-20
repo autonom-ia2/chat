@@ -811,3 +811,8 @@ fora:
       - autonomia/prospecting/lead_consent_refusals
       - autonomia/prospecting/lead_queue_postponements
       - autonomia/prospecting/search_interpretations
+  - motivo: >-
+      O ritmo de envio da conta (#3063: limite de mensagens por cliente e horário de envio) é a regra que vale para as
+      próprias automações e campanhas. Quem ajusta é a pessoa, na tela; automação que muda o próprio freio não é uso.
+    recursos:
+      - ritmo_de_envio

@@ -3,7 +3,8 @@
     "SIDEBAR": {
       "GROUP": "Campanhas",
       "CAMPAIGNS": "Campanha",
-      "AUDIENCES": "Público"
+      "AUDIENCES": "Público",
+      "RITMO": "Limite de mensagens"
     },
     "CHANNELS": {
       "EMAIL": "E-mail",
@@ -748,6 +749,77 @@
       "nao_conferido": "não deu para conferir o modelo",
       "outro": "parou antes de enviar",
       "etiqueta_excluida_apagada": "etiqueta excluída apagada"
+    },
+    "RITMO": {
+      "BREADCRUMB": "Onde você está",
+      "TITLE": "Limite e horário das mensagens",
+      "SUBTITLE": "Escolha quantas mensagens cada cliente recebe e em que horário. Vale para campanhas e automações.",
+      "LIMITE": {
+        "TITLE": "Limite por cliente",
+        "HELP": "Quantas mensagens a mesma pessoa pode receber num período.",
+        "SEM_LIMITE": "Sem limite",
+        "MENSAGENS": "No máximo 1 mensagem | No máximo {n} mensagens",
+        "MENSAGENS_LABEL": "Mensagens por cliente",
+        "A_CADA": "a cada",
+        "DIAS": "1 dia | {n} dias",
+        "DIAS_LABEL": "Período do limite"
+      },
+      "HORARIO": {
+        "TITLE": "Horário de envio",
+        "HELP": "Em que horário as mensagens podem sair.",
+        "QUALQUER_HORA": "A qualquer hora",
+        "SO_EM_CERTOS": "Só em certos horários",
+        "QUANDO_LABEL": "Quando mandar",
+        "DAS": "Das",
+        "AS": "às",
+        "HORA": "{hora}h",
+        "INICIO_LABEL": "Começa a mandar às",
+        "FIM_LABEL": "Para de mandar às",
+        "DIAS_LABEL": "Nos dias",
+        "DIAS_DA_SEMANA": {
+          "0": "Dom",
+          "1": "Seg",
+          "2": "Ter",
+          "3": "Qua",
+          "4": "Qui",
+          "5": "Sex",
+          "6": "Sáb"
+        },
+        "FUSO": "A hora é a do lugar de cada cliente. Se a ficha dele não diz, vale o fuso da sua conta.",
+        "DIAS_LONGOS": {
+          "0": "domingo",
+          "1": "segunda",
+          "2": "terça",
+          "3": "quarta",
+          "4": "quinta",
+          "5": "sexta",
+          "6": "sábado"
+        },
+        "DIAS_RESUMO": {
+          "TODOS": "todos os dias",
+          "UTEIS": "de segunda a sexta"
+        }
+      },
+      "RESUMO": {
+        "LIMITE": "{mensagens} por cliente a cada {dias}.",
+        "SEM_LIMITE": "Sem limite de mensagens por cliente.",
+        "HORARIO": "As mensagens saem {dias}, das {inicio} às {fim}.",
+        "QUALQUER_HORA": "As mensagens saem a qualquer hora.",
+        "FALTA_HORARIO": "Falta arrumar o horário para poder salvar."
+      },
+      "ESPERA": "Se passar do limite ou do horário, a mensagem fica guardada: ela espera e sai sozinha depois.",
+      "FORA_DA_CONTA": "O limite não vale para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente.",
+      "PROBLEMA": {
+        "FIM_ANTES": "O fim ({fim}) precisa ser depois do começo ({inicio}).",
+        "SEM_DIA": "Escolha pelo menos um dia."
+      },
+      "SALVAR": "Salvar",
+      "SALVO": "Limite de mensagens salvo.",
+      "ERRO_AO_SALVAR": "Não deu para salvar. Tente de novo.",
+      "ERRO": "Não deu para abrir o limite de mensagens agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "SO_LEITURA": "Você pode ver, mas não mudar. Para mudar, fale com quem cuida das campanhas.",
+      "TUDO_SALVO": "Tudo salvo."
     }
   }
 }

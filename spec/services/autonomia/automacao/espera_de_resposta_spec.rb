@@ -142,6 +142,25 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
   end
 
   describe 'Pesquisa de satisfação (#2936)' do
+    # #3063: no limite por cliente, a pergunta espera a vaga; na volta ela PERGUNTA (não confere uma resposta que não
+    # houve) e conta.
+    it 'no limite por cliente, a pesquisa espera a vaga e, na volta, pergunta', :aggregate_failures do
+      account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => { 'limite' => { 'mensagens' => 1, 'dias' => 7 } })) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::EnvioAoCliente.create!(account: account, contact: ana, origem: 'campanha_email', enviado_em: 1.day.ago)
+
+      execucao = rodar([pesquisa])
+
+      expect(mandadas).to be_empty
+      expect([execucao.estado, registros(execucao)]).to eq(['esperando', [%w[nota ok adiado_pelo_ritmo]]])
+
+      travel(6.days + 10.minutes) { varrer }
+
+      expect(mandadas.pluck(:content)).to eq(['De 0 a 10, que nota você dá?'])
+      expect(execucao.reload.estado).to eq('esperando')
+      expect(pedido(execucao)).to be_present
+      expect(Autonomia::EnvioAoCliente.where(contact: ana, origem: 'automacao_mensagem').count).to eq(1)
+    end
+
     it 'pergunta com as notas, a IA entende "nota 9, mas demorou" e segue pela nota alta; a nota fica no contato', :aggregate_failures do
       ia_responde({ 'nota' => 9, 'comentario' => 'Demorou um pouco' })
       execucao = rodar([pesquisa])
@@ -271,6 +290,15 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
       travel_to Time.utc(2026, 11, 16, 11, 0, 0)
       account.enable_features!('crm_booking_v2')
       create(:inbox_member, user: world.host, inbox: conversa.inbox)
+    end
+
+    # #3063: o convite da reunião conta no limite por cliente (o resultado do oferecer leva o mensagem_id).
+    it 'o convite conta no limite por cliente', :aggregate_failures do
+      execucao = rodar([reuniao])
+
+      convite = mandadas.last
+      expect(pedido(execucao).dados['mensagem_id']).to eq(convite.id)
+      expect(Autonomia::EnvioAoCliente.where(contact: ana).pluck(:origem)).to eq(['automacao_mensagem'])
     end
 
     it 'oferece os 3 horários, a IA entende a escolha e a reunião fica marcada', :aggregate_failures do
