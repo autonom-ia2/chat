@@ -21,7 +21,16 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // O desfazer que travou no servidor (a lista segue `desfazendo`, mas volta com
 // `podeDesfazer`) não é acompanhado: perguntar de novo não muda nada, quem
 // resolve é a pessoa clicar em Desfazer.
+// #3083 — o servidor manda as listas de página em página
+// (Relacionamentos::Trazer::Historico::POR_PAGINA, o mesmo número daqui). A
+// página cheia quer dizer que pode haver mais: "Ver mais" pede a próxima e a
+// junta embaixo. A carga de sempre (a que a tela pede e a da agenda) relê só a
+// primeira página: ela fica no topo e o que "Ver mais" já trouxe continua
+// embaixo, sem repetir lista. "Ver mais" que falha liga `erroDoMais` (a tela
+// diz e o botão continua lá); por falta de acesso, `semAcesso`.
 export const INTERVALO_DO_HISTORICO_MS = INTERVALO_INICIAL_MS;
+
+export const LISTAS_POR_PAGINA = 100;
 
 const AVISO_ERRO_DESFAZER = 'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER';
 
@@ -50,6 +59,49 @@ const desfazerQuebrou = (antes, agora) =>
       )
     );
 
+const semRepetir = (primeiras, depois) => {
+  const ids = new Set(primeiras.map(lista => lista.id));
+  return [...primeiras, ...depois.filter(lista => !ids.has(lista.id))];
+};
+
+// "Ver mais": a próxima página do histórico, embaixo das que já estão na tela.
+const usePaginasDoHistorico = ({ fonte, listas, semAcesso, encerrou }) => {
+  const temMais = ref(false);
+  const carregandoMais = ref(false);
+  const erroDoMais = ref(false);
+  let paginasLidas = 1;
+
+  const verMais = async () => {
+    if (carregandoMais.value || !temMais.value) return;
+    carregandoMais.value = true;
+    erroDoMais.value = false;
+    const pagina = paginasLidas + 1;
+    try {
+      const recebidas = await fonte.historico(pagina);
+      if (encerrou()) return;
+      listas.value = semRepetir(listas.value, recebidas);
+      paginasLidas = pagina;
+      temMais.value = recebidas.length >= LISTAS_POR_PAGINA;
+    } catch (falha) {
+      if (encerrou()) return;
+      if (ehSemAcesso(falha)) semAcesso.value = true;
+      else erroDoMais.value = true;
+    } finally {
+      carregandoMais.value = false;
+    }
+  };
+
+  // A primeira página lida de novo: sem "Ver mais" ainda, ela é o histórico e
+  // diz se há mais; depois dele, ela vai para o topo e o resto fica.
+  const comAPrimeira = recebidas => {
+    if (paginasLidas > 1) return semRepetir(recebidas, listas.value);
+    temMais.value = recebidas.length >= LISTAS_POR_PAGINA;
+    return recebidas;
+  };
+
+  return { temMais, carregandoMais, erroDoMais, verMais, comAPrimeira };
+};
+
 // As listas que a conta já trouxe e a carga delas.
 const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
   const listas = ref([]);
@@ -60,6 +112,12 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
   let encerrado = false;
   // Número da última carga pedida: resposta de carga mais velha é descartada.
   let ultimaCarga = 0;
+  const { comAPrimeira, ...paginas } = usePaginasDoHistorico({
+    fonte,
+    listas,
+    semAcesso,
+    encerrou: () => encerrado,
+  });
 
   const carregar = async ({ silencioso = false, daAgenda = false } = {}) => {
     if (encerrado) return;
@@ -76,7 +134,7 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
       const recebidas = await fonte.historico();
       if (!vale()) return;
       if (desfazerQuebrou(listas.value, recebidas)) avisar(AVISO_ERRO_DESFAZER);
-      listas.value = recebidas;
+      listas.value = comAPrimeira(recebidas);
       if (recebidas.some(emAndamento)) {
         agenda.agendar(() => carregar({ silencioso: true, daAgenda: true }));
       }
@@ -94,7 +152,7 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
     agenda.cancelar();
   });
 
-  return { listas, carregando, erro, semAcesso, carregar };
+  return { listas, carregando, erro, semAcesso, carregar, ...paginas };
 };
 
 // O desfazer de uma lista: a prévia do que sai e a confirmação.

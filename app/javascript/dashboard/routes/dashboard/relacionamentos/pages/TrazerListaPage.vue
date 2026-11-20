@@ -239,9 +239,13 @@ watch(semAcesso, sem => {
               :com-erro="historico.erro.value"
               :tentando="historico.tentando.value"
               :tem-desfazer="temDesfazer"
+              :tem-mais="historico.temMais.value"
+              :carregando-mais="historico.carregandoMais.value"
+              :erro-do-mais="historico.erroDoMais.value"
               @desfazer="abrirDesfazer"
               @tentar="historico.carregar"
               @tentar-de-novo="historico.tentarDeNovo"
+              @ver-mais="historico.verMais"
             />
           </template>
 
@@ -341,9 +345,13 @@ watch(semAcesso, sem => {
             :com-erro="historico.erro.value"
             :tentando="historico.tentando.value"
             :tem-desfazer="temDesfazer"
+            :tem-mais="historico.temMais.value"
+            :carregando-mais="historico.carregandoMais.value"
+            :erro-do-mais="historico.erroDoMais.value"
             @desfazer="abrirDesfazer"
             @tentar="historico.carregar"
             @tentar-de-novo="historico.tentarDeNovo"
+            @ver-mais="historico.verMais"
           />
         </template>
       </div>

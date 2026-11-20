@@ -238,25 +238,44 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       end
     end
 
-    it 'responde 404 para a lista de outra conta, a da automação e o rascunho' do
+    it 'responde 404 para a lista de outra conta e o rascunho' do
       outra = create(:account)
       dono = create(:user, account: outra, role: :administrator)
       outra.enable_features!('companies')
       de_fora = trazer_lista(conta: outra, quem: dono)
-      da_automacao = trazer_lista
-      da_automacao.update!(options: da_automacao.options.merge('origem' => CampaignImport::AUTOMATION_ORIGIN))
       rascunho = trazer_lista("Nome,Celular\nDavi Dornelino,11987650004\n", trazer: {})
       rascunho.update!(status: :ready_to_confirm)
 
-      [de_fora, da_automacao, rascunho].each do |importacao|
+      [de_fora, rascunho].each do |importacao|
         rotas.each do |nome, pedir|
           expect { pedir.call(importacao, user) }.not_to have_enqueued_job(job)
 
           expect(response).to have_http_status(:not_found), nome
         end
       end
-      expect([de_fora, da_automacao, rascunho].map { |importacao| importacao.reload.undo_status }.uniq).to eq(['pending'])
+      expect([de_fora, rascunho].map { |importacao| importacao.reload.undo_status }.uniq).to eq(['pending'])
       expect(outra.contacts.count).to eq(3)
+    end
+
+    # #3083 — a lista da automação aparece no histórico, mas não é desfeita: a recusa vale para o pedido direto à API,
+    # pronta ou parada no meio ("Parou" fica `failed` com a gravação começada).
+    it 'recusa com nao_pode_desfazer a prévia e o desfazer da lista da automação, sem tirar ninguém' do
+      da_automacao = trazer_lista
+      da_automacao.update!(options: da_automacao.options.merge('origem' => CampaignImport::AUTOMATION_ORIGIN))
+
+      [{ status: :completed }, { status: :failed, import_started_at: 1.hour.ago }].each do |estado|
+        da_automacao.update!(estado)
+
+        rotas.each do |nome, pedir|
+          expect { pedir.call(da_automacao, user) }.not_to have_enqueued_job(job)
+
+          expect(response).to have_http_status(:unprocessable_entity), nome
+          expect(response.parsed_body).to eq('error' => 'nao_pode_desfazer'), nome
+        end
+      end
+      expect(da_automacao.reload.undo_status).to eq('pending')
+      expect(account.contacts.count).to eq(3)
+      expect(Relacionamentos::CampoPreenchido.pendentes.count).to eq(Relacionamentos::CampoPreenchido.count)
     end
   end
 end

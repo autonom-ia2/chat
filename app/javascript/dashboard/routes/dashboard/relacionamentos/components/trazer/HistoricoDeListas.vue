@@ -1,10 +1,12 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import { SITUACOES_DA_LISTA, formatarDia } from '../../trazer/prazo';
 import { SEPARADOR } from '../comum/ponto';
+import { ORIGENS_DA_LISTA } from '../../fonte/trazerTraducao';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
@@ -34,6 +36,13 @@ import { SEPARADOR } from '../comum/ponto';
 // esquerda (`aria-live`), que já está na tela quando ela chega.
 // A lista desfeita em que alguém devia ter saído e ficou (`ficaram`, só o
 // número) diz quantas pessoas ficaram e o que fazer, no mesmo bloco.
+// #3083 — o histórico mostra também a lista que não veio desta tela, com um
+// selo de onde veio ao lado do selo da situação: "Pela automação" (o nome na
+// linha é o da automação) ou "Planilha antiga" (a da tela antiga de Contatos).
+// A desta tela não tem selo de origem: é o caso de sempre. Nenhuma das duas
+// tem Desfazer (quem diz é o servidor, em `podeDesfazer`). Quando o servidor
+// tem mais listas do que as da tela (`temMais`), "Ver mais" pede as próximas;
+// se falhar, a frase do erro aparece em cima do botão, que continua lá.
 const props = defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
@@ -41,8 +50,11 @@ const props = defineProps({
   comErro: { type: Boolean, default: false },
   // O id da lista que está tentando de novo agora (o botão dela fica ocupado).
   tentando: { type: [String, Number], default: null },
+  temMais: { type: Boolean, default: false },
+  carregandoMais: { type: Boolean, default: false },
+  erroDoMais: { type: Boolean, default: false },
 });
-const emit = defineEmits(['desfazer', 'tentar', 'tentarDeNovo']);
+const emit = defineEmits(['desfazer', 'tentar', 'tentarDeNovo', 'verMais']);
 
 const { t, locale } = useI18n();
 
@@ -65,6 +77,22 @@ const ficouAlguem = lista =>
   lista.situacao === SITUACOES_DA_LISTA.DESFEITO && lista.ficaram > SEM_NINGUEM;
 const podeTentarDeNovo = lista => falhou(lista) && Boolean(lista.podeTentar);
 const temBotao = lista => podeTentarDeNovo(lista) || podeDesfazer(lista);
+
+// Só a lista que não veio desta tela tem selo de origem.
+const ORIGENS = {
+  [ORIGENS_DA_LISTA.AUTOMACAO]:
+    'RELACIONAMENTOS_TRAZER.HISTORICO.ORIGEM.AUTOMACAO',
+  [ORIGENS_DA_LISTA.PLANILHA_ANTIGA]:
+    'RELACIONAMENTOS_TRAZER.HISTORICO.ORIGEM.PLANILHA_ANTIGA',
+};
+const temOrigem = lista => Boolean(ORIGENS[lista.origem]);
+const temDireita = lista =>
+  temOrigem(lista) || temSelo(lista) || temBotao(lista);
+
+// "Ver mais" e o erro dele só embaixo das listas já na tela.
+const comListas = computed(
+  () => !props.carregando && !props.comErro && props.listas.length > 0
+);
 
 // "em 12/11 · por Fulano · 2 pessoas"; sem quem trouxe, "em 12/11 · 2 pessoas".
 const quandoQuemQuantas = lista =>
@@ -161,9 +189,16 @@ const NOMES = {
           </p>
         </div>
         <div
-          v-if="temSelo(lista) || temBotao(lista)"
+          v-if="temDireita(lista)"
           class="flex flex-wrap items-center gap-3 shrink-0 sm:justify-end"
         >
+          <span
+            v-if="temOrigem(lista)"
+            :data-origem="lista.origem"
+            class="px-3 py-1 text-sm font-medium rounded-full bg-n-alpha-2 text-n-slate-11"
+          >
+            {{ t(ORIGENS[lista.origem]) }}
+          </span>
           <span
             v-if="temSelo(lista)"
             :data-situacao="lista.situacao"
@@ -220,5 +255,24 @@ const NOMES = {
         </div>
       </li>
     </ul>
+    <p
+      v-if="comListas && erroDoMais"
+      data-relacionamentos="erro-do-ver-mais"
+      role="alert"
+      class="m-0 text-base font-medium text-n-ruby-11"
+    >
+      {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.ERRO_VER_MAIS') }}
+    </p>
+    <Button
+      v-if="comListas && temMais"
+      faded
+      slate
+      data-relacionamentos="ver-mais"
+      class="self-start min-h-11"
+      :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.VER_MAIS')"
+      :disabled="carregandoMais"
+      :is-loading="carregandoMais"
+      @click="emit('verMais')"
+    />
   </section>
 </template>

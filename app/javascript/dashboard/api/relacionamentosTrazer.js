@@ -9,8 +9,9 @@ import ApiClient from './ApiClient';
 //              `pronta` (ou `falhou`). Os problemas vêm em páginas. É na leitura
 //              que a pessoa confere: responde às perguntas, conserta ou deixa de
 //              fora cada linha, troca o destino de uma coluna e, no fim, traz;
-//   listas   — as listas que a conta já trouxe, o andamento de cada uma e o
-//              desfazer de uma lista gravada, com a prévia do que ele faria.
+//   listas   — as listas que a conta já trouxe (de 100 em 100, a mais nova
+//              primeiro), o andamento de cada uma e o desfazer de uma lista
+//              gravada, com a prévia do que ele faria.
 // Tudo pede a permissão de importar contato: sem ela o servidor responde 401.
 // Depois de trazida, a leitura responde 404 e as rotas de linha, 422.
 class RelacionamentosTrazerAPI extends ApiClient {
@@ -62,8 +63,8 @@ class RelacionamentosTrazerAPI extends ApiClient {
     );
   }
 
-  listas() {
-    return axios.get(`${this.url}/listas`);
+  listas(pagina = 1) {
+    return axios.get(`${this.url}/listas`, { params: { pagina } });
   }
 
   andamento(id) {

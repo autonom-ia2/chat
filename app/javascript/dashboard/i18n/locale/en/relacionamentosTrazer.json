@@ -212,7 +212,13 @@
       "CONTINUAR": "Continue",
       "ROTULO_CONTINUAR": "Continue undoing the list {arquivo}",
       "FALHOU": "I couldn't bring in this list.",
-      "ROTULO_TENTAR": "Try again: bring in the list {arquivo}"
+      "ROTULO_TENTAR": "Try again: bring in the list {arquivo}",
+      "ORIGEM": {
+        "AUTOMACAO": "From an automation",
+        "PLANILHA_ANTIGA": "Old spreadsheet"
+      },
+      "VER_MAIS": "See more",
+      "ERRO_VER_MAIS": "I couldn't show more lists. Try again."
     },
     "DESFAZER": {
       "TITULO": "Undo this list?",

@@ -1,6 +1,7 @@
 import { effectScope } from 'vue';
 import {
   INTERVALO_DO_HISTORICO_MS,
+  LISTAS_POR_PAGINA,
   useHistoricoDeListas,
 } from '../../trazer/useHistoricoDeListas';
 
@@ -605,5 +606,109 @@ describe('tentar de novo', () => {
     expect(await historico.tentarDeNovo(falhou)).toBe(false);
     expect(historico.semAcesso.value).toBe(true);
     expect(avisar).not.toHaveBeenCalled();
+  });
+});
+
+// #3083 — o servidor manda as listas de página em página: "Ver mais" pede a
+// próxima e a junta embaixo; a carga de sempre relê só a primeira.
+describe('Ver mais', () => {
+  const pagina = (prefixo, quantas) =>
+    Array.from({ length: quantas }, (_, i) =>
+      lista(`${prefixo}${i}`, 'pronto')
+    );
+
+  it('só há mais quando a página vem cheia', async () => {
+    const curta = montar({ historico: vi.fn(async () => pagina('a', 3)) });
+    await curta.historico.carregar();
+    expect(curta.historico.temMais.value).toBe(false);
+
+    const cheia = montar({
+      historico: vi.fn(async () => pagina('a', LISTAS_POR_PAGINA)),
+    });
+    await cheia.historico.carregar();
+    expect(cheia.historico.temMais.value).toBe(true);
+  });
+
+  it('pede a página seguinte e a junta embaixo, sem repetir lista', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    // Uma lista nova empurrou a última da primeira página para a segunda.
+    const segunda = [primeira.at(-1), ...pagina('b', 2)];
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockResolvedValueOnce(segunda);
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+
+    const carga = historico.verMais();
+    expect(historico.carregandoMais.value).toBe(true);
+    await carga;
+
+    expect(historicoDaFonte).toHaveBeenLastCalledWith(2);
+    expect(historico.carregandoMais.value).toBe(false);
+    expect(historico.listas.value.map(l => l.id)).toEqual([
+      ...primeira.map(l => l.id),
+      'b0',
+      'b1',
+    ]);
+    // A segunda página veio curta: acabou.
+    expect(historico.temMais.value).toBe(false);
+    await historico.verMais();
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+  });
+
+  it('a carga de sempre relê a primeira página e mantém embaixo o que "Ver mais" trouxe', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const nova = lista('nova', 'pronto');
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockResolvedValueOnce(pagina('b', 2))
+      .mockResolvedValueOnce([nova, ...primeira.slice(0, -1)]);
+    const { historico, parar } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    await historico.carregar({ silencioso: true });
+    parar();
+
+    const ids = historico.listas.value.map(l => l.id);
+    expect(ids[0]).toBe('nova');
+    expect(ids.slice(-3)).toEqual([primeira.at(-1).id, 'b0', 'b1']);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(LISTAS_POR_PAGINA + 3);
+  });
+
+  it('quando falha, liga `erroDoMais`, mantém as listas e deixa tentar de novo', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockRejectedValueOnce(new Error('caiu'))
+      .mockResolvedValueOnce(pagina('b', 1));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    expect(historico.erroDoMais.value).toBe(true);
+    expect(historico.temMais.value).toBe(true);
+    expect(historico.listas.value).toHaveLength(LISTAS_POR_PAGINA);
+
+    await historico.verMais();
+    expect(historicoDaFonte).toHaveBeenLastCalledWith(2);
+    expect(historico.erroDoMais.value).toBe(false);
+    expect(historico.listas.value).toHaveLength(LISTAS_POR_PAGINA + 1);
+  });
+
+  it('recusa por falta de acesso liga `semAcesso`, não o erro', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(pagina('a', LISTAS_POR_PAGINA))
+      .mockRejectedValueOnce(
+        Object.assign(new Error('401'), { name: 'SEM_ACESSO' })
+      );
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    expect(historico.semAcesso.value).toBe(true);
+    expect(historico.erroDoMais.value).toBe(false);
   });
 });
