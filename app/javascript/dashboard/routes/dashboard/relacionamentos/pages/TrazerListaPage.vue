@@ -173,6 +173,13 @@ const focarALinha = async id => {
     ?.focus();
 };
 
+// "Ver mais" trouxe listas: o foco vai para a primeira delas. Na última página
+// o botão some e o foco cairia no começo da página.
+const verMais = async () => {
+  const primeira = await historico.verMais();
+  if (primeira !== null) await focarALinha(primeira);
+};
+
 const confirmarDesfazer = async () => {
   const id = historico.alvo.value?.id;
   if (!(await historico.confirmarDesfazer())) return;
@@ -245,7 +252,7 @@ watch(semAcesso, sem => {
               @desfazer="abrirDesfazer"
               @tentar="historico.carregar"
               @tentar-de-novo="historico.tentarDeNovo"
-              @ver-mais="historico.verMais"
+              @ver-mais="verMais"
             />
           </template>
 
@@ -351,7 +358,7 @@ watch(semAcesso, sem => {
             @desfazer="abrirDesfazer"
             @tentar="historico.carregar"
             @tentar-de-novo="historico.tentarDeNovo"
-            @ver-mais="historico.verMais"
+            @ver-mais="verMais"
           />
         </template>
       </div>

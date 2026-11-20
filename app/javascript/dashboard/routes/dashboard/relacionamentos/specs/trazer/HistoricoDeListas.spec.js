@@ -418,14 +418,14 @@ describe('de onde veio a lista', () => {
     mount(HistoricoDeListas, { props: { temDesfazer: true, listas } });
   const selo = (w, id) => w.find(`[data-lista="${id}"] [data-origem]`);
 
-  it('diz "Pela automação" e "Planilha antiga", ao lado do selo da situação, sem Desfazer', () => {
+  it('diz "Pela automação" e "Pela tela antiga", ao lado do selo da situação, sem Desfazer', () => {
     const w = montar([
       lista('auto', 'automacao', { arquivo: 'Boas-vindas aos leads' }),
       lista('antiga', 'planilha_antiga'),
     ]);
     expect(selo(w, 'auto').text()).toBe('Pela automação');
     expect(selo(w, 'auto').attributes('data-origem')).toBe('automacao');
-    expect(selo(w, 'antiga').text()).toBe('Planilha antiga');
+    expect(selo(w, 'antiga').text()).toBe('Pela tela antiga');
     expect(selo(w, 'antiga').attributes('data-origem')).toBe('planilha_antiga');
     // O nome da automação é o que aparece na linha.
     expect(w.get('[data-lista="auto"] p').text()).toBe('Boas-vindas aos leads');
@@ -451,12 +451,12 @@ describe('de onde veio a lista', () => {
     ).toBe(true);
   });
 
-  it('a lista da automação que parou diz que não foi trazida, com o selo e sem botão', () => {
+  it('a lista da automação que parou diz onde olhar, com o selo e sem botão', () => {
     const w = montar([
       lista('auto', 'automacao', { situacao: 'falhou', podeTentar: false }),
     ]);
     expect(w.get('[data-lista="auto"] p[data-situacao="falhou"]').text()).toBe(
-      'Não consegui trazer esta lista.'
+      'A automação não conseguiu trazer esta lista. Veja em Automações o que aconteceu.'
     );
     expect(selo(w, 'auto').text()).toBe('Pela automação');
     expect(w.findAll('button')).toHaveLength(0);

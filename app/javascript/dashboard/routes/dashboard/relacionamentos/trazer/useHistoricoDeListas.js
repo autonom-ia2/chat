@@ -28,7 +28,9 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // todas as páginas que já estão na tela, para a lista de qualquer uma delas
 // que está sendo trazida ou desfeita ser acompanhada, sem repetir lista. "Ver
 // mais" que falha liga `erroDoMais` (a tela diz e o botão continua lá); por
-// falta de acesso, `semAcesso`.
+// falta de acesso, `semAcesso`. Deu certo, "Ver mais" devolve o id da
+// primeira lista que entrou (ou nulo): a tela leva o foco até ela, porque o
+// botão pode sumir na última página.
 export const INTERVALO_DO_HISTORICO_MS = INTERVALO_INICIAL_MS;
 
 export const LISTAS_POR_PAGINA = 100;
@@ -73,20 +75,24 @@ const usePaginasDoHistorico = ({ fonte, listas, semAcesso, encerrou }) => {
   let paginasLidas = 1;
 
   const verMais = async () => {
-    if (carregandoMais.value || !temMais.value) return;
+    if (carregandoMais.value || !temMais.value) return null;
     carregandoMais.value = true;
     erroDoMais.value = false;
     const pagina = paginasLidas + 1;
     try {
       const recebidas = await fonte.historico(pagina);
-      if (encerrou()) return;
+      if (encerrou()) return null;
+      const jaNaTela = listas.value.length;
       listas.value = semRepetir(listas.value, recebidas);
       paginasLidas = pagina;
       temMais.value = recebidas.length >= LISTAS_POR_PAGINA;
+      return listas.value[jaNaTela]?.id ?? null;
     } catch (falha) {
-      if (encerrou()) return;
-      if (ehSemAcesso(falha)) semAcesso.value = true;
-      else erroDoMais.value = true;
+      if (!encerrou()) {
+        if (ehSemAcesso(falha)) semAcesso.value = true;
+        else erroDoMais.value = true;
+      }
+      return null;
     } finally {
       carregandoMais.value = false;
     }

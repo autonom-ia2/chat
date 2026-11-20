@@ -38,11 +38,13 @@ import { ORIGENS_DA_LISTA } from '../../fonte/trazerTraducao';
 // número) diz quantas pessoas ficaram e o que fazer, no mesmo bloco.
 // #3083 — o histórico mostra também a lista que não veio desta tela, com um
 // selo de onde veio ao lado do selo da situação: "Pela automação" (o nome na
-// linha é o da automação) ou "Planilha antiga" (a da tela antiga de Contatos).
+// linha é o da automação) ou "Pela tela antiga" (a da tela antiga de Contatos).
 // A desta tela não tem selo de origem: é o caso de sempre. Nenhuma das duas
-// tem Desfazer (quem diz é o servidor, em `podeDesfazer`). Quando o servidor
-// tem mais listas do que as da tela (`temMais`), "Ver mais" pede as próximas;
-// se falhar, a frase do erro aparece em cima do botão, que continua lá.
+// tem Desfazer (quem diz é o servidor, em `podeDesfazer`). A da automação que
+// parou não tem "Tentar de novo": a frase dela diz onde olhar (Automações).
+// Quando o servidor tem mais listas do que as da tela (`temMais`), "Ver mais"
+// pede as próximas; se falhar, a frase do erro aparece em cima do botão, que
+// continua lá.
 const props = defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
@@ -86,6 +88,10 @@ const ORIGENS = {
     'RELACIONAMENTOS_TRAZER.HISTORICO.ORIGEM.PLANILHA_ANTIGA',
 };
 const temOrigem = lista => Boolean(ORIGENS[lista.origem]);
+const fraseDeFalhou = lista =>
+  lista.origem === ORIGENS_DA_LISTA.AUTOMACAO
+    ? 'RELACIONAMENTOS_TRAZER.HISTORICO.FALHOU_AUTOMACAO'
+    : 'RELACIONAMENTOS_TRAZER.HISTORICO.FALHOU';
 const temDireita = lista =>
   temOrigem(lista) || temSelo(lista) || temBotao(lista);
 
@@ -164,7 +170,7 @@ const NOMES = {
             :data-situacao="lista.situacao"
             class="m-0 text-sm font-medium text-n-ruby-11"
           >
-            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.FALHOU') }}
+            {{ t(fraseDeFalhou(lista)) }}
           </p>
           <p
             v-else-if="desfazerParou(lista)"

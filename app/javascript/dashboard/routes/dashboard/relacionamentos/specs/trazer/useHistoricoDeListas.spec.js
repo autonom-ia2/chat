@@ -657,6 +657,33 @@ describe('Ver mais', () => {
     expect(historicoDaFonte).toHaveBeenCalledTimes(2);
   });
 
+  it('devolve o id da primeira lista nova, para a tela levar o foco até ela', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockResolvedValueOnce([primeira.at(-1), ...pagina('b', 2)])
+      .mockRejectedValueOnce(new Error('caiu'));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+
+    expect(await historico.verMais()).toBe('b0');
+    // Acabou a última página: não pede nada e não há para onde levar o foco.
+    expect(await historico.verMais()).toBeNull();
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+  });
+
+  it('devolve nulo quando falha', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(pagina('a', LISTAS_POR_PAGINA))
+      .mockRejectedValueOnce(new Error('caiu'));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    expect(await historico.verMais()).toBeNull();
+    expect(historico.erroDoMais.value).toBe(true);
+  });
+
   it('a carga de sempre relê todas as páginas na tela, sem repetir lista', async () => {
     const primeira = pagina('a', LISTAS_POR_PAGINA);
     const paginas = { 1: primeira, 2: pagina('b', 2) };
