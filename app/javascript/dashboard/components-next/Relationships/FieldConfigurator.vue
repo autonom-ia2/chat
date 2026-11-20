@@ -434,7 +434,7 @@ defineExpose({ open });
             ghost
             xs
             icon="i-lucide-arrow-left"
-            class="self-start"
+            class="relative self-start before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-['']"
             :label="t('RELATIONSHIPS.BACK')"
             @click="draft = null"
           />
@@ -510,6 +510,7 @@ defineExpose({ open });
           </label>
           <MostrarNaTela
             :model-value="!draft.oculto_na_tela"
+            :titulo="t('RELATIONSHIPS.USE_FIELD')"
             :ajuda="t('RELATIONSHIPS.SHOW_HELP')"
             :disabled="busy"
             class="border-t border-n-weak pt-4"
@@ -602,17 +603,23 @@ defineExpose({ open });
             class="flex flex-col gap-3"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <h4 class="text-sm font-medium text-n-slate-12">
-                {{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}
-              </h4>
-              <p class="text-xs text-n-slate-11">
-                {{ selectionSummary(surfaceName) }}
-              </p>
+              <div
+                class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1"
+              >
+                <h4 class="text-sm font-medium text-n-slate-12">
+                  {{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}
+                </h4>
+                <p class="text-xs text-n-slate-11">
+                  {{ selectionSummary(surfaceName) }}
+                </p>
+              </div>
+              <!-- #3082 — alvo de toque de 44 px sem aumentar o desenho. -->
               <Button
                 type="button"
                 xs
                 ghost
                 icon="i-lucide-rotate-ccw"
+                class="relative before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-['']"
                 :disabled="busy || !changed(surfaceName)"
                 :label="t('RELATIONSHIPS.RESTORE')"
                 @click="restore(surfaceName)"
@@ -628,9 +635,10 @@ defineExpose({ open });
             <div
               v-for="definition in definitions"
               :key="definition.id"
-              class="flex items-center gap-3 rounded-lg border border-n-weak bg-n-background p-3"
+              class="flex items-start gap-3 rounded-lg border border-n-weak bg-n-background p-3"
             >
               <Switch
+                class="mt-0.5 before:absolute before:-inset-3.5 before:content-['']"
                 :model-value="shown(surfaceName, definition)"
                 :disabled="busy || Boolean(definition.oculto_na_tela)"
                 :aria-label="definition.attribute_display_name"
@@ -659,6 +667,7 @@ defineExpose({ open });
                 type="button"
                 xs
                 ghost
+                class="relative before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-['']"
                 :label="t('RELATIONSHIPS.EDIT_FIELD')"
                 @click="edit(definition)"
               />

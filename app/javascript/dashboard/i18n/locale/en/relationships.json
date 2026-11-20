@@ -147,8 +147,9 @@
     "EDIT_DESCRIPTION": "What was already written on the profiles stays there.",
     "CONFIGURE_DESCRIPTION": "Choose which fields show in each place.",
     "CONFIGURE_RECORD_DESCRIPTION": "Choose what shows on the profile.",
-    "RECORD_RULE": "When off, the field only shows on the profile once it is filled in.",
-    "SHOW_HELP": "When off, the field disappears from every screen. What was written stays saved, and the AI keeps using it. To show it again, turn it on here.",
+    "RECORD_RULE": "Turned on: always shows, even when empty. Turned off: only shows once it is filled in.",
+    "USE_FIELD": "Use this field",
+    "SHOW_HELP": "When off, the field disappears from every screen. What was written stays saved.",
     "DESCRIPTION_REQUIRED": "What it is for (required)",
     "SAVE_NEEDS": {
       "BOTH": "To save, write the name and what it is for.",

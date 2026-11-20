@@ -147,8 +147,9 @@
     "EDIT_DESCRIPTION": "O que já foi escrito nas fichas continua lá.",
     "CONFIGURE_DESCRIPTION": "Escolha os campos que aparecem em cada lugar.",
     "CONFIGURE_RECORD_DESCRIPTION": "Escolha o que aparece na ficha.",
-    "RECORD_RULE": "Desligado, o campo só aparece na ficha quando estiver preenchido.",
-    "SHOW_HELP": "Desligado, o campo some de todas as telas. O que já foi escrito fica guardado, e a IA continua usando. Para mostrar de novo, ligue aqui.",
+    "RECORD_RULE": "Ligado: aparece sempre, mesmo vazio. Desligado: só aparece quando estiver preenchido.",
+    "USE_FIELD": "Usar este campo",
+    "SHOW_HELP": "Desligado, o campo some de todas as telas. O que já foi escrito fica guardado.",
     "DESCRIPTION_REQUIRED": "Para que serve (obrigatório)",
     "SAVE_NEEDS": {
       "BOTH": "Para salvar, escreva o nome e para que serve.",

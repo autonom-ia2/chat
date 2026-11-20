@@ -490,6 +490,11 @@ it('from a record: creates the field on that record and says what is missing to 
   expect(wrapper.text()).not.toContain('RELATIONSHIPS.DISPLAY_TITLE');
   expect(wrapper.text()).not.toContain('RELATIONSHIPS.GLOBAL_NOTE');
   expect(wrapper.text()).toContain('RELATIONSHIPS.DESCRIPTION_REQUIRED');
+  expect(mostrarNaTela(wrapper).exists()).toBe(true);
+  expect(wrapper.text()).toContain('RELATIONSHIPS.USE_FIELD');
+  expect(wrapper.text()).not.toContain(
+    'ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.TITULO'
+  );
   expect(wrapper.find('[data-falta-para-salvar]').text()).toBe(
     'RELATIONSHIPS.SAVE_NEEDS.BOTH'
   );
