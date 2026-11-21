@@ -32,6 +32,7 @@ module ListaTrazidaGrandeHelpers
   # `quantas` pessoas que a conta já tinha, uma linha cada, com três campos que a lista preencheu: e-mail, cidade e a
   # marca de cliente. Os três estão como a lista os deixou, então os três voltam.
   def por_pessoas_completadas(importacao, quantas)
+    diag_estado if diag?
     diag_plano('antes do 1o lote')
     em_lotes(importacao, quantas) do |numeros|
       pessoas = numeros.map { |numero| pessoa_completada(importacao.account_id, numero) }
@@ -73,10 +74,27 @@ module ListaTrazidaGrandeHelpers
     ENV['DIAG_3092'] == '1'
   end
 
+  DIAG_TABELAS = %w[contacts campaign_import_rows relacionamentos_campos_preenchidos].freeze
+
   def diag_contadores
-    ActiveRecord::Base.connection.select_one(
-      "SELECT seq_scan, seq_tup_read, idx_scan FROM pg_stat_xact_user_tables WHERE relname = 'campaign_import_rows'"
-    ).to_h
+    ActiveRecord::Base.connection.select_all(
+      "SELECT relname, seq_scan, idx_scan FROM pg_stat_xact_user_tables WHERE relname IN ('#{DIAG_TABELAS.join("','")}')"
+    ).to_a.each_with_object({}) { |linha, total| total["#{linha['relname']}.seq"] = linha['seq_scan']; total["#{linha['relname']}.idx"] = linha['idx_scan'] }
+  end
+
+  def diag_estado
+    conexao = ActiveRecord::Base.connection
+    lista = DIAG_TABELAS.map { |tabela| "'#{tabela}'" }.join(',')
+    DIAG_TABELAS.each { |tabela| puts "DIAG_3092 estado count #{tabela}=#{conexao.select_value("SELECT count(*) FROM #{tabela}")}" }
+    conexao.select_all("SELECT relname, n_live_tup, n_dead_tup, n_tup_ins, n_tup_del FROM pg_stat_user_tables WHERE relname IN (#{lista})")
+           .each { |linha| puts "DIAG_3092 estado stat #{linha.values.join(' | ')}" }
+    conexao.select_all("SELECT tgrelid::regclass, tgname FROM pg_trigger WHERE NOT tgisinternal AND tgrelid::regclass::text IN (#{lista})")
+           .each { |linha| puts "DIAG_3092 estado trigger #{linha.values.join(' | ')}" }
+    conexao.select_all("SELECT tablename, indexname FROM pg_indexes WHERE tablename IN (#{lista}) ORDER BY 1, 2")
+           .each { |linha| puts "DIAG_3092 estado indice #{linha.values.join(' | ')}" }
+    conexao.select_all("SELECT pid, state, xact_start, wait_event_type, left(query, 80) FROM pg_stat_activity
+                        WHERE datname = current_database() AND pid <> pg_backend_pid()")
+           .each { |linha| puts "DIAG_3092 estado conexao #{linha.values.join(' | ')}" }
   end
 
   def diag_tempo(caso, tabela, vigiar: false)
