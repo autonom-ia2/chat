@@ -95,18 +95,27 @@ class Relacionamentos::Compras::Recalcular
     novas = []
     entraram = somas.filter_map do |contact_id, atributos|
       linha = existentes[contact_id] || Relacionamentos::Compra.new(account_id: @account.id, contact_id: contact_id)
-      linha.assign_attributes(atributos)
-      grupo = Relacionamentos::Compras::Grupo.de(linha, @faixas, @agora)
-      linha.assign_attributes(grupo: grupo, grupo_desde: @agora) if grupo != linha.grupo
+      mudou = atualizar(linha, atributos)
       linha.new_record? ? novas << linha : (linha.save! if linha.changed?)
-      [contact_id, grupo, linha.grupo_desde] if entrou?(linha, existentes.key?(contact_id))
+      [contact_id, linha.grupo, linha.grupo_desde] if mudou && entrou?(linha, existentes.key?(contact_id))
     end
     inserir(novas)
     entraram
   end
 
+  # Põe as somas e o grupo na linha (sem gravar). Devolve se o grupo mudou nesta passada.
+  def atualizar(linha, atributos)
+    linha.assign_attributes(atributos)
+    grupo = Relacionamentos::Compras::Grupo.de(linha, @faixas, @agora)
+    return false if grupo == linha.grupo
+
+    linha.assign_attributes(grupo: grupo, grupo_desde: @agora)
+    true
+  end
+
+  # Só chamado para quem mudou de grupo nesta passada.
   def entrou?(linha, existia)
-    return false unless @disparar && linha.grupo_desde == @agora
+    return false unless @disparar
 
     existia || (@disparar == :venda && linha.ultima_em >= @agora - VENDA_RECENTE)
   end

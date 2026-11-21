@@ -26,7 +26,7 @@ const props = defineProps({
   aberta: { type: Boolean, default: false },
   deEmpresas: { type: Boolean, default: false },
   // #3097: sem ver valor de venda, sem o filtro do total comprado.
-  veValores: { type: Boolean, default: true },
+  veValores: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
   opcoes: {
     type: Object,

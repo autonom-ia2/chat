@@ -166,6 +166,8 @@ describe('gatilhos de card', () => {
       campoDoCard: {},
       pagina: {},
       caixa: {},
+      // #3097: os nomes dos grupos de compra são do código (nada é lido).
+      grupo_de_compra: expect.any(Object),
     });
   });
 

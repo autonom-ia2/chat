@@ -48,7 +48,6 @@ import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { GRUPOS_DE_COMPRA, VISOES } from '../fonte/gruposDeCompra';
 import { useFaixasDeCompra } from '../lista/useFaixasDeCompra';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
 import { diasParaTerminar } from '../fonte/selosDoSeguro';
@@ -270,8 +269,9 @@ const trocarVisao = nova => {
 // Aberta pela URL já por compra, a ordem também abre por compra.
 if (porCompra.value) lista.mudarOrdem(ORDEM_PADRAO_POR_COMPRA);
 onMounted(faixasDeCompra.carregar);
-const { isAdmin } = useAdmin();
-const podeAjustarGrupos = computed(() => Boolean(demo) || isAdmin.value);
+const podeAjustarGrupos = computed(
+  () => Boolean(demo) || permissoes.podeAjustarGruposDeCompra.value
+);
 const dialogoDosGrupos = useTemplateRef('dialogoDosGrupos');
 const gruposAjustados = () =>
   useAlert(t('RELACIONAMENTOS_COMPRAS.AJUSTE.SALVO'));
