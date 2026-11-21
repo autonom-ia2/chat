@@ -13,15 +13,17 @@ jobs:
   medir:
     name: Diag 3092 (${{ matrix.caso }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         include:
-          - caso: vizinho-e-medicao
-            specs: spec/services/relacionamentos/trazer/campos_preenchidos_spec.rb spec/services/relacionamentos/trazer/previa_do_desfazer_medicao_spec.rb
-          - caso: medicao-sozinha
-            specs: spec/services/relacionamentos/trazer/previa_do_desfazer_medicao_spec.rb
+          - caso: shard1-inteiro
+            lista: .github/diag3092-inteiro.txt
+          - caso: metade1
+            lista: .github/diag3092-metade1.txt
+          - caso: metade2
+            lista: .github/diag3092-metade2.txt
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -51,14 +53,40 @@ jobs:
       DIAG_3092: '1'
       # Para ver a curva inteira em vez de parar no primeiro lote acima de 14s.
       POSTGRES_STATEMENT_TIMEOUT: 180s
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Instalar dependencias JS
+        run: pnpm install --frozen-lockfile
+      - name: Cache do build do Vite (teste)
+        id: vite-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            public/vite-test
+            tmp/cache/vite
+          key: vite-test-${{ runner.os }}-${{ hashFiles('app/javascript/**', 'config/vite.json', 'package.json', 'pnpm-lock.yaml', 'postcss.config.js', 'tailwind.config.js', 'theme/**', 'vite.config.*', 'vite.shared.*', '.browserslistrc') }}
+      - name: Compilar o Vite de teste
+        if: steps.vite-cache.outputs.cache-hit != 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: bin/vite build
+      - name: Instalar conversores nativos
+        timeout-minutes: 15
+        run: .github/scripts/apt-install.sh libvips42 poppler-utils ffmpeg
       - name: Criar banco e carregar schema
         run: |
           bundle exec rake db:create
           bundle exec rake db:schema:load
-      - name: RSpec em ordem fixa
-        run: bundle exec rspec --order defined --format documentation ${{ matrix.specs }}
+      - name: RSpec na ordem exata do shard 1
+        run: |
+          mapfile -t TESTS < ${{ matrix.lista }}
+          bundle exec rspec --format progress "${TESTS[@]}"
