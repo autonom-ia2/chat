@@ -112,11 +112,13 @@ RSpec.describe 'OAuth Tokens', type: :request do
       expect(Doorkeeper::AccessToken.by_token(response.parsed_body['access_token']).all_accounts).to be(true)
     end
 
-    it 'keeps a connection made before #3106 on its own account when it is refreshed' do
+    # The client cannot widen it: an all_accounts it sends to the token endpoint is ignored.
+    it 'keeps a connection made before #3106 on its own account when it is refreshed, whatever the client sends' do
       old = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id, account_id: account.id,
                                             scopes: 'conversations:read', expires_in: 2.hours, use_refresh_token: true)
 
-      post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: old.plaintext_refresh_token, client_id: application.uid }
+      post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: old.plaintext_refresh_token, client_id: application.uid,
+                                     all_accounts: true }
 
       expect(response).to have_http_status(:success)
       expect(Doorkeeper::AccessToken.by_token(response.parsed_body['access_token']).all_accounts).to be(false)
