@@ -1,8 +1,4 @@
 class Api::V1::Profile::OauthApplicationsController < Api::BaseController
-  include MfaEnforcementGuard
-
-  before_action :check_user_mfa_enforcement, if: :authenticate_by_access_token?
-
   def index
     tokens = Doorkeeper::AccessToken.active_for(current_user).includes(:application)
 
