@@ -13,7 +13,7 @@
 # tem nome de campo na raiz: o erro vai no próprio atributo, com o ponteiro (`/0/action_name ...`).
 class JsonSchemaValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)
-    schemer = JSONSchemer.schema(esquema(record), formats: JsonSchemaFormatos::TODOS)
+    schemer = JsonSchemaDraft7.schema(esquema(record), formats: JsonSchemaFormatos::TODOS)
     schemer.validate(como_gravado(value)).each { |error| format_and_append_error(error, record, attribute) }
   end
 

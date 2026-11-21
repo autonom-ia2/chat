@@ -237,6 +237,27 @@ class Rack::Attack
     req.ip if req.path_without_extensions == '/api/v1/accounts' && req.post?
   end
 
+  ## Client registration is open to anyone and each call stores a row ###
+  throttle('oauth/register/ip', limit: ENV.fetch('RATE_LIMIT_OAUTH_REGISTRATION', '100').to_i, period: 1.hour) do |req|
+    req.ip if req.path_without_extensions == '/oauth/register' && req.post?
+  end
+
+  ## MCP and token endpoints (#3089): a frequency limit against abuse, never a daily cap on the user ###
+  # Per IP and client together: Claude and ChatGPT renew for all their users from the same servers (one client per
+  # user via DCR), and a public client_id alone would let anyone use up the quota of an app (CIMD has one client).
+  throttle('oauth/token/ip_client', limit: ENV.fetch('RATE_LIMIT_OAUTH_TOKEN', '60').to_i, period: 1.minute) do |req|
+    "#{req.ip}:#{req.params['client_id']}" if req.path_without_extensions == '/oauth/token' && req.post?
+  end
+
+  # The consent API may fetch a client's metadata document (CIMD) from the internet
+  throttle('oauth/authorization/ip', limit: ENV.fetch('RATE_LIMIT_OAUTH_AUTHORIZATION', '60').to_i, period: 1.minute) do |req|
+    req.ip if req.path_without_extensions == '/api/v1/oauth/authorization'
+  end
+
+  throttle('mcp/token', limit: ENV.fetch('RATE_LIMIT_MCP', '300').to_i, period: 1.minute) do |req|
+    Digest::SHA256.hexdigest(req.get_header('HTTP_AUTHORIZATION').to_s) if req.path_without_extensions == '/mcp'
+  end
+
   ##-----------------------------------------------##
 
   ###-----------------------------------------------###

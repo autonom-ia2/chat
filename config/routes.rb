@@ -1784,6 +1784,37 @@ Rails.application.routes.draw do
   get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify'
 
   # ----------------------------------------------------------------------
+  # OAuth 2.1 provider for third-party apps
+  # None of these routes match until OAUTH_PROVIDER_ENABLED is set.
+  constraints(->(_request) { GlobalConfig.get('OAUTH_PROVIDER_ENABLED')['OAUTH_PROVIDER_ENABLED'] }) do
+    get '.well-known/oauth-authorization-server', to: 'oauth/metadata#show'
+    post 'oauth/register', to: 'oauth/registrations#create'
+    # The consent screen is a dashboard page, so send the browser there with the client's query.
+    get 'oauth/authorize', to: redirect(status: 302) { |_params, request| "/app/oauth/authorize?#{request.query_string}" }
+    use_doorkeeper do
+      skip_controllers :authorizations, :applications, :authorized_applications, :token_info
+    end
+
+    namespace :api, defaults: { format: 'json' } do
+      namespace :v1 do
+        namespace :oauth do
+          resource :authorization, only: [:create, :destroy] do
+            get '/', action: :new
+          end
+        end
+        namespace :profile do
+          resources :oauth_applications, only: [:index, :destroy]
+        end
+      end
+    end
+
+    if ChatwootApp.enterprise?
+      match 'mcp', to: 'mcp#handle', via: [:get, :post, :delete]
+      get '.well-known/oauth-protected-resource(/mcp)', to: 'mcp/metadata#show'
+    end
+  end
+
+  # ----------------------------------------------------------------------
   # Internal Monitoring Routes
   require 'sidekiq/web'
   require 'sidekiq/cron/web'

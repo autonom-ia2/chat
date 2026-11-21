@@ -42,6 +42,6 @@ class DashboardApp < ApplicationRecord
       'additionalProperties' => false,
       'minItems' => 1
     }
-    errors.add(:content, ': Invalid data') unless JSONSchemer.schema(content_schema.to_json).valid?(self[:content])
+    errors.add(:content, ': Invalid data') unless JsonSchemaDraft7.schema(content_schema.to_json).valid?(self[:content])
   end
 end

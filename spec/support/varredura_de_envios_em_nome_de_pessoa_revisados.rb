@@ -27,6 +27,8 @@ module VarreduraDeEnviosEmNomeDePessoa
     'app/services/carteira/cotacao/envio.rb#Carteira::Cotacao::Envio#mandar_pela_pessoa' =>
       'proposta de renovação (#2901): só no clique de "Enviar" da pessoa, no modo em que ela confere e envia; remetente é ' \
       'ela (Current.user). O que a cotação manda sozinha vai sem remetente (Envio#mandar e #texto)',
+    'enterprise/app/services/mcp/tools/send_message.rb#Mcp::Tools::SendMessage#perform' =>
+      'MCP (#3090): a pessoa pede no app que conectou (Claude, ChatGPT, Em d.ia); remetente é ela (Current.user)',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

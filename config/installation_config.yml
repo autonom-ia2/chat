@@ -379,6 +379,11 @@
 - name: DEPLOYMENT_ENV
   value: self-hosted
   description: 'The deployment environment of the installation, to differentiate between Chatwoot cloud and self-hosted'
+- name: OAUTH_PROVIDER_ENABLED
+  display_title: 'OAuth Provider'
+  value: false
+  type: boolean
+  description: 'Let third-party apps connect to user accounts over OAuth 2.1'
 - name: CLOUD_ANALYTICS_TOKEN
   value:
   display_title: 'Analytics Token'

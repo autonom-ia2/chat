@@ -1,4 +1,34 @@
 {
+  "OAUTH": {
+    "SCOPES": {
+      "CONVERSATIONS_READ": "Ver suas conversas e mensagens",
+      "CONVERSATIONS_WRITE": "Passar conversas para outra pessoa da equipe e mudar a situação, as etiquetas e a prioridade",
+      "MESSAGES_WRITE": "Mandar mensagens para os seus clientes em seu nome e escrever recados para a equipe",
+      "CONTACTS_READ": "Ver seus contatos",
+      "CONTACTS_WRITE": "Criar e mudar contatos",
+      "REPORTS_READ": "Ver os relatórios da conta"
+    },
+    "AUTHORIZE": {
+      "TITLE": "{appName} quer acessar sua conta no Chatwoot",
+      "DESCRIPTION": "Se você permitir, {appName} poderá:",
+      "ACCOUNT_LABEL": "Em qual conta?",
+      "ACCOUNT_NOTE": "O app só acessa a conta que você escolher.",
+      "ALLOW": "Permitir",
+      "DENY": "Não permitir",
+      "ERROR_TITLE": "Este app não pode ser conectado",
+      "ERROR_DESCRIPTION": "O pedido do app não é válido. Volte para o app e tente de novo.",
+      "NO_ADMIN_ACCOUNT": "Só quem administra a conta pode fazer isso. Peça para essa pessoa conectar o app.",
+      "ACCOUNT_SINGLE": "Na conta: {name}",
+      "REDIRECT_LABEL": "Quem recebe este acesso:",
+      "REDIRECT_HINT": "Só permita se você reconhece esse endereço.",
+      "NO_ADMIN_TITLE": "Você não pode conectar este app",
+      "BACK_TO_APP": "Voltar para o app",
+      "NETWORK_ERROR_TITLE": "Não deu para continuar agora",
+      "NETWORK_ERROR_DESCRIPTION": "Não conseguimos falar com o servidor. Confira a internet e tente de novo.",
+      "RETRY": "Tentar de novo",
+      "GO_TO_DASHBOARD": "Ir para o Chatwoot"
+    }
+  },
   "PROFILE_SETTINGS": {
     "LINK": "Configurações do Perfil",
     "TITLE": "Configurações do Perfil",
@@ -96,6 +126,16 @@
         "FETCH_ERROR": "Não foi possível carregar as sessões. Tente novamente.",
         "LAST_ACTIVE": "Última atividade",
         "UNKNOWN_DEVICE": "Dispositivo desconhecido"
+      },
+      "CONNECTED_APPS_SECTION": {
+        "TITLE": "Apps conectados",
+        "NOTE": "Estes apps podem acessar sua conta no Chatwoot em seu nome.",
+        "EMPTY": "Você ainda não conectou nenhum app.",
+        "CONNECTED": "Conectado",
+        "REVOKE": "Desconectar",
+        "REVOKE_SUCCESS": "App desconectado",
+        "REVOKE_ERROR": "Não deu para desconectar o app. Tente de novo.",
+        "FETCH_ERROR": "Não deu para carregar os apps conectados. Tente de novo."
       },
       "ACCESS_TOKEN": {
         "TITLE": "Token de acesso",
