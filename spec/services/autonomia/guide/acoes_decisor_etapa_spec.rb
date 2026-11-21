@@ -48,6 +48,14 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
   end
 
+  # #3106 (revisão do Codex): `enabled: null` não desliga (o Persister tira o nil), então a automação ligada segue ligada.
+  it 'mandar enabled nulo numa automação ligada não escapa da confirmação' do
+    ligada = automacao(enabled: true)
+
+    expect(acoes.desfazivel?('PATCH crm/stage_automations/:id',
+                             { caminho: { id: ligada.id }, corpo: { enabled: nil, steps: [passo_do_decisor] } })).to be(false)
+  end
+
   # MOTIVO: trocar o Decisor ou a resposta que segue numa automação ligada muda o que ela faz sozinha.
   it 'mudar só a configuração do passo do Decisor numa automação ligada pede confirmação' do
     ligada = automacao(enabled: true)

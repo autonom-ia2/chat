@@ -8,11 +8,16 @@ module Autonomia::Guide::SemVolta
     # #3106: as regras leem o corpo como a plataforma o recebe (envelope aberto ou fechado pela conferência).
     # Lendo o corpo cru, `{automation_rule: {active: true}}` passava por desligado e ia ligado.
     dados = dados&.merge(corpo: conferencia.corpo)
-    # #858: regra com Decisor que fica ligada. #2889: ajuste numa automação do motor novo ligada vale na hora.
-    # #3106: trocar a credencial do canal da caixa. E o que cai num nó `x-sem-volta` do esquema.
+    # O que cai num nó `x-sem-volta` do esquema (regra que manda mensagem).
+    conferencia&.sem_volta? || pelas_regras?(account, acao, dados)
+  end
+
+  # #858: regra com Decisor que fica ligada. #2889: ajuste numa automação do motor novo ligada vale na hora.
+  # #3106: trocar a credencial do canal da caixa e promover agente a administrador.
+  def pelas_regras?(account, acao, dados)
     ::Autonomia::Guide::RegraComDecisor.new(account).fica_ligada?(acao, dados) ||
       ::Autonomia::Guide::MotorNovo.new(account).ajusta_ligada?(acao, dados) ||
       ::Autonomia::Guide::CredencialDaCaixa.troca?(acao, dados) ||
-      conferencia&.sem_volta? || false
+      ::Autonomia::Guide::SaiDaPlataforma.vira_administrador?(acao, dados)
   end
 end

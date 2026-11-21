@@ -112,7 +112,8 @@ class Autonomia::Guide::Acoes
     'PUT crm/contacts/:contact_id/relacao', 'POST automation_rules/:automation_rule_id/clone'
     # #2896 — e toda escrita da conferência de "Trazer minha lista" (`Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA`):
     # ela grava com update_all, anexo e job, onde o caderno não chega.
-  ].concat(::Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA).freeze
+    # #3106 — e o que manda dado para fora da conta ou dá acesso a alguém (`SaiDaPlataforma::ACOES`).
+  ].concat(::Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA, ::Autonomia::Guide::SaiDaPlataforma::ACOES).freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
   # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma

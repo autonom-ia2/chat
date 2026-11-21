@@ -8,7 +8,7 @@
       "CONTACTS_WRITE": "Create and update contacts",
       "REPORTS_READ": "Read your account reports",
       "PLATFORM_READ": "See everything you see on the platform: CRM, campaigns, automations, AI agents and the rest",
-      "PLATFORM_WRITE": "Do on the platform everything you can do on screen. Anything that cannot be undone, the app confirms with you first"
+      "PLATFORM_WRITE": "Do on the platform everything you can do on screen. Actions that cannot be undone are flagged so the app asks you first"
     },
     "AUTHORIZE": {
       "TITLE": "{appName} wants to access your Chatwoot account",

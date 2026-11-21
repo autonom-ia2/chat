@@ -26,6 +26,30 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(acoes.desfazivel?('PUT inboxes/:id', servidor)).to be(false)
   end
 
+  it 'trocar a sessão do WhatsApp da caixa pede confirmação; outro ajuste em additional_attributes segue direto' do
+    sessao = { caminho: { id: caixa.id }, corpo: { channel: { additional_attributes: { session: '5511999990000' } } } }
+    janela = { caminho: { id: caixa.id }, corpo: { channel: { additional_attributes: { agent_reply_time_window: 24 } } } }
+
+    expect(acoes.desfazivel?('PATCH inboxes/:id', sessao)).to be(false)
+    expect(acoes.desfazivel?('PATCH inboxes/:id', janela)).to be(true)
+  end
+
+  # #3106 (revisão de segurança): o que manda dado para fora da conta ou dá acesso a alguém.
+  it 'webhook da conta, bot, integração e convite de agente pedem confirmação' do
+    expect(acoes.desfazivel?('POST webhooks', { corpo: { url: 'https://fora.example/hook' } })).to be(false)
+    expect(acoes.desfazivel?('PATCH agent_bots/:id', { caminho: { id: 1 }, corpo: { outgoing_url: 'https://fora.example' } }))
+      .to be(false)
+    expect(acoes.desfazivel?('POST integrations/hooks', { corpo: { app_id: 'slack' } })).to be(false)
+    expect(acoes.desfazivel?('POST agents', { corpo: { name: 'Ana', email: 'ana@example.com', role: 'agent' } })).to be(false)
+  end
+
+  it 'promover agente a administrador pede confirmação; trocar o nome segue direto' do
+    agente = create(:user, account: conta, role: :agent)
+
+    expect(acoes.desfazivel?('PATCH agents/:id', { caminho: { id: agente.id }, corpo: { role: 'administrator' } })).to be(false)
+    expect(acoes.desfazivel?('PATCH agents/:id', { caminho: { id: agente.id }, corpo: { name: 'Ana Souza' } })).to be(true)
+  end
+
   it 'mudar o nome da caixa segue direto, com desfazer' do
     expect(acoes.desfazivel?('PATCH inboxes/:id', { caminho: { id: caixa.id }, corpo: { name: 'Vendas' } })).to be(true)
   end

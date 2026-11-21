@@ -52,8 +52,9 @@ class Autonomia::Guide::RegraComDecisor
   end
 
   # Sem o campo no corpo, vale o que já está gravado; criando, nasce ligada.
+  # `null` no corpo vale como não mandado: o Persister tira com `compact` e o valor gravado fica (#3106, revisão do Codex).
   def ligada?(corpo, campo, atual)
-    return ActiveModel::Type::Boolean.new.cast(corpo[campo]) == true if corpo.key?(campo)
+    return ActiveModel::Type::Boolean.new.cast(corpo[campo]) == true unless corpo[campo].nil?
 
     atual.nil? || atual
   end
