@@ -73,7 +73,27 @@ module Autonomia::Guide::SaiDaPlataforma
     'DELETE inboxes/:inbox_id/whatsapp_templates/:id', 'POST whatsapp_calls/:id/accept',
     'POST whatsapp_calls/:id/reject', 'POST whatsapp_calls/:id/terminate', 'POST inboxes/:inbox_id/conference'
   ].freeze
-  TODAS = (ACOES + FALA_COM_FORA).freeze
+  # 2ª varredura (#3106): conectar ou desconectar provedor (desconectar revoga lá fora; a volta é conectar de novo),
+  # validar chave no domínio que o pedido diz (Freshdesk), mudar ou cancelar reunião (avisa os convidados), anúncio
+  # no ar ou criativo trocado na Meta, apagar comentário na rede social, vincular issue no Linear.
+  # Fica de fora: publicar página, artigo ou perfil próprios e esconder comentário (o desfazer despublica), e o envio
+  # agendado de follow-up e campanha (o desfazer cancela antes da hora).
+  CONEXAO_E_PROVEDOR = [
+    'POST waha_inboxes', 'POST waha_inboxes/:inbox_id/reconnect', 'POST channels/twilio_channel',
+    'POST callbacks/register_facebook_page', 'POST crm/meta_ads_connection/pagina',
+    'POST crm/meta_ads_connection/instagram', 'POST crm/meta_ads_lead_forms/pages/:page_id/receive',
+    'DELETE crm/meta_ads_lead_forms/pages/:page_id/receive', 'DELETE integrations/linear',
+    'DELETE integrations/hooks/:id', 'DELETE integrations/slack', 'DELETE integrations/notion',
+    'DELETE integrations/shopify', 'DELETE email_oauth_apps/:provider', 'DELETE autonomia/insurance/connection',
+    'DELETE crm/meta_ads_connection', 'DELETE crm/integration_tokens/:id', 'POST data_imports/validate_source',
+    'POST data_imports', 'PATCH crm/meetings/:id', 'PUT crm/meetings/:id', 'DELETE crm/meetings/:id',
+    'POST integrations/dyte/create_a_meeting', 'DELETE inboxes/:inbox_id/conference',
+    'POST crm/meta_ads_connection/ads/:ad_id/status', 'PUT crm/meta_ads_connection/ads/:ad_id/creative',
+    'DELETE crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id',
+    'DELETE crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id',
+    'DELETE conversations/:conversation_id/comentario', 'POST integrations/linear/link_issue'
+  ].freeze
+  TODAS = (ACOES + FALA_COM_FORA + CONEXAO_E_PROVEDOR).freeze
 
   # O papel de administrador, pelo nome ou pelo número do enum (`role: 1`, revisão do Codex).
   ADMINISTRADOR = ['administrator', AccountUser.roles['administrator'].to_s].freeze

@@ -66,6 +66,21 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(acoes.desfazivel?('PATCH agents/:id', { caminho: { id: agente.id }, corpo: { name: 'Ana Souza' } })).to be(true)
   end
 
+  it 'desconectar provedor, cancelar reunião e pôr anúncio no ar pedem confirmação' do
+    expect(acoes.desfazivel?('DELETE integrations/slack')).to be(false)
+    expect(acoes.desfazivel?('DELETE crm/meetings/:id', { caminho: { id: 1 } })).to be(false)
+    expect(acoes.desfazivel?('POST crm/meta_ads_connection/ads/:ad_id/status', { caminho: { ad_id: '1' }, corpo: { status: 'ACTIVE' } }))
+      .to be(false)
+  end
+
+  it 'criar caixa API com webhook pede confirmação; sem credencial segue direto' do
+    com_webhook = { corpo: { name: 'API', channel: { type: 'api', webhook_url: 'https://fora.example/hook' } } }
+    sem = { corpo: { name: 'Site', channel: { type: 'web_widget', website_url: 'https://loja.example' } } }
+
+    expect(acoes.desfazivel?('POST inboxes', com_webhook)).to be(false)
+    expect(acoes.desfazivel?('POST inboxes', sem)).to be(true)
+  end
+
   it 'mudar o nome da caixa segue direto, com desfazer' do
     expect(acoes.desfazivel?('PATCH inboxes/:id', { caminho: { id: caixa.id }, corpo: { name: 'Vendas' } })).to be(true)
   end

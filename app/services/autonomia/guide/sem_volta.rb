@@ -13,11 +13,12 @@ module Autonomia::Guide::SemVolta
   end
 
   # #858: regra com Decisor que fica ligada. #2889: ajuste numa automação do motor novo ligada vale na hora.
-  # #3106: trocar a credencial do canal da caixa e promover agente a administrador.
+  # #3106: trocar a credencial do canal da caixa, promover agente a administrador e ligar automação gravada que manda.
   def pelas_regras?(account, acao, dados)
     ::Autonomia::Guide::RegraComDecisor.new(account).fica_ligada?(acao, dados) ||
       ::Autonomia::Guide::MotorNovo.new(account).ajusta_ligada?(acao, dados) ||
       ::Autonomia::Guide::CredencialDaCaixa.troca?(acao, dados) ||
-      ::Autonomia::Guide::SaiDaPlataforma.vira_administrador?(acao, dados)
+      ::Autonomia::Guide::SaiDaPlataforma.vira_administrador?(acao, dados) ||
+      ::Autonomia::Guide::LigaComEnvio.liga?(account, acao, dados)
   end
 end

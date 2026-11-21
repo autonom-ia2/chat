@@ -8,7 +8,8 @@
 # eventos passam a ir), mais os segredos dos canais que não passam por aquele guarda (`encrypts` nos modelos de
 # `Channel::*` e o token HMAC). A lista dos segredos é explícita porque o `encrypts` só vale com a criptografia ligada.
 module Autonomia::Guide::CredencialDaCaixa
-  ACOES = ['PATCH inboxes/:id', 'PUT inboxes/:id'].freeze
+  # Criar a caixa com credencial ou webhook vale o mesmo que trocar (revisão do Codex): o canal já nasce falando com fora.
+  ACOES = ['POST inboxes', 'PATCH inboxes/:id', 'PUT inboxes/:id'].freeze
   SEGREDOS = %w[
     access_token refresh_token api_key business_management_token page_access_token user_access_token
     twitter_access_token twitter_access_token_secret hmac_token secret

@@ -45,6 +45,18 @@ RSpec.describe Autonomia::Guide::Acoes do
       .to raise_error(described_class::Recusada)
   end
 
+  # #3106 (revisão do Codex): ligar a regra gravada que manda mensagem, sem repetir as ações, também confirma.
+  it 'ligar regra gravada que manda mensagem pede confirmação; renomear a que já está ligada segue direto' do
+    acoes_que_mandam = [{ 'action_name' => 'send_message', 'action_params' => ['Olá! Já vamos te atender.'] }]
+    desligada = create(:automation_rule, account: conta, active: false, actions: acoes_que_mandam)
+    ligada = create(:automation_rule, account: conta, active: true, actions: acoes_que_mandam)
+
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: desligada.id }, corpo: { active: true } })).to be(false)
+    expect(acoes.desfazivel?('PUT automation_rules/:id', { caminho: { id: desligada.id }, corpo: { automation_rule: { active: true } } }))
+      .to be(false)
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: ligada.id }, corpo: { name: 'Boas-vindas' } })).to be(true)
+  end
+
   it 'pôr o Decisor numa regra que já está ligada pede confirmação' do
     ligada = create(:automation_rule, account: conta, active: true)
 
