@@ -39,8 +39,10 @@ RSpec.describe 'OAuth Authorization Server Metadata', type: :request do
         'response_types_supported' => ['code'],
         'grant_types_supported' => %w[authorization_code refresh_token],
         'token_endpoint_auth_methods_supported' => ['none'],
-        'code_challenge_methods_supported' => ['S256'],
-        'scopes_supported' => %w[conversations:read contacts:read conversations:write messages:write contacts:write]
+        'code_challenge_methods_supported' => ['S256']
+      )
+      expect(response.parsed_body['scopes_supported']).to match_array(
+        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read]
       )
     end
   end

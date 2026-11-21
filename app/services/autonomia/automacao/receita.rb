@@ -48,7 +48,7 @@ class Autonomia::Automacao::Receita
   # O JsonSchemaValidator põe o erro na chave de dentro (`gatilho`), não em `receita`; quem segue para a conferência
   # do código pergunta aqui.
   def self.esquema_valido?(receita)
-    @esquema ||= JSONSchemer.schema(ESQUEMA)
+    @esquema ||= JsonSchemaDraft7.schema(ESQUEMA)
     @esquema.valid?(JSON.parse(receita.to_json))
   end
 

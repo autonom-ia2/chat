@@ -4,18 +4,26 @@
 #
 # The document is fetched from a URL chosen by whoever starts the flow, so the fetch is the attack surface:
 # https only, no redirects, the host must resolve only to public addresses and the connection goes to the
-# address that was checked (no second DNS lookup), short timeouts and a small size cap.
+# address that was checked (no second DNS lookup), port 443 only, a deadline for the whole fetch and a small
+# size cap. A document that failed is not fetched again for a while.
 class Oauth::ClientMetadataDocument
   class Invalid < StandardError; end
 
   MAX_BYTES = 16.kilobytes
   TIMEOUT_SECONDS = 3
+  # Per-read timeouts alone let a server that trickles one byte at a time hold the web thread much longer.
+  TOTAL_SECONDS = 5
+  REJECTED_FOR = 10.minutes
   MAX_URL_LENGTH = 255
   MAX_REDIRECT_URIS = 10
   # A known client is refreshed at most this often, so a changed document takes effect without hammering it.
   REFRESH_AFTER = 1.hour
-  RESERVED_RANGES = %w[0.0.0.0/8 100.64.0.0/10 192.0.0.0/24 198.18.0.0/15 224.0.0.0/3 ::/128 fc00::/7 ff00::/8]
-                    .map { |range| IPAddr.new(range) }.freeze
+  # Besides private/loopback/link-local: carrier NAT, IETF, benchmarking, multicast/reserved, and the IPv6 forms that
+  # can carry an IPv4 address (IPv4-compatible, NAT64, 6to4).
+  RESERVED_RANGES = %w[0.0.0.0/8 100.64.0.0/10 192.0.0.0/24 198.18.0.0/15 224.0.0.0/3
+                       ::/96 64:ff9b::/96 2002::/16 fc00::/7 ff00::/8].map { |range| IPAddr.new(range) }.freeze
+  FETCH_ERRORS = [JSON::ParserError, SocketError, SystemCallError, IOError, Timeout::Error, OpenSSL::SSL::SSLError,
+                  Net::HTTPBadResponse, Net::ProtocolError, Zlib::Error].freeze
 
   def self.url?(client_id)
     value = client_id.to_s
@@ -27,19 +35,39 @@ class Oauth::ClientMetadataDocument
   def self.sync(client_id)
     application = Doorkeeper::Application.find_by(uid: client_id)
     return application if application && application.updated_at > REFRESH_AFTER.ago
+    return application if Rails.cache.exist?(rejected_key(client_id))
 
-    attributes = new(client_id).application_attributes
-    application ||= Doorkeeper::Application.new(uid: client_id, confidential: false)
-    application.update!(attributes)
-    application
+    save(application || Doorkeeper::Application.new(uid: client_id, confidential: false), new(client_id).application_attributes)
   rescue Invalid, ActiveRecord::RecordInvalid => e
-    Rails.logger.info("oauth.client_metadata_document rejected host=#{URI.parse(client_id).host} reason=#{e.class.name}")
+    reject(client_id, e)
+    application
+  rescue ActiveRecord::RecordNotUnique
+    Doorkeeper::Application.find_by(uid: client_id)
+  end
+
+  # An unchanged document still counts as checked now, so it is not fetched again on every authorization.
+  def self.save(application, attributes)
+    application.assign_attributes(attributes)
+    application.new_record? || application.changed? ? application.save! : application.touch # rubocop:disable Rails/SkipsModelValidations
     application
   end
+
+  def self.reject(client_id, error)
+    Rails.cache.write(rejected_key(client_id), true, expires_in: REJECTED_FOR)
+    # The id may not even parse as a URL, so the host is cut out as text.
+    host = client_id.to_s.delete_prefix('https://').split('/').first.to_s.truncate(100)
+    Rails.logger.info("oauth.client_metadata_document rejected host=#{host} reason=#{error.message}")
+  end
+
+  def self.rejected_key(client_id)
+    "oauth:client_metadata_document:rejected:#{Digest::SHA256.hexdigest(client_id.to_s)}"
+  end
+  private_class_method :save, :reject, :rejected_key
 
   def initialize(url)
     @uri = URI.parse(url)
     raise Invalid, 'not https' unless @uri.is_a?(URI::HTTPS) && @uri.host.present? && @uri.userinfo.nil? && @uri.fragment.nil?
+    raise Invalid, 'not port 443' unless @uri.port == 443
   rescue URI::InvalidURIError
     raise Invalid, 'bad url'
   end
@@ -74,6 +102,15 @@ class Oauth::ClientMetadataDocument
   end
 
   def fetch_document
+    parsed = JSON.parse(Timeout.timeout(TOTAL_SECONDS) { read_document })
+    raise Invalid, 'not an object' unless parsed.is_a?(Hash)
+
+    parsed
+  rescue *FETCH_ERRORS => e
+    raise Invalid, "fetch failed (#{e.class.name})"
+  end
+
+  def read_document
     body = +''
     http_client.request(Net::HTTP::Get.new(@uri.request_uri, 'Accept' => 'application/json')) do |response|
       raise Invalid, "status #{response.code}" unless response.is_a?(Net::HTTPOK)
@@ -83,12 +120,7 @@ class Oauth::ClientMetadataDocument
         raise Invalid, 'too large' if body.bytesize > MAX_BYTES
       end
     end
-    parsed = JSON.parse(body)
-    raise Invalid, 'not an object' unless parsed.is_a?(Hash)
-
-    parsed
-  rescue JSON::ParserError, SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, OpenSSL::SSL::SSLError
-    raise Invalid, 'fetch failed'
+    body
   end
 
   # Connects to the address that was checked, not to a second DNS answer (no rebinding between check and use).

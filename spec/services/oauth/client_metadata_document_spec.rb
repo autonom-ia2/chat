@@ -45,11 +45,37 @@ RSpec.describe Oauth::ClientMetadataDocument do
     end
 
     it 'does not fetch a host that resolves to loopback or link-local addresses' do
-      %w[127.0.0.1 169.254.169.254 ::1 ::ffff:127.0.0.1].each do |address|
+      %w[127.0.0.1 169.254.169.254 ::1 ::ffff:127.0.0.1 ::a00:1 64:ff9b::a00:1 2002:a00:1::1].each do |address|
         allow(Resolv).to receive(:getaddresses).with('emd.ia.br').and_return([address])
 
         expect(described_class.sync(client_id)).to be_nil
       end
+    end
+
+    it 'does not fetch a document on a port other than 443' do
+      request = stub_request(:get, 'https://emd.ia.br:8443/oauth/cliente.json')
+
+      expect(described_class.sync('https://emd.ia.br:8443/oauth/cliente.json')).to be_nil
+      expect(request).not_to have_been_requested
+    end
+
+    it 'answers unknown client, without raising, for an id that is not a valid URL' do
+      expect(described_class.sync('https://host invalido/doc.json')).to be_nil
+    end
+
+    it 'rejects a document that times out' do
+      stub_request(:get, client_id).to_timeout
+
+      expect(described_class.sync(client_id)).to be_nil
+    end
+
+    it 'does not fetch a rejected document again for a while' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      stub_document(status: 404)
+
+      2.times { described_class.sync(client_id) }
+
+      expect(a_request(:get, client_id)).to have_been_made.once
     end
 
     it 'rejects redirect URIs that are not https' do
@@ -79,6 +105,17 @@ RSpec.describe Oauth::ClientMetadataDocument do
       described_class.sync(client_id)
 
       expect(a_request(:get, client_id)).to have_been_made.once
+    end
+
+    it 'counts an unchanged document as checked, so it is not fetched on every authorization' do
+      stub_document
+      application = described_class.sync(client_id)
+      application.update_column(:updated_at, 2.hours.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      2.times { described_class.sync(client_id) }
+
+      expect(a_request(:get, client_id)).to have_been_made.twice
+      expect(application.reload.updated_at).to be > 1.minute.ago
     end
 
     it 'refreshes a client after an hour and keeps the old one when the document cannot be read' do

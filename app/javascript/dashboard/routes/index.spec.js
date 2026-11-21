@@ -118,6 +118,7 @@ describe('#validateAuthenticateRoutePermission', () => {
     it('carries the OAuth request through login', () => {
       const to = {
         name: 'oauth_authorize_link',
+        fullPath: '/app/oauth/authorize?client_id=abc&state=a%20b',
         params: {},
         query: { client_id: 'abc', state: 'a b' },
       };
@@ -129,7 +130,7 @@ describe('#validateAuthenticateRoutePermission', () => {
       validateAuthenticateRoutePermission(to, next);
 
       expect(mockAssign).toHaveBeenCalledWith(
-        '/app/login?redirect_url=oauth%2Fauthorize%3Fclient_id%3Dabc%26state%3Da%2Bb'
+        '/app/login?redirect_to=%2Fapp%2Foauth%2Fauthorize%3Fclient_id%3Dabc%26state%3Da%2520b'
       );
     });
   });

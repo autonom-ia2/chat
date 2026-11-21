@@ -55,6 +55,15 @@ const getSsoCredentials = to => {
 const isSafeAppRedirect = redirectTo =>
   typeof redirectTo === 'string' && redirectTo.startsWith('/app/');
 
+// The login brings the person back to links that only work after signing in (the OAuth consent)
+const loginPathFor = to => {
+  const fullPath = to.fullPath || '';
+  if (!ACCOUNT_SCOPED_LINK_ROUTES[to.name] || !isSafeAppRedirect(fullPath)) {
+    return '/app/login';
+  }
+  return `/app/login?redirect_to=${encodeURIComponent(fullPath)}`;
+};
+
 const defaultAuthenticatedRoute = user => {
   const accountId = user?.account_id || user?.accounts?.[0]?.id;
   return accountId
@@ -89,7 +98,7 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
       window.location.assign(`/auth/autonomia?return_to=${returnTo}`);
       return '';
     }
-    window.location.assign('/app/login');
+    window.location.assign(loginPathFor(to));
     return '';
   }
 

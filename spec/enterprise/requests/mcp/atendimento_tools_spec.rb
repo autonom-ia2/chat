@@ -37,7 +37,7 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
 
     expect(structured('list_inboxes')['inboxes'].pluck('name')).to eq(['WhatsApp Loja'])
     expect(structured('list_labels')['labels'].pluck('title')).to eq(['vip'])
-    expect(structured('list_teams')['teams'].pluck('name')).to eq(['Vendas'])
+    expect(structured('list_teams')['teams'].pluck('name')).to eq(['vendas'])
     expect(structured('list_agents')['agents'].pluck('id')).to eq([admin.id])
     expect(structured('list_canned_responses', { search: 'tudo' })['canned_responses'].pluck('short_code')).to eq(['oi'])
   end

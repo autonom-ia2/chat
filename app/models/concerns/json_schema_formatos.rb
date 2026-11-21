@@ -17,7 +17,7 @@ module JsonSchemaFormatos
   end
 
   def validador_de_email
-    @validador_de_email ||= JSONSchemer.schema({ 'format' => 'email' })
+    @validador_de_email ||= JsonSchemaDraft7.schema({ 'format' => 'email' })
   end
 
   # 'contact.email', 'inbox.email': os drops de EmailHelper#message_drops que respondem a `email`.

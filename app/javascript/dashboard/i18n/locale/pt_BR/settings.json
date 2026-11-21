@@ -15,7 +15,7 @@
       "ACCOUNT_NOTE": "O app só acessa a conta que você escolher.",
       "ALLOW": "Permitir",
       "DENY": "Recusar",
-      "REDIRECT_NOTE": "Você vai voltar para {host}.",
+      "REDIRECT_NOTE": "Quem recebe este acesso é {host}. Só permita se você reconhece esse endereço.",
       "ERROR_TITLE": "Este app não pode ser conectado",
       "ERROR_DESCRIPTION": "O pedido do app não é válido. Volte para o app e tente de novo.",
       "NO_ADMIN_ACCOUNT": "Só quem administra a conta pode conectar apps. Peça a quem administra a sua conta."

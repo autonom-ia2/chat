@@ -128,7 +128,8 @@ RSpec.describe 'MCP tools', type: :request do
       expect(result['structuredContent']['messages']).to match(
         [
           include('content' => 'Where is my order?', 'type' => 'incoming', 'private' => false),
-          include('content' => 'Checking with shipping', 'type' => 'outgoing', 'private' => true, 'sender' => admin.name)
+          include('content' => 'Checking with shipping', 'type' => 'outgoing', 'private' => true, 'sender' => admin.name,
+                  'sender_type' => 'User')
         ]
       )
     end

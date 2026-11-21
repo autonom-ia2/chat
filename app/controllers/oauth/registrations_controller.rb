@@ -4,10 +4,18 @@ class Oauth::RegistrationsController < ApplicationController
   GRANT_TYPES = %w[authorization_code refresh_token].freeze
   RESPONSE_TYPES = %w[code].freeze
   TOKEN_ENDPOINT_AUTH_METHOD = 'none'.freeze
+  # Anyone can register, so the stored row and the name shown on the consent screen are bounded
+  MAX_CLIENT_NAME = 100
+  MAX_REDIRECT_URIS = 10
 
   def create
+    if registration_params[:redirect_uris].to_a.size > MAX_REDIRECT_URIS
+      return render json: { error: 'invalid_redirect_uri', error_description: "At most #{MAX_REDIRECT_URIS} redirect URIs" },
+                    status: :bad_request
+    end
+
     application = Doorkeeper::Application.new(
-      name: registration_params[:client_name],
+      name: registration_params[:client_name].to_s.strip.truncate(MAX_CLIENT_NAME),
       redirect_uri: registration_params[:redirect_uris].to_a.join("\n"),
       scopes: registration_params[:scope].to_s,
       confidential: false

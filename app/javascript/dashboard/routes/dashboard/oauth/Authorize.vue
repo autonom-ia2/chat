@@ -33,7 +33,7 @@ const routeAccountId = Number(route.params.accountId);
 const selectedAccountId = ref(
   adminAccounts.value.some(account => account.id === routeAccountId)
     ? routeAccountId
-    : adminAccounts.value[0]?.id ?? null
+    : (adminAccounts.value[0]?.id ?? null)
 );
 
 const oauthParams = computed(() =>
@@ -123,6 +123,16 @@ onMounted(fetchAuthorization);
               })
             }}
           </p>
+          <!-- The name is chosen by whoever registered the app; the address is what really gets the access -->
+          <p
+            class="flex items-start gap-2 rounded-lg bg-n-amber-3 p-3 text-body-main text-n-slate-12"
+          >
+            <Icon
+              icon="i-lucide-shield-alert"
+              class="mt-0.5 size-4 flex-shrink-0 text-n-amber-11"
+            />
+            {{ t('OAUTH.AUTHORIZE.REDIRECT_NOTE', { host: redirectHost }) }}
+          </p>
         </div>
         <ul class="flex flex-col gap-3">
           <li
@@ -170,9 +180,6 @@ onMounted(fetchAuthorization);
               @click="approve"
             />
           </div>
-          <span class="text-body-b3 text-n-slate-10 text-end">
-            {{ t('OAUTH.AUTHORIZE.REDIRECT_NOTE', { host: redirectHost }) }}
-          </span>
         </div>
       </template>
       <div v-else class="flex flex-col gap-2">

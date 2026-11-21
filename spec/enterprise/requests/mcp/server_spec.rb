@@ -136,8 +136,10 @@ RSpec.describe 'MCP server', type: :request do
       expect(response.parsed_body).to include(
         'resource' => 'https://support.example.com/mcp',
         'authorization_servers' => ['https://support.example.com'],
-        'bearer_methods_supported' => ['header'],
-        'scopes_supported' => %w[conversations:read conversations:write contacts:read messages:write]
+        'bearer_methods_supported' => ['header']
+      )
+      expect(response.parsed_body['scopes_supported']).to match_array(
+        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read]
       )
     end
 

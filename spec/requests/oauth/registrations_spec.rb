@@ -87,5 +87,21 @@ RSpec.describe 'OAuth Dynamic Client Registration', type: :request do
       expect(response).to have_http_status(:bad_request)
       expect(response.parsed_body['error']).to eq('invalid_client_metadata')
     end
+
+    it 'cuts a long client name, which the consent screen shows' do
+      post '/oauth/register', params: registration_params.merge(client_name: 'A' * 500), as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(Doorkeeper::Application.last.name.length).to eq(100)
+    end
+
+    it 'rejects more than ten redirect URIs' do
+      uris = Array.new(11) { |index| "https://chatgpt.com/cb/#{index}" }
+      post '/oauth/register', params: registration_params.merge(redirect_uris: uris), as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body['error']).to eq('invalid_redirect_uri')
+      expect(Doorkeeper::Application.count).to eq(0)
+    end
   end
 end

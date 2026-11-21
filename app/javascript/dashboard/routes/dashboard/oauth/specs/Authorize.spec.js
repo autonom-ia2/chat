@@ -23,10 +23,16 @@ vi.mock('vue-router', () => ({
   }),
 }));
 
+const ADMIN_ACCOUNT = {
+  id: 7,
+  name: 'Acme',
+  role: 'administrator',
+  status: 'active',
+};
+const mockCurrentUser = vi.hoisted(() => ({ value: { accounts: [] } }));
+
 vi.mock('dashboard/composables/store', () => ({
-  useMapGetter: () => ({
-    value: { accounts: [{ id: 7, name: 'Acme' }] },
-  }),
+  useMapGetter: () => mockCurrentUser,
 }));
 
 vi.mock('shared/composables/useBranding', () => ({
@@ -49,6 +55,7 @@ describe('Authorize', () => {
   };
 
   beforeEach(() => {
+    mockCurrentUser.value = { accounts: [ADMIN_ACCOUNT] };
     delete window.location;
     window.location = { assign: vi.fn() };
     oauthAPI.getAuthorization.mockResolvedValue({
@@ -111,6 +118,25 @@ describe('Authorize', () => {
     expect(window.location.assign).toHaveBeenCalledWith(
       'https://chatgpt.com/callback?error=access_denied'
     );
+  });
+
+  it('shows the address that receives the access', async () => {
+    const wrapper = await mountComponent();
+
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.REDIRECT_NOTE');
+  });
+
+  it('offers only accounts the user administers and blocks approval without one', async () => {
+    mockCurrentUser.value = {
+      accounts: [
+        { ...ADMIN_ACCOUNT, role: 'agent' },
+        { ...ADMIN_ACCOUNT, id: 8, status: 'suspended' },
+      ],
+    };
+    const wrapper = await mountComponent();
+
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.NO_ADMIN_ACCOUNT');
+    expect(wrapper.findAllComponents(Button)[1].props('disabled')).toBe(true);
   });
 
   it('shows an error and no actions when the request is not valid', async () => {

@@ -33,7 +33,7 @@ class Crm::Ai::StageCriteriaImprover
   }.freeze
 
   def self.valid_input?(input)
-    input['stage_index'].is_a?(Integer) && JSONSchemer.schema(INPUT_SCHEMA).valid?(input) &&
+    input['stage_index'].is_a?(Integer) && JsonSchemaDraft7.schema(INPUT_SCHEMA).valid?(input) &&
       input['stage_index'] < input['stages'].length && input['stages'].all? { |stage| stage['name'].strip.present? }
   end
 

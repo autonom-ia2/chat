@@ -20,11 +20,14 @@ Porte da branch `feat/mcp-server` do Chatwoot (06–07/10/2026, ainda fora do `d
 - **DCR** (`POST /oauth/register`, RFC 7591): cliente público, sem segredo. É como Claude e ChatGPT se registram.
 - **CIMD** (`Oauth::ClientMetadataDocument`): o `client_id` é a URL https de um documento JSON com
   `client_name` e `redirect_uris`. É como o Em d.ia se identifica. A busca só aceita https, sem redirecionamento,
-  com o host resolvendo só para endereço público e a conexão indo ao endereço conferido; 3 s e 16 KB no máximo;
-  o cliente conhecido é relido no máximo a cada hora. Os escopos do documento são ignorados: cada pedido de
+  só na porta 443, com o host resolvendo só para endereço público e a conexão indo ao endereço conferido; 5 s no
+  total e 16 KB no máximo; o cliente conhecido é relido no máximo a cada hora, e o documento recusado só é buscado
+  de novo depois de 10 min. Os escopos do documento são ignorados: cada pedido de
   autorização pede os seus, e o Doorkeeper confere.
-- **Consentimento**: `/oauth/authorize` leva à tela `/app/accounts/:id/oauth/authorize`. Sem sessão, o SSO da
-  Autonom.ia leva e devolve à mesma tela. A tela só oferece as contas em que a pessoa é administradora.
+- **Consentimento**: `/oauth/authorize` leva à tela `/app/accounts/:id/oauth/authorize`. Sem sessão, o login (SSO
+  da Autonom.ia ou e-mail e senha) devolve à mesma tela. A tela só oferece as contas em que a pessoa é
+  administradora e mostra, em destaque, o endereço que vai receber o acesso: o nome do app é escolhido por quem o
+  registrou, o endereço não.
 - **`/mcp`**: Streamable HTTP sem estado (gem `mcp`). Recusa token revogado, vencido, de conta suspensa ou de
   quem deixou de ser administrador. Cada ferramenta roda como a pessoa, com as policies do painel.
 - **Apps conectados**: Perfil → Apps conectados, com o botão para desconectar.
@@ -52,7 +55,9 @@ no mesmo `Mcp::Tools::ALL`.
    vírgula). Os metadados e o desafio do `/mcp` passam a nomear o host que o cliente usou.
 
 Limites de frequência (Rack::Attack, sem teto diário): `RATE_LIMIT_MCP` (300/min por token),
-`RATE_LIMIT_OAUTH_TOKEN` (60/min por IP), `RATE_LIMIT_OAUTH_REGISTRATION` (100/h por IP).
+`RATE_LIMIT_OAUTH_TOKEN` (60/min por cliente; Claude e ChatGPT renovam de servidores compartilhados),
+`RATE_LIMIT_OAUTH_AUTHORIZATION` (60/min por IP na API da tela de consentimento, que pode buscar o CIMD) e
+`RATE_LIMIT_OAUTH_REGISTRATION` (100/h por IP).
 
 ## Desligar
 
@@ -62,5 +67,7 @@ pessoa: Perfil → Apps conectados → Desconectar (revoga tokens e grants).
 ## Dependências
 
 `doorkeeper ~> 5.9` e `mcp ~> 1.7`. A gem `mcp` exige `json_schemer >= 2.4`: o lock sobe de 0.2.24 para 2.5.0
-(usada também pelos validadores de JSON do fork; a suíte cobre) e `tidewave` (só desenvolvimento) sobe para
+(usada também pelos validadores de JSON do fork). O 2.x lê esquema sem `$schema` como draft 2020-12 e
+expressões como Ruby; os esquemas do fork foram escritos para draft 7 e ECMA, então todos passam por
+`JsonSchemaDraft7.schema`, que fixa os dois. Só o MCP usa a gem direto. `tidewave` (só desenvolvimento) sobe para
 0.9.0, que não depende mais do `fast-mcp`.

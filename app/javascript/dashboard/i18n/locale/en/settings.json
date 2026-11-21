@@ -15,7 +15,7 @@
       "ACCOUNT_NOTE": "The app can only access the account you select.",
       "ALLOW": "Allow",
       "DENY": "Deny",
-      "REDIRECT_NOTE": "You will be sent to {host}.",
+      "REDIRECT_NOTE": "{host} will receive this access. Only allow if you recognize this address.",
       "ERROR_TITLE": "This app cannot be connected",
       "ERROR_DESCRIPTION": "The request from the app is not valid. Go back to the app and try again.",
       "NO_ADMIN_ACCOUNT": "Only account administrators can connect apps. Ask an administrator of your account."

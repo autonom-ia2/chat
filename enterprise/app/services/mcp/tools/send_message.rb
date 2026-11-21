@@ -1,7 +1,8 @@
 class Mcp::Tools::SendMessage < Mcp::Tools::Base
   tool_name 'send_message'
   description 'Send a message in a conversation as the user. By default the message is a reply that the customer receives and it cannot be ' \
-              'recalled. Set private to true to add an internal note that only teammates see.'
+              'recalled, so send only what the user asked for and confirm the text with the user first. ' \
+              'Set private to true to add an internal note that only teammates see.'
   scope 'messages:write'
   annotations(read_only_hint: false, destructive_hint: false, open_world_hint: true)
   input_schema(
