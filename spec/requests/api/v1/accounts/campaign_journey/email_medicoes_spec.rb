@@ -39,7 +39,7 @@ RSpec.describe 'Campaign journey e-mail medição (#3098)', :aggregate_failures,
   it 'grava a janela e o grupo, sorteia, e a sincronização tira o grupo dos destinatários' do
     expect(campaign.email_campaign_recipients.count).to eq(10)
 
-    medir(janela_de_compra_dias: 15, grupo_de_controle_pct: 20)
+    medir({ janela_de_compra_dias: 15, grupo_de_controle_pct: 20 })
 
     expect(response).to have_http_status(:no_content)
     expect(link.reload).to have_attributes(janela_de_compra_dias: 15, grupo_de_controle_pct: 20)
@@ -56,7 +56,7 @@ RSpec.describe 'Campaign journey e-mail medição (#3098)', :aggregate_failures,
     EmailSuppression.create!(account: account, email: suprimido, reason: 'hard_bounce')
     expect(campaign.email_campaign_recipients.detect { |recipient| recipient.email == suprimido }).to be_suppressed
 
-    medir(grupo_de_controle_pct: 20)
+    medir({ grupo_de_controle_pct: 20 })
 
     fora = link.reload.campaign_control_contacts.pluck(:contact_id)
     expect(fora.size).to eq(1)
@@ -67,11 +67,11 @@ RSpec.describe 'Campaign journey e-mail medição (#3098)', :aggregate_failures,
   end
 
   it 'recusa depois do envio e valor fora das opções' do
-    medir(janela_de_compra_dias: 9)
+    medir({ janela_de_compra_dias: 9 })
     expect(response).to have_http_status(:unprocessable_entity)
 
     campaign.update_columns(status: EmailCampaign.statuses.fetch('sent')) # rubocop:disable Rails/SkipsModelValidations
-    medir(janela_de_compra_dias: 15)
+    medir({ janela_de_compra_dias: 15 })
     expect(response.parsed_body['error']).to eq('campaign_journey.already_sent')
   end
 

@@ -33,8 +33,8 @@ class CampaignJourney::Medicao
     @link.lock!
     @link.update!(escolhas) if escolhas.any?
     # Antes do envio (o e-mail volta à revisão e muda a porcentagem): o sorteio antigo sai e vale o novo.
-    @link.campaign_control_contacts.delete_all if @link.saved_change_to_grupo_de_controle_pct?
     grupo = CampaignJourney::GrupoDeControle.new(@link)
+    grupo.apagar! if @link.saved_change_to_grupo_de_controle_pct?
     grupo.sortear!(yield) if grupo.ativo?
   end
 end

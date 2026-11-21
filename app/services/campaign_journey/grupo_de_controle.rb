@@ -20,7 +20,7 @@ class CampaignJourney::GrupoDeControle
   # `contact_ids`: o público inteiro de quem ia receber. Não faz nada se não há grupo ou se já foi sorteado.
   def sortear!(contact_ids)
     return unless ativo?
-    return if @link.campaign_control_contacts.exists?
+    return if sorteados.exists?
 
     unicos = contact_ids.compact.uniq
     quantos = unicos.size * @link.grupo_de_controle_pct / 100
@@ -31,16 +31,27 @@ class CampaignJourney::GrupoDeControle
   def sem_o_grupo(contatos)
     return contatos unless ativo?
 
-    contatos.where.not(id: @link.campaign_control_contacts.select(:contact_id))
+    contatos.where.not(id: sorteados.select(:contact_id))
   end
 
   def ids
     return Set.new unless ativo?
 
-    @link.campaign_control_contacts.pluck(:contact_id).to_set
+    sorteados.pluck(:contact_id).to_set
+  end
+
+  # Desfaz o sorteio (a porcentagem mudou antes do envio).
+  def apagar!
+    sorteados.delete_all
   end
 
   private
+
+  # Sempre do banco, nunca da associação do link: depois de um `delete_all` pela associação, ela fica carregada vazia
+  # e o `pluck` responderia [] mesmo com o sorteio novo gravado.
+  def sorteados
+    CampaignControlContact.where(campaign_audience_link_id: @link.id)
+  end
 
   def posicao(contact_id)
     Digest::SHA256.hexdigest("#{@link.id}:#{contact_id}")

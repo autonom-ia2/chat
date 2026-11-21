@@ -112,10 +112,11 @@ class CampaignJourney::ComprasDaCampanha
 
   # { pessoas, compraram } do grupo de controle, a partir do primeiro envio da campanha. nil sem grupo ou sem envio.
   def controle
-    return unless CampaignJourney::GrupoDeControle.new(@link).ativo?
+    grupo = CampaignJourney::GrupoDeControle.new(@link)
+    return unless grupo.ativo?
 
     inicio = envios.values.min
-    ids = @link.campaign_control_contacts.pluck(:contact_id)
+    ids = grupo.ids.to_a
     return if inicio.nil? || ids.empty?
 
     compras = sem_campanha_depois(compras_de(ids.index_with { inicio }))

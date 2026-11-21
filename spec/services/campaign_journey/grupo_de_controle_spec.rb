@@ -26,7 +26,7 @@ RSpec.describe CampaignJourney::GrupoDeControle, :aggregate_failures do
     described_class.new(link).sortear!(publico_ids.reverse)
     expect(link.campaign_control_contacts.pluck(:contact_id)).to match_array(primeiro)
 
-    link.campaign_control_contacts.delete_all
+    described_class.new(link).apagar!
     described_class.new(link).sortear!(publico_ids.reverse)
     expect(link.campaign_control_contacts.pluck(:contact_id)).to match_array(primeiro)
   end
