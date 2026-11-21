@@ -33,7 +33,7 @@ class Mcp::Tools::Base < MCP::Tool
 
     # The accounts this connection reaches; a connection made before #3106 stays on its own (McpController).
     def account_access(server_context)
-      Mcp::AccountAccess.new(Current.user, only_account_id: server_context[:only_account_id])
+      Mcp::AccountAccess.new(Current.user, **server_context.fetch(:account_reach))
     end
 
     def call(server_context:, account_id: nil, **arguments)

@@ -2,20 +2,21 @@
 # One connection covers them all, and the list is read on every call, so an account the user starts
 # administering is in at once, and one they stop administering, or that gets suspended, is out at once.
 #
-# A connection made before #3106 promised one account, so it stays on that one (`only_account_id`): it does not reach
-# the others without a new consent. McpController reads the token's `all_accounts`, which says which promise the user
-# accepted.
+# A connection made before #3106 promised one account, so it stays on that one: it does not reach the others without a
+# new consent. The token's `all_accounts` says which promise the user accepted; without it, only `account_id` counts,
+# and a missing `account_id` reaches nothing.
 class Mcp::AccountAccess
-  def initialize(user, only_account_id: nil)
+  def initialize(user, all_accounts:, account_id:)
     @user = user
-    @only_account_id = only_account_id
+    @all_accounts = all_accounts == true
+    @account_id = account_id
   end
 
   def account_users
     return AccountUser.none if @user.nil?
 
     scope = @user.account_users.administrator.joins(:account).merge(Account.active).includes(:account).order(:account_id)
-    @only_account_id ? scope.where(account_id: @only_account_id) : scope
+    @all_accounts ? scope : scope.where(account_id: @account_id)
   end
 
   def any?

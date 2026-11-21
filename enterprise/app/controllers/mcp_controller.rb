@@ -13,7 +13,7 @@ class McpController < ApplicationController
   def handle
     server = MCP::Server.new(name: SERVER_NAME, version: Chatwoot.config[:version], instructions: INSTRUCTIONS, tools: Mcp::Tools::ALL,
                              server_context: { scopes: doorkeeper_token.scopes.to_a, base_url: public_url,
-                                               default_account_id: doorkeeper_token.account_id, only_account_id: only_account_id })
+                                               default_account_id: doorkeeper_token.account_id, account_reach: account_reach })
     # Rails already checks the Host header, and the bearer token rules out cross-site browser requests.
     transport = MCP::Server::Transports::StreamableHTTPTransport.new(server, stateless: true, enable_json_response: true,
                                                                              dns_rebinding_protection: false)
@@ -32,14 +32,14 @@ class McpController < ApplicationController
 
     user = User.find_by(id: doorkeeper_token.resource_owner_id)
     # Someone who administers no active account anymore has nothing to connect to: the client starts over.
-    return render_oauth_challenge unless Mcp::AccountAccess.new(user, only_account_id: only_account_id).any?
+    return render_oauth_challenge unless Mcp::AccountAccess.new(user, **account_reach).any?
 
     Current.user = user
   end
 
-  # A connection made before #3106 stays on its own account (Mcp::AccountAccess).
-  def only_account_id
-    doorkeeper_token.all_accounts ? nil : doorkeeper_token.account_id
+  # How far the connection reaches: every account, or only its own when made before #3106 (Mcp::AccountAccess).
+  def account_reach
+    { all_accounts: doorkeeper_token.all_accounts, account_id: doorkeeper_token.account_id }
   end
 
   # The header tells the client where to find the authorization server, which starts the OAuth flow.
