@@ -8,9 +8,10 @@ RSpec.describe 'MCP tools', type: :request do
   let(:inbox) { create(:inbox, account: account) }
   let(:application) { Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: 'https://chatgpt.com/callback', confidential: false) }
   let(:scopes) { 'conversations:read conversations:write contacts:read messages:write' }
+  let(:all_accounts) { false }
   let(:access_token) do
     Doorkeeper::AccessToken.create!(application: application, resource_owner_id: admin.id, account_id: account.id, scopes: scopes,
-                                    expires_in: 2.hours)
+                                    all_accounts: all_accounts, expires_in: 2.hours)
   end
 
   before do
@@ -52,6 +53,8 @@ RSpec.describe 'MCP tools', type: :request do
   describe 'several accounts' do
     let(:other_account) { create(:account, name: 'Loja Silva') }
     let!(:other_inbox) { create(:inbox, account: other_account, name: 'WhatsApp da Loja Silva') }
+
+    let(:all_accounts) { true }
 
     before { create(:account_user, account: other_account, user: admin, role: :administrator) }
 
@@ -111,6 +114,30 @@ RSpec.describe 'MCP tools', type: :request do
 
       expect(without_account['isError']).to be(true)
       expect(with_account.dig('structuredContent', 'inboxes').pluck('id')).to eq([other_inbox.id])
+    end
+
+    # The connection made before #3106 promised one account: it does not reach the others without a new consent.
+    context 'with a connection made before one connection covered every account' do
+      let(:all_accounts) { false }
+
+      it 'lists and reaches only the account chosen back then' do
+        listed = call_mcp_tool('list_accounts', {}, access_token)
+        default = call_mcp_tool('list_inboxes', {}, access_token)
+        other = call_mcp_tool('list_inboxes', { account_id: other_account.id }, access_token)
+
+        expect(listed.dig('structuredContent', 'accounts')).to eq([{ 'id' => account.id, 'name' => account.name, 'default' => true }])
+        expect(default.dig('structuredContent', 'inboxes').pluck('id')).to eq([inbox.id])
+        expect(other['isError']).to be(true)
+        expect(other.dig('content', 0, 'text')).to include('list_accounts')
+      end
+
+      it 'asks to connect again once the user no longer administers that account' do
+        account.account_users.find_by(user_id: admin.id).update!(role: :agent)
+
+        mcp_request('tools/list', {}, access_token)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
     end
 
     it 'reaches an account the user starts administering after connecting' do

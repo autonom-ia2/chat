@@ -102,6 +102,26 @@ RSpec.describe 'OAuth Tokens', type: :request do
       expect(Doorkeeper::AccessToken.by_token(first['access_token'])).to be_revoked
     end
 
+    # #3106: which promise the user accepted goes from the grant to the token and from each token to the next one.
+    it 'keeps how far the connection reaches through the code exchange and the refresh' do
+      post '/oauth/token', params: token_params
+      first = response.parsed_body
+      post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: first['refresh_token'], client_id: application.uid }
+
+      expect(Doorkeeper::AccessToken.by_token(first['access_token']).all_accounts).to be(true)
+      expect(Doorkeeper::AccessToken.by_token(response.parsed_body['access_token']).all_accounts).to be(true)
+    end
+
+    it 'keeps a connection made before #3106 on its own account when it is refreshed' do
+      old = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id, account_id: account.id,
+                                            scopes: 'conversations:read', expires_in: 2.hours, use_refresh_token: true)
+
+      post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: old.plaintext_refresh_token, client_id: application.uid }
+
+      expect(response).to have_http_status(:success)
+      expect(Doorkeeper::AccessToken.by_token(response.parsed_body['access_token']).all_accounts).to be(false)
+    end
+
     it 'rejects a refresh token that was already used' do
       post '/oauth/token', params: token_params
       refresh_params = { grant_type: 'refresh_token', refresh_token: response.parsed_body['refresh_token'], client_id: application.uid }
