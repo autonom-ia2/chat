@@ -168,6 +168,14 @@ RSpec.describe 'OAuth Authorizations API', type: :request do
       expect(grant.scopes.to_a).to eq(%w[conversations:read messages:write])
     end
 
+    # #3106: the consent screen says the connection covers every account the user administers, so the server marks
+    # the grant that way, whatever the client sends.
+    it 'marks the grant as covering every account the user administers, whatever the client sends' do
+      post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: account.id, all_accounts: false), headers: auth_headers
+
+      expect(Doorkeeper::AccessGrant.last.all_accounts).to be(true)
+    end
+
     it 'does not issue a code for an unregistered redirect URI' do
       post '/api/v1/oauth/authorization',
            params: oauth_params.merge(account_id: account.id, redirect_uri: 'https://evil.example.com/callback'),

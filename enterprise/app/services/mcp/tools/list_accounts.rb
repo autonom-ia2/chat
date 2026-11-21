@@ -11,7 +11,7 @@ class Mcp::Tools::ListAccounts < Mcp::Tools::Base
     return insufficient_scope_response(server_context[:base_url]) unless server_context[:scopes].include?(required_scope)
 
     default_id = server_context[:default_account_id]
-    accounts = Mcp::AccountAccess.new(Current.user).account_users.map do |account_user|
+    accounts = account_access(server_context).account_users.map do |account_user|
       { id: account_user.account_id, name: account_user.account.name, default: account_user.account_id == default_id }
     end
     respond(accounts: accounts)

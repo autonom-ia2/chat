@@ -31,10 +31,15 @@ class Mcp::Tools::Base < MCP::Tool
       super.merge(securitySchemes: [{ type: 'oauth2', scopes: [required_scope] }])
     end
 
+    # The accounts this connection reaches; a connection made before #3106 stays on its own (McpController).
+    def account_access(server_context)
+      Mcp::AccountAccess.new(Current.user, only_account_id: server_context[:only_account_id])
+    end
+
     def call(server_context:, account_id: nil, **arguments)
       return insufficient_scope_response(server_context[:base_url]) unless server_context[:scopes].include?(required_scope)
 
-      account_user = Mcp::AccountAccess.new(Current.user).find(account_id || server_context[:default_account_id])
+      account_user = account_access(server_context).find(account_id || server_context[:default_account_id])
       return error_response(NO_ACCOUNT_MESSAGE) unless account_user
 
       on_account(account_user) { perform(**arguments) }

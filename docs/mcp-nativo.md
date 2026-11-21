@@ -67,25 +67,19 @@ Limites de frequência (Rack::Attack, sem teto diário): `RATE_LIMIT_MCP` (300/m
 
 ## Conexões feitas antes do #3106
 
-Antes do #3106 a conexão valia para a conta escolhida no consentimento; depois vale para todas as que a pessoa
-administra. Uma conexão feita com a promessa antiga não ganha as outras contas sem novo consentimento, então ela é
-desativada (`revoked_at`, nada é apagado) e a pessoa conecta de novo uma vez. O app (Claude, ChatGPT, Em d.ia) pede
-o consentimento outra vez sozinho.
+Antes do #3106 a conexão valia para a conta escolhida no consentimento. A conexão feita na tela nova vale para todas as
+contas que a pessoa administra. A coluna `all_accounts` (em `oauth_access_grants` e `oauth_access_tokens`) guarda qual
+das duas promessas a pessoa aceitou:
 
-- **Não se desfaz.** O `down` da migration não reativa: reativar devolveria a conexão de uma conta com acesso a
-  todas. A volta é conectar de novo.
-- **No deploy:** a migration `20261121140000_revogar_conexoes_oauth_de_uma_conta` desativa as conexões e
-  autorizações ativas. Ela roda na green antes da troca de tráfego, e a blue segue servindo o código antigo até a
-  troca: uma conexão feita nesse intervalo nasceria com a promessa antiga. Logo depois da troca, rodar na green, com
-  o momento da troca:
-
-  ```sh
-  bundle exec rails 'mcp:revogar_conexoes_antigas[2026-11-22T03:10:00-03:00]'
-  ```
-
-  Ela desativa só o que foi criado até esse momento e diz quantas. Sem conexão nova no intervalo, sai `tokens=0`.
-- **Quantas:** a migration escreve no log quantas desativou. Quem conectou até 21/11/2026 era basicamente o Rodrigo
-  (Chat2You e Agents no Em d.ia).
+- O servidor liga a coluna no consentimento novo (`Api::V1::Oauth::AuthorizationsController#pre_auth_params`); o valor
+  que o cliente mandar é ignorado.
+- O Doorkeeper a copia do grant para o token e de um token para o seguinte na renovação
+  (`custom_access_token_attributes`).
+- Sem ela (padrão `false`), a conexão segue valendo só para a conta dela: `list_accounts` mostra só essa, e outra conta
+  recebe erro. Nada é revogado e ninguém precisa reconectar para continuar como estava. Para ganhar as outras contas
+  (e os escopos `platform:*`), a pessoa conecta de novo.
+- No deploy blue-green, a blue emite conexões sem a coluna até a troca: elas também ficam numa conta só, inclusive
+  depois de renovadas na green. Não há passo manual.
 
 ## Desligar
 
