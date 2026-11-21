@@ -65,6 +65,28 @@ Limites de frequência (Rack::Attack, sem teto diário): `RATE_LIMIT_MCP` (300/m
 `RATE_LIMIT_OAUTH_AUTHORIZATION` (60/min por IP na API da tela de consentimento, que pode buscar o CIMD) e
 `RATE_LIMIT_OAUTH_REGISTRATION` (100/h por IP).
 
+## Conexões feitas antes do #3106
+
+Antes do #3106 a conexão valia para a conta escolhida no consentimento; depois vale para todas as que a pessoa
+administra. Uma conexão feita com a promessa antiga não ganha as outras contas sem novo consentimento, então ela é
+desativada (`revoked_at`, nada é apagado) e a pessoa conecta de novo uma vez. O app (Claude, ChatGPT, Em d.ia) pede
+o consentimento outra vez sozinho.
+
+- **Não se desfaz.** O `down` da migration não reativa: reativar devolveria a conexão de uma conta com acesso a
+  todas. A volta é conectar de novo.
+- **No deploy:** a migration `20261121140000_revogar_conexoes_oauth_de_uma_conta` desativa as conexões e
+  autorizações ativas. Ela roda na green antes da troca de tráfego, e a blue segue servindo o código antigo até a
+  troca: uma conexão feita nesse intervalo nasceria com a promessa antiga. Logo depois da troca, rodar na green, com
+  o momento da troca:
+
+  ```sh
+  bundle exec rails 'mcp:revogar_conexoes_antigas[2026-11-22T03:10:00-03:00]'
+  ```
+
+  Ela desativa só o que foi criado até esse momento e diz quantas. Sem conexão nova no intervalo, sai `tokens=0`.
+- **Quantas:** a migration escreve no log quantas desativou. Quem conectou até 21/11/2026 era basicamente o Rodrigo
+  (Chat2You e Agents no Em d.ia).
+
 ## Desligar
 
 `OAUTH_PROVIDER_ENABLED = false` some com todas as rotas na hora, sem apagar nada. Para cortar um app de uma
