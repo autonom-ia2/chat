@@ -97,6 +97,7 @@ describe('Authorize', () => {
     expect(oauthAPI.approveAuthorization).toHaveBeenCalledWith({
       ...OAUTH_QUERY,
       account_id: 7,
+      accounts_consent: 'all',
     });
     expect(window.location.assign).toHaveBeenCalledWith(
       'https://chatgpt.com/callback?code=123'
@@ -131,6 +132,34 @@ describe('Authorize', () => {
     const wrapper = await mountComponent();
 
     expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.ACCOUNT_SINGLE');
+  });
+
+  // One connection covers every account the user administers (#3106).
+  it('covers every administered account without asking to choose one', async () => {
+    oauthAPI.approveAuthorization.mockResolvedValue({
+      data: { redirect_uri: 'https://chatgpt.com/callback?code=123' },
+    });
+    mockCurrentUser.value = {
+      accounts: [
+        { ...ADMIN_ACCOUNT, id: 3, name: 'Loja Silva' },
+        ADMIN_ACCOUNT,
+        { ...ADMIN_ACCOUNT, id: 9, name: 'Só agente', role: 'agent' },
+      ],
+    };
+    const wrapper = await mountComponent();
+
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.ACCOUNTS_ALL');
+    expect(wrapper.text()).toContain('Loja Silva, Acme');
+    expect(wrapper.text()).not.toContain('Só agente');
+
+    await wrapper.findAllComponents(Button)[1].trigger('click');
+    await flushPromises();
+
+    expect(oauthAPI.approveAuthorization).toHaveBeenCalledWith({
+      ...OAUTH_QUERY,
+      account_id: 7,
+      accounts_consent: 'all',
+    });
   });
 
   it('lets someone who administers no account only go back to the app', async () => {

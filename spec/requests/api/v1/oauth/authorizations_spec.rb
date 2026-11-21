@@ -168,6 +168,21 @@ RSpec.describe 'OAuth Authorizations API', type: :request do
       expect(grant.scopes.to_a).to eq(%w[conversations:read messages:write])
     end
 
+    # #3106: only the consent screen that shows every account marks the grant that way; all_accounts itself is ignored.
+    it 'marks the grant as covering every account only when the new consent screen approved it' do
+      post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: account.id, accounts_consent: 'all', all_accounts: false),
+                                          headers: auth_headers
+
+      expect(Doorkeeper::AccessGrant.last.all_accounts).to be(true)
+    end
+
+    it 'keeps the grant on one account when the approval came from the screen before #3106, whatever the client sends' do
+      post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: account.id, all_accounts: true), headers: auth_headers
+
+      expect(response).to have_http_status(:success)
+      expect(Doorkeeper::AccessGrant.last.all_accounts).to be(false)
+    end
+
     it 'does not issue a code for an unregistered redirect URI' do
       post '/api/v1/oauth/authorization',
            params: oauth_params.merge(account_id: account.id, redirect_uri: 'https://evil.example.com/callback'),

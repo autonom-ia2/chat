@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_21_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_140000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -4581,6 +4581,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_100000) do
     t.string "code_challenge_method"
     t.datetime "created_at", null: false
     t.datetime "revoked_at"
+    t.boolean "all_accounts", default: false, null: false
     t.index ["application_id"], name: "index_oauth_access_grants_on_application_id"
     t.index ["resource_owner_id"], name: "index_oauth_access_grants_on_resource_owner_id"
     t.index ["token"], name: "index_oauth_access_grants_on_token", unique: true
@@ -4596,6 +4597,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_100000) do
     t.string "scopes"
     t.datetime "created_at", null: false
     t.datetime "revoked_at"
+    t.boolean "all_accounts", default: false, null: false
     t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
     t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
     t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
