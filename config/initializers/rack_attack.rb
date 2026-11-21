@@ -242,6 +242,15 @@ class Rack::Attack
     req.ip if req.path_without_extensions == '/oauth/register' && req.post?
   end
 
+  ## MCP and token endpoints (#3089): a frequency limit against abuse, never a daily cap on the user ###
+  throttle('oauth/token/ip', limit: ENV.fetch('RATE_LIMIT_OAUTH_TOKEN', '60').to_i, period: 1.minute) do |req|
+    req.ip if req.path_without_extensions == '/oauth/token' && req.post?
+  end
+
+  throttle('mcp/token', limit: ENV.fetch('RATE_LIMIT_MCP', '300').to_i, period: 1.minute) do |req|
+    Digest::SHA256.hexdigest(req.get_header('HTTP_AUTHORIZATION').to_s) if req.path_without_extensions == '/mcp'
+  end
+
   ##-----------------------------------------------##
 
   ###-----------------------------------------------###

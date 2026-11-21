@@ -75,7 +75,7 @@ en:
 
   oauth:
     authorizations:
-      invalid_account: Select an account you belong to.
+      invalid_account: Select an account you administer. Only administrators can connect apps.
 
   errors:
     custom_role:

@@ -2571,6 +2571,8 @@
 - labels_wrapper: casca de roteamento, não é tela
 - macros_wrapper: casca de roteamento, não é tela
 - onboarding_inbox_setup: etapa do cadastro, fora do painel
+- oauth_authorize: tela de consentimento OAuth aberta pelo app que conecta (Em d.ia, Claude, ChatGPT), não é caminho do painel (#3090)
+- oauth_authorize_link: casca de roteamento do consentimento OAuth, não é tela
 
 ### abrir_relacionamentos
 - titulo: Abrir Relacionamentos

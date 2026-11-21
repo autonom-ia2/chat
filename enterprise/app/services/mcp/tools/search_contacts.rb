@@ -22,18 +22,4 @@ class Mcp::Tools::SearchContacts < Mcp::Tools::Base
 
     respond(contacts: contacts.map { |contact| contact_summary(contact) })
   end
-
-  def self.contact_summary(contact)
-    {
-      id: contact.id,
-      name: contact.name,
-      email: contact.email,
-      phone_number: contact.phone_number,
-      identifier: contact.identifier,
-      company: contact.additional_attributes&.dig('company_name'),
-      created_at: contact.created_at.iso8601,
-      last_activity_at: contact.last_activity_at&.iso8601
-    }
-  end
-  private_class_method :contact_summary
 end

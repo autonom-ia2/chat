@@ -1,7 +1,7 @@
 # Protected resource metadata, as defined in RFC 9728.
 class Mcp::MetadataController < ApplicationController
   def show
-    base_url = ENV.fetch('FRONTEND_URL')
+    base_url = Oauth::PublicUrl.for(request)
 
     render json: {
       resource: "#{base_url}/mcp",

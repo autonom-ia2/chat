@@ -22,6 +22,6 @@ Doorkeeper.configure do
   custom_access_token_attributes [:account_id]
 
   default_scopes 'conversations:read', 'contacts:read'
-  optional_scopes 'conversations:write', 'messages:write', 'contacts:write'
+  optional_scopes 'conversations:write', 'messages:write', 'contacts:write', 'reports:read'
   enforce_configured_scopes
 end

@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe 'MCP server', type: :request do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account) }
+  let(:user) { create(:user, account: account, role: :administrator) }
   let(:application) { Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: 'https://chatgpt.com/callback', confidential: false) }
   let(:access_token) do
     Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id, account_id: account.id,
@@ -73,6 +73,25 @@ RSpec.describe 'MCP server', type: :request do
       post '/mcp', params: initialize_request.to_json, headers: headers
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'rejects the token once the user is no longer an administrator of the account' do
+      account.account_users.find_by(user_id: user.id).update!(role: :agent)
+
+      post '/mcp', params: initialize_request.to_json, headers: headers
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'names the host the client used when it is an extra host of the installation' do
+      with_modified_env FRONTEND_URL: 'https://agents.example.com', OAUTH_PROVIDER_EXTRA_HOSTS: 'chat.example.com' do
+        host! 'chat.example.com'
+        post '/mcp', params: initialize_request.to_json, headers: headers.except('Authorization')
+      end
+
+      expect(response.headers['WWW-Authenticate']).to eq(
+        'Bearer resource_metadata="https://chat.example.com/.well-known/oauth-protected-resource/mcp"'
+      )
     end
 
     it 'answers the initialize request' do

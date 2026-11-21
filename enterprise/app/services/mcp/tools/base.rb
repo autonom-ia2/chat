@@ -16,7 +16,7 @@ class Mcp::Tools::Base < MCP::Tool
     end
 
     def call(server_context:, **arguments)
-      return insufficient_scope_response unless server_context[:scopes].include?(required_scope)
+      return insufficient_scope_response(server_context[:base_url]) unless server_context[:scopes].include?(required_scope)
 
       perform(**arguments)
     rescue ActiveRecord::RecordNotFound, Pundit::NotAuthorizedError
@@ -36,9 +36,9 @@ class Mcp::Tools::Base < MCP::Tool
     end
 
     # The challenge in _meta makes the client ask the user for the missing scope.
-    def insufficient_scope_response
+    def insufficient_scope_response(base_url)
       description = "This action needs the #{required_scope} scope"
-      challenge = Mcp::BearerChallenge.build(error: 'insufficient_scope', error_description: description)
+      challenge = Mcp::BearerChallenge.build(base_url: base_url, error: 'insufficient_scope', error_description: description)
 
       error_response(description, meta: { 'mcp/www_authenticate' => [challenge] })
     end
@@ -49,6 +49,30 @@ class Mcp::Tools::Base < MCP::Tool
 
     def find_conversation(display_id)
       Current.account.conversations.find_by!(display_id: display_id).tap { |conversation| authorize(conversation, :show?) }
+    end
+
+    def contact_summary(contact)
+      {
+        id: contact.id,
+        name: contact.name,
+        email: contact.email,
+        phone_number: contact.phone_number,
+        identifier: contact.identifier,
+        company: contact.additional_attributes&.dig('company_name'),
+        created_at: contact.created_at.iso8601,
+        last_activity_at: contact.last_activity_at&.iso8601
+      }
+    end
+
+    def find_contact(contact_id)
+      Current.account.contacts.find(contact_id).tap { |contact| authorize(contact, :show?) }
+    end
+
+    # A model may invent a label. Saving it would create a tag that no label in the account matches.
+    def unknown_labels_error(labels)
+      account_labels = Current.account.labels.pluck(:title)
+      unknown = labels.to_a - account_labels
+      error_response("Unknown labels: #{unknown.join(', ')}. Labels of the account: #{account_labels.join(', ')}") if unknown.any?
     end
 
     def conversation_summary(conversation)

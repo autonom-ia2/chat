@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe 'OAuth Authorizations API', type: :request do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account) }
+  let(:user) { create(:user, account: account, role: :administrator) }
   let(:auth_headers) { user.create_new_auth_token }
   let(:redirect_uri) { 'https://chatgpt.com/connector/oauth/callback' }
   let(:application) { Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: redirect_uri, confidential: false) }
@@ -60,6 +60,19 @@ RSpec.describe 'OAuth Authorizations API', type: :request do
       expect(response.parsed_body['scope']).to eq('conversations:read contacts:read')
     end
 
+    it 'accepts a client identified by a metadata document URL' do
+      client_id = 'https://emd.ia.br/oauth/cliente.json'
+      allow(Resolv).to receive(:getaddresses).with('emd.ia.br').and_return(['203.0.113.10'])
+      stub_request(:get, client_id).to_return(
+        status: 200, body: { client_id: client_id, client_name: 'Em d.ia', redirect_uris: [redirect_uri] }.to_json
+      )
+
+      get '/api/v1/oauth/authorization', params: oauth_params.merge(client_id: client_id), headers: auth_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['client_name']).to eq('Em d.ia')
+    end
+
     it 'rejects an unknown client' do
       get '/api/v1/oauth/authorization', params: oauth_params.merge(client_id: 'unknown'), headers: auth_headers
 
@@ -112,6 +125,16 @@ RSpec.describe 'OAuth Authorizations API', type: :request do
 
     it 'returns 422 for an account the user does not belong to' do
       post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: create(:account).id), headers: auth_headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(Doorkeeper::AccessGrant.count).to eq(0)
+    end
+
+    it 'returns 422 for an account where the user is only an agent' do
+      agent_account = create(:account)
+      create(:account_user, account: agent_account, user: user, role: :agent)
+
+      post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: agent_account.id), headers: auth_headers
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(Doorkeeper::AccessGrant.count).to eq(0)

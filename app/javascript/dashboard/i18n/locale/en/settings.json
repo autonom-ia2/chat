@@ -5,7 +5,8 @@
       "CONVERSATIONS_WRITE": "Assign conversations and change their status, labels, and priority",
       "MESSAGES_WRITE": "Send replies to customers and add private notes",
       "CONTACTS_READ": "Read your contacts",
-      "CONTACTS_WRITE": "Create and update contacts"
+      "CONTACTS_WRITE": "Create and update contacts",
+      "REPORTS_READ": "Read your account reports"
     },
     "AUTHORIZE": {
       "TITLE": "{appName} wants to access your Chatwoot account",
@@ -16,7 +17,8 @@
       "DENY": "Deny",
       "REDIRECT_NOTE": "You will be sent to {host}.",
       "ERROR_TITLE": "This app cannot be connected",
-      "ERROR_DESCRIPTION": "The request from the app is not valid. Go back to the app and try again."
+      "ERROR_DESCRIPTION": "The request from the app is not valid. Go back to the app and try again.",
+      "NO_ADMIN_ACCOUNT": "Only account administrators can connect apps. Ask an administrator of your account."
     }
   },
   "PROFILE_SETTINGS": {

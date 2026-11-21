@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe 'OAuth Tokens', type: :request do
   let(:account) { create(:account) }
-  let(:user) { create(:user, account: account) }
+  let(:user) { create(:user, account: account, role: :administrator) }
   let(:redirect_uri) { 'https://chatgpt.com/connector/oauth/callback' }
   let(:application) { Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: redirect_uri, confidential: false) }
   let(:code_verifier) { 'a-code-verifier-that-is-long-enough-to-be-valid-0123456789' }

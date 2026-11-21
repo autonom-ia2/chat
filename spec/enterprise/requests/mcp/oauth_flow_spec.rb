@@ -3,7 +3,7 @@ require 'rails_helper'
 # Walks the path an MCP client takes, from an unauthenticated call to a tool result.
 RSpec.describe 'MCP OAuth flow', type: :request do
   let(:account) { create(:account) }
-  let(:agent) { create(:user, account: account, role: :agent) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:redirect_uri) { 'https://chatgpt.com/connector/oauth/callback' }
   let(:code_verifier) { 'a-code-verifier-that-is-long-enough-to-be-valid-0123456789' }
@@ -15,7 +15,7 @@ RSpec.describe 'MCP OAuth flow', type: :request do
   before do
     InstallationConfig.where(name: 'OAUTH_PROVIDER_ENABLED').delete_all
     InstallationConfig.create!(name: 'OAUTH_PROVIDER_ENABLED', value: true)
-    create(:inbox_member, inbox: inbox, user: agent)
+    create(:inbox_member, inbox: inbox, user: admin)
   end
 
   after { GlobalConfig.clear_cache }
@@ -40,7 +40,7 @@ RSpec.describe 'MCP OAuth flow', type: :request do
          params: { client_id: client_id, redirect_uri: redirect_uri, response_type: 'code', state: 'client-state',
                    scope: resource_metadata['scopes_supported'].join(' '), account_id: account.id, code_challenge_method: 'S256',
                    code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(code_verifier), padding: false) },
-         headers: agent.create_new_auth_token
+         headers: admin.create_new_auth_token
     code = Rack::Utils.parse_query(URI.parse(response.parsed_body['redirect_uri']).query)['code']
 
     post URI.parse(server_metadata['token_endpoint']).path,
@@ -56,10 +56,10 @@ RSpec.describe 'MCP OAuth flow', type: :request do
 
   it 'stops serving the token once the user leaves the account' do
     application = Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: redirect_uri, confidential: false)
-    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: agent.id, account_id: account.id,
+    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: admin.id, account_id: account.id,
                                             scopes: 'conversations:read', expires_in: 2.hours)
 
-    account.account_users.find_by(user_id: agent.id).destroy!
+    account.account_users.find_by(user_id: admin.id).destroy!
     post '/mcp', params: tool_call, headers: mcp_headers.merge('Authorization' => "Bearer #{token.plaintext_token}")
 
     expect(response).to have_http_status(:unauthorized)

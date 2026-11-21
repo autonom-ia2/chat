@@ -1,7 +1,7 @@
 # Authorization server metadata, as defined in RFC 8414.
 class Oauth::MetadataController < ApplicationController
   def show
-    base_url = ENV.fetch('FRONTEND_URL')
+    base_url = Oauth::PublicUrl.for(request)
 
     render json: {
       issuer: base_url,
@@ -13,7 +13,9 @@ class Oauth::MetadataController < ApplicationController
       response_types_supported: ['code'],
       grant_types_supported: Oauth::RegistrationsController::GRANT_TYPES,
       token_endpoint_auth_methods_supported: [Oauth::RegistrationsController::TOKEN_ENDPOINT_AUTH_METHOD],
-      code_challenge_methods_supported: Doorkeeper.config.pkce_code_challenge_methods
+      code_challenge_methods_supported: Doorkeeper.config.pkce_code_challenge_methods,
+      # Em d.ia and other clients identify themselves by the URL of a public document instead of registering
+      client_id_metadata_document_supported: true
     }
   end
 end

@@ -10,7 +10,7 @@ import {
   OAUTH_SCOPE_LABELS,
 } from 'dashboard/constants/oauth';
 import Button from 'dashboard/components-next/button/Button.vue';
-import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
@@ -23,7 +23,18 @@ const authorization = ref(null);
 const errorDescription = ref('');
 const isLoading = ref(true);
 const isSubmitting = ref(false);
-const selectedAccountId = ref(Number(route.params.accountId));
+// Only administrators may connect apps (#3089), so only the accounts the user administers are offered.
+const adminAccounts = computed(() =>
+  (currentUser.value.accounts || []).filter(
+    account => account.role === 'administrator' && account.status === 'active'
+  )
+);
+const routeAccountId = Number(route.params.accountId);
+const selectedAccountId = ref(
+  adminAccounts.value.some(account => account.id === routeAccountId)
+    ? routeAccountId
+    : adminAccounts.value[0]?.id ?? null
+);
 
 const oauthParams = computed(() =>
   Object.fromEntries(
@@ -35,7 +46,7 @@ const oauthParams = computed(() =>
 );
 
 const accountOptions = computed(() =>
-  (currentUser.value.accounts || []).map(account => ({
+  adminAccounts.value.map(account => ({
     value: account.id,
     label: account.name,
   }))
@@ -130,7 +141,15 @@ onMounted(fetchAuthorization);
           <span class="text-heading-3 text-n-slate-12">
             {{ t('OAUTH.AUTHORIZE.ACCOUNT_LABEL') }}
           </span>
-          <ComboBox v-model="selectedAccountId" :options="accountOptions" />
+          <ChoiceSelect
+            v-if="accountOptions.length"
+            v-model="selectedAccountId"
+            :options="accountOptions"
+            :aria-label="t('OAUTH.AUTHORIZE.ACCOUNT_LABEL')"
+          />
+          <span v-else class="text-body-main text-n-ruby-11">
+            {{ t('OAUTH.AUTHORIZE.NO_ADMIN_ACCOUNT') }}
+          </span>
           <span class="text-body-b3 text-n-slate-11">
             {{ t('OAUTH.AUTHORIZE.ACCOUNT_NOTE') }}
           </span>
