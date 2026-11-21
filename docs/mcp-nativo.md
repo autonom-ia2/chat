@@ -48,6 +48,18 @@ Porte da branch `feat/mcp-server` do Chatwoot (06–07/10/2026, ainda fora do `d
 | `contacts:read` | `search_contacts`, `get_contact`, `list_companies`, `get_company` |
 | `contacts:write` | `create_contact`, `update_contact`, `add_contact_note` |
 | `reports:read` | `get_report_summary` |
+| `platform:read` | `platform_catalog`, `platform_read`, `platform_action_format` |
+| `platform:write` | `platform_action` |
+
+**Tudo da plataforma** (#3106): as ferramentas `platform_*` usam o motor do Guia da Plataforma
+(`Autonomia::Guide::Consulta` e `Acoes`, subclasse `Mcp::Plataforma::Acoes`). Leitura e ação passam pelo mesmo
+endpoint da tela, com o token da pessoa (`ChamadaInterna`), então o Pundit e a conta valem como na tela. O catálogo
+nasce do roteador e cresce com a plataforma. O que tem desfazer roda na hora e fica desfazível por 5 dias, como o do
+Guia (`Mcp::Plataforma::Contexto`). O que não tem (`Acoes::SEM_DESFAZER`: mensagem e campanha, credencial, lote,
+apagar caixa ou time) só roda com `confirmed: true`, que o app manda depois de a pessoa confirmar. Toda ação vai para
+a Auditoria como `mcp_action`, com o nome do app ("{agente} fez pelo app Em d.ia: {frase}"). Diferente do Guia, o MCP
+não exige que o id tenha vindo de uma leitura na mesma conversa: cada chamada é um pedido separado, e o app traz os
+ids das respostas anteriores.
 
 Toda ferramenta de escrita sai com `readOnlyHint: false`: o Claude e o ChatGPT pedem confirmação à pessoa antes.
 No Em d.ia quem pede é o prompt. As próximas ondas (CRM e Relacionamentos, Marketing, Automação e IA) entram

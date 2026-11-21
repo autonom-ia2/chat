@@ -6,7 +6,9 @@
       "MESSAGES_WRITE": "Mandar mensagens para os seus clientes em seu nome e escrever recados para a equipe",
       "CONTACTS_READ": "Ver seus contatos",
       "CONTACTS_WRITE": "Criar e mudar contatos",
-      "REPORTS_READ": "Ver os relatórios da conta"
+      "REPORTS_READ": "Ver os relatórios da conta",
+      "PLATFORM_READ": "Ver tudo o que você vê na plataforma: CRM, campanhas, automações, agentes de IA e o resto",
+      "PLATFORM_WRITE": "Fazer na plataforma tudo o que você faz na tela. O que não tem volta, o app confirma com você antes"
     },
     "AUTHORIZE": {
       "TITLE": "{appName} quer acessar sua conta no Chatwoot",

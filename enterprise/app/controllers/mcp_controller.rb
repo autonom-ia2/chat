@@ -19,10 +19,13 @@ class McpController < ApplicationController
                                                                              dns_rebinding_protection: false)
     server.transport = transport
 
+    Mcp::Request.app_name = doorkeeper_token.application&.name
     status, headers, body = transport.handle_request(request)
     response.headers.merge!(headers)
     self.status = status
     self.response_body = body
+  ensure
+    Mcp::Request.app_name = nil
   end
 
   private

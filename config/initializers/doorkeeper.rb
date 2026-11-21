@@ -22,6 +22,7 @@ Doorkeeper.configure do
   custom_access_token_attributes [:account_id]
 
   default_scopes 'conversations:read', 'contacts:read'
-  optional_scopes 'conversations:write', 'messages:write', 'contacts:write', 'reports:read'
+  # platform:read and platform:write (#3106) open everything the user can do on screen, through the Guide's engine.
+  optional_scopes 'conversations:write', 'messages:write', 'contacts:write', 'reports:read', 'platform:read', 'platform:write'
   enforce_configured_scopes
 end

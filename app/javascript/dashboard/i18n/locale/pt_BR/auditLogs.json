@@ -122,6 +122,9 @@
     "GUIDE": {
       "ACTION": "{agentName} fez pelo Guia da Plataforma: {frase}"
     },
+    "MCP": {
+      "ACTION": "{agentName} fez pelo app {app}: {frase}"
+    },
     "AUTOMACAO": {
       "ACTION": "A automação #{automacaoId}, ligada por {agentName}, fez: {frase}"
     },

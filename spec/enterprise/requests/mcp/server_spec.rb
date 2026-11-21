@@ -139,7 +139,7 @@ RSpec.describe 'MCP server', type: :request do
         'bearer_methods_supported' => ['header']
       )
       expect(response.parsed_body['scopes_supported']).to match_array(
-        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read]
+        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read platform:read platform:write]
       )
     end
 

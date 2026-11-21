@@ -55,6 +55,30 @@ class Mcp::Tools::Base < MCP::Tool
       Current.account, Current.account_user = previous
     end
 
+    def text_response(text, error: false)
+      MCP::Tool::Response.new([{ type: 'text', text: text }], error: error)
+    end
+
+    # The Guide's engine for the platform_* tools (#3106): reads and actions go through the endpoint the screen calls.
+    def consulta
+      Autonomia::Guide::Consulta.new(account: Current.account, user: Current.user, account_user: Current.account_user)
+    end
+
+    def contexto
+      Mcp::Plataforma::Contexto.new(app_name: Mcp::Request.app_name, account: Current.account, user: Current.user,
+                                    account_user: Current.account_user)
+    end
+
+    def acoes
+      contexto.acoes
+    end
+
+    def outside_catalog(action)
+      neighbours = Autonomia::Guide::Rotas.vizinhas(acoes.catalogo, action)
+      hint = neighbours.any? ? " For this, the platform has: #{neighbours.join(', ')}." : ''
+      "\"#{action}\" is not a platform action. Use platform_catalog with kind write.#{hint}"
+    end
+
     def respond(data)
       MCP::Tool::Response.new([{ type: 'text', text: data.to_json }], structured_content: data)
     end
