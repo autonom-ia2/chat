@@ -74,10 +74,7 @@ class CampaignJourney::AudienceCampaignCreator
   # #3098: a janela de compra e o grupo de controle escolhidos na revisão, com o sorteio, na mesma transação: o envio
   # nunca vê a campanha sem o grupo já separado.
   def medir!(link)
-    canal = @channel == 'sms' ? :sms : :whatsapp
-    CampaignJourney::Medicao.new(link).aplicar!(@attributes) do
-      CampaignJourney::AudienceContacts.contacts_for(link, channel: canal, com_o_grupo: true).pluck(:id)
-    end
+    CampaignJourney::Medicao.new(link).aplicar!(@attributes) { CampaignJourney::Medicao.publico(link, @channel) }
   end
 
   def inbox

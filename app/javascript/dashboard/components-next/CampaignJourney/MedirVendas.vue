@@ -1,6 +1,7 @@
 <script setup>
 // #3098 — no passo de revisão da campanha, depois de "Quando começa": por quantos dias contar quem recebeu e comprou
-// (mesmo sem responder) e, na campanha com público escolhido, deixar uma parte sorteada sem receber, para comparar.
+// (mesmo sem responder) e deixar uma parte do público sorteada sem receber, para comparar (toda campanha da jornada vai
+// para um público salvo, então o grupo sempre cabe; o sorteio é CampaignJourney::GrupoDeControle).
 // Entra fechado, como as outras linhas da revisão (o resumo e "Alterar"): o padrão (7 dias, sem grupo de controle)
 // serve para quase todo mundo, e quem não mexe mede igual.
 //
@@ -18,10 +19,8 @@ const props = defineProps({
   controle: { type: Number, default: 0 },
   // Quantas pessoas a campanha alcança (o "Vão receber" da revisão, antes de tirar o grupo de controle).
   publico: { type: Number, default: 0 },
-  // A campanha tem público escolhido (CampaignAudienceLink): só nela dá para sortear o grupo de controle.
-  podeControlar: { type: Boolean, default: true },
 });
-const emit = defineEmits(['update', 'escolherPublico']);
+const emit = defineEmits(['update']);
 
 const NS = 'CAMPANHA_VENDAS.MEDIR';
 // O "Alterar" é o mesmo das outras linhas da revisão (StepReview), com o nome da linha para o leitor de tela.
@@ -52,7 +51,6 @@ const primeiraQueServe = computed(
 );
 const comControle = computed(() => props.controle > 0);
 const semReceber = computed(() => deFora(props.controle));
-const podeLigar = computed(() => props.podeControlar && algumaServe.value);
 
 const alternarControle = ligado =>
   emit('update', { controle: ligado ? primeiraQueServe.value.pct : 0 });
@@ -64,7 +62,6 @@ const detalhe = computed(() =>
     : t(`${NS}.RESUMO_SEM_CONTROLE`)
 );
 const ajuda = computed(() => {
-  if (!props.podeControlar) return t(`${NS}.CONTROLE_INDISPONIVEL`);
   if (!algumaServe.value)
     return t(`${NS}.PUBLICO_PEQUENO`, {
       minimo: inteiro(PUBLICO_MINIMO),
@@ -161,21 +158,10 @@ const classeDaPilula = escolhida =>
           <ToggleSwitch
             :model-value="comControle"
             :label="t(`${NS}.CONTROLE`)"
-            :disabled="!podeLigar"
+            :disabled="!algumaServe"
             @update:model-value="alternarControle"
           />
         </div>
-        <Button
-          v-if="!podeControlar"
-          :label="t(`${NS}.ESCOLHER_PUBLICO`)"
-          icon="i-lucide-users"
-          slate
-          faded
-          sm
-          class="!min-h-11 self-start"
-          data-escolher-publico
-          @click="emit('escolherPublico')"
-        />
         <div v-if="comControle" class="flex flex-col gap-2">
           <p id="quantos-sem-receber" class="m-0 text-xs text-n-slate-11">
             {{ t(`${NS}.CONTROLE_QUANTO`) }}

@@ -17,7 +17,7 @@ class CampaignJourney::ComprasNaJanela
   def de(inicios)
     return [] if inicios.empty?
 
-    linhas(inicios.keys).filter_map do |contato, fechado_em, moeda, centavos|
+    linhas(inicios.keys, inicios.values.min..(inicios.values.max + @dias.days)).filter_map do |contato, fechado_em, moeda, centavos|
       inicio = inicios[contato]
       next unless fechado_em.between?(inicio, inicio + @dias.days)
 
@@ -35,8 +35,9 @@ class CampaignJourney::ComprasNaJanela
 
   private
 
-  def linhas(contatos)
-    cards = Crm::Card.where(account_id: @account.id, contact_id: contatos).where.not(closed_at: nil)
+  # Só os cards fechados entre o primeiro início e o último fim de janela: o resto do histórico da pessoa não vem.
+  def linhas(contatos, periodo)
+    cards = Crm::Card.where(account_id: @account.id, contact_id: contatos, closed_at: periodo)
     cards = cards.where(pipeline_id: @pipeline_ids) unless @pipeline_ids.nil?
     cards.joins(RR::RENEWAL_PREMIUM_JOIN).where(RR::CLOSED_SALE)
          .pluck(:contact_id, :closed_at, Arel.sql(RR::CURRENCY), Arel.sql(RR::CENTS))

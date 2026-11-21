@@ -14,7 +14,7 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
     authorize campaign, :send_now?
     link = CampaignAudienceLink.for_campaign(campaign)
     raise ActiveRecord::RecordNotFound if link.nil?
-    return render json: { error: 'campaign_journey.already_sent' }, status: :unprocessable_entity unless campaign.draft? || campaign.scheduled?
+    return render json: { error: 'campaign_journey.already_sent' }, status: :unprocessable_entity unless antes_do_envio?(campaign)
 
     aplicar(link)
     head :no_content
@@ -25,10 +25,14 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
 
   private
 
+  def antes_do_envio?(campaign)
+    (campaign.draft? || campaign.scheduled?) && !campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
+  end
+
   def aplicar(link)
     ActiveRecord::Base.transaction do
       ::CampaignJourney::Medicao.new(link).aplicar!(params.permit(:janela_de_compra_dias, :grupo_de_controle_pct)) do
-        ::CampaignJourney::EmailAudienceRecipients.candidates(link.campaign_import).map { |candidate| candidate.contact.id }
+        ::CampaignJourney::Medicao.publico(link, 'email')
       end
     end
   end

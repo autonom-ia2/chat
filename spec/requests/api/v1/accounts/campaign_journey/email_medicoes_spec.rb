@@ -51,6 +51,21 @@ RSpec.describe 'Campaign journey e-mail medição (#3098)', :aggregate_failures,
     expect(campaign.email_campaign_recipients.where(contact_id: fora)).to be_empty
   end
 
+  it 'quem tem e-mail suprimido não entra no sorteio e não sobra linha de quem foi sorteado' do
+    suprimido = 'pessoa0@alfa.com.br'
+    EmailSuppression.create!(account: account, email: suprimido, reason: 'hard_bounce')
+    expect(campaign.email_campaign_recipients.detect { |recipient| recipient.email == suprimido }).to be_suppressed
+
+    medir(grupo_de_controle_pct: 20)
+
+    fora = link.reload.campaign_control_contacts.pluck(:contact_id)
+    expect(fora.size).to eq(1)
+    expect(fora).not_to include(account.contacts.from_email(suprimido)&.id)
+    CampaignJourney::EmailAudienceRecipients.new(campaign.reload).sync!
+    expect(campaign.email_campaign_recipients.where(contact_id: fora)).to be_empty
+    expect(campaign.email_campaign_recipients.count).to eq(9)
+  end
+
   it 'recusa depois do envio e valor fora das opções' do
     medir(janela_de_compra_dias: 9)
     expect(response).to have_http_status(:unprocessable_entity)
