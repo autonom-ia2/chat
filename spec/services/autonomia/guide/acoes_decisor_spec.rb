@@ -34,6 +34,17 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: sem_decisor.id }, corpo: { active: true } })).to be(true)
   end
 
+  # #3106 (revisão do Codex): o PUT cai no mesmo update, e o corpo embrulhado chega aberto à plataforma.
+  it 'ligar por PUT, ou com o corpo embrulhado, também pede confirmação' do
+    com_decisor = create(:automation_rule, account: conta, active: false, actions: passos)
+    caminho = { id: com_decisor.id }
+
+    expect(acoes.desfazivel?('PUT automation_rules/:id', { caminho: caminho, corpo: { active: true } })).to be(false)
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: caminho, corpo: { automation_rule: { active: true } } })).to be(false)
+    expect { acoes.conferir!('PUT automation_rules/:id', { caminho: caminho, corpo: { active: true } }) }
+      .to raise_error(described_class::Recusada)
+  end
+
   it 'pôr o Decisor numa regra que já está ligada pede confirmação' do
     ligada = create(:automation_rule, account: conta, active: true)
 

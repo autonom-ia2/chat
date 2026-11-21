@@ -6,7 +6,8 @@
 #
 # Vale para as regras de automação e para as automações de etapa do CRM, que têm o mesmo passo.
 class Autonomia::Guide::RegraComDecisor
-  REGRAS = ['POST automation_rules', 'PATCH automation_rules/:id'].freeze
+  # O PUT cai no mesmo update do controller: sem ele aqui, ligar por PUT passava sem confirmação (#3106).
+  REGRAS = ['POST automation_rules', 'PATCH automation_rules/:id', 'PUT automation_rules/:id'].freeze
   ETAPAS = ['POST crm/stages/:stage_id/stage_automations', 'PATCH crm/stage_automations/:id', 'PUT crm/stage_automations/:id'].freeze
   PASSOS_DE_ETAPA = ['POST crm/stage_automations/:stage_automation_id/steps', 'PATCH crm/stage_automations/:stage_automation_id/steps/:id',
                      'PUT crm/stage_automations/:stage_automation_id/steps/:id'].freeze
@@ -27,8 +28,8 @@ class Autonomia::Guide::RegraComDecisor
   private
 
   def regra_ligada?(acao, dados)
-    corpo = corpo(dados)
-    regra = acao.start_with?('PATCH') ? @account.automation_rules.find_by(id: caminho(dados)[:id]) : nil
+    corpo = corpo(dados, :automation_rule)
+    regra = acao.start_with?('POST') ? nil : @account.automation_rules.find_by(id: caminho(dados)[:id])
     ligada?(corpo, :active, regra&.active) && com_decisor?(corpo.key?(:actions) ? corpo[:actions] : regra&.actions, :action_name)
   end
 
