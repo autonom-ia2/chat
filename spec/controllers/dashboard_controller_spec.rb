@@ -173,8 +173,12 @@ end
 
 # The login app (v3) sends anyone signed in to /app, so the OAuth consent must load the dashboard (#3104).
 describe 'dashboard application pack', type: :request do
+  # The pack only counts if the page renders: the SSO redirect and the installation onboarding answer 302 first.
   def pack_for(path)
-    get path
+    with_modified_env AUTONOMIA_SSO_AUTO_REDIRECT: 'false' do
+      get path
+    end
+    expect(response).to have_http_status(:success)
     controller.instance_variable_get(:@application_pack)
   end
 
