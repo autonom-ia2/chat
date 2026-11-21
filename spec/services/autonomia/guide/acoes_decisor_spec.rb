@@ -28,7 +28,7 @@ RSpec.describe Autonomia::Guide::Acoes do
 
   it 'ligar uma regra que tem Decisor pede confirmação; ligar regra sem Decisor não' do
     com_decisor = create(:automation_rule, account: conta, active: false, actions: passos)
-    sem_decisor = create(:automation_rule, account: conta, active: false)
+    sem_decisor = create(:automation_rule, account: conta, active: false, actions: [{ action_name: 'add_label', action_params: ['lead'] }])
 
     expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: com_decisor.id }, corpo: { active: true } })).to be(false)
     expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: sem_decisor.id }, corpo: { active: true } })).to be(true)
