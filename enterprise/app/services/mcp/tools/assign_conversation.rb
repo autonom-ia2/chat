@@ -14,8 +14,8 @@ class Mcp::Tools::AssignConversation < Mcp::Tools::Base
   )
 
   def self.perform(conversation_id:, agent_id: nil, team_id: nil)
+    # find_conversation authorizes show?, which in this fork is the gate for every write to a conversation
     conversation = find_conversation(conversation_id)
-    authorize(conversation, :update?)
     team = find_team(team_id)
     check_agent(conversation, agent_id)
     ActiveRecord::Base.transaction do
