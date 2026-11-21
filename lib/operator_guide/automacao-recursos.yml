@@ -659,6 +659,8 @@ fora:
       - campaign_journey/campaigns
       - campaign_journey/conversa_aberta
       - campaign_journey/conversation_audiences
+      # #3098: a medição da campanha por e-mail é parte de confirmar o envio.
+      - campaign_journey/email_medicoes
       - campaign_journey/recipient_previews
       - email_campaigns/ai
       - email_campaigns/assets
