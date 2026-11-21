@@ -7,15 +7,16 @@ import { FAIXAS_PADRAO } from '../fonte/gruposDeCompra';
 // as do padrão. Na demonstração nada vai ao servidor: o ajuste fica na memória.
 // `salvar` devolve true se gravou; quem chama decide o aviso. A resposta diz
 // também se quem pede vê valor de venda (`veValores`): sem isso, a lista não
-// oferece o filtro nem as ordens por valor (o servidor recusa).
-const separar = ({ ve_valores: veValor = true, ...faixasLidas } = {}) => ({
+// oferece o filtro nem as ordens por valor (o servidor recusa). Até a leitura
+// chegar, ou se ela falhar, não oferece; a demonstração mostra os valores.
+const separar = ({ ve_valores: veValor = false, ...faixasLidas } = {}) => ({
   veValor,
   faixasLidas,
 });
 
 export const useFaixasDeCompra = ({ demo = false } = {}) => {
   const faixas = ref({ ...FAIXAS_PADRAO });
-  const veValores = ref(true);
+  const veValores = ref(demo);
   const guardar = data => {
     const { veValor, faixasLidas } = separar(data);
     faixas.value = { ...FAIXAS_PADRAO, ...faixasLidas };

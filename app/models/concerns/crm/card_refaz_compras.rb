@@ -3,7 +3,8 @@
 # depois do commit, num job. É a venda que muda o grupo de compra na hora; o tempo fica com a rotina diária.
 #
 # Na transação com várias gravações do mesmo card, o after_commit só vê a última em `saved_changes`: cada gravação anota
-# as pessoas no after_save, e o after_commit junta e limpa (como Crm::CardAvisaAutomacao).
+# as pessoas no after_save, com a transação (ou o savepoint) em que gravou, e o after_commit junta e limpa. O rollback
+# tira só as anotações da transação desfeita (como Crm::CardAvisaAutomacao, #2750).
 #
 # Limite: só a escrita que passa pelos callbacks do modelo. `update_all`, `delete_all` e a cascata do banco não passam;
 # a rotina diária acerta essas pessoas, sem disparar.
@@ -35,11 +36,12 @@ module Crm::CardRefazCompras
   end
 
   def anotar_pessoas(*ids)
-    @compras_a_refazer = (@compras_a_refazer || []) | ids.compact
+    anotacao = { transacao: self.class.connection.current_transaction.state, pessoas: ids.compact }
+    @compras_a_refazer = [*@compras_a_refazer, anotacao]
   end
 
   def refazer_compras
-    pessoas = @compras_a_refazer
+    pessoas = anotacoes_valendo.flat_map { |anotacao| anotacao[:pessoas] }.uniq
     @compras_a_refazer = nil
     return if pessoas.blank?
 
@@ -47,6 +49,8 @@ module Crm::CardRefazCompras
   end
 
   def esquecer_compras
-    @compras_a_refazer = nil
+    @compras_a_refazer = anotacoes_valendo.presence
   end
+
+  def anotacoes_valendo = Array(@compras_a_refazer).reject { |anotacao| anotacao[:transacao].rolledback? }
 end

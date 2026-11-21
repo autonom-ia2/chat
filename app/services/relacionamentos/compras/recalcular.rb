@@ -12,12 +12,20 @@
 #   - false — o ajuste das faixas: o grupo muda, ninguém recebe mensagem por isso.
 # "Nunca comprou" não dispara: nenhum gatilho o oferece.
 #
-# Duas execuções ao mesmo tempo na mesma pessoa (o card e a rotina) não quebram: a linha nova entra com ON CONFLICT DO
-# NOTHING, e a próxima passada acerta o que ficou para trás.
+# Duas execuções ao mesmo tempo na mesma conta (dois cards ganhos seguidos, o card e a rotina) passam uma de cada vez: a
+# leitura e a gravação ficam numa transação com trava da conta (pg_advisory_xact_lock). A segunda lê o que a primeira
+# gravou, então a soma não volta atrás e quem entrou no grupo dispara uma vez só. O disparo vem depois do commit; se o
+# processo cair entre os dois, aquela entrada não dispara (nunca dispara duas vezes).
+#
+# Na venda, a linha nova só "entra" quando a última compra é recente (VENDA_RECENTE): mexer no valor de um card ganho
+# antigo de quem ainda não tinha linha (antes do preenchimento terminar) não manda "Comprou uma vez" a cliente antigo.
 class Relacionamentos::Compras::Recalcular
   GATILHO = 'contato.entrou_no_grupo_de_compra'.freeze
   REAL = 'BRL'.freeze
   LOTE = 1_000
+  VENDA_RECENTE = 1.day
+  # A chave da trava (pg_advisory_xact_lock(chave, conta)): só precisa não colidir com outra trava de duas chaves.
+  TRAVA = 3097
 
   def initialize(account, contact_ids: nil, disparar: :venda)
     @account = account
@@ -30,14 +38,22 @@ class Relacionamentos::Compras::Recalcular
   def call
     return if @contact_ids&.empty?
 
-    somas = somar
-    existentes = linhas_existentes
-    entraram = gravar(somas, existentes)
-    apagar(existentes.keys - somas.keys)
+    entraram = Relacionamentos::Compra.transaction do
+      travar_a_conta
+      somas = somar
+      existentes = linhas_existentes
+      gravar(somas, existentes).tap { apagar(existentes.keys - somas.keys) }
+    end
     disparar(entraram)
   end
 
   private
+
+  def travar_a_conta
+    Relacionamentos::Compra.connection.execute(
+      Relacionamentos::Compra.sanitize_sql_array(['SELECT pg_advisory_xact_lock(?, ?)', TRAVA, @account.id])
+    )
+  end
 
   # { contact_id => atributos da linha }, numa leitura só dos cards ganhos, por pessoa e moeda.
   def somar
@@ -92,7 +108,7 @@ class Relacionamentos::Compras::Recalcular
   def entrou?(linha, existia)
     return false unless @disparar && linha.grupo_desde == @agora
 
-    existia || @disparar == :venda
+    existia || (@disparar == :venda && linha.ultima_em >= @agora - VENDA_RECENTE)
   end
 
   def inserir(novas)

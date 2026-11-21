@@ -7,6 +7,6 @@ class Relacionamentos::Compras::RecalcularJob < ApplicationJob
     account = Account.find_by(id: account_id)
     return unless account
 
-    Relacionamentos::Compras::Recalcular.new(account, contact_ids: contact_ids, disparar: disparar&.to_sym).call
+    Relacionamentos::Compras::Recalcular.new(account, contact_ids: contact_ids, disparar: disparar ? disparar.to_sym : false).call
   end
 end

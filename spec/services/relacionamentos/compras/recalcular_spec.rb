@@ -152,11 +152,33 @@ RSpec.describe Relacionamentos::Compras::Recalcular do
       expect(Autonomia::Automacao::Escuta).not_to have_received(:comecar)
     end
 
+    it 'na venda, não dispara para quem ganha a linha por uma compra antiga' do
+      com_automacao_ligada
+      compra(ana, dias: 300)
+
+      recalcular(disparar: :venda, contact_ids: [ana.id])
+
+      expect(linha(ana).grupo).to eq('compra_perdidos')
+      expect(Autonomia::Automacao::Escuta).not_to have_received(:comecar)
+    end
+
     it 'sem automação ligada com o gatilho, nem lê os contatos' do
       compra(ana, dias: 0)
 
       recalcular(disparar: :venda, contact_ids: [ana.id])
 
+      expect(Autonomia::Automacao::Escuta).not_to have_received(:comecar)
+    end
+  end
+
+  describe 'o job' do
+    it 'regrupa a conta sem disparar no ajuste das faixas' do
+      allow(Autonomia::Automacao::Escuta).to receive(:comecar)
+      compra(ana, dias: 40)
+
+      Relacionamentos::Compras::RecalcularJob.perform_now(account.id, nil, false)
+
+      expect(linha(ana).grupo).to eq('compra_novos')
       expect(Autonomia::Automacao::Escuta).not_to have_received(:comecar)
     end
   end
@@ -175,6 +197,20 @@ RSpec.describe Relacionamentos::Compras::Recalcular do
 
       expect { card.update!(contact: bruno) }
         .to have_enqueued_job(Relacionamentos::Compras::RecalcularJob).with(account.id, contain_exactly(ana.id, bruno.id), 'venda')
+    end
+
+    it 'o savepoint desfeito não leva o refazer da transação de fora' do
+      card = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, contact: ana, title: 'Pedido')
+
+      expect do
+        Crm::Card.transaction do
+          card.update!(status: :won)
+          Crm::Card.transaction(requires_new: true) do
+            card.update!(value_cents: 500)
+            raise ActiveRecord::Rollback
+          end
+        end
+      end.to have_enqueued_job(Relacionamentos::Compras::RecalcularJob).with(account.id, [ana.id], 'venda')
     end
 
     it 'não enfileira nada no card aberto que muda de título' do
