@@ -20,7 +20,9 @@ ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 
 # 6144: com a onda 2 do agendamento (#1209) o vite build passou de 4 GB e o deploy de 10/10 falhou por heap (runner 16 GB).
-ARG NODE_OPTIONS="--max-old-space-size=6144 --openssl-legacy-provider"
+# 8192: o deploy do #3051 (20/11) estourou 6 GB duas vezes (#3086). Teto prático: o runner tem 16 GB e o Ruby/Docker
+# rodam junto. Passou disso, atacar o consumo do vite build em vez de subir o limite.
+ARG NODE_OPTIONS="--max-old-space-size=8192 --openssl-legacy-provider"
 ENV NODE_OPTIONS ${NODE_OPTIONS}
 
 ENV BUNDLE_PATH="/gems"
