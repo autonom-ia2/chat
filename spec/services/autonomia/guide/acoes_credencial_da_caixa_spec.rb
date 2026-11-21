@@ -52,6 +52,12 @@ RSpec.describe Autonomia::Guide::Acoes do
                              { caminho: { post_id: 1, comment_id: 2 }, corpo: { mensagem: 'Oi' } })).to be(false)
   end
 
+  it 'o que fala com o cliente ou com o provedor na hora pede confirmação' do
+    expect(acoes.desfazivel?('POST crm/meetings/:id/remind', { caminho: { id: 1 } })).to be(false)
+    expect(acoes.desfazivel?('POST whatsapp_hybrid_connections/:inbox_id/reconnect', { caminho: { inbox_id: caixa.id } })).to be(false)
+    expect(acoes.desfazivel?('POST crm/integration_tokens', { corpo: { name: 'Zapier' } })).to be(false)
+  end
+
   it 'promover agente a administrador pede confirmação; trocar o nome segue direto' do
     agente = create(:user, account: conta, role: :agent)
 

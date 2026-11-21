@@ -42,6 +42,39 @@ module Autonomia::Guide::SaiDaPlataforma
     'POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply',
     'POST integrations/linear/create_issue'
   ].freeze
+  # Varredura do catálogo (#3106): o que fala com gente ou com provedor de fora na hora, e o desfazer não recolhe.
+  # - Fala com o cliente: encaminhar, responder comentário, editar mensagem no WhatsApp, convites e lembretes de
+  #   reunião, publicar post, campanha da jornada, resposta de presença por e-mail, convite de tester.
+  # - Destino ou acesso dado no pedido: feed público de conversões, token de integração, participante de reunião,
+  #   consulta a URL externa no teste da automação, robô externo que atende a caixa (webhook).
+  # - Conexão com o provedor: sessão do WhatsApp (híbrida, convite, manual, Embedded Signup), webhook e chamadas na
+  #   Meta, token da página, conector de seguros, apagar modelo na Meta, chamadas ao vivo e conferência.
+  # Fica de fora, de propósito: o evento que toda escrita manda aos webhooks que a própria conta configurou, a IA da
+  # plataforma, os jobs internos e quem da conta enxerga o quê (membros de caixa, time e conversa).
+  FALA_COM_FORA = [
+    'POST conversa_canal/encaminhamentos', 'POST conversations/:conversation_id/comentario/responder',
+    'PATCH conversations/:conversation_id/messages/:id/content', 'POST crm/booking_invites/:id/deliver',
+    'POST crm/booking_pages/:id/test_invite', 'POST crm/booking_stats/opened_not_booked/:invite_id/resend',
+    'POST crm/meetings/:id/rebook_link', 'POST crm/meetings/:id/remind', 'POST crm/meetings',
+    'POST crm/booking_pages/:id/meetings', 'POST crm/meta_ads_connection/posts', 'POST campaign_journey/campaigns',
+    'POST campaign_journey/campaign_pauses/:id/resume', 'PATCH conversa_canal/convites_do_email/:id',
+    'PUT conversa_canal/convites_do_email/:id', 'POST instagram/testers/invite', 'POST crm/google_conversion_feed',
+    'POST crm/integration_tokens', 'POST integrations/dyte/add_participant_to_meeting',
+    'POST autonomia/automacoes/testar_consulta', 'PUT autonomia/inboxes/:inbox_id/quem_atende',
+    'POST whatsapp_hybrid_connections/:inbox_id/connect', 'POST whatsapp_hybrid_connections/:inbox_id/reconnect',
+    'POST whatsapp_hybrid_connections/:inbox_id/pause', 'POST whatsapp_hybrid_connections/:inbox_id/resume',
+    'POST whatsapp_hybrid_connections/:inbox_id/request_code', 'PATCH whatsapp_hybrid_connections/:inbox_id',
+    'PUT whatsapp_hybrid_connections/:inbox_id', 'DELETE whatsapp_hybrid_connections/:inbox_id',
+    'POST autonomia/invite_connection/:inbox_id/reconnect', 'POST whatsapp/manual/connect',
+    'POST whatsapp/manual/:inbox_id/setup_webhook', 'POST whatsapp/authorization',
+    'POST inboxes/:id/register_webhook', 'POST inboxes/:id/enable_whatsapp_calling',
+    'POST inboxes/:id/disable_whatsapp_calling', 'POST callbacks/reauthorize_page',
+    'POST autonomia/insurance/connection', 'POST autonomia/insurance/connection/reconnect',
+    'DELETE inboxes/:inbox_id/whatsapp_templates/:id', 'POST whatsapp_calls/:id/accept',
+    'POST whatsapp_calls/:id/reject', 'POST whatsapp_calls/:id/terminate', 'POST inboxes/:inbox_id/conference'
+  ].freeze
+  TODAS = (ACOES + FALA_COM_FORA).freeze
+
   # O papel de administrador, pelo nome ou pelo número do enum (`role: 1`, revisão do Codex).
   ADMINISTRADOR = ['administrator', AccountUser.roles['administrator'].to_s].freeze
   EDITAR_AGENTE = ['PATCH agents/:id', 'PUT agents/:id'].freeze
