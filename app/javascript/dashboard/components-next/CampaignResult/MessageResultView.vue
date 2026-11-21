@@ -18,6 +18,7 @@ import { CAMPAIGN_CHANNELS } from 'dashboard/components-next/CampaignJourney/cam
 import ResultHeader from './ResultHeader.vue';
 import ResultKpiStrip from './ResultKpiStrip.vue';
 import ResultCrmBand from './ResultCrmBand.vue';
+import ResultVendas from './ResultVendas.vue';
 import ResultPeopleTable from './ResultPeopleTable.vue';
 import { useResultPolling } from './useResultPolling';
 import { journeyStatus, messageKpis, resultBalance } from './resultMetrics';
@@ -275,6 +276,7 @@ watch(() => [props.channel, props.campaignId], load, { immediate: true });
       />
 
       <ResultCrmBand :name="campaign.name" :crm="result.crm" />
+      <ResultVendas v-if="result.vendas" :vendas="result.vendas" />
 
       <ResultPeopleTable
         :channel="channel"

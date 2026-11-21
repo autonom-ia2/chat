@@ -95,6 +95,7 @@ import {
   buildEmailPayload,
   buildSmsPayload,
   buildWhatsappApiPayload,
+  medicaoDaCampanha,
   emailChecks,
 } from 'dashboard/components-next/CampaignJourney/journeyChannelPayloads';
 
@@ -722,9 +723,11 @@ const SUBMITTERS = {
             : {},
           // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
           freeText: textoDaConversaAberta.value,
+          medicao: medicaoDaCampanha(draft.value),
         })
       )
     ),
+
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
     const payload = withDraftId(
       buildWhatsappApiPayload({
@@ -751,10 +754,12 @@ const SUBMITTERS = {
         })
       )
     ),
-  // The e-mail draft exists since Passo 2: schedule it or send it now (engine endpoints).
-  [CAMPAIGN_CHANNELS.EMAIL]: () => {
+  // The e-mail draft exists since Passo 2: schedule it or send it now (engine endpoints). #3098: "Quem comprou depois"
+  // goes first, so the control group is drawn before the audience syncs.
+  [CAMPAIGN_CHANNELS.EMAIL]: async () => {
     const id = draft.value.emailCampaignId;
     const at = scheduledAtValue();
+    await journeyCampaignsAPI.medirEmail(id, medicaoDaCampanha(draft.value));
     return at
       ? EmailCampaignsAPI.schedule(id, at)
       : EmailCampaignsAPI.sendNow(id);

@@ -16,6 +16,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
 import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { toLocaleTag, formatNumber } from './localeTag';
+import MedirVendas from './MedirVendas.vue';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -63,7 +64,20 @@ const REASON_ORDER = [
 
 const isLater = computed(() => props.draft.when === 'later');
 const total = computed(() => props.preview?.total ?? props.reach);
-const receivers = computed(() => props.preview?.receive ?? props.reach);
+// #3098: o público que alcança, antes do grupo de controle. O sorteio tira a porcentagem escolhida (para baixo, como o
+// servidor faz em CampaignJourney::GrupoDeControle); "Vão receber" e a confirmação já mostram sem eles.
+const publico = computed(() => props.preview?.receive ?? props.reach);
+const semReceber = computed(() =>
+  Math.floor((publico.value * (props.draft.grupoDeControle || 0)) / 100)
+);
+const receivers = computed(() => publico.value - semReceber.value);
+const medir = ({ janela, controle }) =>
+  emit(
+    'update',
+    janela === undefined
+      ? { grupoDeControle: controle }
+      : { janelaDeCompra: janela }
+  );
 const reasons = computed(() =>
   REASON_ORDER.map(key => ({
     key,
@@ -217,6 +231,12 @@ const submit = () => {
           />
         </fieldset>
       </div>
+      <MedirVendas
+        :janela="draft.janelaDeCompra || 7"
+        :controle="draft.grupoDeControle || 0"
+        :publico="publico"
+        @update="medir"
+      />
     </section>
 
     <aside
@@ -255,6 +275,18 @@ const submit = () => {
             {{ t(`${NS}.REASONS.${reason.key.toUpperCase()}`) }}
           </dt>
           <dd class="m-0 tabular-nums">{{ MINUS }}{{ n(reason.count) }}</dd>
+        </div>
+        <div
+          v-if="semReceber"
+          class="flex justify-between gap-3"
+          data-test="review-controle"
+        >
+          <dt class="text-n-slate-11">
+            {{ t('CAMPANHA_VENDAS.MEDIR.FICAM_PARA_COMPARAR') }}
+          </dt>
+          <dd class="m-0 font-semibold tabular-nums">
+            {{ MINUS }}{{ n(semReceber) }}
+          </dd>
         </div>
       </dl>
       <ul

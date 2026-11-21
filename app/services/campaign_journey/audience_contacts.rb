@@ -26,7 +26,9 @@ module CampaignJourney::AudienceContacts
   PHONE_CHANNELS = %i[whatsapp sms].freeze
 
   class << self
-    def contacts_for(link, channel:)
+    # #3098: sem o grupo de controle da campanha (quem foi sorteado para não receber). `com_o_grupo: true` devolve o
+    # público inteiro, base do sorteio (CampaignJourney::Medicao).
+    def contacts_for(link, channel:, com_o_grupo: false)
       raise ArgumentError, "unsupported channel #{channel}" unless CHANNELS.include?(channel)
       return Contact.none if link&.campaign_import.blank?
 
@@ -36,7 +38,8 @@ module CampaignJourney::AudienceContacts
             else
               email_matches(link.campaign_import, account: account).map(&:contact_id)
             end
-      account.contacts.where(id: ids).campaign_reachable
+      contatos = account.contacts.where(id: ids).campaign_reachable
+      com_o_grupo ? contatos : CampaignJourney::GrupoDeControle.new(link).sem_o_grupo(contatos)
     end
 
     # Contact ids whose row had a valid mobile that the contact still has. Same rule for the

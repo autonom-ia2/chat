@@ -33,8 +33,9 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
       @campaign_import.lock!
       validate_audience!
       campaign = super
-      CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import,
-                                   variable_defaults: variable_defaults(campaign.message_body))
+      link = CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import,
+                                          variable_defaults: variable_defaults(campaign.message_body))
+      medir!(link)
       campaign
     end
   rescue Pundit::NotAuthorizedError
@@ -130,5 +131,13 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
 
   def permitted
     @permitted ||= @params.permit(:title, :inbox_id, :template_id, :message_body, :scheduled_at, :company_default, variable_defaults: {})
+  end
+
+  # #3098: a janela de compra e o grupo de controle, com o sorteio, antes do agendador ver a campanha.
+  def medir!(link)
+    escolhas = @params.permit(:janela_de_compra_dias, :grupo_de_controle_pct)
+    CampaignJourney::Medicao.new(link).aplicar!(escolhas) do
+      CampaignJourney::AudienceContacts.contacts_for(link, channel: :whatsapp, com_o_grupo: true).pluck(:id)
+    end
   end
 end

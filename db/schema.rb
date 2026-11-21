@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_21_150100) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_170000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1522,9 +1522,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150100) do
     t.jsonb "variable_defaults", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "janela_de_compra_dias", default: 7, null: false
+    t.integer "grupo_de_controle_pct", default: 0, null: false
     t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
     t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
+  end
+
+  create_table "campaign_control_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_audience_link_id", null: false
+    t.bigint "contact_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_campaign_control_contacts_on_account_id"
+    t.index ["campaign_audience_link_id", "contact_id"], name: "idx_campaign_control_contacts_link_contact", unique: true
+    t.index ["contact_id"], name: "index_campaign_control_contacts_on_contact_id"
   end
 
   create_table "campaign_free_text_deliveries", force: :cascade do |t|
@@ -5261,6 +5273,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150100) do
   add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
+  add_foreign_key "campaign_control_contacts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_control_contacts", "campaign_audience_links", on_delete: :cascade
+  add_foreign_key "campaign_control_contacts", "contacts", on_delete: :cascade
   add_foreign_key "campaign_free_text_deliveries", "accounts", on_delete: :cascade
   add_foreign_key "campaign_free_text_deliveries", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_free_texts", "accounts", on_delete: :cascade

@@ -1,7 +1,8 @@
 # Result of one campaign (#1007, PRD §6.5, O1–O2, E1–E4). Read-only, account-scoped.
 # Contract: docs/campaigns/publicos/resultado-1007.md.
 #
-#   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals
+#   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals, and who
+#                                                            received and bought (#3098, nil without an audience)
 #   GET …/campaign_journey/results/:channel/:id/recipients  people, 25 per page, ?status=
 #   GET …/campaign_journey/results/:channel/:id/export      masked CSV, ?status=
 #   GET …/campaign_journey/results/email/:id/period         numbers of this campaign, ?period=7|14|30|all (#990)
@@ -21,7 +22,8 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
         campaign: @result.campaign_payload,
         totals: @result.totals,
         filters: @result.filters,
-        crm: crm_payload
+        crm: crm_payload,
+        vendas: vendas_payload
       }
     }
   end
@@ -53,6 +55,15 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
 
     replies = ::CampaignJourney::ResultReplies.new(Current.account, @result.source_id)
     payload.merge(deals: replies.deals_for(user: Current.user, account_user: Current.account_user))
+  end
+
+  # #3098: quem recebeu e comprou, com a janela e o grupo de controle da campanha. Precisa do CRM ligado (as compras são
+  # cards do CRM).
+  def vendas_payload
+    return unless Crm::Config.enabled?
+
+    ::CampaignJourney::ComprasDaCampanha.new(Current.account, @result.campaign, @result.source_id)
+                                        .payload(user: Current.user, account_user: Current.account_user)
   end
 
   def authorize_result

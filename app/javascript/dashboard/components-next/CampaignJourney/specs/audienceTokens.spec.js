@@ -55,6 +55,8 @@ describe('journey channel payloads (api-999.md §2)', () => {
         scheduled_at: null,
         message_body: 'Oi {{contact.company}}',
         variable_defaults: { 'contact.company': 'sua empresa' },
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
       },
     });
   });
