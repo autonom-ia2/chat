@@ -170,3 +170,35 @@ describe '/app/login', type: :request do
     end
   end
 end
+
+# The login app (v3) sends anyone signed in to /app, so the OAuth consent must load the dashboard (#3104).
+describe 'dashboard application pack', type: :request do
+  def pack_for(path)
+    get path
+    controller.instance_variable_get(:@application_pack)
+  end
+
+  %w[
+    /app/oauth/authorize?response_type=code
+    /app/accounts/1/oauth/authorize?response_type=code
+    /app/accounts/1/dashboard
+    /accept-invitation
+  ].each do |path|
+    it "serves #{path} with the dashboard" do
+      expect(pack_for(path)).to eq('dashboard')
+    end
+  end
+
+  %w[
+    /app/login
+    /app/login/local
+    /app/login/sso
+    /app/auth/signup
+    /app/auth/password/edit
+    /app/auth/reset/password
+  ].each do |path|
+    it "serves #{path} with the login app" do
+      expect(pack_for(path)).to eq('v3app')
+    end
+  end
+end
