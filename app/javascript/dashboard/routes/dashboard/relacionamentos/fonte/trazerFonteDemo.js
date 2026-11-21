@@ -1,5 +1,6 @@
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 import {
+  ORIGENS_DA_LISTA,
   SITUACAO_DA_LEITURA,
   copia,
   erroDaLeitura,
@@ -111,6 +112,8 @@ const vistaDaLista = (lista, agora, demo) => {
   return {
     id: lista.id,
     arquivo: lista.arquivo,
+    // As listas da demonstração nasceram todas nesta tela.
+    origem: lista.origem ?? ORIGENS_DA_LISTA.TRAZER,
     quando: lista.quando,
     quem: lista.quem,
     total: lista.total,
@@ -318,10 +321,12 @@ const listaQueJaEntrou = (dadosDaDemo, trazidaId, agora) => {
 
 // O que a conta já trouxe e o desfazer.
 const historicoDaDemo = ({ dados, atraso, agora }) => ({
-  async historico() {
+  // A demonstração cabe numa página: a segunda vem vazia.
+  async historico(pagina = 1) {
     // `?demo=carregando`: o histórico fica no esqueleto, para o print.
     if (demoCarregando()) return esperarParaSempre();
     await esperar(atraso);
+    if (pagina > 1) return [];
     const dadosDaDemo = await dados();
     const momento = agora();
     return dadosDaDemo.memoria.listas.map(lista =>

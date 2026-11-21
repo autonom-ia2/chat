@@ -579,6 +579,27 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       expect(account.contacts.count).to eq(3)
     end
 
+    # #3083 — a lista da automação nunca é desfeita: nem pelo clique, nem pelo job que alguém tenha posto na fila.
+    it 'recusa a lista da automação, pronta ou parada, e o job não tira nada dela' do
+      importacao = trazer_lista
+      importacao.update!(options: importacao.options.merge('origem' => CampaignImport::AUTOMATION_ORIGIN))
+
+      [{ status: :completed }, { status: :failed, import_started_at: 1.hour.ago }].each do |estado|
+        importacao.update!(estado)
+
+        expect(described_class.pode?(importacao)).to be(false)
+        expect(described_class.new(importacao).pedir).to have_attributes(erro: 'nao_pode_desfazer', enfileirar: nil)
+      end
+      expect(importacao.reload.undo_status).to eq('pending')
+
+      importacao.update!(status: :completed, undo_status: :processing)
+      described_class.new(importacao.reload, quem: user).call
+
+      expect(importacao.reload.undo_status).to eq('processing')
+      expect(account.contacts.count).to eq(3)
+      expect(ana.reload.email).to eq('ana.albuquerino@exemplo.com.br')
+    end
+
     it 'marca "desfazendo" no primeiro clique e não enfileira de novo no segundo' do
       importacao = trazer_lista
 

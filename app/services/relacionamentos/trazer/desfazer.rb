@@ -36,6 +36,10 @@
 #
 # Enquanto um desfazer anda na conta (`em_curso?`), "Trazer" é recusado (Relacionamentos::Trazer::Trazer): a lista nova
 # completaria uma pessoa que está de saída.
+#
+# A lista do passo "para cada item" da automação (#3083) aparece no histórico, mas nunca é desfeita: `pode?` a recusa,
+# e com ele a prévia, o clique e o job, venha o pedido da tela ou direto da API. Ela não anota nada do que preencheu,
+# e o "Parou" dela fica `failed` com a gravação começada, o que de outro modo a deixaria passar.
 class Relacionamentos::Trazer::Desfazer
   include CampaignImports::SuppressedContactEvents
 
@@ -52,6 +56,8 @@ class Relacionamentos::Trazer::Desfazer
   Pedido = Struct.new(:erro, :enfileirar, keyword_init: true)
 
   def self.pode?(importacao)
+    return false if importacao.from_automation?
+
     GRAVADA.include?(importacao.status) || (importacao.failed? && importacao.import_started_at.present?)
   end
 

@@ -212,7 +212,14 @@
       "CONTINUAR": "Continuar",
       "ROTULO_CONTINUAR": "Continuar a desfazer a lista {arquivo}",
       "FALHOU": "Não consegui trazer esta lista.",
-      "ROTULO_TENTAR": "Tentar de novo: trazer a lista {arquivo}"
+      "FALHOU_AUTOMACAO": "A automação não conseguiu trazer esta lista. Veja em Automações o que aconteceu.",
+      "ROTULO_TENTAR": "Tentar de novo: trazer a lista {arquivo}",
+      "ORIGEM": {
+        "AUTOMACAO": "Pela automação",
+        "PLANILHA_ANTIGA": "Pela tela antiga"
+      },
+      "VER_MAIS": "Ver mais",
+      "ERRO_VER_MAIS": "Não consegui mostrar mais listas. Tente de novo."
     },
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",
