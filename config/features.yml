@@ -1341,14 +1341,16 @@
 # Automações abre com "O que você quer que aconteça sozinho?" (o pedido vai para o Guia) e os 20 modelos prontos, com
 # os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); o pedido e
 # os modelos levam ao Guia, e "Montar do zero" fica como segunda opção. Só com o Guia na conta e para quem pode montar.
-# Desligada: a lista de hoje (o herói compartilhado ganhou ajustes de celular e acessibilidade nas duas telas). Sem
-# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: é a 42 (2199023255552,
+# Desligada: a lista de hoje (o herói compartilhado ganhou ajustes de celular e acessibilidade nas duas telas).
+# Ligada em todas as contas e no padrão de conta nova pela migration 20261121100000 (#3096, F0 do épico #3095), porque
+# o ConfigLoader não sobrescreve o padrão já gravado; o `enabled: true` aqui vale para instalação nova. Rollback:
+# `db:migrate:down` dessa migration (desliga só as contas que ela ligou). A posição vale pela ordem neste arquivo: é a 42 (2199023255552,
 # 1 << 41), a primeira depois das 41 flags da main de 11/11; ela entrou antes da F5 e da F7 da vitrine #2858, que ficam
 # com a 43 (`agente_ferramentas_prontas_bases`) e a 44 (`agente_ferramentas_prontas_premium`). O
 # spec/models/account_spec.rb cita os três bits.
 - name: automacao_porta
   display_name: Automação › porta única e modelos por segmento
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Agentes: ferramentas prontas, F5 (#2858): as bases que a plataforma baixa e mantém atualizadas. Ligada (junto com
