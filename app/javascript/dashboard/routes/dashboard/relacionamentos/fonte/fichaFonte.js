@@ -48,6 +48,7 @@ const LEITURAS = {
   notas: [],
   arquivos: [],
   origem: null,
+  compras: null,
   empresa: null,
   pessoasDaEmpresa: [],
   conversasDaEmpresa: [],
@@ -174,6 +175,7 @@ const fonteReal = () => ({
   notas: id => noServidor(() => RelacionamentosAPI.notasDaPessoa(id)),
   arquivos: id => noServidor(() => RelacionamentosAPI.arquivosDaPessoa(id)),
   origem: id => noServidor(() => RelacionamentosAPI.origemDaPessoa(id)),
+  compras: id => noServidor(() => RelacionamentosAPI.comprasDaPessoa(id)),
   empresa: lerEmpresa,
   pessoasDaEmpresa: id =>
     noServidor(() => RelacionamentosAPI.pessoasDaEmpresa(id)),

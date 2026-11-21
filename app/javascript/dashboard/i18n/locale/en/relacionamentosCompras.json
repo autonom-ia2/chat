@@ -1,0 +1,141 @@
+{
+  "RELACIONAMENTOS_COMPRAS": {
+    "FICHA": {
+      "TITULO": "Purchases",
+      "NUNCA": "Hasn't bought anything yet.",
+      "DE_ONDE": "A purchase shows up here when one of this person's cards is marked as won.",
+      "RITMO": "Usually comes back every {count} day. | Usually comes back every {count} days.",
+      "PASSOU": "It's been {count} day since the last purchase. | It's been {count} days since the last purchase.",
+      "CHAMAR": "Reach out",
+      "QUANTAS": "{count} purchase | {count} purchases",
+      "TOTAL_LEITOR": "Total spent:",
+      "EM_COMPRAS": "in {count} purchase | in {count} purchases",
+      "MEDIA": "average {valor}",
+      "OUTRAS_MOEDAS": "and {valores}",
+      "EM_DIA": "Bought {count} day ago. | Bought {count} days ago.",
+      "DIA_DE_VOLTAR": "due back",
+      "HOJE": "today",
+      "VOLTA_EM": "should be back around {data}",
+      "UMA_COMPRA": "The purchase was on {data}.",
+      "UMA_COMPRA_APOIO": "After the second purchase, this shows how often this person usually comes back."
+    },
+    "GRUPOS": {
+      "CAMPEOES": {
+        "NOME": "Champions",
+        "NA_FICHA": "Champion",
+        "EXPLICACAO": "Bought {campeao_compras} times or more, the last one less than {campeao} ago."
+      },
+      "FIEIS": {
+        "NOME": "Loyal",
+        "NA_FICHA": "Loyal",
+        "EXPLICACAO": "Bought more than once, the last one less than {em_risco} ago."
+      },
+      "NOVOS": {
+        "NOME": "Bought once",
+        "NA_FICHA": "Bought once",
+        "EXPLICACAO": "Bought only once, less than {em_risco} ago."
+      },
+      "PASSOU_DA_HORA": {
+        "NOME": "Overdue to come back",
+        "NA_FICHA": "Overdue to come back",
+        "EXPLICACAO": "Buy every so often and are well past that time without buying."
+      },
+      "EM_RISCO": {
+        "NOME": "No purchase for {entre}",
+        "NA_FICHA": "No purchase for {entre}",
+        "EXPLICACAO": "Have bought before, but the last purchase was {entre} ago."
+      },
+      "PERDIDOS": {
+        "NOME": "No purchase for over {perdido}",
+        "NA_FICHA": "No purchase for over {perdido}",
+        "EXPLICACAO": "Have bought before, but not in over {perdido}."
+      },
+      "NUNCA": {
+        "NOME": "Never bought",
+        "NA_FICHA": "Never bought",
+        "EXPLICACAO": "Haven't bought anything yet."
+      }
+    },
+    "LISTA": {
+      "VISAO": "Show groups by",
+      "CONVERSA": "Conversation",
+      "COMPRA": "Purchase",
+      "AJUSTAR": "Adjust groups",
+      "COMPROU_HA": "Bought {quando}",
+      "COMPRAS": "{count} time | {count} times",
+      "NUNCA_COMPROU": "Never bought",
+      "EM_COMPRAS": "{valor} in purchases",
+      "PESSOAS": "people",
+      "VER_TODOS": "See all ({count})",
+      "NUNCA_COMPRARAM": "Never bought ({count})"
+    },
+    "AJUSTE": {
+      "TITULO": "Adjust purchase groups",
+      "EXPLICACAO": "Customers move between groups on their own, with each sale and as time goes by.",
+      "CAMPEAO_COMPRAS": "To be a champion, bought at least",
+      "VEZES": "times",
+      "CAMPEAO_DIAS": "To be a champion, the last purchase was at most",
+      "DIAS": "days ago",
+      "EM_RISCO": "Starts counting as \"no purchase\" after",
+      "PERDIDO": "Counts as gone for a long time after",
+      "SALVAR": "Save",
+      "CANCELAR": "Cancel",
+      "PADRAO": "Back to default",
+      "SALVO": "Done. The groups were adjusted.",
+      "ERRO_ORDEM": "Must be greater than the number above ({dias} days).",
+      "ERRO_MINIMO": "Use a number greater than zero.",
+      "NAO_DISPARA": "Changing these numbers doesn't message anyone. Automations only apply to people who change groups because of a sale or as time goes by.",
+      "ERRO_CAMPEAO": "Must be less than the \"no purchase\" number ({dias} days)."
+    },
+    "FILTROS": {
+      "COMPRAS": "Purchases",
+      "QUALQUER": "Any",
+      "JA_COMPROU": "Has bought",
+      "NUNCA_COMPROU": "Never bought",
+      "ULTIMOS": "Bought in the last {count} days",
+      "TOTAL": "Total spent",
+      "ACIMA": "Over {valor}"
+    },
+    "GATILHO": {
+      "FRASE": "When entering a purchase group",
+      "GRUPO": "Purchase group",
+      "AJUDA": "Only applies to whoever enters the group after you turn on the automation. Those already in it are left out.",
+      "QUEM_ENTRA": "Who enters: {explicacao}"
+    },
+    "UNIDADES": {
+      "DIAS": "{count} day | {count} days",
+      "MESES": "{count} month | {count} months",
+      "ENTRE_DIAS": "{de} to {ate} days",
+      "ENTRE_MESES": "{de} to {ate} months"
+    },
+    "ORDENAR": {
+      "CAMPOS": {
+        "COMPRA": "Purchase",
+        "TOTAL": "Total spent"
+      },
+      "SENTIDOS": {
+        "MAIS_TEMPO": "Longest without buying",
+        "RECENTE": "Most recent purchase",
+        "MAIS": "Spent the most",
+        "MENOS": "Spent the least"
+      },
+      "ESCOLHIDA": {
+        "COMPRA_MAIS_TEMPO": "Longest without buying",
+        "COMPRA_RECENTE": "Most recent purchase",
+        "TOTAL_MAIS": "Spent the most",
+        "TOTAL_MENOS": "Spent the least"
+      }
+    },
+    "HEROI": {
+      "PASSOU": "{count} customer is overdue to come back. | {count} customers are overdue to come back.",
+      "EM_RISCO": "{count} customer hasn't bought in {entre}. | {count} customers haven't bought in {entre}.",
+      "CAMPEOES": "You have {count} champion. | You have {count} champions.",
+      "COMPRARAM": "{count} customer has bought from you. | {count} customers have bought from you.",
+      "NENHUMA": "No purchases marked yet.",
+      "NENHUMA_APOIO": "A purchase counts when a card is marked as won.",
+      "JUNTOS": "Has spent {valor} with you. | Together, they've spent {valor} with you.",
+      "VER_QUEM_CHAMAR": "See who to reach out to",
+      "VER_CAMPEOES": "See the champions"
+    }
+  }
+}

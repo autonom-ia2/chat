@@ -75,7 +75,7 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
           'created_at' => (agora - 40.days).to_i,
           'additional_attributes' => { 'city' => 'Campinas', 'company_name' => 'Padaria Bom Dia' },
           'custom_attributes' => { 'cpf' => '123.456.789-00' }, 'labels' => %w[feira],
-          'opted_out_at' => (agora - 1.day).to_i, 'opt_out_source' => 'manual'
+          'opted_out_at' => (agora - 1.day).to_i, 'opt_out_source' => 'manual', 'compras' => nil
         }]
       )
     end
@@ -168,7 +168,10 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
 
       expect(response.parsed_body).to eq(
         'todos' => 2, 'clientes' => 1, 'falou_ha_pouco' => 1, 'sumiu_1_a_3_meses' => 1, 'sumiu_mais_de_3_meses' => 0,
-        'nunca_conversou' => 0, 'nao_quer_mensagens' => 0, 'ativos_agora' => 0
+        'nunca_conversou' => 0, 'nao_quer_mensagens' => 0, 'ativos_agora' => 0,
+        # #3097: os grupos de compra e o quanto cada um comprou (ninguém comprou aqui).
+        'compra_campeoes' => 0, 'compra_fieis' => 0, 'compra_novos' => 0, 'compra_passou_da_hora' => 0,
+        'compra_em_risco' => 0, 'compra_perdidos' => 0, 'compra_nunca' => 2, 'valores_de_compra' => { 'todos' => [] }
       )
     end
   end

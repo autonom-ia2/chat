@@ -5,7 +5,15 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import { useFocoPreso } from 'dashboard/components-next/NovaConversa/useFocoPreso';
-import { FILTROS_VAZIOS, PERIODOS_DE_CHEGADA } from '../../lista/filtros';
+import {
+  COMPRAS,
+  DIAS_DAS_COMPRAS,
+  FILTROS_VAZIOS,
+  PERIODOS_DE_CHEGADA,
+  TOTAIS_ACIMA,
+} from '../../lista/filtros';
+import { formatarDinheiro } from '../../ficha/compras';
+import { useIdioma } from '../../ficha/idioma';
 
 // #2894 — "Mais filtros": gaveta à direita com foco preso (useFocoPreso, a
 // mesma da gaveta de Nova conversa), Esc fecha e o foco volta ao botão que
@@ -17,6 +25,8 @@ import { FILTROS_VAZIOS, PERIODOS_DE_CHEGADA } from '../../lista/filtros';
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   deEmpresas: { type: Boolean, default: false },
+  // #3097: sem ver valor de venda, sem o filtro do total comprado.
+  veValores: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
   opcoes: {
     type: Object,
@@ -64,7 +74,40 @@ const periodos = computed(() => [
   },
 ]);
 
+// #3097 — compras e total comprado (só em Pessoas). O total vai em faixas
+// prontas: o leigo escolhe, não digita valor.
+const idioma = useIdioma();
+const FC = 'RELACIONAMENTOS_COMPRAS.FILTROS';
+const qualquer = () => ({ value: '', label: t(`${FC}.QUALQUER`) });
+const compras = () => ({
+  chave: 'compras',
+  rotuloCompleto: `${FC}.COMPRAS`,
+  opcoes: [
+    qualquer(),
+    { value: COMPRAS.JA_COMPROU, label: t(`${FC}.JA_COMPROU`) },
+    { value: COMPRAS.NUNCA, label: t(`${FC}.NUNCA_COMPROU`) },
+    ...Object.entries(DIAS_DAS_COMPRAS).map(([value, dias]) => ({
+      value,
+      label: t(`${FC}.ULTIMOS`, { count: dias }),
+    })),
+  ],
+});
+const totalAcima = () => ({
+  chave: 'totalAcima',
+  rotuloCompleto: `${FC}.TOTAL`,
+  opcoes: [
+    qualquer(),
+    ...TOTAIS_ACIMA.map(valor => ({
+      value: String(valor),
+      label: t(`${FC}.ACIMA`, {
+        valor: formatarDinheiro(valor, 'BRL', idioma.value),
+      }),
+    })),
+  ],
+});
 const temOQueEscolher = campo => campo.opcoes.length > 1;
+const rotuloDo = campo =>
+  t(campo.rotuloCompleto || `RELACIONAMENTOS.LISTA.FILTROS.${campo.rotulo}`);
 
 const cidade = lista => ({
   chave: 'cidade',
@@ -93,6 +136,8 @@ const campos = computed(() =>
         },
         cidade(props.opcoes.cidades),
         chegouEm(),
+        compras(),
+        ...(props.veValores ? [totalAcima()] : []),
       ]
   ).filter(temOQueEscolher)
 );
@@ -172,13 +217,13 @@ const aoTeclar = evento => {
               :for="`${idBase}-${campo.chave}`"
               class="text-sm font-medium text-n-slate-12"
             >
-              {{ t(`RELACIONAMENTOS.LISTA.FILTROS.${campo.rotulo}`) }}
+              {{ rotuloDo(campo) }}
             </label>
             <ChoiceSelect
               :model-value="rascunho[campo.chave]"
               :options="campo.opcoes"
               :trigger-id="`${idBase}-${campo.chave}`"
-              :aria-label="t(`RELACIONAMENTOS.LISTA.FILTROS.${campo.rotulo}`)"
+              :aria-label="rotuloDo(campo)"
               @update:model-value="escolher(campo.chave, $event)"
             />
           </div>

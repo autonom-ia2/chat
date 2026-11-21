@@ -1,4 +1,5 @@
 import { DIA_EM_MS } from '../fonte/grupos';
+import { diasSemComprar } from '../fonte/gruposDeCompra';
 
 // #2894 — "Mais filtros" da lista de pessoas: empresa, etiqueta, cidade e
 // quando chegou. Vazio ('') quer dizer "qualquer".
@@ -7,7 +8,25 @@ export const FILTROS_VAZIOS = Object.freeze({
   etiqueta: '',
   cidade: '',
   chegouEm: '',
+  // #3097 — compras: já comprou, nunca comprou ou comprou nos últimos N dias
+  // (`ultimos_30`...); totalAcima: o total comprado, em reais, acima de N.
+  compras: '',
+  totalAcima: '',
 });
+
+export const COMPRAS = {
+  JA_COMPROU: 'ja_comprou',
+  NUNCA: 'nunca',
+  ULTIMOS_30: 'ultimos_30',
+  ULTIMOS_90: 'ultimos_90',
+  ULTIMOS_180: 'ultimos_180',
+};
+export const DIAS_DAS_COMPRAS = {
+  [COMPRAS.ULTIMOS_30]: 30,
+  [COMPRAS.ULTIMOS_90]: 90,
+  [COMPRAS.ULTIMOS_180]: 180,
+};
+export const TOTAIS_ACIMA = [100, 250, 500, 1000, 5000];
 
 export const PERIODOS_DE_CHEGADA = {
   ULTIMOS_7: 'ultimos_7',
@@ -37,12 +56,30 @@ const chegouNoPeriodo = (pessoa, periodo, agora) => {
   return pessoa.created_at * 1000 >= agora - dias * DIA_EM_MS;
 };
 
+const totalEmReais = compras =>
+  (compras?.por_moeda || []).find(({ moeda }) => moeda === 'BRL')?.total ?? 0;
+
+const passaNasCompras = (compras, filtro, agora) => {
+  if (!preenchido(filtro)) return true;
+  const comprou = Boolean(compras?.quantas);
+  if (filtro === COMPRAS.NUNCA) return !comprou;
+  if (filtro === COMPRAS.JA_COMPROU) return comprou;
+  return comprou && diasSemComprar(compras, agora) <= DIAS_DAS_COMPRAS[filtro];
+};
+
 export const pessoaPassaNosFiltros = (
   pessoa,
   filtros = {},
   agora = Date.now()
 ) => {
-  const { empresa, etiqueta, cidade, chegouEm } = filtros;
+  const { empresa, etiqueta, cidade, chegouEm, compras, totalAcima } = filtros;
+  if (!passaNasCompras(pessoa.compras, compras, agora)) return false;
+  if (
+    preenchido(totalAcima) &&
+    !(totalEmReais(pessoa.compras) > Number(totalAcima))
+  ) {
+    return false;
+  }
   if (preenchido(empresa) && !mesmaEmpresa(pessoa, empresa)) return false;
   if (preenchido(etiqueta) && !(pessoa.labels || []).includes(etiqueta)) {
     return false;

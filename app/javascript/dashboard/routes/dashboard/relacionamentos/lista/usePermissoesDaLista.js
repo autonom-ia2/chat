@@ -51,5 +51,10 @@ export const usePermissoesDaLista = () => {
     // #2898 — mudar onde ficam as renovações pede as duas chaves que o
     // servidor pede (carteira/usePodeAjustarRenovacoes.js).
     podeAjustarRenovacoes: usePodeAjustarRenovacoes(),
+    // #3097 — ajustar as faixas dos grupos de compra é do administrador (o
+    // servidor recusa os outros: GruposDeCompraController#update).
+    podeAjustarGruposDeCompra: computed(() =>
+      checkPermissions(['administrator'])
+    ),
   };
 };

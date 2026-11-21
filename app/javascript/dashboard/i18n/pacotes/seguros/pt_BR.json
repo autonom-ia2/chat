@@ -338,5 +338,13 @@
     "RITMO": {
       "FORA_DA_CONTA": "O limite não vale para o aviso de renovação do seguro, para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente."
     }
+  },
+  "RELACIONAMENTOS_COMPRAS": {
+    "FICHA": {
+      "DE_ONDE": "A compra aparece aqui quando um card desta pessoa fecha o seguro."
+    },
+    "HEROI": {
+      "NENHUMA_APOIO": "A compra conta quando um card fecha o seguro."
+    }
   }
 }

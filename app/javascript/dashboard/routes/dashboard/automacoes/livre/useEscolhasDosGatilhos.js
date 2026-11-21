@@ -1,6 +1,14 @@
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import RelacionamentosAPI from 'dashboard/api/relacionamentos';
+import {
+  FAIXAS_PADRAO,
+  GRUPOS_DE_COMPRA,
+  GRUPOS_DE_COMPRA_IDS,
+} from 'dashboard/routes/dashboard/relacionamentos/fonte/gruposDeCompra';
+import { textosDasFaixas } from 'dashboard/routes/dashboard/relacionamentos/lista/textosDasFaixas';
 import AttributeAPI from 'dashboard/api/attributes';
 import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
@@ -84,13 +92,23 @@ const camposDoCard = definicoes =>
 const PECAS_DO_FUNIL = ['etapa', 'funil'];
 const PECAS_DOS_CAMPOS = ['campo', 'mudanca'];
 
+// #3097: o "entrou num grupo de compra" escolhe o grupo (os da lista de
+// Relacionamentos, com os nomes pelas faixas da conta). "Nunca comprou" não
+// entra: toda pessoa nova nasceria nele, e o gatilho viraria "toda pessoa
+// nova". A explicação de cada grupo vira o "Quem entra" do gatilho.
+const DO_GATILHO = GRUPOS_DE_COMPRA.filter(
+  ({ id }) => id !== GRUPOS_DE_COMPRA_IDS.NUNCA
+);
+
 export function useEscolhasDosGatilhos() {
+  const { t } = useI18n();
   const funis = ref([]);
   const etapasPorFunil = ref({});
   const definicoes = ref([]);
   // G32: as páginas de agendamento, para o filtro dos gatilhos de reunião.
   const paginas = ref([]);
   const caixas = useMapGetter('inboxes/getInboxes');
+  const faixasDeCompra = ref({ ...FAIXAS_PADRAO });
 
   const carregarFunis = async () => {
     const { data } = await CrmKanbanAPI.getPipelines();
@@ -114,6 +132,11 @@ export function useEscolhasDosGatilhos() {
     paginas.value = data.payload || [];
   };
 
+  const carregarFaixasDeCompra = async () => {
+    const { data } = await RelacionamentosAPI.faixasDeCompra();
+    faixasDeCompra.value = { ...FAIXAS_PADRAO, ...data };
+  };
+
   // Só o que as peças pedem. Sem peças, os funis (como sempre foi).
   const carregar = async (pecas = PECAS_DO_FUNIL) => {
     const leituras = [];
@@ -122,8 +145,15 @@ export function useEscolhasDosGatilhos() {
     if (pecas.some(peca => PECAS_DOS_CAMPOS.includes(peca)))
       leituras.push(carregarCampos());
     if (pecas.includes('pagina')) leituras.push(carregarPaginas());
+    if (pecas.includes('grupo_de_compra'))
+      leituras.push(carregarFaixasDeCompra());
     await Promise.all(leituras);
   };
+
+  const textosDeCompra = computed(() =>
+    textosDasFaixas(faixasDeCompra.value, t)
+  );
+  const nomeDoGrupo = grupo => t(grupo.nome, textosDeCompra.value);
 
   const escolhas = computed(() => ({
     funis: comNome(funis.value),
@@ -144,6 +174,16 @@ export function useEscolhasDosGatilhos() {
     // Os campos de data, pelo alvo do gatilho: { 'Crm::Card': [...], Contact }.
     campos: porAlvo(definicoes.value, lista => lista),
     camposDoCard: camposDoCard(definicoes.value),
+    gruposDeCompra: DO_GATILHO.map(grupo => ({
+      value: grupo.id,
+      label: nomeDoGrupo(grupo),
+    })),
+    quemEntraNoGrupo: Object.fromEntries(
+      DO_GATILHO.map(grupo => [
+        grupo.id,
+        t(grupo.explicacao, textosDeCompra.value),
+      ])
+    ),
     // Pela peça do parâmetro (etapa, funil): o id escolhido e o nome dele. O
     // campo vai também pelo alvo, porque card e contato podem ter a mesma chave.
     nomes: {
@@ -158,6 +198,9 @@ export function useEscolhasDosGatilhos() {
       etapa: porId(Object.values(etapasPorFunil.value).flat()),
       funilDaEtapa: funilDaEtapa(funis.value, etapasPorFunil.value),
       caixa: porId(caixas.value),
+      grupo_de_compra: Object.fromEntries(
+        DO_GATILHO.map(grupo => [grupo.id, nomeDoGrupo(grupo)])
+      ),
     },
   }));
 

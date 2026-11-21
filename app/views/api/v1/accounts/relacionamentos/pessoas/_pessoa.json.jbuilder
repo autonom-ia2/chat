@@ -16,3 +16,5 @@ json.labels(pessoa.label_taggings.reject(&:tagger_id).filter_map { |marcacao| ma
 json.company_id pessoa.company_id if Current.account.feature_enabled?('companies')
 json.opted_out_at pessoa.opted_out_at&.to_i
 json.opt_out_source pessoa.opt_out_source
+# #3097 — o resumo das compras, na lista (lido numa consulta só para a página, ConsultaDePessoas#compras_da_pagina).
+json.compras @consulta.compras_da_pagina[pessoa.id]&.para_a_tela(com_valores: ve_valores?) if @consulta

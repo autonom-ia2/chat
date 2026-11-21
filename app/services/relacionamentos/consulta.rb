@@ -30,7 +30,7 @@ class Relacionamentos::Consulta
   end
 
   def itens
-    com_o_que_a_linha_usa(ordenados.offset((pagina - 1) * POR_PAGINA).limit(POR_PAGINA))
+    @itens ||= com_o_que_a_linha_usa(ordenados.offset((pagina - 1) * POR_PAGINA).limit(POR_PAGINA))
   end
 
   def total

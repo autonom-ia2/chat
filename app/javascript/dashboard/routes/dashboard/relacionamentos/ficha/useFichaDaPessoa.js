@@ -18,6 +18,8 @@ const PARTES_VAZIAS = {
   notas: [],
   arquivos: [],
   origem: null,
+  // #3097 — o resumo das compras (cards ganhos nos funis de Vender).
+  compras: null,
 };
 
 export const useFichaDaPessoa = (fonte, id) => {
@@ -153,6 +155,7 @@ export const useFichaDaPessoa = (fonte, id) => {
     notas: computed(() => partes.valores.value.notas),
     arquivos: computed(() => partes.valores.value.arquivos),
     origem: computed(() => partes.valores.value.origem),
+    compras: computed(() => partes.valores.value.compras),
     falhas: partes.falhas,
     ocupadoEm,
     algumOcupado,

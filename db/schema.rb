@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_21_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_150100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -4684,6 +4684,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_140000) do
     t.index ["contact_id"], name: "index_relacionamentos_campos_preenchidos_on_contact_id"
   end
 
+  create_table "relacionamentos_compras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "quantas", null: false
+    t.datetime "primeira_em", null: false
+    t.datetime "ultima_em", null: false
+    t.bigint "total_brl_cents", default: 0, null: false
+    t.jsonb "por_moeda", default: [], null: false
+    t.string "grupo", null: false
+    t.datetime "grupo_desde", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "grupo"], name: "idx_relacionamentos_compras_conta_grupo"
+    t.index ["account_id", "total_brl_cents"], name: "idx_relacionamentos_compras_conta_total"
+    t.index ["account_id", "ultima_em"], name: "idx_relacionamentos_compras_conta_ultima"
+    t.index ["contact_id"], name: "index_relacionamentos_compras_on_contact_id", unique: true
+  end
+
   create_table "relacionamentos_documentos", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "contact_id"
@@ -5490,6 +5508,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_140000) do
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "relacionamentos_campos_preenchidos", "campaign_import_rows", on_delete: :cascade
+  add_foreign_key "relacionamentos_compras", "accounts"
+  add_foreign_key "relacionamentos_compras", "contacts", on_delete: :cascade
   add_foreign_key "relacionamentos_documentos", "accounts"
   add_foreign_key "relacionamentos_documentos", "companies", on_delete: :cascade
   add_foreign_key "relacionamentos_documentos", "contacts", on_delete: :cascade

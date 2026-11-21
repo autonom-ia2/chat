@@ -1448,5 +1448,13 @@
         "TEXTO": "Ao implantar, o sistema pega os dados que faltam, envia ao seu sistema de gestão e manda as boas-vindas."
       }
     }
+  },
+  "RELACIONAMENTOS_COMPRAS": {
+    "FICHA": {
+      "DE_ONDE": "A compra aparece aqui quando um card desta pessoa é marcado como implantado."
+    },
+    "HEROI": {
+      "NENHUMA_APOIO": "A compra conta quando um card é marcado como implantado."
+    }
   }
 }

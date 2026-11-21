@@ -331,6 +331,9 @@ const FILTRO_NO_SERVIDOR = {
   etiqueta: 'etiqueta',
   cidade: 'cidade',
   chegouEm: 'chegou_em',
+  // #3097 — os filtros de compra.
+  compras: 'compras',
+  totalAcima: 'total_acima',
 };
 
 const filtrosDoPedido = (filtros = {}) =>

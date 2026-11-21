@@ -9,6 +9,9 @@
 # mesma leitura de ContactsController#active, que lê a conta inteira e por isso mostra o visitante anônimo), as sete
 # ordens dela, cada uma nos dois sentidos, e a consulta inteira
 # para "Baixar planilha" (Account::ContactsExportJob).
+#
+# #3097 — as compras: os grupos de compra, os filtros "compras" e "total acima de", as ordens por compra e o quanto
+# cada grupo já comprou (Relacionamentos::Compras::NaListaDePessoas).
 class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   GRUPOS = {
     'todos' => 'TRUE',
@@ -89,6 +92,16 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     ordenados
   end
 
+  # #3097 — { grupo de compra => [{ moeda, total }] }, para a mesma busca e os mesmos filtros (o grupo pedido não entra).
+  def valores_de_compra
+    compras.valores(consultados(self.class.base(@account)))
+  end
+
+  # #3097 — { contact_id => Relacionamentos::Compra } das pessoas da página, numa leitura só.
+  def compras_da_pagina
+    @compras_da_pagina ||= Relacionamentos::Compra.where(account_id: @account.id, contact_id: itens.map(&:id)).index_by(&:contact_id)
+  end
+
   private
 
   def tabela
@@ -96,15 +109,15 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   end
 
   def ordens
-    @ordens ||= super.merge(ORDENS_A_MAIS)
+    @ordens ||= super.merge(ORDENS_A_MAIS).merge(compras.ordens)
   end
 
   def grupos
-    @grupos ||= GRUPOS.merge(carteira.grupos)
+    @grupos ||= GRUPOS.merge(carteira.grupos).merge(compras.grupos)
   end
 
   def cortes
-    @cortes ||= super.merge(carteira.cortes).merge(ativos_agora: ativos_agora)
+    @cortes ||= super.merge(carteira.cortes).merge(compras.cortes).merge(ativos_agora: ativos_agora)
   end
 
   # Quem está com o chat do site aberto agora (a presença que o widget renova). Lista vazia vira `IN (NULL)`: ninguém.
@@ -122,7 +135,15 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
 
   def consultados(base = grupo == 'ativos_agora' ? @account.contacts : self.class.base(@account))
     carteira.buscados(buscados(base, textos: TEXTOS, numeros: NUMEROS), base, @pedido[:busca])
-            .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou)
+            .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou).then { |escopo| com_as_compras(escopo) }
+  end
+
+  def compras
+    @compras ||= Relacionamentos::Compras::NaListaDePessoas.new(@account, @agora)
+  end
+
+  def com_as_compras(escopo)
+    compras.filtros(filtro(:compras), filtro(:total_acima)).reduce(escopo) { |filtrado, condicao| filtrado.where(condicao) }
   end
 
   def carteira
@@ -163,5 +184,7 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     super
     recusar("chegou_em desconhecido: #{filtro(:chegou_em)}") unless filtro(:chegou_em).nil? || CHEGOU_EM.key?(filtro(:chegou_em))
     recusar("empresa inválida: #{filtro(:empresa)}") unless filtro(:empresa).nil? || empresa_id
+    motivo = compras.motivo_invalido(filtro(:compras), filtro(:total_acima))
+    recusar(motivo) if motivo
   end
 end
