@@ -8374,6 +8374,23 @@
       "related_category_ids"
     ]
   },
+  "PATCH relacionamentos/grupos_de_compra": {
+    "campos": {
+      "campeao_compras": {},
+      "campeao_dias": {},
+      "em_risco_dias": {},
+      "perdido_dias": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/grupos_de_compra#update",
+    "corpo_plano": false,
+    "envelope": "faixas",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/grupos_de_compra_controller.rb:13",
+      "app/controllers/api/v1/accounts/relacionamentos/grupos_de_compra_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
   "PATCH relacionamentos/seguros/:id": {
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#update",
@@ -20748,8 +20765,10 @@
         "campos": {
           "chegou_em": {},
           "cidade": {},
+          "compras": {},
           "empresa": {},
-          "etiqueta": {}
+          "etiqueta": {},
+          "total_acima": {}
         },
         "tipo": "objeto"
       },
@@ -20761,8 +20780,8 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:33",
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:72"
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:40",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:92"
     ],
     "sem_corpo": false
   },

@@ -355,6 +355,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     let(:esperado) do
       { 'todos' => 5, 'clientes' => 2, 'falou_ha_pouco' => 1, 'sumiu_1_a_3_meses' => 2, 'sumiu_mais_de_3_meses' => 1,
         'nunca_conversou' => 1, 'nao_quer_mensagens' => 1, 'ativos_agora' => 0 }
+        .merge(Relacionamentos::Compras::Grupo::TODOS.index_with(0), 'compra_nunca' => 5) # #3097: ninguém comprou
     end
 
     before do
@@ -547,7 +548,7 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       end
 
       it 'a lista não tem o grupo nem procura nos seguros' do
-        expect(consulta.contagens.keys).to eq(described_class::GRUPOS.keys)
+        expect(consulta.contagens.keys).to match_array(described_class::GRUPOS.keys + Relacionamentos::Compras::Grupo::TODOS)
         expect { consulta(grupo: 'so_um_seguro') }.to raise_error(Relacionamentos::PedidoInvalido, 'grupo desconhecido: so_um_seguro')
         expect(nomes(busca: 'EX-001234')).to be_empty
         expect(nomes(busca: 'carro exemplo')).to be_empty

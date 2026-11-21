@@ -1111,7 +1111,7 @@ describe('GavetaDeFiltros', () => {
     w.unmount();
   });
 
-  it('aberta, é um diálogo com título e os quatro campos', () => {
+  it('aberta, é um diálogo com título e os cinco campos', () => {
     const w = montar();
     const gaveta = w.get('[data-relacionamentos="gaveta-filtros"]');
     expect(gaveta.attributes('role')).toBe('dialog');
@@ -1122,7 +1122,15 @@ describe('GavetaDeFiltros', () => {
       'Etiqueta',
       'Cidade',
       'Chegou em',
+      'Compras',
     ]);
+    w.unmount();
+  });
+
+  // #3097: o total comprado é dinheiro, só para quem vê valor de venda.
+  it('quem vê valor de venda tem também o total comprado', () => {
+    const w = montar({ veValores: true });
+    expect(w.findAll('label').map(l => l.text())).toContain('Total comprado');
     w.unmount();
   });
 
@@ -1147,6 +1155,7 @@ describe('GavetaDeFiltros', () => {
     expect(w.findAll('label').map(l => l.text())).toEqual([
       'Etiqueta',
       'Chegou em',
+      'Compras',
     ]);
     w.unmount();
   });
@@ -1160,7 +1169,16 @@ describe('GavetaDeFiltros', () => {
     const ver = w.findAll('button').find(b => b.text() === 'Ver resultado');
     await ver.trigger('click');
     expect(w.emitted('aplicar')).toEqual([
-      [{ empresa: 7, etiqueta: '', cidade: 'Santos', chegouEm: '' }],
+      [
+        {
+          empresa: 7,
+          etiqueta: '',
+          cidade: 'Santos',
+          chegouEm: '',
+          compras: '',
+          totalAcima: '',
+        },
+      ],
     ]);
     w.unmount();
   });

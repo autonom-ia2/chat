@@ -319,6 +319,25 @@ const notasDeBase = id => {
 
 export const cards = id => daPessoaEDasAbsorvidas(id, cardsSo);
 
+// #3097 — o resumo de compras da demonstração: sai do id, como o resto. Só o
+// cliente comprou; o costume só existe com 2 compras ou mais.
+const COMPRAS_NO_MAXIMO = 6;
+const DIAS_DA_ULTIMA_NO_MAXIMO = 220;
+const VALOR_BASE_DA_COMPRA = 300;
+export const compras = id => {
+  const base = pessoaPorId(id);
+  if (!base || pessoaCompleta(base).contact_type !== 'customer') return null;
+  const quantas = 1 + (id % COMPRAS_NO_MAXIMO);
+  const dias = (id * 17) % DIAS_DA_ULTIMA_NO_MAXIMO;
+  const total = quantas * (VALOR_BASE_DA_COMPRA + (id % 9) * 120);
+  return {
+    quantas,
+    ultima_em: agoraEmSegundos() - dias * SEGUNDOS_POR_DIA,
+    intervalo_medio_dias: quantas > 1 ? 20 + (id % 5) * 10 : null,
+    por_moeda: [{ moeda: 'BRL', total, quantas }],
+  };
+};
+
 const notasSo = id => [...(memoria.notas.get(id) ?? []), ...notasDeBase(id)];
 
 export const notas = id =>
@@ -681,6 +700,7 @@ export const demoDaFicha = {
   pessoa,
   conversas,
   cards,
+  compras,
   notas,
   arquivos,
   origem,

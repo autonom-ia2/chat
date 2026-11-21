@@ -6,6 +6,10 @@
 #
 # Uma planilha por pessoa e conta a cada poucos minutos: cada pedido é uma consulta inteira e um e-mail. A trava fica no
 # Redis com prazo, e o pedido repetido nesse tempo responde 429 com quantos segundos faltam.
+#
+# #3097 — as compras: o resumo de compras da ficha (`compras`), o quanto cada grupo de compra já comprou nas contagens
+# (`valores_de_compra`) e o filtro e as ordens por valor, que só quem vê valor de venda (Crm::ValorDeVenda) recebe e
+# pede: para os outros, o valor não vem e o pedido por valor responde 403.
 class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts::Relacionamentos::BaseController
   DA_LISTA = %i[index contagens todas exportar].freeze
   TRAVA_DA_PLANILHA = 'RELACIONAMENTOS_PLANILHA::%<account_id>d::%<user_id>d'.freeze
@@ -13,13 +17,16 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
 
   before_action :sem_parametros, except: DA_LISTA
   before_action :achar_pessoa, except: DA_LISTA
+  helper_method :ve_valores?
 
   def index
     @consulta = consulta
   end
 
   def contagens
-    render json: consulta.contagens
+    consultada = consulta
+    contagens = consultada.contagens
+    render json: ve_valores? ? contagens.merge('valores_de_compra' => consultada.valores_de_compra) : contagens
   end
 
   # Para "Marcar todas as N": sem página e sem teto.
@@ -32,8 +39,7 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
   # conhece), antes de ir para a fila: um filtro perdido no caminho mandaria a base inteira.
   def exportar
     authorize Contact, :export?
-    pedido_da_planilha = pedido.to_h.except('pagina')
-    ::Relacionamentos::ConsultaDePessoas.new(Current.account, pedido_da_planilha)
+    pedido_da_planilha = consulta_conferida(pedido.to_h.except('pagina'))
     return planilha_pedida_ha_pouco unless travar_planilha
 
     Account::ContactsExportJob.perform_later(Current.account.id, Current.user.id, nil, { relacionamentos: pedido_da_planilha })
@@ -62,14 +68,32 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
     render json: ::Relacionamentos::Ficha::Origem.new(@pessoa).call
   end
 
+  # #3097 — o resumo das compras da pessoa, com as faixas da conta (o selo do grupo). Quem nunca comprou: null.
+  def compras
+    compra = ::Relacionamentos::Compra.find_by(account_id: Current.account.id, contact_id: @pessoa.id)
+    render json: compra&.para_a_tela(com_valores: ve_valores?, faixas: ::Relacionamentos::Compras::Faixas.da_conta(Current.account))
+  end
+
   private
 
   def consulta
-    ::Relacionamentos::ConsultaDePessoas.new(Current.account, pedido)
+    ::Relacionamentos::ConsultaDePessoas.new(Current.account, consulta_conferida(pedido))
+  end
+
+  # O pedido que a lista aceita, sem o filtro e a ordem por valor para quem não vê valor de venda (403).
+  def consulta_conferida(recebido)
+    raise Pundit::NotAuthorizedError if ::Relacionamentos::Compras::NaListaDePessoas.de_valor?(recebido) && !ve_valores?
+
+    ::Relacionamentos::ConsultaDePessoas.new(Current.account, recebido)
+    recebido
   end
 
   def pedido
-    conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:empresa, :etiqueta, :cidade, :chegou_em]))
+    conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:empresa, :etiqueta, :cidade, :chegou_em, :compras, :total_acima]))
+  end
+
+  def ve_valores?
+    ::Crm::ValorDeVenda.ve?(Current.account_user)
   end
 
   def trava_da_planilha

@@ -211,6 +211,6 @@ module Enterprise::Account::PlanUsageAndLimits
       'additionalProperties' => false
     }
 
-    errors.add(:limits, ': Invalid data') unless JSONSchemer.schema(limit_schema).valid?(self[:limits])
+    errors.add(:limits, ': Invalid data') unless JsonSchemaDraft7.schema(limit_schema).valid?(self[:limits])
   end
 end

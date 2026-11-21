@@ -102,7 +102,9 @@ RSpec.describe 'Carteira de seguros na lista de pessoas', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
 
       ler('pessoas/contagens')
-      expect(response.parsed_body.keys).to eq(Relacionamentos::ConsultaDePessoas::GRUPOS.keys)
+      # Os grupos de compra (#3097) e o quanto cada um comprou entram em toda conta; o da carteira, não.
+      expect(response.parsed_body.keys).to match_array(Relacionamentos::ConsultaDePessoas::GRUPOS.keys +
+                                                       Relacionamentos::Compras::Grupo::TODOS + ['valores_de_compra'])
       expect(nomes(busca: 'EX-001234')).to be_empty
       expect(nomes).to contain_exactly('Marina Exemplo', 'Bruno Exemplo', 'Carla Sem Seguro')
     end

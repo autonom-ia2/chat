@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_19_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_150100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -4569,6 +4569,53 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_150000) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "oauth_access_grants", force: :cascade do |t|
+    t.bigint "resource_owner_id", null: false
+    t.bigint "application_id", null: false
+    t.bigint "account_id", null: false
+    t.string "token", null: false
+    t.integer "expires_in", null: false
+    t.text "redirect_uri", null: false
+    t.string "scopes", default: "", null: false
+    t.string "code_challenge"
+    t.string "code_challenge_method"
+    t.datetime "created_at", null: false
+    t.datetime "revoked_at"
+    t.boolean "all_accounts", default: false, null: false
+    t.index ["application_id"], name: "index_oauth_access_grants_on_application_id"
+    t.index ["resource_owner_id"], name: "index_oauth_access_grants_on_resource_owner_id"
+    t.index ["token"], name: "index_oauth_access_grants_on_token", unique: true
+  end
+
+  create_table "oauth_access_tokens", force: :cascade do |t|
+    t.bigint "resource_owner_id"
+    t.bigint "application_id", null: false
+    t.bigint "account_id", null: false
+    t.string "token", null: false
+    t.string "refresh_token"
+    t.integer "expires_in"
+    t.string "scopes"
+    t.datetime "created_at", null: false
+    t.datetime "revoked_at"
+    t.boolean "all_accounts", default: false, null: false
+    t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
+    t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
+    t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
+    t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
+  end
+
+  create_table "oauth_applications", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "uid", null: false
+    t.string "secret"
+    t.text "redirect_uri", null: false
+    t.string "scopes", default: "", null: false
+    t.boolean "confidential", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
+  end
+
   create_table "platform_app_permissibles", force: :cascade do |t|
     t.bigint "platform_app_id", null: false
     t.string "permissible_type", null: false
@@ -4635,6 +4682,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_150000) do
     t.index ["account_id"], name: "index_relacionamentos_campos_preenchidos_on_account_id"
     t.index ["campaign_import_row_id", "campo"], name: "idx_rel_campos_preenchidos_linha_campo", unique: true
     t.index ["contact_id"], name: "index_relacionamentos_campos_preenchidos_on_contact_id"
+  end
+
+  create_table "relacionamentos_compras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "quantas", null: false
+    t.datetime "primeira_em", null: false
+    t.datetime "ultima_em", null: false
+    t.bigint "total_brl_cents", default: 0, null: false
+    t.jsonb "por_moeda", default: [], null: false
+    t.string "grupo", null: false
+    t.datetime "grupo_desde", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "grupo"], name: "idx_relacionamentos_compras_conta_grupo"
+    t.index ["account_id", "total_brl_cents"], name: "idx_relacionamentos_compras_conta_total"
+    t.index ["account_id", "ultima_em"], name: "idx_relacionamentos_compras_conta_ultima"
+    t.index ["contact_id"], name: "index_relacionamentos_compras_on_contact_id", unique: true
   end
 
   create_table "relacionamentos_documentos", force: :cascade do |t|
@@ -5443,6 +5508,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_150000) do
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "relacionamentos_campos_preenchidos", "campaign_import_rows", on_delete: :cascade
+  add_foreign_key "relacionamentos_compras", "accounts"
+  add_foreign_key "relacionamentos_compras", "contacts", on_delete: :cascade
   add_foreign_key "relacionamentos_documentos", "accounts"
   add_foreign_key "relacionamentos_documentos", "companies", on_delete: :cascade
   add_foreign_key "relacionamentos_documentos", "contacts", on_delete: :cascade

@@ -39,6 +39,7 @@ const {
   DISABLE_META_INBOX_CREATION: disableMetaInboxCreation,
   DISABLE_META_MESSAGE_SENDING: disableMetaMessageSending,
   DEPLOYMENT_ENV: deploymentEnv,
+  OAUTH_PROVIDER_ENABLED: oauthProviderEnabled,
   ACTIVE_PLATFORM_BANNERS: activePlatformBanners,
 } = window.globalConfig || {};
 
@@ -71,6 +72,7 @@ const state = {
   displayManifest,
   gitSha,
   maximumFileUploadSize: resolveMaximumFileUploadSize(maximumFileUploadSize),
+  oauthProviderEnabled: parseBoolean(oauthProviderEnabled),
   hCaptchaSiteKey,
   installationName,
   logo,

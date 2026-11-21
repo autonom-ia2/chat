@@ -21,6 +21,8 @@ const LEITURAS = [
   // G27: o "card atualizado" (mudanca) escolhe entre os campos do card.
   { pecas: ['mudanca'], erro: 'MUDANCA.ERRO_CAMPOS' },
   { pecas: ['pagina'], erro: 'GATILHO_DE_REUNIAO.ERRO_PAGINAS' },
+  // #3097: os nomes dos grupos de compra seguem as faixas da conta.
+  { pecas: ['grupo_de_compra'], erro: 'GATILHO_DE_COMPRA.ERRO_FAIXAS' },
 ];
 
 export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {

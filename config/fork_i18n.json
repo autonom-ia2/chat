@@ -158,6 +158,9 @@
     },
     {
       "file": "relacionamentosCarteira.json"
+    },
+    {
+      "file": "relacionamentosCompras.json"
     }
   ],
   "pacotes": {
