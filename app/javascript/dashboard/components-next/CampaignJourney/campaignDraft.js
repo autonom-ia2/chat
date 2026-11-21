@@ -30,6 +30,9 @@ export const emptyDraft = () => ({
   brandKitId: null,
   when: 'now',
   scheduledAt: '',
+  // #3098: "Quem comprou depois" da revisão: dias da janela de compra e a porcentagem do grupo de controle (0 = sem).
+  janelaDeCompra: 7,
+  grupoDeControle: 0,
   step: 1,
 });
 

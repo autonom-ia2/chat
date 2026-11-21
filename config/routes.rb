@@ -286,6 +286,7 @@ Rails.application.routes.draw do
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]
+            resources :email_medicoes, only: [:update] # #3098
             resource :overview, only: [:show]
             get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
             post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329

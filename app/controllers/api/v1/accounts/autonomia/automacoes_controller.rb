@@ -96,7 +96,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     com_valores = Current.account_user&.permission_granted?('financial_view') || false
     historico = ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, com_valores: com_valores,
                                                       pagina: params[:pagina])
-    return render(json: historico.resultado) if params[:dentro].blank?
+    return render(json: historico.resultado.merge(compras: compras_do_historico)) if params[:dentro].blank?
 
     # #2933: o que aconteceu dentro de um bloco que ela usou.
     dentro = historico.dentro(params[:dentro])
@@ -113,6 +113,15 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def ensaio_novo = ensaiar(receita, conferir: true)
 
   private
+
+  # #3098: quanto compraram as pessoas com quem a automação agiu (o topo do histórico). Só na primeira página e com o
+  # CRM ligado (as compras são cards do CRM).
+  def compras_do_historico
+    return unless Crm::Config.enabled? && params[:pagina].to_i <= 1
+
+    ::Autonomia::Automacao::ComprasDoHistorico.new(automacao: @automacao, user: Current.user,
+                                                   account_user: Current.account_user).resumo
+  end
 
   def exigir_flag
     head :not_found unless Current.account.feature_enabled?(FLAG)

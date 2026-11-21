@@ -25,6 +25,7 @@ import relacionamentosFicha from './relacionamentosFicha.json';
 import relacionamentosTrazer from './relacionamentosTrazer.json';
 import relacionamentosCarteira from './relacionamentosCarteira.json';
 import relacionamentosCompras from './relacionamentosCompras.json';
+import campanhaVendas from './campanhaVendas.json';
 import seusPosts from './seusPosts.json';
 import metaAdsComentariosIa from './metaAdsComentariosIa.json';
 import painelDoContato from './painelDoContato.json';
@@ -127,6 +128,7 @@ export default {
   ...relacionamentosTrazer,
   ...relacionamentosCarteira,
   ...relacionamentosCompras,
+  ...campanhaVendas,
   ...seusPosts,
   ...metaAdsComentariosIa,
   ...painelDoContato,

@@ -20,6 +20,7 @@ const journey = vi.hoisted(() => ({
   create: vi.fn(),
   createWithFile: vi.fn(),
   preview: vi.fn(),
+  medirEmail: vi.fn(),
 }));
 const emailApi = vi.hoisted(() => ({
   show: vi.fn(),
@@ -256,6 +257,8 @@ describe('Nova campanha — WhatsApp API (D7)', () => {
           'Oi {{contact.first_name}}!{{publico.data_de_vencimento}}',
         template_id: 3,
         variable_defaults: {},
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
       },
     });
     expect(push).toHaveBeenCalledWith({
@@ -318,6 +321,8 @@ describe('Nova campanha — SMS (#1004, M3)', () => {
         scheduled_at: null,
         message: 'Olá {{contact.first_name}}',
         variable_defaults: {},
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
       },
     });
     wrapper.unmount();
@@ -401,6 +406,7 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
     });
     emailApi.sendTest.mockResolvedValue({});
     emailApi.schedule.mockResolvedValue({});
+    journey.medirEmail.mockResolvedValue({});
     // The editor's exit lands here with ?email=<id> (journeyRedirects, #1093).
     const wrapper = mountPage({ query: { email: '31' } });
     await flushPromises();
@@ -423,6 +429,11 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
     await wrapper.find('[data-test="open-confirmation"]').trigger('click');
     await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
     await flushPromises();
+    // #3098: "Quem comprou depois" goes before the schedule, with the defaults.
+    expect(journey.medirEmail).toHaveBeenCalledWith(31, {
+      janela_de_compra_dias: 7,
+      grupo_de_controle_pct: 0,
+    });
     expect(emailApi.schedule).toHaveBeenCalledWith(
       31,
       '2027-01-10T11:00:00.000Z'

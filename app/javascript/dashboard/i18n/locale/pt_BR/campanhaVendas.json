@@ -1,0 +1,57 @@
+{
+  "CAMPANHA_VENDAS": {
+    "MEDIR": {
+      "TITULO": "Quem comprou depois",
+      "JANELA": "Contar as compras feitas até quantos dias depois do envio?",
+      "DIAS": "{n} dia | {n} dias",
+      "JANELA_AJUDA": "Conta quem recebeu a mensagem e comprou nesse prazo, mesmo sem responder. Na dúvida, deixe 7 dias.",
+      "CONTROLE": "Deixar uma parte sem receber, para comparar",
+      "CONTROLE_AJUDA": "{sem} de {total} pessoas não vão receber, por sorteio. Depois mostramos se quem recebeu comprou mais.",
+      "CONTROLE_QUANTO": "Quantos ficam sem receber",
+      "PORCENTO": "{n}%",
+      "RESUMO_SEM_CONTROLE": "Sem grupo para comparar",
+      "RESUMO_COM_CONTROLE": "{sem} pessoas ficam sem receber, para comparar",
+      "CONTROLE_AJUDA_DESLIGADO": "Se ligar, sorteamos uma parte do público que não recebe esta mensagem. Depois mostramos se quem recebeu comprou mais.",
+      "PESSOAS_DO_GRUPO": "{n} pessoa | {n} pessoas",
+      "POUCO_PARA_COMPARAR": "As opções apagadas deixariam menos de {minimo} pessoas sem receber: pouco para comparar.",
+      "PUBLICO_PEQUENO": "Para comparar, o público precisa ter pelo menos {minimo} pessoas. Este tem {total}.",
+      "RESUMO": "Contar quem comprou em até {dias} dias",
+      "FICAM_PARA_COMPARAR": "Ficam sem receber, para comparar"
+    },
+    "RESULTADO": {
+      "TITULO": "Quem recebeu e comprou",
+      "CONTANDO_ATE": "Ainda contando até {data}. Os números podem subir.",
+      "FECHADO": "Contou as compras feitas em até {dias} dias depois de cada envio.",
+      "COMPRARAM": "{n} pessoa comprou depois de receber | {n} pessoas compraram depois de receber",
+      "NINGUEM": "Ninguém comprou depois de receber, por enquanto.",
+      "VALOR": "{valor} em compras",
+      "RESPONDERAM": "Responderam e compraram",
+      "SEM_RESPONDER": "Compraram sem responder",
+      "PESSOAS": "{n} pessoa | {n} pessoas",
+      "COMPARAR_TITULO": "Comparado com quem ficou sem receber",
+      "DE": "{compraram} de {total}",
+      "MAIS": "Quem recebeu comprou {vezes} vezes mais que quem ficou sem receber.",
+      "SO_QUEM_RECEBEU": "Só quem recebeu comprou. Ninguém que ficou sem receber comprou.",
+      "IGUAL": "Compraram quase igual. Desta vez a mensagem não fez diferença.",
+      "MENOS": "Quem ficou sem receber comprou mais. Vale rever a mensagem ou o público.",
+      "POUCOS": "Ainda não dá para comparar: poucas pessoas ficaram sem receber.",
+      "SO_CONTAGEM": "O valor das compras fica escondido para você. Quem cuida da conta pode liberar.",
+      "NINGUEM_FECHADO": "Ninguém que recebeu comprou nos {dias} dias.",
+      "UM_POUCO_MAIS": "Quem recebeu comprou mais que quem ficou sem receber.",
+      "POUCAS_COMPRAS": "Ainda não dá para ter certeza: poucas compras para comparar.",
+      "DE_CADA": "De cada {escala} que receberam, {n} compraram. | De cada {escala} que receberam, {n} comprou. | De cada {escala} que receberam, {n} compraram.",
+      "DE_CADA_SEM": "De cada {escala} que ficaram sem receber, {n} compraram. | De cada {escala} que ficaram sem receber, {n} comprou. | De cada {escala} que ficaram sem receber, {n} compraram.",
+      "DOBRO": "Quem recebeu comprou mais que o dobro de quem ficou sem receber.",
+      "TRIPLO": "Quem recebeu comprou mais que o triplo de quem ficou sem receber.",
+      "POUCOS_FECHADO": "Não deu para comparar: poucas pessoas ficaram sem receber.",
+      "POUCAS_COMPRAS_FECHADO": "Não deu para ter certeza: foram poucas compras para comparar."
+    },
+    "AUTOMACAO": {
+      "TITULO": "Compras depois da automação",
+      "PASSARAM": "A automação agiu com {n} pessoa | A automação agiu com {n} pessoas",
+      "COMPRARAM": "{n} pessoa comprou em até {janela} dias depois | {n} pessoas compraram em até {janela} dias depois",
+      "NINGUEM": "Ninguém comprou em até {janela} dias depois",
+      "VALOR": "{valor} em compras"
+    }
+  }
+}

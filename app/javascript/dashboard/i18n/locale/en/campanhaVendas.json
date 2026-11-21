@@ -1,0 +1,57 @@
+{
+  "CAMPANHA_VENDAS": {
+    "MEDIR": {
+      "TITULO": "Who bought afterwards",
+      "JANELA": "Count purchases made up to how many days after sending?",
+      "DIAS": "{n} day | {n} days",
+      "JANELA_AJUDA": "Counts who got the message and bought in this period, even without replying. If unsure, keep 7 days.",
+      "CONTROLE": "Leave part of the audience out, to compare",
+      "CONTROLE_AJUDA": "{sem} of {total} people won't get it, by draw. Then we show whether those who got it bought more.",
+      "CONTROLE_QUANTO": "How many are left out",
+      "PORCENTO": "{n}%",
+      "RESUMO_SEM_CONTROLE": "No comparison group",
+      "RESUMO_COM_CONTROLE": "{sem} people won't receive it, for comparison",
+      "CONTROLE_AJUDA_DESLIGADO": "If on, we draw part of the audience that won't get this message. Then we show whether those who got it bought more.",
+      "PESSOAS_DO_GRUPO": "{n} person | {n} people",
+      "POUCO_PARA_COMPARAR": "The dimmed options would leave fewer than {minimo} people out: too few to compare.",
+      "PUBLICO_PEQUENO": "To compare, the audience needs at least {minimo} people. This one has {total}.",
+      "RESUMO": "Count who bought within {dias} days",
+      "FICAM_PARA_COMPARAR": "Left out, to compare"
+    },
+    "RESULTADO": {
+      "TITULO": "Who got it and bought",
+      "CONTANDO_ATE": "Still counting until {data}. The numbers may go up.",
+      "FECHADO": "Counted purchases made within {dias} days after each send.",
+      "COMPRARAM": "{n} person bought after receiving it | {n} people bought after receiving it",
+      "NINGUEM": "Nobody bought after receiving it, so far.",
+      "VALOR": "{valor} in purchases",
+      "RESPONDERAM": "Replied and bought",
+      "SEM_RESPONDER": "Bought without replying",
+      "PESSOAS": "{n} person | {n} people",
+      "COMPARAR_TITULO": "Compared with who was left out",
+      "DE": "{compraram} of {total}",
+      "MAIS": "Those who received it bought {vezes} times more than those who didn't.",
+      "SO_QUEM_RECEBEU": "Only those who got it bought. Nobody left out bought.",
+      "IGUAL": "They bought about the same. This time the message made no difference.",
+      "MENOS": "Those left out bought more. Consider reviewing the message or the audience.",
+      "POUCOS": "Not enough to compare yet: few people were left out.",
+      "SO_CONTAGEM": "The purchase value is hidden for you. The account admin can grant access.",
+      "NINGUEM_FECHADO": "Nobody who got it bought within the {dias} days.",
+      "UM_POUCO_MAIS": "Those who got it bought more than those left out.",
+      "POUCAS_COMPRAS": "Can't be sure yet: too few purchases to compare.",
+      "DE_CADA": "Out of every {escala} who received it, {n} bought. | Out of every {escala} who received it, {n} bought. | Out of every {escala} who received it, {n} bought.",
+      "DE_CADA_SEM": "Out of every {escala} who didn't receive it, {n} bought. | Out of every {escala} who didn't receive it, {n} bought. | Out of every {escala} who didn't receive it, {n} bought.",
+      "DOBRO": "Those who received it bought more than twice as much as those who didn't.",
+      "TRIPLO": "Those who received it bought more than three times as much as those who didn't.",
+      "POUCOS_FECHADO": "We couldn't compare: too few people stayed out.",
+      "POUCAS_COMPRAS_FECHADO": "We couldn't be sure: too few purchases to compare."
+    },
+    "AUTOMACAO": {
+      "TITULO": "Purchases after the automation",
+      "PASSARAM": "The automation acted on {n} person | The automation acted on {n} people",
+      "COMPRARAM": "{n} person bought within {janela} days | {n} people bought within {janela} days",
+      "NINGUEM": "Nobody bought within {janela} days",
+      "VALOR": "{valor} in purchases"
+    }
+  }
+}
