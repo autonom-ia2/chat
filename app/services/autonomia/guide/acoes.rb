@@ -186,9 +186,9 @@ class Autonomia::Guide::Acoes
   # ação só (o formato da ação não tem corpo); com eles, também pelo que o corpo faz.
   # O corpo também conta pelo esquema: o que cai num nó `x-sem-volta` (regra que manda mensagem) confirma.
   def desfazivel?(acao, dados = nil)
-    # O que o pedido faz também pode não ter volta: ligar o Decisor, ajustar automação ligada, trocar credencial (SemVolta).
+    # O que o pedido faz também pode não ter volta: ligar o Decisor, ajustar automação ligada, trocar credencial (PeloQueFaz).
     SEM_DESFAZER.exclude?(acao.to_s) &&
-      !::Autonomia::Guide::SemVolta.pelo_que_faz?(@account, acao.to_s, dados, dados && conferencia(acao, dados))
+      !::Autonomia::Guide::PeloQueFaz.sem_volta?(@account, acao.to_s, dados, dados && conferencia(acao, dados))
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação

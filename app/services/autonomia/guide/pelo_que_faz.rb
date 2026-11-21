@@ -1,10 +1,11 @@
 # O que um pedido de escrita faz e que o desfazer não alcança, além das rotas de `Acoes::SEM_DESFAZER`.
 # `Acoes#desfazivel?` pergunta aqui; cada regra mora na própria classe.
-module Autonomia::Guide::SemVolta
+# Não é regra de domínio (o guarda do #932 proíbe arquivo `*sem_volta*` por domínio): só reúne as classes de regra.
+module Autonomia::Guide::PeloQueFaz
   module_function
 
   # `conferencia` é a `Formatos::Conferencia` do pedido (nil sem dados).
-  def pelo_que_faz?(account, acao, dados, conferencia)
+  def sem_volta?(account, acao, dados, conferencia)
     # #3106: as regras leem o corpo como a plataforma o recebe (envelope aberto ou fechado pela conferência).
     # Lendo o corpo cru, `{automation_rule: {active: true}}` passava por desligado e ia ligado.
     dados = dados&.merge(corpo: conferencia.corpo)

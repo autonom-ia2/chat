@@ -21,7 +21,7 @@ module Autonomia::Guide::CredencialDaCaixa
 
   module_function
 
-  # `dados` com o corpo já como a plataforma vai recebê-lo (`SemVolta.pelo_que_faz?` normaliza antes).
+  # `dados` com o corpo já como a plataforma vai recebê-lo (`PeloQueFaz.sem_volta?` normaliza antes).
   def troca?(acao, dados)
     return false unless dados && ACOES.include?(acao)
 

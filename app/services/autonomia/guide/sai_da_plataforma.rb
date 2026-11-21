@@ -101,7 +101,7 @@ module Autonomia::Guide::SaiDaPlataforma
 
   module_function
 
-  # `dados` com o corpo já como a plataforma vai recebê-lo (`SemVolta.pelo_que_faz?` normaliza antes).
+  # `dados` com o corpo já como a plataforma vai recebê-lo (`PeloQueFaz.sem_volta?` normaliza antes).
   def vira_administrador?(acao, dados)
     return false unless dados && EDITAR_AGENTE.include?(acao)
 
