@@ -21,7 +21,8 @@ ENV RAILS_ENV ${RAILS_ENV}
 
 # 6144: com a onda 2 do agendamento (#1209) o vite build passou de 4 GB e o deploy de 10/10 falhou por heap (runner 16 GB).
 # 8192: o deploy do #3051 (20/11) estourou 6 GB duas vezes (#3086). Teto prático: o runner tem 16 GB e o Ruby/Docker
-# rodam junto. Passou disso, atacar o consumo do vite build em vez de subir o limite.
+# rodam junto. Passou disso, atacar o consumo do vite build em vez de subir o limite (#3088).
+# Os jobs de teste que rodam o vite build usam o mesmo teto (.github/workflows, NODE_OPTIONS).
 ARG NODE_OPTIONS="--max-old-space-size=8192 --openssl-legacy-provider"
 ENV NODE_OPTIONS ${NODE_OPTIONS}
 
