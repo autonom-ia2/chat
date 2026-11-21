@@ -18,6 +18,10 @@ module Mcp::Tools
     Mcp::Tools::AddContactNote,
     Mcp::Tools::ListCompanies,
     Mcp::Tools::GetCompany,
-    Mcp::Tools::GetReportSummary
+    Mcp::Tools::GetReportSummary,
+    Mcp::Tools::PlatformCatalog,
+    Mcp::Tools::PlatformRead,
+    Mcp::Tools::PlatformActionFormat,
+    Mcp::Tools::PlatformAction
   ].freeze
 end

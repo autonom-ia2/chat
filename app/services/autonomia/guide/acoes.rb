@@ -55,9 +55,10 @@ class Autonomia::Guide::Acoes
   SEM_DESFAZER = [
     'POST conversations',
     'POST conversations/:conversation_id/messages',
-    'POST conversations/:conversation_id/messages/:id/retry',
+    # #3106 — a reação vai ao WhatsApp do cliente (WAHA): o desfazer apaga a linha, não a reação que ele já viu.
+    'POST conversations/:conversation_id/messages/:id/retry', 'POST conversations/:conversation_id/messages/:id/reaction',
     'POST conversations/:conversation_id/contact_info_request',
-    'POST contacts/:id/call',
+    'POST contacts/:id/call', 'POST conversa_canal/reacoes',
     'POST whatsapp_calls/initiate',
     'POST campaigns',
     'POST whatsapp_api_campaigns',
@@ -111,7 +112,8 @@ class Autonomia::Guide::Acoes
     'PUT crm/contacts/:contact_id/relacao', 'POST automation_rules/:automation_rule_id/clone'
     # #2896 — e toda escrita da conferência de "Trazer minha lista" (`Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA`):
     # ela grava com update_all, anexo e job, onde o caderno não chega.
-  ].concat(::Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA).freeze
+    # #3106 — e o que manda dado para fora da conta ou dá acesso a alguém (`SaiDaPlataforma::ACOES`).
+  ].concat(::Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA, ::Autonomia::Guide::SaiDaPlataforma::TODAS).freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
   # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma
@@ -184,9 +186,9 @@ class Autonomia::Guide::Acoes
   # ação só (o formato da ação não tem corpo); com eles, também pelo que o corpo faz.
   # O corpo também conta pelo esquema: o que cai num nó `x-sem-volta` (regra que manda mensagem) confirma.
   def desfazivel?(acao, dados = nil)
-    # #2889: ajuste numa automação do motor novo ligada vale na hora, como o Decisor ligado: a pessoa confirma.
-    SEM_DESFAZER.exclude?(acao.to_s) && !::Autonomia::Guide::RegraComDecisor.new(@account).fica_ligada?(acao.to_s, dados) &&
-      !::Autonomia::Guide::MotorNovo.new(@account).ajusta_ligada?(acao.to_s, dados) && !(dados && conferencia(acao, dados).sem_volta?)
+    # O que o pedido faz também pode não ter volta: ligar o Decisor, ajustar automação ligada, trocar credencial (SemVolta).
+    SEM_DESFAZER.exclude?(acao.to_s) &&
+      !::Autonomia::Guide::SemVolta.pelo_que_faz?(@account, acao.to_s, dados, dados && conferencia(acao, dados))
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação

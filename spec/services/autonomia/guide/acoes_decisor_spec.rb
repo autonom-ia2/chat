@@ -28,10 +28,33 @@ RSpec.describe Autonomia::Guide::Acoes do
 
   it 'ligar uma regra que tem Decisor pede confirmação; ligar regra sem Decisor não' do
     com_decisor = create(:automation_rule, account: conta, active: false, actions: passos)
-    sem_decisor = create(:automation_rule, account: conta, active: false)
+    sem_decisor = create(:automation_rule, account: conta, active: false, actions: [{ action_name: 'add_label', action_params: ['lead'] }])
 
     expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: com_decisor.id }, corpo: { active: true } })).to be(false)
     expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: sem_decisor.id }, corpo: { active: true } })).to be(true)
+  end
+
+  # #3106 (revisão do Codex): o PUT cai no mesmo update, e o corpo embrulhado chega aberto à plataforma.
+  it 'ligar por PUT, ou com o corpo embrulhado, também pede confirmação' do
+    com_decisor = create(:automation_rule, account: conta, active: false, actions: passos)
+    caminho = { id: com_decisor.id }
+
+    expect(acoes.desfazivel?('PUT automation_rules/:id', { caminho: caminho, corpo: { active: true } })).to be(false)
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: caminho, corpo: { automation_rule: { active: true } } })).to be(false)
+    expect { acoes.conferir!('PUT automation_rules/:id', { caminho: caminho, corpo: { active: true } }) }
+      .to raise_error(described_class::Recusada)
+  end
+
+  # #3106 (revisão do Codex): ligar a regra gravada que manda mensagem, sem repetir as ações, também confirma.
+  it 'ligar regra gravada que manda mensagem pede confirmação; renomear a que já está ligada segue direto' do
+    acoes_que_mandam = [{ 'action_name' => 'send_message', 'action_params' => ['Olá! Já vamos te atender.'] }]
+    desligada = create(:automation_rule, account: conta, active: false, actions: acoes_que_mandam)
+    ligada = create(:automation_rule, account: conta, active: true, actions: acoes_que_mandam)
+
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: desligada.id }, corpo: { active: true } })).to be(false)
+    expect(acoes.desfazivel?('PUT automation_rules/:id', { caminho: { id: desligada.id }, corpo: { automation_rule: { active: true } } }))
+      .to be(false)
+    expect(acoes.desfazivel?('PATCH automation_rules/:id', { caminho: { id: ligada.id }, corpo: { name: 'Boas-vindas' } })).to be(true)
   end
 
   it 'pôr o Decisor numa regra que já está ligada pede confirmação' do
