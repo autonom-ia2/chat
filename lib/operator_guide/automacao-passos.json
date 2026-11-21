@@ -602,6 +602,22 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETIQUETA"
         }
       ]
+    },
+    {
+      "tipo": "contato.entrou_no_grupo_de_compra",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_ENTROU_NO_GRUPO_DE_COMPRA",
+      "grupo": "contato",
+      "requer": "automacao_gatilhos",
+      "se_repetir": true,
+      "parametros": [
+        {
+          "nome": "grupo_de_compra",
+          "peca": "grupo_de_compra",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.GRUPO_DE_COMPRA"
+        }
+      ]
     }
   ],
   "operadores": [

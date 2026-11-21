@@ -7,6 +7,7 @@ import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import SegundaLinha from './SegundaLinha.vue';
 import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
+import { useIdioma } from '../../ficha/idioma';
 
 // #2894 — uma pessoa na lista. Clicar no nome (ou Enter) abre a ficha: o botão
 // do nome estica a área de clique pela linha toda; a caixa de marcar e o
@@ -34,13 +35,19 @@ const props = defineProps({
   podeConversar: { type: Boolean, default: false },
   podeEditar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
+  // #3097 — com os grupos por compra, a segunda linha diz a compra.
+  porCompra: { type: Boolean, default: false },
 });
 const emit = defineEmits(['abrir', 'alternar', 'conversar', 'editar']);
 
 const { t } = useI18n();
 
+const idioma = useIdioma();
 const partes = computed(() =>
-  segundaLinhaDaPessoa(props.pessoa, props.agora, t)
+  segundaLinhaDaPessoa(props.pessoa, props.agora, t, {
+    porCompra: props.porCompra,
+    idioma: idioma.value,
+  })
 );
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');

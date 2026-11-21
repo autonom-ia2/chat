@@ -30,7 +30,8 @@
       "CONVERSA_ETIQUETA_POSTA": "When a label is added to the conversation",
       "CONVERSA_ETIQUETA_TIRADA": "When a label is removed from the conversation",
       "CONTATO_ETIQUETA_POSTA": "When a label is added to the contact",
-      "CONTATO_ETIQUETA_TIRADA": "When a label is removed from the contact"
+      "CONTATO_ETIQUETA_TIRADA": "When a label is removed from the contact",
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "When the person joins a purchase group"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -94,7 +95,8 @@
       "REPETE": "Repeats",
       "PAGINA_ID": "Booking page",
       "ANTES": "How long before it starts",
-      "ETIQUETA": "Label"
+      "ETIQUETA": "Label",
+      "GRUPO_DE_COMPRA": "Purchase group"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -122,7 +124,8 @@
       "CONVERSA_ETIQUETA_POSTA": "When the label {etiqueta} is added to the conversation",
       "CONVERSA_ETIQUETA_TIRADA": "When the label {etiqueta} is removed from the conversation",
       "CONTATO_ETIQUETA_POSTA": "When the label {etiqueta} is added to the contact",
-      "CONTATO_ETIQUETA_TIRADA": "When the label {etiqueta} is removed from the contact"
+      "CONTATO_ETIQUETA_TIRADA": "When the label {etiqueta} is removed from the contact",
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "When the person joins the group {grupo_de_compra}"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
@@ -151,6 +154,9 @@
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Could not load the date fields. Close and open it again.",
       "AVISO_LEMBRETE": "If the meeting is rescheduled, it reminds at the new time. If it is canceled, it does not remind. If it is booked with less notice than this, it reminds right away."
+    },
+    "GATILHO_DE_COMPRA": {
+      "ERRO_FAIXAS": "Couldn't load the purchase groups. Close and open again."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Any page",

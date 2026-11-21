@@ -11,7 +11,7 @@ import { ORDENS } from '../fonte/listaFonte';
 // dela (`companies_sort_by`).
 const ORDEM = 'RELACIONAMENTOS.LISTA.ORDENAR';
 
-const campo = (chave, ordens) => ({ chave, ordens });
+const campo = (chave, ordens, prefixo = ORDEM) => ({ chave, ordens, prefixo });
 const ordem = (value, sentido) => ({ value, sentido });
 
 export const CAMPOS_DE_ORDEM = [
@@ -41,16 +41,41 @@ export const CAMPOS_DE_ORDEM_DAS_EMPRESAS = [
   ]),
 ];
 
+// #3097 — na visão por compra, Compra e Total comprado vêm antes das outras; a
+// ordem padrão dessa visão é "Mais tempo sem comprar". Não vão para a
+// preferência guardada (a lista de contatos de hoje não as conhece).
+export const ORDEM_PADRAO_POR_COMPRA = 'mais_tempo_sem_comprar';
+const ORDEM_DE_COMPRA = 'RELACIONAMENTOS_COMPRAS.ORDENAR';
+export const CAMPOS_DE_ORDEM_POR_COMPRA = [
+  campo(
+    'COMPRA',
+    [
+      ordem(ORDEM_PADRAO_POR_COMPRA, 'MAIS_TEMPO'),
+      ordem('compra_mais_recente', 'RECENTE'),
+    ],
+    ORDEM_DE_COMPRA
+  ),
+  campo(
+    'TOTAL',
+    [ordem('mais_comprou', 'MAIS'), ordem('menos_comprou', 'MENOS')],
+    ORDEM_DE_COMPRA
+  ),
+  ...CAMPOS_DE_ORDEM,
+];
+// Quem não vê valor de venda não ordena por quanto a pessoa comprou.
+export const CAMPOS_DE_ORDEM_POR_COMPRA_SEM_VALOR =
+  CAMPOS_DE_ORDEM_POR_COMPRA.filter(({ chave }) => chave !== 'TOTAL');
+
 // As escolhas da lista, agrupadas por campo (o `groups` do ChoiceSelect). O
 // botão fechado mostra o campo e o sentido juntos ("Cidade, de A a Z").
 export const gruposDeOrdem = (t, campos = CAMPOS_DE_ORDEM) =>
-  campos.map(({ chave, ordens }) => ({
-    label: t(`${ORDEM}.CAMPOS.${chave}`),
+  campos.map(({ chave, ordens, prefixo }) => ({
+    label: t(`${prefixo}.CAMPOS.${chave}`),
     options: ordens.map(({ value, sentido }) => {
-      const escolhida = t(`${ORDEM}.ESCOLHIDA.${chave}_${sentido}`);
+      const escolhida = t(`${prefixo}.ESCOLHIDA.${chave}_${sentido}`);
       return {
         value,
-        label: t(`${ORDEM}.SENTIDOS.${sentido}`),
+        label: t(`${prefixo}.SENTIDOS.${sentido}`),
         shortLabel: escolhida,
         searchLabel: escolhida,
       };

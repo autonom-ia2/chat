@@ -1141,8 +1141,13 @@ Rails.application.routes.draw do
                 get :notas
                 get :arquivos
                 get :origem
+                # #3097 — o resumo das compras da pessoa (os cards ganhos nos funis de Vender).
+                get :compras
               end
             end
+            # #3097 — as faixas dos grupos de compra da conta: ler e, o administrador, ajustar.
+            get :grupos_de_compra, to: 'grupos_de_compra#show'
+            patch :grupos_de_compra, to: 'grupos_de_compra#update'
             if ChatwootApp.enterprise?
               resources :empresas, only: [:index, :show] do
                 get :contagens, on: :collection

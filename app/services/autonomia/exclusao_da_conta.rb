@@ -33,6 +33,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
   ETAPAS = [
     # Contador do limite de mensagens por cliente (#3063): ninguém aponta para ele.
     ['Autonomia::EnvioAoCliente', :por_conta],
+    # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.
+    ['Relacionamentos::Compra', :por_conta],
     # Decisões, passagens e memória apontam para card, funil e conversa.
     ['Autonomia::DecisorDecisao', :por_conta],
     ['Autonomia::Decisor', :por_conta],

@@ -43,8 +43,9 @@ class Autonomia::Automacao::Ensaio
   MAXIMO_DE_PASSOS = 500
   GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada mensagem.falhou conversa.responsavel_mudou
                 conversa.time_mudou conversa.etiqueta_posta conversa.etiqueta_tirada].freeze
-  # G10: o gatilho de contato que o ensaio roda; os de tempo e o recorrente do contato, ainda não.
-  DO_CONTATO = %w[contato.etiqueta_posta contato.etiqueta_tirada].freeze
+  # G10: o gatilho de contato que o ensaio roda; os de tempo e o recorrente do contato, ainda não. #3097: o "entrou no
+  # grupo de compra", nas pessoas que estão no grupo.
+  DO_CONTATO = %w[contato.etiqueta_posta contato.etiqueta_tirada contato.entrou_no_grupo_de_compra].freeze
   AMOSTRAS = { 'conversa' => ::Autonomia::Automacao::ConversasDoEnsaio, 'card' => ::Autonomia::Automacao::CardsDoEnsaio,
                'contato' => ::Autonomia::Automacao::ContatosDoEnsaio }.freeze
   SO_MOSTRA = %w[esperar].freeze

@@ -1448,5 +1448,13 @@
         "TEXTO": "When a plan starts, the system gets the missing details, sends them to your management system and sends a welcome message."
       }
     }
+  },
+  "RELACIONAMENTOS_COMPRAS": {
+    "FICHA": {
+      "DE_ONDE": "A purchase shows up here when one of this person's cards is marked as implemented."
+    },
+    "HEROI": {
+      "NENHUMA_APOIO": "A purchase counts when a card is marked as implemented."
+    }
   }
 }

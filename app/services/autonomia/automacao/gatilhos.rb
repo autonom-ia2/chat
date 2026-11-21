@@ -32,7 +32,7 @@ module Autonomia::Automacao::Gatilhos
   DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
   # Os parâmetros que o gatilho compara como texto (sem diferença de maiúscula); os outros são ids.
-  DE_TEXTO = %w[etiqueta].freeze
+  DE_TEXTO = %w[etiqueta grupo_de_compra].freeze
   # O card atualizado (G27, #2661): a `mudanca` é o campo e a condição (Autonomia::Automacao::MudancaDoCard).
   ATUALIZADO = 'card.atualizado'.freeze
 
@@ -50,6 +50,8 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'conversa.etiqueta_tirada', alvo: 'Conversation', origem: :evento, parametros: %w[etiqueta]),
     Entrada.new(tipo: 'contato.etiqueta_posta', alvo: CONTATO, origem: :evento, parametros: %w[etiqueta]),
     Entrada.new(tipo: 'contato.etiqueta_tirada', alvo: CONTATO, origem: :evento, parametros: %w[etiqueta]),
+    # #3097: a pessoa entrou num grupo de compra, por uma venda ou com o passar do tempo (Relacionamentos::Compras::Recalcular).
+    Entrada.new(tipo: 'contato.entrou_no_grupo_de_compra', alvo: CONTATO, origem: :evento, parametros: %w[grupo_de_compra]),
     Entrada.new(tipo: 'card.criado', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.entrou_na_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
