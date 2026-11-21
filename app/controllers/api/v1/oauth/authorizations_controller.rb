@@ -14,10 +14,11 @@ class Api::V1::Oauth::AuthorizationsController < Doorkeeper::AuthorizationsContr
 
   private
 
-  # The consent screen says the connection covers every account the user administers (#3106), so the server marks the
-  # grant that way. A value sent by the client is overwritten: it never decides how far the connection reaches.
+  # The consent screen of #3106 says the connection covers every account the user administers, and tells so with
+  # `accounts_consent=all` (the screen before it, still open in a tab, does not send it). Only then the grant covers them
+  # all. An `all_accounts` sent by anyone is overwritten: it never decides how far the connection reaches.
   def pre_auth_params
-    super.merge(all_accounts: true)
+    super.merge(all_accounts: params[:accounts_consent] == 'all')
   end
 
   def sync_metadata_document_client

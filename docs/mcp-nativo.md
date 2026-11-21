@@ -71,8 +71,9 @@ Antes do #3106 a conexão valia para a conta escolhida no consentimento. A conex
 contas que a pessoa administra. A coluna `all_accounts` (em `oauth_access_grants` e `oauth_access_tokens`) guarda qual
 das duas promessas a pessoa aceitou:
 
-- O servidor liga a coluna no consentimento novo (`Api::V1::Oauth::AuthorizationsController#pre_auth_params`); o valor
-  que o cliente mandar é ignorado.
+- O servidor liga a coluna só quando a tela de consentimento nova aprova (ela manda `accounts_consent=all`;
+  `Api::V1::Oauth::AuthorizationsController#pre_auth_params`). Uma aba ainda aberta com a tela anterior não manda, e a
+  conexão fica numa conta. Um `all_accounts` mandado por quem quer que seja é ignorado.
 - O Doorkeeper a copia do grant para o token e de um token para o seguinte na renovação
   (`custom_access_token_attributes`).
 - Sem ela (padrão `false`), a conexão segue valendo só para a conta dela: `list_accounts` mostra só essa, e outra conta

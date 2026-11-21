@@ -97,6 +97,7 @@ describe('Authorize', () => {
     expect(oauthAPI.approveAuthorization).toHaveBeenCalledWith({
       ...OAUTH_QUERY,
       account_id: 7,
+      accounts_consent: 'all',
     });
     expect(window.location.assign).toHaveBeenCalledWith(
       'https://chatgpt.com/callback?code=123'
@@ -157,6 +158,7 @@ describe('Authorize', () => {
     expect(oauthAPI.approveAuthorization).toHaveBeenCalledWith({
       ...OAUTH_QUERY,
       account_id: 7,
+      accounts_consent: 'all',
     });
   });
 

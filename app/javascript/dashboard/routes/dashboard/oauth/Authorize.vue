@@ -102,6 +102,8 @@ const approve = () =>
     oauthAPI.approveAuthorization({
       ...oauthParams.value,
       account_id: defaultAccountId.value,
+      // This screen shows that the connection covers every account (#3106); the server only marks it that way when told so.
+      accounts_consent: 'all',
     })
   );
 
