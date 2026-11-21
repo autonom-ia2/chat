@@ -10,7 +10,6 @@ import {
   OAUTH_SCOPE_LABELS,
 } from 'dashboard/constants/oauth';
 import Button from 'dashboard/components-next/button/Button.vue';
-import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
@@ -24,14 +23,15 @@ const authorization = ref(null);
 const hasNetworkError = ref(false);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
-// Only administrators may connect apps (#3089), so only the accounts the user administers are offered.
+// Only administrators may connect apps (#3089). One connection covers every account the user administers (#3106).
 const adminAccounts = computed(() =>
   (currentUser.value.accounts || []).filter(
     account => account.role === 'administrator' && account.status === 'active'
   )
 );
 const routeAccountId = Number(route.params.accountId);
-const selectedAccountId = ref(
+// The account the tools use when the app names none: the one the user is in, or the first they administer.
+const defaultAccountId = computed(() =>
   adminAccounts.value.some(account => account.id === routeAccountId)
     ? routeAccountId
     : (adminAccounts.value[0]?.id ?? null)
@@ -46,11 +46,15 @@ const oauthParams = computed(() =>
   )
 );
 
-const accountOptions = computed(() =>
-  adminAccounts.value.map(account => ({
-    value: account.id,
-    label: account.name,
-  }))
+const MAX_ACCOUNT_NAMES = 5;
+const accountNames = computed(() =>
+  adminAccounts.value.map(account => account.name)
+);
+const shownAccountNames = computed(() =>
+  accountNames.value.slice(0, MAX_ACCOUNT_NAMES).join(', ')
+);
+const hiddenAccountCount = computed(() =>
+  Math.max(accountNames.value.length - MAX_ACCOUNT_NAMES, 0)
 );
 
 const scopes = computed(() =>
@@ -60,7 +64,7 @@ const scopes = computed(() =>
 );
 
 const singleAccountName = computed(() =>
-  accountOptions.value.length === 1 ? accountOptions.value[0].label : ''
+  accountNames.value.length === 1 ? accountNames.value[0] : ''
 );
 
 const redirectHost = computed(
@@ -97,7 +101,7 @@ const approve = () =>
   respond(
     oauthAPI.approveAuthorization({
       ...oauthParams.value,
-      account_id: selectedAccountId.value,
+      account_id: defaultAccountId.value,
     })
   );
 
@@ -124,7 +128,7 @@ onMounted(fetchAuthorization);
         <Spinner />
       </div>
       <div
-        v-else-if="authorization && !accountOptions.length"
+        v-else-if="authorization && !accountNames.length"
         class="flex flex-col gap-4"
       >
         <h1 class="text-heading-2 text-n-slate-12">
@@ -191,19 +195,28 @@ onMounted(fetchAuthorization);
         <p v-if="singleAccountName" class="text-body-main text-n-slate-12">
           {{ t('OAUTH.AUTHORIZE.ACCOUNT_SINGLE', { name: singleAccountName }) }}
         </p>
-        <div v-else class="flex flex-col gap-2">
+        <div v-else class="flex flex-col gap-1">
           <span class="text-body-main font-medium text-n-slate-12">
-            {{ t('OAUTH.AUTHORIZE.ACCOUNT_LABEL') }}
+            {{
+              t('OAUTH.AUTHORIZE.ACCOUNTS_ALL', {
+                count: accountNames.length,
+              })
+            }}
           </span>
-          <ChoiceSelect
-            v-model="selectedAccountId"
-            :options="accountOptions"
-            :aria-label="t('OAUTH.AUTHORIZE.ACCOUNT_LABEL')"
-          />
-          <span class="text-body-b3 text-n-slate-11">
-            {{ t('OAUTH.AUTHORIZE.ACCOUNT_NOTE') }}
+          <span class="text-body-main text-n-slate-11">
+            {{ shownAccountNames }}
+            <template v-if="hiddenAccountCount">
+              {{
+                t('OAUTH.AUTHORIZE.ACCOUNTS_MORE', {
+                  count: hiddenAccountCount,
+                })
+              }}
+            </template>
           </span>
         </div>
+        <p class="text-body-b3 text-n-slate-11">
+          {{ t('OAUTH.AUTHORIZE.ACCOUNTS_NOTE') }}
+        </p>
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             lg
@@ -218,7 +231,7 @@ onMounted(fetchAuthorization);
             lg
             class="w-full sm:w-auto"
             :label="t('OAUTH.AUTHORIZE.ALLOW')"
-            :disabled="isSubmitting || !selectedAccountId"
+            :disabled="isSubmitting || !defaultAccountId"
             :is-loading="isSubmitting"
             @click="approve"
           />
