@@ -1,7 +1,9 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
 import { FALHA_DA_PARTE } from '../../ficha/falhas';
+import { blocoDosCamposAparece } from '../../ficha/atributos';
 import CartaoDeInformacoes from './CartaoDeInformacoes.vue';
+import CartaoDosCampos from './CartaoDosCampos.vue';
 import SecaoCards from './SecaoCards.vue';
 import SecaoConversas from './SecaoConversas.vue';
 import SecaoMidias from './SecaoMidias.vue';
@@ -19,6 +21,8 @@ import SecaoPessoasDaEmpresa from './SecaoPessoasDaEmpresa.vue';
 // O que ainda só simula (conversar com uma pessoa daqui, "Ver todas" as
 // conversas sem abrir) só existe na demonstração: `podeConversar`,
 // `podeVerTodas`.
+// #3082 — do lado, "Seus campos" vem antes de Informações: os campos
+// personalizados da empresa (`campos`, de ficha/atributos.js#camposDaEmpresa).
 const props = defineProps({
   pessoas: { type: Array, required: true },
   totalDePessoas: { type: Number, default: 0 },
@@ -27,6 +31,7 @@ const props = defineProps({
   notas: { type: Array, required: true },
   midias: { type: Object, required: true },
   linhas: { type: Array, required: true },
+  campos: { type: Array, default: () => [] },
   agora: { type: Number, required: true },
   falhas: { type: Object, default: () => ({}) },
   tirando: { type: Number, default: null },
@@ -50,6 +55,7 @@ const emit = defineEmits([
   'verTodasAsMidias',
   'alterar',
   'escolherCampos',
+  'criarCampo',
 ]);
 
 const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
@@ -121,13 +127,21 @@ const { t } = useI18n();
       />
     </div>
     <div data-relacionamentos="coluna-lado" class="flex flex-col min-w-0 gap-6">
-      <CartaoDeInformacoes
-        raiz="RELACIONAMENTOS_FICHA.EMPRESA.INFORMACOES"
-        :linhas="linhas"
+      <CartaoDosCampos
+        v-if="blocoDosCamposAparece(campos, podeEditar && podeEscolherCampos)"
+        de="empresa"
+        :campos="campos"
         :pode-editar="podeEditar"
         :pode-escolher-campos="podeEscolherCampos"
         @alterar="emit('alterar')"
         @escolher-campos="emit('escolherCampos')"
+        @criar-campo="emit('criarCampo')"
+      />
+      <CartaoDeInformacoes
+        raiz="RELACIONAMENTOS_FICHA.EMPRESA.INFORMACOES"
+        :linhas="linhas"
+        :pode-editar="podeEditar"
+        @alterar="emit('alterar')"
       />
     </div>
   </div>

@@ -30,7 +30,9 @@ import {
   redesPreenchidas,
 } from '../../ficha/informacoes';
 import {
+  blocoDosCamposAparece,
   camposDaPessoa,
+  linhasDosCampos,
   linkCompleto,
   linkSeguro,
 } from '../../ficha/atributos';
@@ -247,26 +249,24 @@ describe('informações da pessoa', () => {
       attribute_values: ['Manhã', 'Tarde'],
     },
   ];
-  const linhasCom = (alvo, definicoes = DEFINICOES) =>
-    linhasDaPessoa(alvo, {
-      idioma: 'pt-BR',
-      campos: camposDaPessoa({
+  const linhasCom = alvo => linhasDaPessoa(alvo, { idioma: 'pt-BR' });
+  const linhasDosCamposDe = (alvo, definicoes = DEFINICOES, escolhidos = []) =>
+    linhasDosCampos(
+      camposDaPessoa({
         definicoes,
+        escolhidos,
         valores: alvo.custom_attributes,
-      }),
-    });
+      })
+    );
 
-  it('lista o fixo e os campos da conta com o nome que a conta deu', () => {
+  it('lista o fixo; os campos da conta ficam fora de Informações', () => {
     const linhas = linhasCom(pessoa);
     const por = chave => linhas.find(l => l.chave === chave);
     expect(por('cpf')).toMatchObject({ valor: '529.982.247-25', copiar: true });
     // A empresa fica só no cabeçalho.
     expect(por('empresa')).toBeUndefined();
-    expect(por('conta:melhor_horario')).toMatchObject({
-      rotulo: 'Melhor hora para ligar',
-      tipo: 'list',
-      valor: 'Tarde',
-    });
+    // #3082 — os campos da conta vão para o bloco "Seus campos".
+    expect(por('conta:melhor_horario')).toBeUndefined();
     // Telefone e e-mail ficam só no cabeçalho; país e "Sobre" vazios não vêm.
     expect(linhas.map(l => l.chave).slice(0, 2)).toEqual(['cpf', 'cidade']);
     expect(por('telefone')).toBeUndefined();
@@ -293,8 +293,53 @@ describe('informações da pessoa', () => {
     });
   });
 
+  it('"Seus campos": o campo com o nome que a conta deu e o tipo', () => {
+    expect(linhasDosCamposDe(pessoa)).toEqual([
+      {
+        chave: 'conta:melhor_horario',
+        rotulo: 'Melhor hora para ligar',
+        tipo: 'list',
+        valor: 'Tarde',
+      },
+    ]);
+  });
+
+  it('"Seus campos": o escolhido sem valor vem vazio; o não escolhido sem valor fica fora', () => {
+    const definicoes = [
+      ...DEFINICOES,
+      {
+        id: 2,
+        attribute_model: 'contact_attribute',
+        attribute_key: 'placa',
+        attribute_display_name: 'Placa do carro',
+        attribute_display_type: 'text',
+      },
+      {
+        id: 3,
+        attribute_model: 'contact_attribute',
+        attribute_key: 'apelido',
+        attribute_display_name: 'Apelido',
+        attribute_display_type: 'text',
+      },
+    ];
+    const linhas = linhasDosCamposDe(pessoa, definicoes, [2]);
+    expect(linhas.map(l => [l.chave, l.valor])).toEqual([
+      ['conta:placa', ''],
+      ['conta:melhor_horario', 'Tarde'],
+    ]);
+  });
+
+  it('o bloco "Seus campos" aparece com campo para mostrar ou para quem pode criar', () => {
+    const mostrado = { chave: 'a', principal: true };
+    const escondido = { chave: 'b', principal: false };
+    expect(blocoDosCamposAparece([mostrado], false)).toBe(true);
+    expect(blocoDosCamposAparece([escondido], false)).toBe(false);
+    expect(blocoDosCamposAparece([], false)).toBe(false);
+    expect(blocoDosCamposAparece([], true)).toBe(true);
+  });
+
   it('valor gravado sem definição usa o nome da chave, com acento', () => {
-    expect(linhasCom(pessoa, [])).toEqual(
+    expect(linhasDosCamposDe(pessoa, [])).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           chave: 'conta:melhor_horario',

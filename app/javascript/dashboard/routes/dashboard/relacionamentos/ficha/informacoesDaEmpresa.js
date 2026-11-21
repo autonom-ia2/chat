@@ -5,48 +5,37 @@
 // (o servidor junta com o que já havia); a descrição é a coluna `description`.
 import { formatarCnpj, formatarMes, quandoRelativo } from './formatos';
 import { soDigitos } from '../fonte/texto';
-import { linkCompleto, temValor } from './atributos';
+import { linkCompleto } from './atributos';
 import { atributosMudados, comLinksCompletos } from './informacoes';
 
 const preenchido = valor => String(valor ?? '').trim() !== '';
 const limpo = valor => (preenchido(valor) ? String(valor).trim() : '');
 
 // As linhas de Informações: cidade, "O que a empresa faz" (só preenchida), quantas
-// pessoas e clientes, desde quando está cadastrada, a última conversa e os
-// campos personalizados que aparecem na ficha (`campos`, de camposDaEmpresa).
-// CNPJ e site ficam no cabeçalho.
+// pessoas e clientes, desde quando está cadastrada e a última conversa. CNPJ e
+// site ficam no cabeçalho. #3082 — os campos personalizados saíram daqui para o
+// bloco "Seus campos" (atributos.js#linhasDosCampos).
 export const linhasDaEmpresa = (
   empresa,
-  { campos = [], idioma = 'pt-BR', agora = Date.now() } = {}
-) => {
-  const fixas = [
-    { chave: 'cidade', valor: limpo(empresa.city) },
-    ...(preenchido(empresa.description)
-      ? [{ chave: 'sobre', valor: limpo(empresa.description), longo: true }]
-      : []),
-    { chave: 'pessoas', valor: String(empresa.contacts_count ?? 0) },
-    { chave: 'clientes', valor: String(empresa.customers_count ?? 0) },
-    {
-      chave: 'desde',
-      valor: empresa.created_at ? formatarMes(empresa.created_at, idioma) : '',
-    },
-    {
-      chave: 'ultima_conversa',
-      valor: empresa.last_activity_at
-        ? quandoRelativo(empresa.last_activity_at, agora, idioma)
-        : '',
-    },
-  ];
-  const daConta = campos
-    .filter(campo => campo.principal)
-    .map(campo => ({
-      chave: `conta:${campo.chave}`,
-      rotulo: campo.rotulo,
-      tipo: campo.tipo,
-      valor: temValor(campo.valor) ? campo.valor : '',
-    }));
-  return [...fixas, ...daConta];
-};
+  { idioma = 'pt-BR', agora = Date.now() } = {}
+) => [
+  { chave: 'cidade', valor: limpo(empresa.city) },
+  ...(preenchido(empresa.description)
+    ? [{ chave: 'sobre', valor: limpo(empresa.description), longo: true }]
+    : []),
+  { chave: 'pessoas', valor: String(empresa.contacts_count ?? 0) },
+  { chave: 'clientes', valor: String(empresa.customers_count ?? 0) },
+  {
+    chave: 'desde',
+    valor: empresa.created_at ? formatarMes(empresa.created_at, idioma) : '',
+  },
+  {
+    chave: 'ultima_conversa',
+    valor: empresa.last_activity_at
+      ? quandoRelativo(empresa.last_activity_at, agora, idioma)
+      : '',
+  },
+];
 
 // O formulário da gaveta. Empresa nova chega como `{}`. `foto` nasce vazia: é a
 // troca pedida ({ arquivo, previa }) ou { tirar: true }.

@@ -93,6 +93,9 @@ const LembreteGaveta = defineAsyncComponent(
 // Informações. A gaveta ganha a foto, o país, "Sobre a pessoa", a empresa
 // cadastrada (chave `companies`) e os campos com o controle de cada tipo. Quem
 // só pode ver lê tudo isso e o aviso de que não pode mudar.
+// #3082 — os campos personalizados ganharam o bloco "Seus campos", no topo da
+// coluna do lado, com "Novo campo" (o configurador abre direto no formulário)
+// e "Escolher campos da ficha".
 const { t } = useI18n();
 const route = useRoute();
 const idioma = useIdioma();
@@ -170,10 +173,7 @@ const campos = computed(() =>
 );
 const linhas = computed(() =>
   ficha.pessoa.value
-    ? linhasDaPessoa(ficha.pessoa.value, {
-        idioma: idioma.value,
-        campos: campos.value,
-      })
+    ? linhasDaPessoa(ficha.pessoa.value, { idioma: idioma.value })
     : []
 );
 const redes = computed(() =>
@@ -641,6 +641,7 @@ watch(
             :arquivos="ficha.arquivos.value"
             :origem="ficha.origem.value"
             :linhas="linhas"
+            :campos="campos"
             :redes="redes"
             :agora="agora"
             :guardando-nota="ficha.ocupadoEm('guardarNota')"
@@ -655,6 +656,7 @@ watch(
             @guardar-nota="guardarNota"
             @alterar="gavetaAberta = true"
             @escolher-campos="configurador?.open()"
+            @criar-campo="configurador?.open(null, true)"
           >
             <template v-if="comSeguros" #antes>
               <SegurosDaFicha

@@ -6,18 +6,17 @@ import ListaDeInformacoes from './ListaDeInformacoes.vue';
 
 // #3075 — o cartão Informações da ficha. Quem pode mudar (`podeEditar`) tem
 // "Alterar" no topo; quem só pode ver lê que não pode mudar nada (a ficha
-// antiga dizia o mesmo, RecordReadOnly). Quem pode mudar os campos da ficha
-// (`podeEscolherCampos`) tem "Escolher campos" embaixo das informações.
+// antiga dizia o mesmo, RecordReadOnly).
 // #3078 — o mesmo cartão na ficha da pessoa e na da empresa (`raiz`: de onde
-// vêm os nomes das linhas).
+// vêm os nomes das linhas). #3082 — os campos personalizados e "Escolher
+// campos da ficha" foram para o bloco "Seus campos" (CartaoDosCampos).
 defineProps({
   linhas: { type: Array, required: true },
   redes: { type: Array, default: () => [] },
   raiz: { type: String, default: 'RELACIONAMENTOS_FICHA.INFORMACOES' },
   podeEditar: { type: Boolean, default: true },
-  podeEscolherCampos: { type: Boolean, default: false },
 });
-const emit = defineEmits(['alterar', 'escolherCampos']);
+const emit = defineEmits(['alterar']);
 
 const { t } = useI18n();
 </script>
@@ -48,15 +47,5 @@ const { t } = useI18n();
       {{ t('RELACIONAMENTOS_FICHA.INFORMACOES.SO_LEITURA') }}
     </p>
     <ListaDeInformacoes :raiz="raiz" :linhas="linhas" :redes="redes" />
-    <Button
-      v-if="podeEditar && podeEscolherCampos"
-      data-relacionamentos="escolher-campos"
-      slate
-      ghost
-      icon="i-lucide-settings-2"
-      class="!h-11 mt-4 -ms-3"
-      :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ESCOLHER_CAMPOS')"
-      @click="emit('escolherCampos')"
-    />
   </CartaoDaSecao>
 </template>
