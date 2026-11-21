@@ -3,22 +3,30 @@
     "SCOPES": {
       "CONVERSATIONS_READ": "Read your conversations and messages",
       "CONVERSATIONS_WRITE": "Assign conversations and change their status, labels, and priority",
-      "MESSAGES_WRITE": "Send replies to customers and add private notes",
+      "MESSAGES_WRITE": "Send messages to your customers on your behalf and add private notes",
       "CONTACTS_READ": "Read your contacts",
       "CONTACTS_WRITE": "Create and update contacts",
       "REPORTS_READ": "Read your account reports"
     },
     "AUTHORIZE": {
       "TITLE": "{appName} wants to access your Chatwoot account",
-      "DESCRIPTION": "If you allow this, {appName} can do the following with your permissions:",
-      "ACCOUNT_LABEL": "Account",
+      "DESCRIPTION": "If you allow this, {appName} can:",
+      "ACCOUNT_LABEL": "Which account?",
       "ACCOUNT_NOTE": "The app can only access the account you select.",
       "ALLOW": "Allow",
-      "DENY": "Deny",
-      "REDIRECT_NOTE": "{host} will receive this access. Only allow if you recognize this address.",
+      "DENY": "Don't allow",
       "ERROR_TITLE": "This app cannot be connected",
       "ERROR_DESCRIPTION": "The request from the app is not valid. Go back to the app and try again.",
-      "NO_ADMIN_ACCOUNT": "Only account administrators can connect apps. Ask an administrator of your account."
+      "NO_ADMIN_ACCOUNT": "Only account administrators can do this. Ask an administrator to connect the app.",
+      "ACCOUNT_SINGLE": "Account: {name}",
+      "REDIRECT_LABEL": "Who receives this access:",
+      "REDIRECT_HINT": "Only allow if you recognize this address.",
+      "NO_ADMIN_TITLE": "You can't connect this app",
+      "BACK_TO_APP": "Back to the app",
+      "NETWORK_ERROR_TITLE": "We couldn't continue right now",
+      "NETWORK_ERROR_DESCRIPTION": "We couldn't reach the server. Check your connection and try again.",
+      "RETRY": "Try again",
+      "GO_TO_DASHBOARD": "Go to Chatwoot"
     }
   },
   "PROFILE_SETTINGS": {

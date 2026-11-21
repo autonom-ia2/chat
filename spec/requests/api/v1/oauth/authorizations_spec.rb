@@ -140,6 +140,15 @@ RSpec.describe 'OAuth Authorizations API', type: :request do
       expect(Doorkeeper::AccessGrant.count).to eq(0)
     end
 
+    it 'returns 422 for a suspended account, whose token /mcp would refuse' do
+      account.update!(status: :suspended)
+
+      post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: account.id), headers: auth_headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(Doorkeeper::AccessGrant.count).to eq(0)
+    end
+
     it 'returns a redirect URI that carries the code and the state' do
       post '/api/v1/oauth/authorization', params: oauth_params.merge(account_id: account.id), headers: auth_headers
 

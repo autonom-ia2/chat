@@ -45,6 +45,7 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
   describe 'assign_conversation' do
     it 'assigns an agent and a team, and removes them with 0' do
       agent = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agent, inbox: inbox)
       team = create(:team, account: account)
 
       structured('assign_conversation', { conversation_id: conversation.display_id, agent_id: agent.id, team_id: team.id })
@@ -52,6 +53,15 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
 
       structured('assign_conversation', { conversation_id: conversation.display_id, agent_id: 0, team_id: 0 })
       expect(conversation.reload).to have_attributes(assignee: nil, team: nil)
+    end
+
+    it 'does not assign an agent who is not in the inbox of the conversation' do
+      agent = create(:user, account: account, role: :agent)
+
+      result = call_mcp_tool('assign_conversation', { conversation_id: conversation.display_id, agent_id: agent.id }, access_token)
+
+      expect(result['isError']).to be(true)
+      expect(conversation.reload.assignee).to be_nil
     end
 
     it 'does not assign someone from another account' do
@@ -122,6 +132,15 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
 
     expect(data['period']).to include('conversations_count')
     expect(data['previous_period']).to include('conversations_count')
+    expect(Time.zone.parse(data['period']['since'])).to eq(Time.zone.parse('2026-11-01T00:00:00-03:00'))
+    expect(Time.zone.parse(data['previous_period']['since'])).to eq(Time.zone.parse('2026-10-25T00:00:00-03:00'))
+    expect(Time.zone.parse(data['previous_period']['until'])).to eq(Time.zone.parse('2026-10-31T23:59:59-03:00'))
+  end
+
+  it 'answers a readable error for a date that does not exist' do
+    result = call_mcp_tool('get_report_summary', { since: '2026-11-01', until: '2026-02-30' }, access_token)
+
+    expect(result['isError']).to be(true)
   end
 
   it 'refuses a write without the write scope' do

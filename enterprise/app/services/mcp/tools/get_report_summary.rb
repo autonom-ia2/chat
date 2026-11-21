@@ -20,15 +20,21 @@ class Mcp::Tools::GetReportSummary < Mcp::Tools::Base
     zone = ActiveSupport::TimeZone[timezone_offset]
     return error_response('timezone_offset must be hours from UTC, like -3.') if zone.nil?
 
-    first = zone.parse(since).beginning_of_day
-    last = zone.parse(binding.local_variable_get(:until)).end_of_day
-    return error_response("The period must have between 1 and #{MAX_DAYS} days.") unless first <= last && (last - first) <= MAX_DAYS.days
+    first_day = Date.iso8601(since)
+    days = (Date.iso8601(binding.local_variable_get(:until)) - first_day).to_i + 1
+    return error_response("The period must have between 1 and #{MAX_DAYS} days.") unless days.between?(1, MAX_DAYS)
 
-    previous_first = first - (last - first) - 1.second
-    respond(period: summary(first, last, timezone_offset), previous_period: summary(previous_first, first - 1.second, timezone_offset))
-  rescue ArgumentError, TypeError
+    respond(periods(zone.local(first_day.year, first_day.month, first_day.day), days, timezone_offset))
+  rescue Date::Error, TypeError
     error_response('Use dates like 2026-11-21.')
   end
+
+  # The period asked for and the one of the same length just before it, to compare.
+  def self.periods(first, days, timezone_offset)
+    { period: summary(first, first + days.days - 1.second, timezone_offset),
+      previous_period: summary(first - days.days, first - 1.second, timezone_offset) }
+  end
+  private_class_method :periods
 
   def self.summary(first, last, timezone_offset)
     params = { type: :account, since: first.to_i.to_s, until: last.to_i.to_s, timezone_offset: timezone_offset, business_hours: false }

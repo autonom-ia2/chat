@@ -22,8 +22,10 @@ class Mcp::Tools::AssignConversation < Mcp::Tools::Base
     respond(conversation_summary(conversation.reload))
   end
 
+  # Same people the dashboard offers: members of the conversation's inbox and the administrators.
   def self.assign_agent(conversation, agent_id)
-    Current.account.users.find(agent_id) if agent_id.positive?
+    raise ActiveRecord::RecordNotFound if agent_id.positive? && conversation.inbox.assignable_agents.none? { |agent| agent.id == agent_id }
+
     Conversations::AssignmentService.new(conversation: conversation, assignee_id: agent_id.positive? ? agent_id : nil).perform
   end
   private_class_method :assign_agent

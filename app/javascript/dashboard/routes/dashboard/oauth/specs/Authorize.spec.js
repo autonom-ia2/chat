@@ -123,30 +123,65 @@ describe('Authorize', () => {
   it('shows the address that receives the access', async () => {
     const wrapper = await mountComponent();
 
-    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.REDIRECT_NOTE');
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.REDIRECT_LABEL');
+    expect(wrapper.text()).toContain('chatgpt.com');
   });
 
-  it('offers only accounts the user administers and blocks approval without one', async () => {
+  it('names the only account instead of asking to choose one', async () => {
+    const wrapper = await mountComponent();
+
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.ACCOUNT_SINGLE');
+  });
+
+  it('lets someone who administers no account only go back to the app', async () => {
     mockCurrentUser.value = {
       accounts: [
         { ...ADMIN_ACCOUNT, role: 'agent' },
         { ...ADMIN_ACCOUNT, id: 8, status: 'suspended' },
       ],
     };
+    oauthAPI.denyAuthorization.mockResolvedValue({
+      data: {
+        redirect_uri: 'https://chatgpt.com/callback?error=access_denied',
+      },
+    });
     const wrapper = await mountComponent();
 
-    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.NO_ADMIN_ACCOUNT');
-    expect(wrapper.findAllComponents(Button)[1].props('disabled')).toBe(true);
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.NO_ADMIN_TITLE');
+    const buttons = wrapper.findAllComponents(Button);
+    expect(buttons).toHaveLength(1);
+
+    await buttons[0].trigger('click');
+    await flushPromises();
+
+    expect(oauthAPI.approveAuthorization).not.toHaveBeenCalled();
+    expect(oauthAPI.denyAuthorization).toHaveBeenCalledWith(OAUTH_QUERY);
   });
 
-  it('shows an error and no actions when the request is not valid', async () => {
+  it('shows a plain error, without the server text, and a way out when the request is not valid', async () => {
     oauthAPI.getAuthorization.mockRejectedValue({
       response: { data: { error_description: 'Client authentication failed' } },
     });
     const wrapper = await mountComponent();
 
     expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.ERROR_TITLE');
-    expect(wrapper.text()).toContain('Client authentication failed');
-    expect(wrapper.findAllComponents(Button)).toHaveLength(0);
+    expect(wrapper.text()).not.toContain('Client authentication failed');
+
+    await wrapper.findAllComponents(Button)[0].trigger('click');
+
+    expect(window.location.assign).toHaveBeenCalledWith('/app');
+  });
+
+  it('offers to try again when the server cannot be reached', async () => {
+    oauthAPI.getAuthorization.mockRejectedValueOnce(new Error('Network Error'));
+    const wrapper = await mountComponent();
+
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.NETWORK_ERROR_TITLE');
+
+    await wrapper.findAllComponents(Button)[0].trigger('click');
+    await flushPromises();
+
+    expect(oauthAPI.getAuthorization).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('OAUTH.AUTHORIZE.TITLE ChatGPT');
   });
 });
