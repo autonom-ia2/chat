@@ -2526,7 +2526,9 @@
   },
   "relacionamentos/trazer/listas": {
     "controller": "api/v1/accounts/relacionamentos/trazer/listas#index",
-    "parametros": []
+    "parametros": [
+      "pagina"
+    ]
   },
   "relacionamentos/trazer/listas/:id/andamento": {
     "controller": "api/v1/accounts/relacionamentos/trazer/listas#andamento",
