@@ -86,15 +86,19 @@ RSpec.describe 'MCP tools', type: :request do
       expect(result.dig('structuredContent', 'inboxes').pluck('id')).to eq([inbox.id])
     end
 
-    it 'refuses an account the user only works in as an agent, and changes nothing there' do
-      agent_account = create(:account)
-      create(:account_user, account: agent_account, user: admin, role: :agent)
+    context 'with a token that can create contacts' do
+      let(:scopes) { 'conversations:read contacts:read contacts:write' }
 
-      result = call_mcp_tool('create_contact', { name: 'Ana', account_id: agent_account.id }, access_token)
+      it 'refuses an account the user only works in as an agent, and changes nothing there' do
+        agent_account = create(:account)
+        create(:account_user, account: agent_account, user: admin, role: :agent)
 
-      expect(result['isError']).to be(true)
-      expect(result.dig('content', 0, 'text')).to include('list_accounts')
-      expect(agent_account.contacts.count).to eq(0)
+        result = call_mcp_tool('create_contact', { name: 'Ana', account_id: agent_account.id }, access_token)
+
+        expect(result['isError']).to be(true)
+        expect(result.dig('content', 0, 'text')).to include('list_accounts')
+        expect(agent_account.contacts.count).to eq(0)
+      end
     end
 
     it 'keeps the connection when the default account is lost but another one remains' do
