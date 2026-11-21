@@ -8,6 +8,7 @@ import {
   siteParaGravar,
 } from '../../ficha/informacoesDaEmpresa';
 import { useFichaDaEmpresa } from '../../ficha/useFichaDaEmpresa';
+import { linhasDosCampos } from '../../ficha/atributos';
 import { apagarEmpresas } from '../../fonte/apagarEmpresas';
 import { criarEmpresa } from '../../fonte/gravarEmpresa';
 import { GRAVOU_EM_PARTE } from '../../fonte/gravarPessoa';
@@ -82,34 +83,36 @@ describe('linhasDaEmpresa', () => {
     });
   });
 
-  it('os campos personalizados que aparecem na ficha vêm depois, com nome e tipo', () => {
-    const linhas = linhasDaEmpresa(empresa, {
-      agora: AGORA,
-      campos: [
-        {
-          chave: 'porte',
-          rotulo: 'Porte',
-          tipo: 'text',
-          valor: 'Pequeno',
-          principal: true,
-        },
-        {
-          chave: 'site2',
-          rotulo: 'Outro',
-          tipo: 'link',
-          valor: 'x.com',
-          principal: false,
-        },
-        {
-          chave: 'ativo',
-          rotulo: 'Ativo',
-          tipo: 'checkbox',
-          valor: null,
-          principal: true,
-        },
-      ],
-    });
-    expect(linhas.slice(-2)).toEqual([
+  it('os campos personalizados ficam fora de Informações (#3082)', () => {
+    const linhas = linhasDaEmpresa(empresa, { agora: AGORA });
+    expect(linhas.some(linha => linha.chave.startsWith('conta:'))).toBe(false);
+  });
+
+  it('"Seus campos" da empresa: os que aparecem na ficha, com nome e tipo', () => {
+    const linhas = linhasDosCampos([
+      {
+        chave: 'porte',
+        rotulo: 'Porte',
+        tipo: 'text',
+        valor: 'Pequeno',
+        principal: true,
+      },
+      {
+        chave: 'site2',
+        rotulo: 'Outro',
+        tipo: 'link',
+        valor: 'x.com',
+        principal: false,
+      },
+      {
+        chave: 'ativo',
+        rotulo: 'Ativo',
+        tipo: 'checkbox',
+        valor: null,
+        principal: true,
+      },
+    ]);
+    expect(linhas).toEqual([
       { chave: 'conta:porte', rotulo: 'Porte', tipo: 'text', valor: 'Pequeno' },
       { chave: 'conta:ativo', rotulo: 'Ativo', tipo: 'checkbox', valor: '' },
     ]);

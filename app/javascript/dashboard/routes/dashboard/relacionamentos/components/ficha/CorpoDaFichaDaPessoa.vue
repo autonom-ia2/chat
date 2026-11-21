@@ -1,7 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { FALHA_DA_PARTE } from '../../ficha/falhas';
+import { blocoDosCamposAparece } from '../../ficha/atributos';
 import CartaoDeInformacoes from './CartaoDeInformacoes.vue';
+import CartaoDosCampos from './CartaoDosCampos.vue';
 import DeOndeVeio from './DeOndeVeio.vue';
 import SecaoArquivos from './SecaoArquivos.vue';
 import SecaoCards from './SecaoCards.vue';
@@ -23,8 +25,11 @@ import SecaoNotas from './SecaoNotas.vue';
 // Seguros (o que a pessoa tem com a corretora vem antes da conversa).
 // #3075 — quem só pode ver lê em Informações que não pode mudar nada (a ficha
 // antiga dizia o mesmo, RecordReadOnly). Quem pode mudar os campos da ficha
-// (`podeEscolherCampos`) tem "Escolher campos" embaixo das informações. O slot
+// (`podeEscolherCampos`) escolhe os campos em "Seus campos" (#3082). O slot
 // `lado` vem depois de Informações: é onde a ficha põe "Este contato é".
+// #3082 — "Seus campos" abre a coluna do lado: os campos personalizados
+// (`campos`, de ficha/atributos.js#camposDaPessoa), com "Novo campo"
+// (`criarCampo`) e "Escolher campos da ficha" para quem pode.
 const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -32,6 +37,7 @@ const props = defineProps({
   arquivos: { type: Array, required: true },
   origem: { type: Object, default: null },
   linhas: { type: Array, required: true },
+  campos: { type: Array, default: () => [] },
   redes: { type: Array, required: true },
   agora: { type: Number, required: true },
   guardandoNota: { type: Boolean, default: false },
@@ -50,6 +56,7 @@ const emit = defineEmits([
   'abrirConversa',
   'apagarNota',
   'escolherCampos',
+  'criarCampo',
 ]);
 
 const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
@@ -109,13 +116,20 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       />
     </div>
     <div data-relacionamentos="coluna-lado" class="flex flex-col min-w-0 gap-6">
-      <CartaoDeInformacoes
-        :linhas="linhas"
-        :redes="redes"
+      <CartaoDosCampos
+        v-if="blocoDosCamposAparece(campos, podeEditar && podeEscolherCampos)"
+        :campos="campos"
         :pode-editar="podeEditar"
         :pode-escolher-campos="podeEscolherCampos"
         @alterar="emit('alterar')"
         @escolher-campos="emit('escolherCampos')"
+        @criar-campo="emit('criarCampo')"
+      />
+      <CartaoDeInformacoes
+        :linhas="linhas"
+        :redes="redes"
+        :pode-editar="podeEditar"
+        @alterar="emit('alterar')"
       />
       <slot name="lado" />
       <DeOndeVeio

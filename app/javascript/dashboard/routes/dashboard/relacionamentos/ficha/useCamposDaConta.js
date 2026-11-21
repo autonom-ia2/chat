@@ -6,8 +6,8 @@
 //  - a escolha da ficha é a área `contact_details` (a mesma da ficha antiga),
 //    lida por useRelationships, só na conta com as chaves
 //    `relationships_attributes` e `custom_attributes` (sem elas não há
-//    configurador). `comConfiguracao` falso (a lista) não a lê: lá os campos
-//    aparecem pela ordem da conta.
+//    configurador). #3082 — a lista também a lê, para as gavetas Nova pessoa
+//    e Nova empresa mostrarem os mesmos campos da ficha.
 // `podeEscolher`: quem pode mudar os campos da ficha ("Escolher campos"), a
 // mesma regra do botão "Configurar" da ficha antiga (can_manage do servidor).
 // #3078 — a ficha da empresa usa o mesmo, com os campos da empresa
@@ -48,10 +48,7 @@ const semConfiguracao = () => ({
   podeEscolher: computed(() => false),
 });
 
-export const useCamposDaConta = ({
-  comConfiguracao = true,
-  de = DA_PESSOA,
-} = {}) => {
+export const useCamposDaConta = ({ de = DA_PESSOA } = {}) => {
   // Todas as da conta, já sem as internas da WAHA; aqui ficam as do registro.
   const daConta = useMapGetter('attributes/getAttributes');
   const definicoes = computed(() =>
@@ -61,7 +58,6 @@ export const useCamposDaConta = ({
   );
   const { isCloudFeatureEnabled } = useAccount();
   const comConfigurador =
-    comConfiguracao &&
     isCloudFeatureEnabled(FEATURE_FLAGS.RELATIONSHIPS_ATTRIBUTES) &&
     isCloudFeatureEnabled(FEATURE_FLAGS.CUSTOM_ATTRIBUTES);
   const { escolhidos, podeEscolher } = comConfigurador

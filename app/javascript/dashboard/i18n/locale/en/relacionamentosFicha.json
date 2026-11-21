@@ -242,8 +242,17 @@
       "SOBRE": "About this person",
       "SIM": "Yes",
       "NAO": "No",
-      "SO_LEITURA": "You can see this information, but you cannot change it.",
-      "ESCOLHER_CAMPOS": "Choose profile fields"
+      "SO_LEITURA": "You can see this information, but you cannot change it."
+    },
+    "CAMPOS": {
+      "TITULO": "Your fields",
+      "ALTERAR": "Change your fields",
+      "NOVO": "New field",
+      "PRIMEIRO": "Create the first field",
+      "ESCOLHER": "Choose profile fields",
+      "NENHUM_NA_FICHA": "No field shows on this profile yet.",
+      "SEM_CAMPOS_PESSOA": "Create fields to write down what matters to your business, like the birthday or who referred them.",
+      "SEM_CAMPOS_EMPRESA": "Create fields to write down what matters to your business, like the number of employees."
     },
     "ORIGEM": {
       "TITULO": "Where they came from",
@@ -268,7 +277,6 @@
       "CIDADE": "City",
       "EMPRESA": "Company",
       "REDES": "Social networks",
-      "OUTRAS": "Other details",
       "SALVAR": "Save",
       "SALVO": "Details saved.",
       "ERRO_AO_SALVAR": "I could not save. Try again.",

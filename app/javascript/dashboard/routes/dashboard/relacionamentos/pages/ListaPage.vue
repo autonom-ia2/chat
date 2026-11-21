@@ -444,9 +444,10 @@ const dialogoDaPlanilha = useTemplateRef('dialogoDaPlanilha');
 // Depois de criar, abre a ficha nova (o próximo passo de quem acabou de
 // cadastrar); depois de editar, a lista se atualiza sem sair do lugar.
 // #3075 — com a empresa cadastrada (`temEmpresas`) e os campos personalizados
-// da conta. A lista não lê o configurador de campos (seria uma leitura a mais
-// ao abrir a lista): os campos vêm na ordem da conta.
-const camposDaConta = useCamposDaConta({ comConfiguracao: false });
+// da conta. #3082 — a gaveta lê os campos escolhidos para a ficha (a mesma
+// leitura da ficha): eles vêm logo depois do nome, e os outros ficam atrás de
+// "Mais campos", como em "Alterar" da ficha.
+const camposDaConta = useCamposDaConta();
 const gaveta = usePessoaNaGaveta({
   acoes,
   aoCriar: criada => {
@@ -883,6 +884,7 @@ watch(naAbaDeSeguros, estaNela => {
       :com-empresas="temEmpresas"
       :buscar-empresas="acoes.buscarEmpresas"
       :definicoes="camposDaConta.definicoes.value"
+      :escolhidos="camposDaConta.escolhidos.value"
       marca="gaveta-da-pessoa"
       @fechar="gaveta.fechar"
       @salvar="gaveta.salvar"
