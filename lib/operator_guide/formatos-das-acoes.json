@@ -4437,7 +4437,7 @@
     "modelo": "CampaignAudienceLink",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:34",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
       "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
     ],
     "sem_corpo": false
@@ -24854,7 +24854,7 @@
     "modelo": "CampaignAudienceLink",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:34",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
       "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
     ],
     "sem_corpo": false

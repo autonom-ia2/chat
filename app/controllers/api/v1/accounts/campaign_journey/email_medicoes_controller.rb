@@ -14,9 +14,8 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
     authorize campaign, :send_now?
     link = CampaignAudienceLink.for_campaign(campaign)
     raise ActiveRecord::RecordNotFound if link.nil?
-    return render json: { error: 'campaign_journey.already_sent' }, status: :unprocessable_entity unless antes_do_envio?(campaign)
+    return render json: { error: 'campaign_journey.already_sent' }, status: :unprocessable_entity unless aplicar(campaign, link)
 
-    aplicar(link)
     head :no_content
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: 'campaign_journey.invalid_medicao', message: e.record.errors.full_messages.to_sentence },
@@ -29,11 +28,17 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
     (campaign.draft? || campaign.scheduled?) && !campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
   end
 
-  def aplicar(link)
+  # Trava a linha do público, a mesma que o envio trava antes de sincronizar a lista (CampaignJourney::EmailAudienceGate),
+  # e só então confere que a campanha não começou a sair: o sorteio e a lista do envio nunca se cruzam. false = já saiu.
+  def aplicar(campaign, link)
     ActiveRecord::Base.transaction do
+      link.campaign_import&.lock!
+      next false unless antes_do_envio?(campaign.reload)
+
       ::CampaignJourney::Medicao.new(link).aplicar!(params.permit(:janela_de_compra_dias, :grupo_de_controle_pct)) do
         ::CampaignJourney::Medicao.publico(link, 'email')
       end
+      true
     end
   end
 
