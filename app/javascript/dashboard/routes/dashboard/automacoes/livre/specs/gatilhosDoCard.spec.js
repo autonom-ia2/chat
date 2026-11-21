@@ -166,8 +166,19 @@ describe('gatilhos de card', () => {
       campoDoCard: {},
       pagina: {},
       caixa: {},
-      // #3097: os nomes dos grupos de compra são do código (nada é lido).
-      grupo_de_compra: expect.any(Object),
+      // #3097: os nomes dos grupos de compra (pelas faixas do padrão, sem a
+      // leitura das faixas, que só vem com a peça grupo_de_compra). "Nunca
+      // comprou" não é oferecido.
+      grupo_de_compra: {
+        compra_campeoes: expect.stringContaining('GRUPOS.CAMPEOES.NOME'),
+        compra_fieis: expect.stringContaining('GRUPOS.FIEIS.NOME'),
+        compra_novos: expect.stringContaining('GRUPOS.NOVOS.NOME'),
+        compra_passou_da_hora: expect.stringContaining(
+          'GRUPOS.PASSOU_DA_HORA.NOME'
+        ),
+        compra_em_risco: expect.stringContaining('GRUPOS.EM_RISCO.NOME'),
+        compra_perdidos: expect.stringContaining('GRUPOS.PERDIDOS.NOME'),
+      },
     });
   });
 

@@ -139,6 +139,16 @@ RSpec.describe Relacionamentos::Compras::Recalcular do
         .with(ana, gatilho, hash_including(dados: { 'grupo_de_compra' => 'compra_em_risco' }))
     end
 
+    it 'com o tempo, quem ganha a linha agora (o preenchimento) entra calado' do
+      com_automacao_ligada
+      compra(ana, dias: 0)
+
+      recalcular(disparar: :tempo)
+
+      expect(linha(ana).grupo).to eq('compra_novos')
+      expect(Autonomia::Automacao::Escuta).not_to have_received(:comecar)
+    end
+
     it 'não dispara quando nada mudou, nem no ajuste das faixas' do
       com_automacao_ligada
       compra(ana, dias: 40)
