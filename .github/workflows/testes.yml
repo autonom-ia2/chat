@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 on:
-  pull_request:
+  # diag/3092-medicao: suíte inteira desligada nesta branch de diagnóstico (não mergear).
   merge_group:
     types: [checks_requested]
   workflow_dispatch:

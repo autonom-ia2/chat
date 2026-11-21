@@ -22,9 +22,9 @@ module ListaTrazidaGrandeHelpers
   def por_pessoas_criadas(importacao, quantas)
     em_lotes(importacao, quantas) do |numeros|
       pessoas = numeros.map { |numero| pessoa_criada(importacao.account_id, numero) }
-      ids = inserir(Contact, pessoas)
-      linhas = inserir_linhas(importacao, numeros, ids, ja_existia: false)
-      inserir(Relacionamentos::CampoPreenchido, resumos_das_criadas(importacao, linhas, ids))
+      ids = diag_tempo('criadas', 'pessoas') { inserir(Contact, pessoas) }
+      linhas = diag_tempo('criadas', 'linhas') { inserir_linhas(importacao, numeros, ids, ja_existia: false) }
+      diag_tempo('criadas', 'campos', vigiar: true) { inserir(Relacionamentos::CampoPreenchido, resumos_das_criadas(importacao, linhas, ids)) }
     end
     quantas / UMA_RECUSA_A_CADA
   end
@@ -32,11 +32,15 @@ module ListaTrazidaGrandeHelpers
   # `quantas` pessoas que a conta já tinha, uma linha cada, com três campos que a lista preencheu: e-mail, cidade e a
   # marca de cliente. Os três estão como a lista os deixou, então os três voltam.
   def por_pessoas_completadas(importacao, quantas)
+    diag_plano('antes do 1o lote')
     em_lotes(importacao, quantas) do |numeros|
       pessoas = numeros.map { |numero| pessoa_completada(importacao.account_id, numero) }
-      ids = inserir(Contact, pessoas)
-      linhas = inserir_linhas(importacao, numeros, ids, ja_existia: true)
-      inserir(Relacionamentos::CampoPreenchido, campos_das_linhas(importacao.account_id, linhas, ids, pessoas))
+      ids = diag_tempo('completadas', 'pessoas') { inserir(Contact, pessoas) }
+      linhas = diag_tempo('completadas', 'linhas') { inserir_linhas(importacao, numeros, ids, ja_existia: true) }
+      diag_tempo('completadas', 'campos', vigiar: true) do
+        inserir(Relacionamentos::CampoPreenchido, campos_das_linhas(importacao.account_id, linhas, ids, pessoas))
+      end
+      diag_plano('depois do 1o lote') if numeros.first == 1
     end
   end
 
@@ -63,6 +67,63 @@ module ListaTrazidaGrandeHelpers
   end
 
   private
+
+  # DIAGNÓSTICO #3092 (branch diag/3092-medicao, não mergear). Só com DIAG_3092=1.
+  def diag?
+    ENV['DIAG_3092'] == '1'
+  end
+
+  def diag_contadores
+    ActiveRecord::Base.connection.select_one(
+      "SELECT seq_scan, seq_tup_read, idx_scan FROM pg_stat_xact_user_tables WHERE relname = 'campaign_import_rows'"
+    ).to_h
+  end
+
+  def diag_tempo(caso, tabela, vigiar: false)
+    return yield unless diag?
+
+    antes = diag_contadores
+    vigia = diag_vigia if vigiar
+    resultado = nil
+    segundos = Benchmark.realtime { resultado = yield }
+    vigia&.kill
+    depois = diag_contadores
+    delta = depois.to_h { |chave, valor| [chave, valor.to_i - antes[chave].to_i] }
+    puts "DIAG_3092 caso=#{caso} tabela=#{tabela} n=#{resultado.size} s=#{segundos.round(3)} cir_xact_delta=#{delta}"
+    resultado
+  end
+
+  # Outra conexão olha o banco a cada segundo enquanto os campos são gravados: espera por trava (Lock) ou não.
+  def diag_vigia
+    config = ActiveRecord::Base.connection_db_config.configuration_hash
+    Thread.new do
+      pg = PG.connect(host: config[:host], port: config[:port], user: config[:username], password: config[:password].presence,
+                      dbname: config[:database])
+      loop do
+        sleep 1
+        pg.exec("SELECT pid, state, wait_event_type, wait_event, left(query, 80) AS q FROM pg_stat_activity
+                 WHERE datname = current_database() AND pid <> pg_backend_pid() AND state <> 'idle'").each do |linha|
+          puts "DIAG_3092 vigia #{linha.values.join(' | ')}"
+        end
+      end
+    ensure
+      pg&.close
+    end
+  end
+
+  def diag_plano(momento)
+    return unless diag?
+
+    conexao = ActiveRecord::Base.connection
+    id = conexao.select_value('SELECT max(id) FROM campaign_import_rows').to_i
+    sql = 'SELECT 1 FROM ONLY campaign_import_rows x WHERE id = $1 FOR KEY SHARE OF x'
+    custom = conexao.select_values("EXPLAIN (ANALYZE, BUFFERS) #{sql.sub('$1', id.to_s)}")
+    conexao.execute("SET LOCAL plan_cache_mode = force_generic_plan; PREPARE diag_ri(bigint) AS #{sql}")
+    generico = conexao.select_values("EXPLAIN EXECUTE diag_ri(#{id})")
+    conexao.execute('DEALLOCATE diag_ri; SET LOCAL plan_cache_mode = auto')
+    estat = conexao.select_one("SELECT reltuples, relpages FROM pg_class WHERE relname = 'campaign_import_rows'")
+    puts "DIAG_3092 plano #{momento} pg_class=#{estat}\n  custom: #{custom.join(' / ')}\n  generico: #{generico.join(' / ')}"
+  end
 
   def em_lotes(importacao, quantas, &)
     primeiro = importacao.campaign_import_rows.maximum(:row_number).to_i + 1

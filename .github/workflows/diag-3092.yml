@@ -1,0 +1,64 @@
+name: Diagnóstico 3092 (não mergear)
+
+# Branch diag/3092-medicao: mede por que previa_do_desfazer_medicao_spec estoura o tempo depois de
+# campos_preenchidos_spec. Dois jobs: ordem forçada (vizinho + medição) e a medição sozinha.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  medir:
+    name: Diag 3092 (${{ matrix.caso }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - caso: vizinho-e-medicao
+            specs: spec/services/relacionamentos/trazer/campos_preenchidos_spec.rb spec/services/relacionamentos/trazer/previa_do_desfazer_medicao_spec.rb
+          - caso: medicao-sozinha
+            specs: spec/services/relacionamentos/trazer/previa_do_desfazer_medicao_spec.rb
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+    env:
+      RAILS_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ''
+      REDIS_URL: redis://localhost:6379
+      DIAG_3092: '1'
+      # Para ver a curva inteira em vez de parar no primeiro lote acima de 14s.
+      POSTGRES_STATEMENT_TIMEOUT: 180s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Criar banco e carregar schema
+        run: |
+          bundle exec rake db:create
+          bundle exec rake db:schema:load
+      - name: RSpec em ordem fixa
+        run: bundle exec rspec --order defined --format documentation ${{ matrix.specs }}
