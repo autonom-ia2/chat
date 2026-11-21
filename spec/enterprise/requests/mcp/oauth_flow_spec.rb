@@ -38,7 +38,8 @@ RSpec.describe 'MCP OAuth flow', type: :request do
 
     post '/api/v1/oauth/authorization',
          params: { client_id: client_id, redirect_uri: redirect_uri, response_type: 'code', state: 'client-state',
-                   scope: resource_metadata['scopes_supported'].join(' '), account_id: account.id, code_challenge_method: 'S256',
+                   scope: resource_metadata['scopes_supported'].join(' '), account_id: account.id, accounts_consent: 'all',
+                   code_challenge_method: 'S256',
                    code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(code_verifier), padding: false) },
          headers: admin.create_new_auth_token
     code = Rack::Utils.parse_query(URI.parse(response.parsed_body['redirect_uri']).query)['code']

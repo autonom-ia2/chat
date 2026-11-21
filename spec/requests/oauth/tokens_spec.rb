@@ -10,7 +10,7 @@ RSpec.describe 'OAuth Tokens', type: :request do
   let(:code) do
     post '/api/v1/oauth/authorization',
          params: { client_id: application.uid, redirect_uri: redirect_uri, response_type: 'code', scope: 'conversations:read',
-                   code_challenge: code_challenge, code_challenge_method: 'S256', account_id: account.id },
+                   code_challenge: code_challenge, code_challenge_method: 'S256', account_id: account.id, accounts_consent: 'all' },
          headers: user.create_new_auth_token
     Rack::Utils.parse_query(URI.parse(response.parsed_body['redirect_uri']).query)['code']
   end
