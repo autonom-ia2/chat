@@ -41,12 +41,16 @@ RSpec.describe Autonomia::Guide::Acoes do
       .to be(false)
     expect(acoes.desfazivel?('POST integrations/hooks', { corpo: { app_id: 'slack' } })).to be(false)
     expect(acoes.desfazivel?('POST agents', { corpo: { name: 'Ana', email: 'ana@example.com', role: 'agent' } })).to be(false)
+    expect(acoes.desfazivel?('POST conversations/:id/transcript', { caminho: { id: 1 }, corpo: { email: 'fora@example.com' } }))
+      .to be(false)
+    expect(acoes.desfazivel?('POST captain/custom_tools/test', { corpo: { endpoint_url: 'https://fora.example' } })).to be(false)
   end
 
   it 'promover agente a administrador pede confirmação; trocar o nome segue direto' do
     agente = create(:user, account: conta, role: :agent)
 
     expect(acoes.desfazivel?('PATCH agents/:id', { caminho: { id: agente.id }, corpo: { role: 'administrator' } })).to be(false)
+    expect(acoes.desfazivel?('PUT agents/:id', { caminho: { id: agente.id }, corpo: { role: 1 } })).to be(false)
     expect(acoes.desfazivel?('PATCH agents/:id', { caminho: { id: agente.id }, corpo: { name: 'Ana Souza' } })).to be(true)
   end
 

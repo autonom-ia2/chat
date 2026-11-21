@@ -9,6 +9,13 @@
 # - Bots de agente e o bot da caixa: a `outgoing_url` do bot recebe as conversas da caixa.
 # - Integrações (Slack, Dialogflow e as outras por `integrations/hooks`): ligam o envio de conversas a outro sistema.
 #
+# - A transcrição da conversa vai por e-mail ao endereço que o pedido diz; o teste de campanha de e-mail também.
+# - Apps de painel: a URL abre na tela da conversa e recebe os dados da conversa e do contato.
+# - Ferramentas HTTP dos agentes de IA (Captain e Autonomia): o agente passa a mandar dado das conversas à URL; o teste
+#   chama a URL na hora, do servidor.
+# - App OAuth do e-mail da conta: quem reconectar a caixa manda o código de autorização ao app configurado.
+# - Relatório de anúncios por WhatsApp: vai ao número que o pedido diz.
+#
 # O webhook da caixa API vai pela `CredencialDaCaixa`, junto do resto de como a caixa se conecta.
 module Autonomia::Guide::SaiDaPlataforma
   ACOES = [
@@ -16,8 +23,18 @@ module Autonomia::Guide::SaiDaPlataforma
     'POST webhooks', 'PATCH webhooks/:id', 'PUT webhooks/:id',
     'POST agent_bots', 'PATCH agent_bots/:id', 'PUT agent_bots/:id', 'POST inboxes/:id/set_agent_bot',
     'POST integrations/hooks', 'PATCH integrations/hooks/:id', 'PUT integrations/hooks/:id',
-    'POST integrations/slack', 'PATCH integrations/slack', 'PUT integrations/slack'
+    'POST integrations/slack', 'PATCH integrations/slack', 'PUT integrations/slack',
+    'POST conversations/:id/transcript', 'POST email_campaigns/campaigns/:id/test_send',
+    'POST dashboard_apps', 'PATCH dashboard_apps/:id', 'PUT dashboard_apps/:id',
+    'POST captain/custom_tools', 'PATCH captain/custom_tools/:id', 'PUT captain/custom_tools/:id', 'POST captain/custom_tools/test',
+    'POST autonomia/agents/:agent_id/tools', 'PATCH autonomia/agents/:agent_id/tools/:id', 'PUT autonomia/agents/:agent_id/tools/:id',
+    'POST autonomia/agents/:agent_id/tools/:id/test',
+    'PATCH email_oauth_apps/:provider', 'PUT email_oauth_apps/:provider',
+    'PATCH crm/meta_ads_connection/whatsapp_report', 'PUT crm/meta_ads_connection/whatsapp_report',
+    'POST crm/meta_ads_connection/whatsapp_report/test'
   ].freeze
+  # O papel de administrador, pelo nome ou pelo número do enum (`role: 1`, revisão do Codex).
+  ADMINISTRADOR = ['administrator', AccountUser.roles['administrator'].to_s].freeze
   EDITAR_AGENTE = ['PATCH agents/:id', 'PUT agents/:id'].freeze
 
   module_function
@@ -26,6 +43,6 @@ module Autonomia::Guide::SaiDaPlataforma
   def vira_administrador?(acao, dados)
     return false unless dados && EDITAR_AGENTE.include?(acao)
 
-    ::Autonomia::Guide::Formatos::Conferencia.new(acao, dados[:corpo]).valores['role'].to_s == 'administrator'
+    ADMINISTRADOR.include?(::Autonomia::Guide::Formatos::Conferencia.new(acao, dados[:corpo]).valores['role'].to_s)
   end
 end
