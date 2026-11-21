@@ -24,7 +24,7 @@ module ListaTrazidaGrandeHelpers
       pessoas = numeros.map { |numero| pessoa_criada(importacao.account_id, numero) }
       ids = inserir(Contact, pessoas)
       linhas = inserir_linhas(importacao, numeros, ids, ja_existia: false)
-      replanejar_as_chaves_estrangeiras
+      analisar_linhas_da_importacao
       inserir(Relacionamentos::CampoPreenchido, resumos_das_criadas(importacao, linhas, ids))
     end
     quantas / UMA_RECUSA_A_CADA
@@ -37,7 +37,7 @@ module ListaTrazidaGrandeHelpers
       pessoas = numeros.map { |numero| pessoa_completada(importacao.account_id, numero) }
       ids = inserir(Contact, pessoas)
       linhas = inserir_linhas(importacao, numeros, ids, ja_existia: true)
-      replanejar_as_chaves_estrangeiras
+      analisar_linhas_da_importacao
       inserir(Relacionamentos::CampoPreenchido, campos_das_linhas(importacao.account_id, linhas, ids, pessoas))
     end
   end
@@ -66,13 +66,13 @@ module ListaTrazidaGrandeHelpers
 
   private
 
-  # Cada campo gravado confere, pela chave estrangeira, a pessoa e a linha da importação. O Postgres guarda o plano dessa
-  # conferência na conexão, e a conexão é a mesma em todos os specs do processo. Se um spec anterior gravou campos com
-  # essas tabelas quase vazias (campos_preenchidos_spec.rb, por exemplo), o plano guardado é ler a tabela inteira, e aqui
-  # ele vira uma leitura de dezenas de milhares de linhas por campo gravado: o lote passa do statement_timeout. O ANALYZE
-  # dá ao banco o tamanho de agora e descarta o plano velho (em produção, o autovacuum faz isso sozinho).
-  def replanejar_as_chaves_estrangeiras
-    ActiveRecord::Base.connection.execute('ANALYZE contacts, campaign_import_rows')
+  # Cada campo gravado confere, pela chave estrangeira, a linha da importação (#3092). Na CI, os specs anteriores gravam e
+  # desfazem linhas em campaign_import_rows; passado o limiar, o autovacuum analisa a tabela vazia e grava reltuples = 0.
+  # Com isso o plano da conferência vira leitura da tabela inteira, guardado para o insert todo: cada lote de 15 mil
+  # campos relia a tabela 15 mil vezes (de 37 milhões a 712 milhões de linhas lidas, de 2 s a 25 s por lote) e passava
+  # do statement_timeout. O ANALYZE dá à tabela o tamanho de agora, como ela tem em produção, e o plano volta ao índice.
+  def analisar_linhas_da_importacao
+    ActiveRecord::Base.connection.execute('ANALYZE campaign_import_rows')
   end
 
   def em_lotes(importacao, quantas, &)
