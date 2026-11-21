@@ -3,6 +3,7 @@ import {
   computed,
   defineAsyncComponent,
   onMounted,
+  ref,
   useTemplateRef,
   watch,
 } from 'vue';
@@ -17,6 +18,10 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
+import ChaveDosGrupos from '../components/lista/ChaveDosGrupos.vue';
+import CartoesDeCompra from '../components/lista/CartoesDeCompra.vue';
+import HeroiDeCompras from '../components/lista/HeroiDeCompras.vue';
+import DialogoGruposDeCompra from '../components/lista/DialogoGruposDeCompra.vue';
 import AbasDaLista from '../components/lista/AbasDaLista.vue';
 import AcoesDaAba from '../components/lista/AcoesDaAba.vue';
 import BarraDeAcaoEmGrupo from '../components/lista/BarraDeAcaoEmGrupo.vue';
@@ -41,6 +46,8 @@ import MostrarMais from '../components/lista/MostrarMais.vue';
 import NovaEmpresaNaLista from '../components/lista/NovaEmpresaNaLista.vue';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
+import { GRUPOS_DE_COMPRA, VISOES } from '../fonte/gruposDeCompra';
+import { useFaixasDeCompra } from '../lista/useFaixasDeCompra';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
 import { diasParaTerminar } from '../fonte/selosDoSeguro';
@@ -56,7 +63,14 @@ import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
-import { CAMPOS_DE_ORDEM_DAS_EMPRESAS, gruposDeOrdem } from '../lista/ordens';
+import {
+  CAMPOS_DE_ORDEM_DAS_EMPRESAS,
+  CAMPOS_DE_ORDEM_POR_COMPRA,
+  CAMPOS_DE_ORDEM_POR_COMPRA_SEM_VALOR,
+  ORDEM_PADRAO_POR_COMPRA,
+  gruposDeOrdem,
+} from '../lista/ordens';
+import { textosDasFaixas } from '../lista/textosDasFaixas';
 import { useOrdemGuardada } from '../lista/useOrdemGuardada';
 import { usePessoaNaGaveta } from '../lista/usePessoaNaGaveta';
 import { useCamposDaConta } from '../ficha/useCamposDaConta';
@@ -194,11 +208,8 @@ const mudarOrdem = nova => {
   ordemGuardada.guardar(nova, aba.value);
   return lista.mudarOrdem(nova);
 };
-const ordensDaAba = computed(() =>
-  ehEmpresas.value
-    ? gruposDeOrdem(t, CAMPOS_DE_ORDEM_DAS_EMPRESAS)
-    : gruposDeOrdem(t)
-);
+// #3097: as faixas dos grupos de compra e se quem vê a lista vê valor de venda.
+const faixasDeCompra = useFaixasDeCompra({ demo: Boolean(demo) });
 // O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
 // texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
 // renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
@@ -223,14 +234,60 @@ const trocarAba = nova => {
 // está aberta.
 const verGrupo = id => lista.escolherGrupo(id);
 
+// #3097 — em Pessoas, os grupos por conversa ou por compra ("Ver os grupos
+// por"). Por compra, "Todos" abre e vêm os grupos de compra; a linha diz a
+// compra em vez da conversa. Abre pela URL com `?grupos=compra`. Trocar volta
+// para "Todos". Quem é administrador ajusta as faixas ("Ajustar os grupos").
+const visao = ref(
+  route.query.grupos === VISOES.COMPRA ? VISOES.COMPRA : VISOES.CONVERSA
+);
+const porCompra = computed(
+  () => !ehEmpresas.value && visao.value === VISOES.COMPRA
+);
+// Por compra, as ordens por compra; sem valor de venda, sem as de valor.
+const ordensDaAba = computed(() => {
+  if (ehEmpresas.value) return gruposDeOrdem(t, CAMPOS_DE_ORDEM_DAS_EMPRESAS);
+  if (!porCompra.value) return gruposDeOrdem(t);
+  return gruposDeOrdem(
+    t,
+    faixasDeCompra.veValores.value
+      ? CAMPOS_DE_ORDEM_POR_COMPRA
+      : CAMPOS_DE_ORDEM_POR_COMPRA_SEM_VALOR
+  );
+});
+// Por compra, a lista abre por quem está há mais tempo sem comprar; de volta
+// à conversa, volta a ordem guardada da pessoa.
+const trocarVisao = nova => {
+  visao.value = nova;
+  lista.escolherGrupo(GRUPO_PADRAO[aba.value]);
+  lista.mudarOrdem(
+    nova === VISOES.COMPRA
+      ? ORDEM_PADRAO_POR_COMPRA
+      : ordemGuardada.ordemDaAba(aba.value)
+  );
+};
+// Aberta pela URL já por compra, a ordem também abre por compra.
+if (porCompra.value) lista.mudarOrdem(ORDEM_PADRAO_POR_COMPRA);
+onMounted(faixasDeCompra.carregar);
+const podeAjustarGrupos = computed(
+  () => Boolean(demo) || permissoes.podeAjustarGruposDeCompra.value
+);
+const dialogoDosGrupos = useTemplateRef('dialogoDosGrupos');
+const gruposAjustados = () =>
+  useAlert(t('RELACIONAMENTOS_COMPRAS.AJUSTE.SALVO'));
+
 // Os grupos da aba; a conta com a carteira tem um a mais em Pessoas.
-const gruposDaLista = computed(() =>
-  gruposDaAba(aba.value, { comSeguros: temSeguros.value })
+const gruposDaLista = computed(() => {
+  const daAba = gruposDaAba(aba.value, { comSeguros: temSeguros.value });
+  return porCompra.value ? [daAba[0], ...GRUPOS_DE_COMPRA] : daAba;
+});
+const textosDeCompra = computed(() =>
+  textosDasFaixas(faixasDeCompra.faixas.value, t)
 );
 const grupos = computed(() =>
   gruposDaLista.value.map(({ id, nome }) => ({
     id,
-    nome: t(nome),
+    nome: t(nome, textosDeCompra.value),
     total: lista.contagens.value[id],
   }))
 );
@@ -239,7 +296,7 @@ const grupos = computed(() =>
 const explicacao = computed(() => {
   if (lista.grupo.value === GRUPO_PADRAO[aba.value]) return '';
   const atual = gruposDaLista.value.find(g => g.id === lista.grupo.value);
-  return atual ? t(atual.explicacao) : '';
+  return atual ? t(atual.explicacao, textosDeCompra.value) : '';
 });
 const contaDeMarcados = computed(() => contaDaMensagem(marcados.pessoas.value));
 
@@ -516,7 +573,15 @@ watch(naAbaDeSeguros, estaNela => {
           data-relacionamentos="carregando"
         />
         <template v-else>
+          <HeroiDeCompras
+            v-if="porCompra && !contaVazia"
+            :resumo="lista.resumo.value"
+            :textos="textosDeCompra"
+            :grupo-escolhido="lista.grupo.value"
+            @ver-grupo="verGrupo"
+          />
           <HeroiDaLista
+            v-else
             :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
             :aba="aba"
@@ -559,7 +624,35 @@ watch(naAbaDeSeguros, estaNela => {
               class="flex flex-col min-w-0 gap-5"
             >
               <div v-if="!lista.semAcesso.value" class="flex flex-col">
+                <div
+                  v-if="!ehEmpresas"
+                  class="flex flex-wrap items-center justify-between mb-3 gap-x-4"
+                >
+                  <ChaveDosGrupos
+                    :model-value="visao"
+                    @update:model-value="trocarVisao"
+                  />
+                  <Button
+                    v-if="porCompra && podeAjustarGrupos"
+                    link
+                    sm
+                    class="min-h-11 max-sm:order-last"
+                    icon="i-lucide-sliders-horizontal"
+                    :label="t('RELACIONAMENTOS_COMPRAS.LISTA.AJUSTAR')"
+                    data-relacionamentos="ajustar-grupos"
+                    @click="dialogoDosGrupos?.abrir()"
+                  />
+                </div>
+                <CartoesDeCompra
+                  v-if="porCompra"
+                  :grupos="grupos.slice(1)"
+                  :todos="grupos[0]"
+                  :valores="lista.contagens.value.valores_de_compra"
+                  :model-value="lista.grupo.value"
+                  @update:model-value="lista.escolherGrupo"
+                />
                 <PilulasDeGrupo
+                  v-else
                   sem-vazios
                   :grupos="grupos"
                   :model-value="lista.grupo.value"
@@ -655,6 +748,7 @@ watch(naAbaDeSeguros, estaNela => {
                       :pode-marcar="podeMarcar"
                       :pode-conversar="naDemonstracao"
                       :pode-editar="podeEditar"
+                      :por-compra="porCompra"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
@@ -728,6 +822,7 @@ watch(naAbaDeSeguros, estaNela => {
     <GavetaDeFiltros
       :aberta="maisFiltros.aberta.value"
       :de-empresas="ehEmpresas"
+      :ve-valores="faixasDeCompra.veValores.value"
       :filtros="lista.filtros.value"
       :opcoes="maisFiltros.opcoes.value"
       @fechar="maisFiltros.aberta.value = false"
@@ -770,6 +865,12 @@ watch(naAbaDeSeguros, estaNela => {
       :lista="listaDaPlanilha"
       :acoes="acoes"
       :consulta="consultaDaTela"
+    />
+    <DialogoGruposDeCompra
+      ref="dialogoDosGrupos"
+      :faixas="faixasDeCompra.faixas.value"
+      :salvar="faixasDeCompra.salvar"
+      @salvo="gruposAjustados"
     />
     <GavetaDeInformacoes
       v-if="podeEditar"

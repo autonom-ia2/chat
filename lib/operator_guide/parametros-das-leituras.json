@@ -2380,6 +2380,10 @@
     "controller": "api/v1/accounts/relacionamentos/funis#index",
     "parametros": []
   },
+  "relacionamentos/grupos_de_compra": {
+    "controller": "api/v1/accounts/relacionamentos/grupos_de_compra#show",
+    "parametros": []
+  },
   "relacionamentos/opcoes_de_filtro": {
     "controller": "api/v1/accounts/relacionamentos/opcoes_de_filtro#show",
     "parametros": []
@@ -2404,6 +2408,10 @@
   },
   "relacionamentos/pessoas/:id/cards": {
     "controller": "api/v1/accounts/relacionamentos/pessoas#cards",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/compras": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#compras",
     "parametros": []
   },
   "relacionamentos/pessoas/:id/conversas": {

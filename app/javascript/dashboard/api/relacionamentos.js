@@ -86,6 +86,20 @@ class RelacionamentosAPI extends ApiClient {
     return axios.get(`${this.url}/pessoas/${id}/cards`);
   }
 
+  // #3097 — as faixas dos grupos de compra da conta.
+  faixasDeCompra() {
+    return axios.get(`${this.url}/grupos_de_compra`);
+  }
+
+  salvarFaixasDeCompra(faixas) {
+    return axios.patch(`${this.url}/grupos_de_compra`, { faixas });
+  }
+
+  // #3097 — o resumo das compras da pessoa (cards ganhos nos funis de Vender).
+  comprasDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/compras`);
+  }
+
   notasDaPessoa(id) {
     return axios.get(`${this.url}/pessoas/${id}/notas`);
   }

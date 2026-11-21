@@ -93,7 +93,7 @@ class Autonomia::Automacao::PassoDeIa
 
   def conferida(texto, schema)
     resposta = JSON.parse(texto.to_s)
-    raise Falha.new(:permanente, 'resposta_fora_do_schema') unless JSONSchemer.schema(schema[:schema].deep_stringify_keys).valid?(resposta)
+    raise Falha.new(:permanente, 'resposta_fora_do_schema') unless JsonSchemaDraft7.schema(schema[:schema].deep_stringify_keys).valid?(resposta)
 
     resposta
   rescue JSON::ParserError

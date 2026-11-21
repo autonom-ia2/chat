@@ -9,6 +9,11 @@ import AnalyticsHelper from '../helper/AnalyticsHelper';
 import AcceptInvitation from 'v3/views/auth/accept-invitation/Index.vue';
 
 const ONBOARDING_STEPS = ['account_details', 'enrichment', 'inbox_setup'];
+// Links that cannot know the account; the guard moves them into the current one
+const ACCOUNT_SCOPED_LINK_ROUTES = {
+  oauth_authorize_link: 'oauth_authorize',
+};
+
 const publicRoutes = [
   {
     path: '/accept-invitation',
@@ -50,6 +55,15 @@ const getSsoCredentials = to => {
 const isSafeAppRedirect = redirectTo =>
   typeof redirectTo === 'string' && redirectTo.startsWith('/app/');
 
+// The login brings the person back to links that only work after signing in (the OAuth consent)
+const loginPathFor = to => {
+  const fullPath = to.fullPath || '';
+  if (!ACCOUNT_SCOPED_LINK_ROUTES[to.name] || !isSafeAppRedirect(fullPath)) {
+    return '/app/login';
+  }
+  return `/app/login?redirect_to=${encodeURIComponent(fullPath)}`;
+};
+
 const defaultAuthenticatedRoute = user => {
   const accountId = user?.account_id || user?.accounts?.[0]?.id;
   return accountId
@@ -84,7 +98,7 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
       window.location.assign(`/auth/autonomia?return_to=${returnTo}`);
       return '';
     }
-    window.location.assign('/app/login');
+    window.location.assign(loginPathFor(to));
     return '';
   }
 
@@ -105,6 +119,15 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
     ONBOARDING_STEPS.includes(userAccount?.onboarding_step) &&
     isAdmin &&
     isActive;
+
+  const accountScopedRoute = ACCOUNT_SCOPED_LINK_ROUTES[to.name];
+  if (accountScopedRoute) {
+    return next({
+      name: accountScopedRoute,
+      params: { accountId: routeAccountId },
+      query: to.query,
+    });
+  }
 
   if (to.name === 'no_accounts' || !to.name) {
     const target = needsOnboarding

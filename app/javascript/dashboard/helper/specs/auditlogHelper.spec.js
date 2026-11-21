@@ -190,6 +190,29 @@ describe('Helper functions', () => {
       });
     });
 
+    // #3106 — o app conectado pelo MCP diz o passo e o próprio nome.
+    it('should carry the step and the app name of an MCP action', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'mcp_action',
+        user_id: 1,
+        auditable_id: 16,
+        audited_changes: {
+          frase: 'Criar o funil Vendas.',
+          acao: 'POST crm/pipelines',
+          app: 'Em d.ia',
+        },
+      };
+
+      const payload = generateTranslationPayload(auditLogItem, agentList);
+      expect(payload).toEqual({
+        agentName: 'Agent 1',
+        id: 16,
+        frase: 'Criar o funil Vendas.',
+        app: 'Em d.ia',
+      });
+    });
+
     // #2459 — a automação diz o passo e o número dela.
     it('should carry the step and the automation id of an automation action', () => {
       const auditLogItem = {
@@ -357,6 +380,19 @@ describe('Helper functions', () => {
 
       expect(generateLogActionKey(auditLogItem)).toEqual(
         'AUDIT_LOGS.AUTOMACAO.ACTION'
+      );
+    });
+
+    it('should generate the key of an MCP action (#3106)', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'mcp_action',
+        user_id: 1,
+        auditable_id: 16,
+      };
+
+      expect(generateLogActionKey(auditLogItem)).toEqual(
+        'AUDIT_LOGS.MCP.ACTION'
       );
     });
 

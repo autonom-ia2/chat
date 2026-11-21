@@ -1141,8 +1141,13 @@ Rails.application.routes.draw do
                 get :notas
                 get :arquivos
                 get :origem
+                # #3097 — o resumo das compras da pessoa (os cards ganhos nos funis de Vender).
+                get :compras
               end
             end
+            # #3097 — as faixas dos grupos de compra da conta: ler e, o administrador, ajustar.
+            get :grupos_de_compra, to: 'grupos_de_compra#show'
+            patch :grupos_de_compra, to: 'grupos_de_compra#update'
             if ChatwootApp.enterprise?
               resources :empresas, only: [:index, :show] do
                 get :contagens, on: :collection
@@ -1782,6 +1787,37 @@ Rails.application.routes.draw do
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'
   get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify'
+
+  # ----------------------------------------------------------------------
+  # OAuth 2.1 provider for third-party apps
+  # None of these routes match until OAUTH_PROVIDER_ENABLED is set.
+  constraints(->(_request) { GlobalConfig.get('OAUTH_PROVIDER_ENABLED')['OAUTH_PROVIDER_ENABLED'] }) do
+    get '.well-known/oauth-authorization-server', to: 'oauth/metadata#show'
+    post 'oauth/register', to: 'oauth/registrations#create'
+    # The consent screen is a dashboard page, so send the browser there with the client's query.
+    get 'oauth/authorize', to: redirect(status: 302) { |_params, request| "/app/oauth/authorize?#{request.query_string}" }
+    use_doorkeeper do
+      skip_controllers :authorizations, :applications, :authorized_applications, :token_info
+    end
+
+    namespace :api, defaults: { format: 'json' } do
+      namespace :v1 do
+        namespace :oauth do
+          resource :authorization, only: [:create, :destroy] do
+            get '/', action: :new
+          end
+        end
+        namespace :profile do
+          resources :oauth_applications, only: [:index, :destroy]
+        end
+      end
+    end
+
+    if ChatwootApp.enterprise?
+      match 'mcp', to: 'mcp#handle', via: [:get, :post, :delete]
+      get '.well-known/oauth-protected-resource(/mcp)', to: 'mcp/metadata#show'
+    end
+  end
 
   # ----------------------------------------------------------------------
   # Internal Monitoring Routes

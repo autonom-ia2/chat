@@ -33,6 +33,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
   ETAPAS = [
     # Contador do limite de mensagens por cliente (#3063): ninguém aponta para ele.
     ['Autonomia::EnvioAoCliente', :por_conta],
+    # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.
+    ['Relacionamentos::Compra', :por_conta],
     # Decisões, passagens e memória apontam para card, funil e conversa.
     ['Autonomia::DecisorDecisao', :por_conta],
     ['Autonomia::Decisor', :por_conta],
@@ -197,7 +199,10 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['BrandImportJob', :por_conta],
     ['BrandKit', :por_conta],
     ['Etiquetas::Nome', :por_conta],
-    ['IdempotencyKey', :por_conta]
+    ['IdempotencyKey', :por_conta],
+    # Apps conectados por OAuth (#3090): token e autorização ficam presos à conta, sem chave estrangeira.
+    ['Doorkeeper::AccessToken', :por_conta],
+    ['Doorkeeper::AccessGrant', :por_conta]
   ].freeze
 
   # Das ETAPAS, as que têm chave sem cascata para o que o pré-apagar do upstream apaga: a mensagem (destinatário de

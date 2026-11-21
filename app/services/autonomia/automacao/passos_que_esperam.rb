@@ -5,8 +5,8 @@
 # um, a classe que pergunta e entende a resposta, o prazo e a conferência ao salvar.
 #
 # Ao salvar (a Receita chama `problemas_ao_salvar`):
-# - os três só com a flag `automacao_passos_novos` (fica desligada em produção até o motor dos seis passos estar
-#   completo, exceção registrada em docs/2414-prototipos/passos-novos.md);
+# - os três só com a flag `automacao_passos_novos` (ligada em todas as contas desde 13/11; desligar é o rollback,
+#   ver docs/2414-prototipos/passos-novos.md);
 # - a reunião e a pesquisa mandam mensagem (a flag da F4) e a IA entende a resposta (a flag da F7). Nunca lista de
 #   palavras: quem entende o que o cliente escreveu é a IA;
 # - quem aprova ou em qual agenda: a pessoa e o time são da conta; "quem cuida do card" precisa de card ou conversa;

@@ -30,7 +30,8 @@
       "CONVERSA_ETIQUETA_POSTA": "Quando uma etiqueta é posta na conversa",
       "CONVERSA_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada da conversa",
       "CONTATO_ETIQUETA_POSTA": "Quando uma etiqueta é posta no contato",
-      "CONTATO_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada do contato"
+      "CONTATO_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada do contato",
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "Quando a pessoa entra num grupo de compra"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -94,7 +95,8 @@
       "REPETE": "Repete",
       "PAGINA_ID": "Página de agendamento",
       "ANTES": "Quanto tempo antes do início",
-      "ETIQUETA": "Etiqueta"
+      "ETIQUETA": "Etiqueta",
+      "GRUPO_DE_COMPRA": "Grupo de compra"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -122,7 +124,8 @@
       "CONVERSA_ETIQUETA_POSTA": "Quando a etiqueta {etiqueta} é posta na conversa",
       "CONVERSA_ETIQUETA_TIRADA": "Quando a etiqueta {etiqueta} é tirada da conversa",
       "CONTATO_ETIQUETA_POSTA": "Quando a etiqueta {etiqueta} é posta no contato",
-      "CONTATO_ETIQUETA_TIRADA": "Quando a etiqueta {etiqueta} é tirada do contato"
+      "CONTATO_ETIQUETA_TIRADA": "Quando a etiqueta {etiqueta} é tirada do contato",
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "Quando a pessoa entra no grupo {grupo_de_compra}"
     },
     "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
     "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",
@@ -151,6 +154,9 @@
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo.",
       "AVISO_LEMBRETE": "Se a reunião for remarcada, lembra no horário novo. Se for cancelada, não lembra. Se for marcada com menos antecedência do que isso, lembra logo."
+    },
+    "GATILHO_DE_COMPRA": {
+      "ERRO_FAIXAS": "Não consegui carregar os grupos de compra. Feche e abra de novo."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Qualquer página",

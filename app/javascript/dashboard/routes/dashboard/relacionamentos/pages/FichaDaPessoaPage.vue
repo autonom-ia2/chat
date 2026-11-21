@@ -18,6 +18,8 @@ import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
 import ConversaNova from '../components/carteira/ConversaNova.vue';
+import SecaoCompras from '../components/ficha/SecaoCompras.vue';
+import { FALHA_DA_PARTE } from '../ficha/falhas';
 import DialogoDeConfirmacao from '../components/carteira/DialogoDeConfirmacao.vue';
 import AvisoVivo from '../components/ficha/AvisoVivo.vue';
 import CabecalhoDaPessoa from '../components/ficha/CabecalhoDaPessoa.vue';
@@ -658,8 +660,18 @@ watch(
             @escolher-campos="configurador?.open()"
             @criar-campo="configurador?.open(null, true)"
           >
-            <template v-if="comSeguros" #antes>
+            <template #antes>
+              <SecaoCompras
+                v-if="ficha.falhas.value.compras !== FALHA_DA_PARTE.SEM_ACESSO"
+                :compras="ficha.compras.value"
+                :agora="agora"
+                :falhou="ficha.falhas.value.compras === FALHA_DA_PARTE.ERRO"
+                pode-chamar
+                @chamar="conversar"
+                @tentar="ficha.relerParte('compras')"
+              />
               <SegurosDaFicha
+                v-if="comSeguros"
                 :dono-id="id"
                 :demo="demo"
                 :nome="nome"

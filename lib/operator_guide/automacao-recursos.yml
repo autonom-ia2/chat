@@ -716,6 +716,12 @@ fora:
       - relacionamentos/etiqueta
       - relacionamentos/pessoas
   - motivo: >-
+      Grupos de compra (#3097): as faixas dos grupos ("campeão", "sem comprar há tanto tempo") são escolha da conta
+      inteira, feita pelo administrador na tela "Ajustar os grupos". Mudar as faixas troca o grupo de todo mundo de uma
+      vez, e não é passo de automação: a automação usa o grupo pelo gatilho "entrou no grupo de compra".
+    recursos:
+      - relacionamentos/grupos_de_compra
+  - motivo: >-
       Trazer minha lista (#2896): a pessoa envia a planilha, confere o que foi lido e traz pela tela. Enviar e trazer
       gravam em lote, num job; colunas, respostas e linhas só valem dentro dessa conferência. Desfazer uma lista
       trazida apaga pessoas e esvazia campos em lote, também num job. No Guia, as dez escritas pedem confirmação e não

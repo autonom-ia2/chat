@@ -55,7 +55,7 @@ module Autonomia::Guide::Formatos::Esquemas
   end
 
   def validador(esquema)
-    JSONSchemer.schema(esquema, formats: JsonSchemaFormatos::TODOS)
+    JsonSchemaDraft7.schema(esquema, formats: JsonSchemaFormatos::TODOS)
   end
 
   # O dado cabe no trecho do esquema? As anotações não contam.

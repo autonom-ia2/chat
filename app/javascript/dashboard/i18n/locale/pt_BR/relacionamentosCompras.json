@@ -1,0 +1,141 @@
+{
+  "RELACIONAMENTOS_COMPRAS": {
+    "FICHA": {
+      "TITULO": "Compras",
+      "NUNCA": "Ainda não comprou.",
+      "DE_ONDE": "A compra aparece aqui quando um card desta pessoa é marcado como ganho.",
+      "RITMO": "Costuma voltar a cada {count} dia. | Costuma voltar a cada {count} dias.",
+      "PASSOU": "Já faz {count} dia que não compra. | Já faz {count} dias que não compra.",
+      "CHAMAR": "Chamar de volta",
+      "QUANTAS": "{count} compra | {count} compras",
+      "TOTAL_LEITOR": "Total comprado:",
+      "EM_COMPRAS": "em {count} compra | em {count} compras",
+      "MEDIA": "média de {valor}",
+      "OUTRAS_MOEDAS": "e {valores}",
+      "EM_DIA": "Comprou há {count} dia. | Comprou há {count} dias.",
+      "DIA_DE_VOLTAR": "dia de voltar",
+      "HOJE": "hoje",
+      "VOLTA_EM": "deve voltar perto de {data}",
+      "UMA_COMPRA": "A compra foi em {data}.",
+      "UMA_COMPRA_APOIO": "Com a segunda compra, aparece aqui de quanto em quanto tempo esta pessoa costuma voltar."
+    },
+    "GRUPOS": {
+      "CAMPEOES": {
+        "NOME": "Campeões",
+        "NA_FICHA": "Campeão",
+        "EXPLICACAO": "Compraram {campeao_compras} vezes ou mais, e a última foi há menos de {campeao}."
+      },
+      "FIEIS": {
+        "NOME": "Fiéis",
+        "NA_FICHA": "Fiel",
+        "EXPLICACAO": "Compraram mais de uma vez, e a última foi há menos de {em_risco}."
+      },
+      "NOVOS": {
+        "NOME": "Comprou uma vez",
+        "NA_FICHA": "Comprou uma vez",
+        "EXPLICACAO": "Compraram uma vez só, há menos de {em_risco}."
+      },
+      "PASSOU_DA_HORA": {
+        "NOME": "Passou da hora de voltar",
+        "NA_FICHA": "Passou da hora de voltar",
+        "EXPLICACAO": "Compram de tempos em tempos e já passaram bem desse tempo sem comprar."
+      },
+      "EM_RISCO": {
+        "NOME": "Sem comprar há {entre}",
+        "NA_FICHA": "Sem comprar há {entre}",
+        "EXPLICACAO": "Já compraram, mas a última compra foi há {entre}."
+      },
+      "PERDIDOS": {
+        "NOME": "Sem comprar há mais de {perdido}",
+        "NA_FICHA": "Sem comprar há mais de {perdido}",
+        "EXPLICACAO": "Já compraram, mas não compram há mais de {perdido}."
+      },
+      "NUNCA": {
+        "NOME": "Nunca comprou",
+        "NA_FICHA": "Nunca comprou",
+        "EXPLICACAO": "Ainda não compraram nada."
+      }
+    },
+    "LISTA": {
+      "VISAO": "Ver os grupos por",
+      "CONVERSA": "Conversa",
+      "COMPRA": "Compra",
+      "AJUSTAR": "Ajustar os grupos",
+      "COMPROU_HA": "Comprou {quando}",
+      "COMPRAS": "{count} vez | {count} vezes",
+      "NUNCA_COMPROU": "Nunca comprou",
+      "EM_COMPRAS": "{valor} em compras",
+      "PESSOAS": "pessoas",
+      "VER_TODOS": "Ver todos ({count})",
+      "NUNCA_COMPRARAM": "Nunca compraram ({count})"
+    },
+    "AJUSTE": {
+      "TITULO": "Ajustar os grupos de compra",
+      "EXPLICACAO": "Os clientes mudam de grupo sozinhos, a cada venda e com o passar do tempo.",
+      "CAMPEAO_COMPRAS": "Para ser campeão, comprou pelo menos",
+      "VEZES": "vezes",
+      "CAMPEAO_DIAS": "Para ser campeão, a última compra foi há no máximo",
+      "DIAS": "dias",
+      "EM_RISCO": "Começa a contar como \"sem comprar\" depois de",
+      "PERDIDO": "Conta como sumido há muito tempo depois de",
+      "SALVAR": "Salvar",
+      "CANCELAR": "Cancelar",
+      "PADRAO": "Voltar ao padrão",
+      "SALVO": "Pronto. Os grupos foram ajustados.",
+      "ERRO_ORDEM": "Precisa ser maior que o número de cima ({dias} dias).",
+      "ERRO_MINIMO": "Use um número maior que zero.",
+      "NAO_DISPARA": "Mudar estes números não manda mensagem para ninguém. As automações valem só para quem muda de grupo por causa de uma venda ou do tempo.",
+      "ERRO_CAMPEAO": "Precisa ser menor que o número de \"sem comprar\" ({dias} dias)."
+    },
+    "FILTROS": {
+      "COMPRAS": "Compras",
+      "QUALQUER": "Qualquer",
+      "JA_COMPROU": "Já comprou",
+      "NUNCA_COMPROU": "Nunca comprou",
+      "ULTIMOS": "Comprou nos últimos {count} dias",
+      "TOTAL": "Total comprado",
+      "ACIMA": "Acima de {valor}"
+    },
+    "GATILHO": {
+      "FRASE": "Quando entra num grupo de compra",
+      "GRUPO": "Grupo de compra",
+      "AJUDA": "Vale só para quem entrar no grupo depois que você ligar a automação. Quem já está nele fica de fora.",
+      "QUEM_ENTRA": "Quem entra: {explicacao}"
+    },
+    "UNIDADES": {
+      "DIAS": "{count} dia | {count} dias",
+      "MESES": "{count} mês | {count} meses",
+      "ENTRE_DIAS": "{de} a {ate} dias",
+      "ENTRE_MESES": "{de} a {ate} meses"
+    },
+    "ORDENAR": {
+      "CAMPOS": {
+        "COMPRA": "Compra",
+        "TOTAL": "Total comprado"
+      },
+      "SENTIDOS": {
+        "MAIS_TEMPO": "Mais tempo sem comprar",
+        "RECENTE": "Compra mais recente",
+        "MAIS": "Quem mais comprou",
+        "MENOS": "Quem menos comprou"
+      },
+      "ESCOLHIDA": {
+        "COMPRA_MAIS_TEMPO": "Mais tempo sem comprar",
+        "COMPRA_RECENTE": "Compra mais recente",
+        "TOTAL_MAIS": "Quem mais comprou",
+        "TOTAL_MENOS": "Quem menos comprou"
+      }
+    },
+    "HEROI": {
+      "PASSOU": "{count} cliente passou da hora de voltar. | {count} clientes passaram da hora de voltar.",
+      "EM_RISCO": "{count} cliente está há {entre} sem comprar. | {count} clientes estão há {entre} sem comprar.",
+      "CAMPEOES": "Você tem {count} campeão. | Você tem {count} campeões.",
+      "COMPRARAM": "{count} cliente já comprou com você. | {count} clientes já compraram com você.",
+      "NENHUMA": "Nenhuma compra marcada ainda.",
+      "NENHUMA_APOIO": "A compra conta quando um card é marcado como ganho.",
+      "JUNTOS": "Já comprou {valor} com você. | Juntos, já compraram {valor} com você.",
+      "VER_QUEM_CHAMAR": "Ver quem chamar",
+      "VER_CAMPEOES": "Ver os campeões"
+    }
+  }
+}

@@ -24,6 +24,9 @@ import { mostraNaFrequencia } from '../recorrente';
 // acontece de novo com a automação ainda esperando no mesmo card ou conversa.
 // G10 (F8.7): a etiqueta posta ou tirada pede a etiqueta, pelo nome (é assim
 // que a conversa e o contato a guardam).
+// #3097: o "entrou num grupo de compra" pede o grupo (useEscolhasDosGatilhos:
+// os da lista de Relacionamentos, com os nomes pelas faixas da conta), diz
+// quem entra nele e que só vale para quem entra depois de ligar.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -61,6 +64,16 @@ const tiposDeGatilho = computed(() => props.gatilhos.map(opcao));
 const entradaDo = tipo => props.gatilhos.find(item => item.tipo === tipo);
 const pedePeca = (item, peca) =>
   (item?.parametros || []).some(parametro => parametro.peca === peca);
+
+// "Quem entra: ..." com a explicação do grupo escolhido, para a pessoa saber
+// quem vai receber antes de ligar.
+const quemEntra = nome => {
+  const explicacao =
+    props.escolhas.quemEntraNoGrupo?.[props.modelValue?.[nome]];
+  return explicacao
+    ? t('RELACIONAMENTOS_COMPRAS.GATILHO.QUEM_ENTRA', { explicacao })
+    : '';
+};
 
 const entrada = computed(() => entradaDo(props.modelValue?.tipo));
 const pede = peca => pedePeca(entrada.value, peca);
@@ -429,6 +442,26 @@ const mudar = (nome, valor) => {
         :options="opcoes.etiquetaPorNome || []"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
+      <template v-else-if="parametro.peca === 'grupo_de_compra'">
+        <ChoiceSelect
+          data-grupo-de-compra
+          :model-value="modelValue?.[parametro.nome] ?? ''"
+          :aria-label="$t(parametro.frase)"
+          :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+          :options="escolhas.gruposDeCompra || []"
+          @update:model-value="valor => mudar(parametro.nome, valor)"
+        />
+        <p
+          v-if="quemEntra(parametro.nome)"
+          data-quem-entra
+          class="m-0 text-sm font-medium text-n-slate-12"
+        >
+          {{ quemEntra(parametro.nome) }}
+        </p>
+        <p class="m-0 text-sm text-n-slate-11">
+          {{ $t('RELACIONAMENTOS_COMPRAS.GATILHO.AJUDA') }}
+        </p>
+      </template>
       <ChoiceSelect
         v-else-if="parametro.peca === 'pagina'"
         data-pagina

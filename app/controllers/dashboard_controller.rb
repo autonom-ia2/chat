@@ -28,6 +28,7 @@ class DashboardController < ActionController::Base
     DISABLE_META_MESSAGE_SENDING
     DEPLOYMENT_ENV
     INSTALLATION_PRICING_PLAN
+    OAUTH_PROVIDER_ENABLED
   ].freeze
 
   before_action :redirect_to_autonomia_sso_if_needed, only: [:index]
@@ -184,12 +185,15 @@ class DashboardController < ActionController::Base
     value.match?(/\A[A-Za-z][A-Za-z0-9+\-.]*:/) || value.start_with?('//')
   end
 
+  # The login app (v3) owns /app/login and /app/auth/*; every other screen is the dashboard. Matching
+  # by prefix keeps /app/oauth/authorize (the OAuth consent, #3104) out of the login app, whose guard
+  # sends anyone already signed in to /app.
   def set_application_pack
-    @application_pack = if request.path.include?('/auth') || request.path.include?('/login')
-                          'v3app'
-                        else
-                          'dashboard'
-                        end
+    @application_pack = login_app_path?(request.path) ? 'v3app' : 'dashboard'
+  end
+
+  def login_app_path?(path)
+    path == '/app/login' || path.start_with?('/app/login/', '/app/auth/')
   end
 
   def sensitive_path?

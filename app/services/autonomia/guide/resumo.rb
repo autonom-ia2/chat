@@ -50,12 +50,14 @@ class Autonomia::Guide::Resumo
   # forma não denuncia nada: `hmac_token`, `imap_password`, `smtp_password` e o
   # `secret` de webhook são strings curtas, iguaizinhas a um nome de caixa. Iam
   # inteiros para o modelo. Aqui o nome é a única coisa que importa, e vale para
-  # qualquer um dos 270 recursos.
+  # qualquer um dos 270 recursos. `pin` (#3106, revisão de segurança): o PIN de duas etapas do WhatsApp
+  # (`provider_config.verification_pin`).
   SEGREDOS = %w[
     secret hmac_token inbox_identifier
     password imap_password smtp_password
     token access_token auth_token refresh_token api_key apikey
     private_key client_secret signing_key webhook_secret
+    pin
   ].freeze
 
   def initialize(corpo:, campos: nil, teto: MAX_TEXTO)
