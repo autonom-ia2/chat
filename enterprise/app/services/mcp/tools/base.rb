@@ -1,7 +1,15 @@
-# A tool runs as the user who connected the app, on the account the token is bound to.
+# A tool runs as the user who connected the app, on one of the accounts they administer (#3106): the one the call
+# names in account_id, or the one chosen on the consent screen.
 # The OAuth scope limits what the app may do. The policies still decide what the user may do.
 class Mcp::Tools::Base < MCP::Tool
   NOT_FOUND_MESSAGE = 'Not found, or you do not have access to it.'.freeze
+  ACCOUNT_ID_PROPERTY = {
+    account_id: {
+      type: 'integer',
+      description: 'The account to act on, from list_accounts. Leave it out to use the account chosen when the app was connected.'
+    }
+  }.freeze
+  NO_ACCOUNT_MESSAGE = 'You do not administer this account, or it is not active. Call list_accounts to see the accounts you can use.'.freeze
 
   class << self
     attr_reader :required_scope
@@ -10,15 +18,31 @@ class Mcp::Tools::Base < MCP::Tool
       @required_scope = value
     end
 
+    # Every tool takes the account it acts on.
+    def input_schema(*args)
+      value = args.first
+      return super unless value.is_a?(Hash)
+
+      super(value.merge(properties: ACCOUNT_ID_PROPERTY.merge(value[:properties] || {})))
+    end
+
     # ChatGPT reads securitySchemes to know which scope to ask the user for.
     def to_h
       super.merge(securitySchemes: [{ type: 'oauth2', scopes: [required_scope] }])
     end
 
-    def call(server_context:, **arguments)
+    # The accounts this connection reaches; a connection made before #3106 stays on its own (McpController).
+    def account_access(server_context)
+      Mcp::AccountAccess.new(Current.user, **server_context.fetch(:account_reach))
+    end
+
+    def call(server_context:, account_id: nil, **arguments)
       return insufficient_scope_response(server_context[:base_url]) unless server_context[:scopes].include?(required_scope)
 
-      perform(**arguments)
+      account_user = account_access(server_context).find(account_id || server_context[:default_account_id])
+      return error_response(NO_ACCOUNT_MESSAGE) unless account_user
+
+      on_account(account_user) { perform(**arguments) }
     rescue ActiveRecord::RecordNotFound, Pundit::NotAuthorizedError
       error_response(NOT_FOUND_MESSAGE)
     rescue ActiveRecord::RecordInvalid => e
@@ -26,6 +50,15 @@ class Mcp::Tools::Base < MCP::Tool
     end
 
     private
+
+    def on_account(account_user)
+      previous = [Current.account, Current.account_user]
+      Current.account = account_user.account
+      Current.account_user = account_user
+      yield
+    ensure
+      Current.account, Current.account_user = previous
+    end
 
     def respond(data)
       MCP::Tool::Response.new([{ type: 'text', text: data.to_json }], structured_content: data)

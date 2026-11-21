@@ -8,9 +8,10 @@ RSpec.describe 'MCP tools', type: :request do
   let(:inbox) { create(:inbox, account: account) }
   let(:application) { Doorkeeper::Application.create!(name: 'ChatGPT', redirect_uri: 'https://chatgpt.com/callback', confidential: false) }
   let(:scopes) { 'conversations:read conversations:write contacts:read messages:write' }
+  let(:all_accounts) { false }
   let(:access_token) do
     Doorkeeper::AccessToken.create!(application: application, resource_owner_id: admin.id, account_id: account.id, scopes: scopes,
-                                    expires_in: 2.hours)
+                                    all_accounts: all_accounts, expires_in: 2.hours)
   end
 
   before do
@@ -26,7 +27,7 @@ RSpec.describe 'MCP tools', type: :request do
       tools = mcp_request('tools/list', {}, access_token)['tools']
 
       expect(tools.to_h { |tool| [tool['name'], tool['securitySchemes'].first['scopes']] }).to eq(
-        'list_inboxes' => ['conversations:read'], 'list_conversations' => ['conversations:read'],
+        'list_accounts' => ['conversations:read'], 'list_inboxes' => ['conversations:read'], 'list_conversations' => ['conversations:read'],
         'get_conversation' => ['conversations:read'], 'update_conversation' => ['conversations:write'],
         'assign_conversation' => ['conversations:write'], 'send_message' => ['messages:write'],
         'list_labels' => ['conversations:read'], 'list_teams' => ['conversations:read'], 'list_agents' => ['conversations:read'],
@@ -43,6 +44,108 @@ RSpec.describe 'MCP tools', type: :request do
 
       expect(writers).to contain_exactly('update_conversation', 'assign_conversation', 'send_message', 'create_contact',
                                          'update_contact', 'add_contact_note')
+    end
+  end
+
+  # One connection covers every active account the user administers (#3106).
+  describe 'several accounts' do
+    let(:other_account) { create(:account, name: 'Loja Silva') }
+    let!(:other_inbox) { create(:inbox, account: other_account, name: 'WhatsApp da Loja Silva') }
+
+    let(:all_accounts) { true }
+
+    before { create(:account_user, account: other_account, user: admin, role: :administrator) }
+
+    it 'gives every tool but list_accounts an account_id argument' do
+      tools = mcp_request('tools/list', {}, access_token)['tools']
+
+      with_account = tools.select { |tool| tool.dig('inputSchema', 'properties', 'account_id') }.pluck('name')
+      expect(with_account).to match_array(Mcp::Tools::ALL.map(&:name_value) - ['list_accounts'])
+    end
+
+    it 'lists the accounts the user administers and marks the default one' do
+      agent_account = create(:account)
+      create(:account_user, account: agent_account, user: admin, role: :agent)
+      suspended = create(:account, status: :suspended)
+      create(:account_user, account: suspended, user: admin, role: :administrator)
+
+      result = call_mcp_tool('list_accounts', {}, access_token)
+
+      expect(result.dig('structuredContent', 'accounts')).to contain_exactly(
+        { 'id' => account.id, 'name' => account.name, 'default' => true },
+        { 'id' => other_account.id, 'name' => 'Loja Silva', 'default' => false }
+      )
+    end
+
+    it 'acts on the account the call names' do
+      result = call_mcp_tool('list_inboxes', { account_id: other_account.id }, access_token)
+
+      expect(result.dig('structuredContent', 'inboxes').pluck('name')).to eq(['WhatsApp da Loja Silva'])
+    end
+
+    it 'uses the account chosen on the consent screen when the call names none' do
+      result = call_mcp_tool('list_inboxes', {}, access_token)
+
+      expect(result.dig('structuredContent', 'inboxes').pluck('id')).to eq([inbox.id])
+    end
+
+    context 'with a token that can create contacts' do
+      let(:scopes) { 'conversations:read contacts:read contacts:write' }
+
+      it 'refuses an account the user only works in as an agent, and changes nothing there' do
+        agent_account = create(:account)
+        create(:account_user, account: agent_account, user: admin, role: :agent)
+
+        result = call_mcp_tool('create_contact', { name: 'Ana', account_id: agent_account.id }, access_token)
+
+        expect(result['isError']).to be(true)
+        expect(result.dig('content', 0, 'text')).to include('list_accounts')
+        expect(agent_account.contacts.count).to eq(0)
+      end
+    end
+
+    it 'keeps the connection when the default account is lost but another one remains' do
+      account.account_users.find_by(user_id: admin.id).update!(role: :agent)
+
+      without_account = call_mcp_tool('list_inboxes', {}, access_token)
+      with_account = call_mcp_tool('list_inboxes', { account_id: other_account.id }, access_token)
+
+      expect(without_account['isError']).to be(true)
+      expect(with_account.dig('structuredContent', 'inboxes').pluck('id')).to eq([other_inbox.id])
+    end
+
+    # The connection made before #3106 promised one account: it does not reach the others without a new consent.
+    context 'with a connection made before one connection covered every account' do
+      let(:all_accounts) { false }
+
+      it 'lists and reaches only the account chosen back then' do
+        listed = call_mcp_tool('list_accounts', {}, access_token)
+        default = call_mcp_tool('list_inboxes', {}, access_token)
+        other = call_mcp_tool('list_inboxes', { account_id: other_account.id }, access_token)
+
+        expect(listed.dig('structuredContent', 'accounts')).to eq([{ 'id' => account.id, 'name' => account.name, 'default' => true }])
+        expect(default.dig('structuredContent', 'inboxes').pluck('id')).to eq([inbox.id])
+        expect(other['isError']).to be(true)
+        expect(other.dig('content', 0, 'text')).to include('list_accounts')
+      end
+
+      it 'asks to connect again once the user no longer administers that account' do
+        account.account_users.find_by(user_id: admin.id).update!(role: :agent)
+
+        mcp_request('tools/list', {}, access_token)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    it 'reaches an account the user starts administering after connecting' do
+      newer = create(:account)
+      newer_inbox = create(:inbox, account: newer)
+      create(:account_user, account: newer, user: admin, role: :administrator)
+
+      result = call_mcp_tool('list_inboxes', { account_id: newer.id }, access_token)
+
+      expect(result.dig('structuredContent', 'inboxes').pluck('id')).to eq([newer_inbox.id])
     end
   end
 

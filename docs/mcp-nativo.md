@@ -1,8 +1,8 @@
 # MCP nativo com OAuth (#3089)
 
 O Chat2You publica o próprio servidor MCP. Quem **administra** uma conta cola o endereço no app (Em d.ia,
-Claude, ChatGPT), clica em conectar, entra com o login de sempre, escolhe a conta e permite. O app passa a
-usar a plataforma com as permissões dessa pessoa, só naquela conta.
+Claude, ChatGPT), clica em conectar, entra com o login de sempre e permite. O app passa a usar a plataforma com
+as permissões dessa pessoa, em todas as contas ativas que ela administra (#3106).
 
 | Instalação | Endereço MCP |
 |---|---|
@@ -16,7 +16,8 @@ Porte da branch `feat/mcp-server` do Chatwoot (06–07/10/2026, ainda fora do `d
 (`20261006173150_create_doorkeeper_tables`) para o merge futuro não duplicar as tabelas.
 
 - **Doorkeeper**: authorization code com PKCE S256 obrigatório, refresh token rotativo, segredos guardados só
-  como hash. O token fica preso a uma conta (`account_id`).
+  como hash. O `account_id` do token é só a conta padrão: a conta em que a pessoa estava na tela de
+  consentimento, ou a primeira que ela administra.
 - **DCR** (`POST /oauth/register`, RFC 7591): cliente público, sem segredo. É como Claude e ChatGPT se registram.
 - **CIMD** (`Oauth::ClientMetadataDocument`): o `client_id` é a URL https de um documento JSON com
   `client_name` e `redirect_uris`. É como o Em d.ia se identifica. A busca só aceita https, sem redirecionamento,
@@ -25,18 +26,23 @@ Porte da branch `feat/mcp-server` do Chatwoot (06–07/10/2026, ainda fora do `d
   de novo depois de 10 min. Os escopos do documento são ignorados: cada pedido de
   autorização pede os seus, e o Doorkeeper confere.
 - **Consentimento**: `/oauth/authorize` leva à tela `/app/accounts/:id/oauth/authorize`. Sem sessão, o login (SSO
-  da Autonom.ia ou e-mail e senha) devolve à mesma tela. A tela só oferece as contas em que a pessoa é
-  administradora e mostra, em destaque, o endereço que vai receber o acesso: o nome do app é escolhido por quem o
+  da Autonom.ia ou e-mail e senha) devolve à mesma tela. A tela diz que a conexão vale para todas as contas que a
+  pessoa administra, com os nomes, sem pedir para escolher uma, e mostra, em destaque, o endereço que vai receber o acesso: o nome do app é escolhido por quem o
   registrou, o endereço não.
-- **`/mcp`**: Streamable HTTP sem estado (gem `mcp`). Recusa token revogado, vencido, de conta suspensa ou de
-  quem deixou de ser administrador. Cada ferramenta roda como a pessoa, com as policies do painel.
+- **`/mcp`**: Streamable HTTP sem estado (gem `mcp`). Recusa token revogado, vencido, ou de quem não administra
+  mais nenhuma conta ativa. Cada ferramenta roda como a pessoa, com as policies do painel.
+- **Várias contas** (#3106): `list_accounts` lista as contas ativas que a pessoa administra e marca a padrão. Toda
+  outra ferramenta aceita `account_id`, e sem ele usa a padrão. A lista é lida em cada chamada
+  (`Mcp::AccountAccess`): uma conta que a pessoa passa a administrar entra na hora, e uma que ela deixa de
+  administrar, ou que é suspensa, sai na hora. O super admin é cadastrado em todas as contas, então não tem regra
+  própria.
 - **Apps conectados**: Perfil → Apps conectados, com o botão para desconectar.
 
 ## Escopos e ferramentas
 
 | Escopo | Ferramentas |
 |---|---|
-| `conversations:read` | `list_inboxes`, `list_conversations`, `get_conversation`, `list_labels`, `list_teams`, `list_agents`, `list_canned_responses` |
+| `conversations:read` | `list_accounts`, `list_inboxes`, `list_conversations`, `get_conversation`, `list_labels`, `list_teams`, `list_agents`, `list_canned_responses` |
 | `conversations:write` | `update_conversation`, `assign_conversation` |
 | `messages:write` | `send_message` (resposta ao cliente ou nota interna) |
 | `contacts:read` | `search_contacts`, `get_contact`, `list_companies`, `get_company` |
@@ -52,12 +58,29 @@ no mesmo `Mcp::Tools::ALL`.
 1. Migration do Doorkeeper (deploy normal).
 2. Super Admin → App Config: `OAUTH_PROVIDER_ENABLED = true`. Antes disso nenhuma rota OAuth/MCP existe (404).
 3. Instalação com mais de um endereço: `OAUTH_PROVIDER_EXTRA_HOSTS=chat.autonomia.site` (lista separada por
-   vírgula). Os metadados e o desafio do `/mcp` passam a nomear o host que o cliente usou.
+   vírgula). É variável de ambiente do container (web), não App Config do Super Admin. Os metadados e o desafio do `/mcp` passam a nomear o host que o cliente usou.
 
 Limites de frequência (Rack::Attack, sem teto diário): `RATE_LIMIT_MCP` (300/min por token),
 `RATE_LIMIT_OAUTH_TOKEN` (60/min por IP e cliente juntos; Claude e ChatGPT renovam de servidores compartilhados, e o ID público de um cliente sozinho não esgota a cota de ninguém),
 `RATE_LIMIT_OAUTH_AUTHORIZATION` (60/min por IP na API da tela de consentimento, que pode buscar o CIMD) e
 `RATE_LIMIT_OAUTH_REGISTRATION` (100/h por IP).
+
+## Conexões feitas antes do #3106
+
+Antes do #3106 a conexão valia para a conta escolhida no consentimento. A conexão feita na tela nova vale para todas as
+contas que a pessoa administra. A coluna `all_accounts` (em `oauth_access_grants` e `oauth_access_tokens`) guarda qual
+das duas promessas a pessoa aceitou:
+
+- O servidor liga a coluna só quando a tela de consentimento nova aprova (ela manda `accounts_consent=all`;
+  `Api::V1::Oauth::AuthorizationsController#pre_auth_params`). Uma aba ainda aberta com a tela anterior não manda, e a
+  conexão fica numa conta. Um `all_accounts` mandado por quem quer que seja é ignorado.
+- O Doorkeeper a copia do grant para o token e de um token para o seguinte na renovação
+  (`custom_access_token_attributes`).
+- Sem ela (padrão `false`), a conexão segue valendo só para a conta dela: `list_accounts` mostra só essa, e outra conta
+  recebe erro. Nada é revogado e ninguém precisa reconectar para continuar como estava. Para ganhar as outras contas
+  (e os escopos `platform:*`), a pessoa conecta de novo.
+- No deploy blue-green, a blue emite conexões sem a coluna até a troca: elas também ficam numa conta só, inclusive
+  depois de renovadas na green. Não há passo manual.
 
 ## Desligar
 

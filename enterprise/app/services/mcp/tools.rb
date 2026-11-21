@@ -1,5 +1,6 @@
 module Mcp::Tools
   ALL = [
+    Mcp::Tools::ListAccounts,
     Mcp::Tools::ListInboxes,
     Mcp::Tools::ListConversations,
     Mcp::Tools::GetConversation,
