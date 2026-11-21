@@ -33,7 +33,9 @@ RSpec.describe 'MCP tools', type: :request do
         'list_labels' => ['conversations:read'], 'list_teams' => ['conversations:read'], 'list_agents' => ['conversations:read'],
         'list_canned_responses' => ['conversations:read'], 'search_contacts' => ['contacts:read'], 'get_contact' => ['contacts:read'],
         'create_contact' => ['contacts:write'], 'update_contact' => ['contacts:write'], 'add_contact_note' => ['contacts:write'],
-        'list_companies' => ['contacts:read'], 'get_company' => ['contacts:read'], 'get_report_summary' => ['reports:read']
+        'list_companies' => ['contacts:read'], 'get_company' => ['contacts:read'], 'get_report_summary' => ['reports:read'],
+        'platform_catalog' => ['platform:read'], 'platform_read' => ['platform:read'], 'platform_action_format' => ['platform:read'],
+        'platform_action' => ['platform:write']
       )
     end
 
@@ -43,7 +45,7 @@ RSpec.describe 'MCP tools', type: :request do
       writers = tools.reject { |tool| tool.dig('annotations', 'readOnlyHint') }.pluck('name')
 
       expect(writers).to contain_exactly('update_conversation', 'assign_conversation', 'send_message', 'create_contact',
-                                         'update_contact', 'add_contact_note')
+                                         'update_contact', 'add_contact_note', 'platform_action')
     end
   end
 

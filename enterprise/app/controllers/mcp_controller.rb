@@ -12,17 +12,19 @@ class McpController < ApplicationController
 
   def handle
     server = MCP::Server.new(name: SERVER_NAME, version: Chatwoot.config[:version], instructions: INSTRUCTIONS, tools: Mcp::Tools::ALL,
-                             server_context: { scopes: doorkeeper_token.scopes.to_a, base_url: public_url,
-                                               default_account_id: doorkeeper_token.account_id, account_reach: account_reach })
+                             server_context: server_context)
     # Rails already checks the Host header, and the bearer token rules out cross-site browser requests.
     transport = MCP::Server::Transports::StreamableHTTPTransport.new(server, stateless: true, enable_json_response: true,
                                                                              dns_rebinding_protection: false)
     server.transport = transport
 
+    Mcp::Request.app_name = doorkeeper_token.application&.name
     status, headers, body = transport.handle_request(request)
     response.headers.merge!(headers)
     self.status = status
     self.response_body = body
+  ensure
+    Mcp::Request.app_name = nil
   end
 
   private
@@ -35,6 +37,11 @@ class McpController < ApplicationController
     return render_oauth_challenge unless Mcp::AccountAccess.new(user, **account_reach).any?
 
     Current.user = user
+  end
+
+  def server_context
+    { scopes: doorkeeper_token.scopes.to_a, base_url: public_url, default_account_id: doorkeeper_token.account_id,
+      account_reach: account_reach }
   end
 
   # How far the connection reaches: every account, or only its own when made before #3106 (Mcp::AccountAccess).
