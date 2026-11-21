@@ -55,13 +55,15 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
       expect(conversation.reload).to have_attributes(assignee: nil, team: nil)
     end
 
-    it 'does not assign an agent who is not in the inbox of the conversation' do
+    it 'changes nothing when the agent is not in the inbox of the conversation' do
       agent = create(:user, account: account, role: :agent)
+      team = create(:team, account: account)
 
-      result = call_mcp_tool('assign_conversation', { conversation_id: conversation.display_id, agent_id: agent.id }, access_token)
+      result = call_mcp_tool('assign_conversation', { conversation_id: conversation.display_id, agent_id: agent.id, team_id: team.id },
+                             access_token)
 
       expect(result['isError']).to be(true)
-      expect(conversation.reload.assignee).to be_nil
+      expect(conversation.reload).to have_attributes(assignee: nil, team: nil)
     end
 
     it 'does not assign someone from another account' do

@@ -243,9 +243,10 @@ class Rack::Attack
   end
 
   ## MCP and token endpoints (#3089): a frequency limit against abuse, never a daily cap on the user ###
-  # Per client, not per IP: Claude and ChatGPT renew tokens for all their users from the same servers.
-  throttle('oauth/token/client', limit: ENV.fetch('RATE_LIMIT_OAUTH_TOKEN', '60').to_i, period: 1.minute) do |req|
-    (req.params['client_id'].presence || req.ip) if req.path_without_extensions == '/oauth/token' && req.post?
+  # Per IP and client together: Claude and ChatGPT renew for all their users from the same servers (one client per
+  # user via DCR), and a public client_id alone would let anyone use up the quota of an app (CIMD has one client).
+  throttle('oauth/token/ip_client', limit: ENV.fetch('RATE_LIMIT_OAUTH_TOKEN', '60').to_i, period: 1.minute) do |req|
+    "#{req.ip}:#{req.params['client_id']}" if req.path_without_extensions == '/oauth/token' && req.post?
   end
 
   # The consent API may fetch a client's metadata document (CIMD) from the internet

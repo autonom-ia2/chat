@@ -9,8 +9,8 @@ class Oauth::RegistrationsController < ApplicationController
   MAX_REDIRECT_URIS = 10
 
   def create
-    if registration_params[:redirect_uris].to_a.size > MAX_REDIRECT_URIS
-      return render json: { error: 'invalid_redirect_uri', error_description: "At most #{MAX_REDIRECT_URIS} redirect URIs" },
+    if invalid_redirect_uris?
+      return render json: { error: 'invalid_redirect_uri', error_description: "One URI per item, at most #{MAX_REDIRECT_URIS}" },
                     status: :bad_request
     end
 
@@ -29,6 +29,12 @@ class Oauth::RegistrationsController < ApplicationController
   end
 
   private
+
+  # Doorkeeper splits each value on whitespace, so one item could carry many URIs past the count
+  def invalid_redirect_uris?
+    uris = registration_params[:redirect_uris].to_a
+    uris.size > MAX_REDIRECT_URIS || uris.any? { |uri| uri.to_s.split.size != 1 }
+  end
 
   def registration_params
     params.permit(:client_name, :scope, redirect_uris: [])

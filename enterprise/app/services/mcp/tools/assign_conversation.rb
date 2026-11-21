@@ -16,23 +16,26 @@ class Mcp::Tools::AssignConversation < Mcp::Tools::Base
   def self.perform(conversation_id:, agent_id: nil, team_id: nil)
     conversation = find_conversation(conversation_id)
     authorize(conversation, :update?)
-    assign_team(conversation, team_id) unless team_id.nil?
-    assign_agent(conversation, agent_id) unless agent_id.nil?
+    team = find_team(team_id)
+    check_agent(conversation, agent_id)
+    ActiveRecord::Base.transaction do
+      conversation.with_lock { conversation.update!(team: team) } unless team_id.nil?
+      Conversations::AssignmentService.new(conversation: conversation, assignee_id: agent_id.positive? ? agent_id : nil).perform unless agent_id.nil?
+    end
 
     respond(conversation_summary(conversation.reload))
   end
 
+  # Both are checked before anything is saved, so a refused agent leaves the conversation as it was.
+  def self.find_team(team_id)
+    Current.account.teams.find(team_id) if team_id&.positive?
+  end
+  private_class_method :find_team
+
   # Same people the dashboard offers: members of the conversation's inbox and the administrators.
-  def self.assign_agent(conversation, agent_id)
-    raise ActiveRecord::RecordNotFound if agent_id.positive? && conversation.inbox.assignable_agents.none? { |agent| agent.id == agent_id }
-
-    Conversations::AssignmentService.new(conversation: conversation, assignee_id: agent_id.positive? ? agent_id : nil).perform
+  def self.check_agent(conversation, agent_id)
+    return unless agent_id&.positive?
+    raise ActiveRecord::RecordNotFound if conversation.inbox.assignable_agents.none? { |agent| agent.id == agent_id }
   end
-  private_class_method :assign_agent
-
-  def self.assign_team(conversation, team_id)
-    team = team_id.positive? ? Current.account.teams.find(team_id) : nil
-    conversation.with_lock { conversation.update!(team: team) }
-  end
-  private_class_method :assign_team
+  private_class_method :check_agent
 end

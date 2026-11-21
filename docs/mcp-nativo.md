@@ -55,7 +55,7 @@ no mesmo `Mcp::Tools::ALL`.
    vírgula). Os metadados e o desafio do `/mcp` passam a nomear o host que o cliente usou.
 
 Limites de frequência (Rack::Attack, sem teto diário): `RATE_LIMIT_MCP` (300/min por token),
-`RATE_LIMIT_OAUTH_TOKEN` (60/min por cliente; Claude e ChatGPT renovam de servidores compartilhados),
+`RATE_LIMIT_OAUTH_TOKEN` (60/min por IP e cliente juntos; Claude e ChatGPT renovam de servidores compartilhados, e o ID público de um cliente sozinho não esgota a cota de ninguém),
 `RATE_LIMIT_OAUTH_AUTHORIZATION` (60/min por IP na API da tela de consentimento, que pode buscar o CIMD) e
 `RATE_LIMIT_OAUTH_REGISTRATION` (100/h por IP).
 

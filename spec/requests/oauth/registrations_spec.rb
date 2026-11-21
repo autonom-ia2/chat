@@ -95,6 +95,14 @@ RSpec.describe 'OAuth Dynamic Client Registration', type: :request do
       expect(Doorkeeper::Application.last.name.length).to eq(100)
     end
 
+    it 'rejects several redirect URIs packed in one item' do
+      packed = Array.new(11) { |index| "https://chatgpt.com/cb/#{index}" }.join("\n")
+      post '/oauth/register', params: registration_params.merge(redirect_uris: [packed]), as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(Doorkeeper::Application.count).to eq(0)
+    end
+
     it 'rejects more than ten redirect URIs' do
       uris = Array.new(11) { |index| "https://chatgpt.com/cb/#{index}" }
       post '/oauth/register', params: registration_params.merge(redirect_uris: uris), as: :json
