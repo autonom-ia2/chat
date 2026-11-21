@@ -66,11 +66,11 @@ module ListaTrazidaGrandeHelpers
 
   private
 
-  # Cada campo gravado confere, pela chave estrangeira, a linha da importação (#3092). Na CI, os specs anteriores gravam e
-  # desfazem linhas em campaign_import_rows; passado o limiar, o autovacuum analisa a tabela vazia e grava reltuples = 0.
-  # Com isso o plano da conferência vira leitura da tabela inteira, guardado para o insert todo: cada lote de 15 mil
-  # campos relia a tabela 15 mil vezes (de 37 milhões a 712 milhões de linhas lidas, de 2 s a 25 s por lote) e passava
-  # do statement_timeout. O ANALYZE dá à tabela o tamanho de agora, como ela tem em produção, e o plano volta ao índice.
+  # Cada campo gravado confere, pela chave estrangeira, a linha da importação (#3092). Na CI, os specs anteriores do shard
+  # gravam e desfazem linhas em campaign_import_rows, e a tabela chega aqui com reltuples = 0 (vazia, mas analisada; o
+  # mais provável é o autovacuum, que passa do limiar com as linhas desfeitas). Nesse estado, a conferência leu a tabela
+  # inteira para cada campo: de 37 milhões a 712 milhões de linhas lidas, de 2 s a 25 s por lote de 15 mil, e o lote
+  # passava do statement_timeout. O ANALYZE dá à tabela o tamanho do momento, e a conferência volta ao índice.
   def analisar_linhas_da_importacao
     ActiveRecord::Base.connection.execute('ANALYZE campaign_import_rows')
   end
