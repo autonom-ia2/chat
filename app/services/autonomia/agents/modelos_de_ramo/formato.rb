@@ -7,7 +7,7 @@
 #     paga só entra no agente pela escolha de uma pessoa, na vitrine;
 #   - `premium`: só sugestão de cartão pago, e por isso só chave de cartão Premium;
 #   - `teste`: as 3 perguntas de teste;
-#   - o roteiro (`.md`) CRU em até 8.000 bytes, com cada marcador uma única vez e sozinho na linha, e com o trecho do
+#   - o roteiro (`.md`) CRU em até 10.000 bytes, com cada marcador uma única vez e sozinho na linha, e com o trecho do
 #     conhecimento do ramo (`Conhecimento`). O teto vale antes
 #     da troca dos marcadores: o que o dono acrescenta depois é limitado por quantidade e tamanho de item.
 class Autonomia::Agents::ModelosDeRamo::Formato
@@ -17,7 +17,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   CAMPOS_DA_FERRAMENTA = %w[fonte usar_quando].freeze
   SEM_ROTEIRO_GERAL = %w[custom insurance_quote].freeze
   NOME_MAX = 120
-  ROTEIRO_MAX = 8_000
+  ROTEIRO_MAX = 10_000
   TESTES = 3
 
   class Invalido < StandardError; end

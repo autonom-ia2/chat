@@ -25,7 +25,7 @@ class Autonomia::Agents::JuizDaProva
   class Malformada < StandardError; end
 
   # O agente vai ao juiz com teto (revisão do t6d, MÉDIO 3): a instrução pode chegar a Agent::MAX_INSTRUCTION_LENGTH.
-  INSTRUCAO_DO_AGENTE_MAX_CHARS = 8_000
+  INSTRUCAO_DO_AGENTE_MAX_CHARS = 12_000
   CAMPO_DO_AGENTE_MAX_CHARS = 1_000
 
   # Texto lido pelo modelo: sem travessão e sem crase.
