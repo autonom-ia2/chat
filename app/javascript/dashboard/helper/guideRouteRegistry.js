@@ -175,6 +175,8 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'modelos_whatsapp_novo',
   'modelos_whatsapp_usar',
   'no_accounts',
+  'oauth_authorize',
+  'oauth_authorize_link',
   'onboarding_account_details',
   'onboarding_inbox_setup',
   'portals_articles_edit',

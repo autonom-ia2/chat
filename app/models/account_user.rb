@@ -48,6 +48,7 @@ class AccountUser < ApplicationRecord
   after_create_commit :notify_creation, :create_notification_setting, unless: :integration?
   after_destroy :notify_deletion, :remove_user_from_account, unless: :integration?
   after_destroy :apagar_o_que_o_guia_guardou
+  after_destroy :remove_oauth_access
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
   after_commit :invalidate_filtered_unread_count_visibility, on: [:create, :destroy]
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_visibility_changed?
@@ -64,6 +65,12 @@ class AccountUser < ApplicationRecord
 
   def remove_user_from_account
     ::Agents::DestroyJob.perform_later(account, user)
+  end
+
+  # An OAuth token works for one account, so it must stop working once the user leaves that account.
+  def remove_oauth_access
+    Doorkeeper::AccessToken.where(resource_owner_id: user_id, account_id: account_id).delete_all
+    Doorkeeper::AccessGrant.where(resource_owner_id: user_id, account_id: account_id).delete_all
   end
 
   def permissions

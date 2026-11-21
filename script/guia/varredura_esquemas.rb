@@ -56,8 +56,8 @@ class VarreduraEsquemas
   end
 
   def conferir(registro, coluna, validador)
-    JSONSchemer.schema(validador.esquema(registro), formats: JsonSchemaFormatos::TODOS)
-               .validate(JSON.parse(registro[coluna].to_json)).to_a
+    JsonSchemaDraft7.schema(validador.esquema(registro), formats: JsonSchemaFormatos::TODOS)
+                    .validate(JSON.parse(registro[coluna].to_json)).to_a
   end
 
   def contar(nome, registro, erros)

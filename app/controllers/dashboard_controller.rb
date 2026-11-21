@@ -28,6 +28,7 @@ class DashboardController < ActionController::Base
     DISABLE_META_MESSAGE_SENDING
     DEPLOYMENT_ENV
     INSTALLATION_PRICING_PLAN
+    OAUTH_PROVIDER_ENABLED
   ].freeze
 
   before_action :redirect_to_autonomia_sso_if_needed, only: [:index]

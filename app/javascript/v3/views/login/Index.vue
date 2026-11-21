@@ -363,7 +363,10 @@ export default {
     handleMfaVerified() {
       // MFA verification successful, continue with login
       this.handleImpersonation();
-      window.location = '/app';
+      // Same destination as a login without MFA, like the OAuth consent screen
+      window.location = isSafeAppRedirect(this.redirectTo)
+        ? this.redirectTo
+        : '/app';
     },
     handleMfaCancel() {
       // User cancelled MFA, reset state

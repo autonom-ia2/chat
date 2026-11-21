@@ -139,7 +139,7 @@ class Integrations::Hook < ApplicationRecord
     return if app.blank? || app.params[:settings_json_schema].blank?
     return if legacy_dyte_settings_unchanged?
 
-    errors.add(:settings, ': Invalid settings data') unless JSONSchemer.schema(app.params[:settings_json_schema]).valid?(settings)
+    errors.add(:settings, ': Invalid settings data') unless JsonSchemaDraft7.schema(app.params[:settings_json_schema]).valid?(settings)
   end
 
   # TODO: When adding credential validation for other integrations (dialogflow, dyte, etc.),
