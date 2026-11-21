@@ -15,6 +15,9 @@
 #   chama a URL na hora, do servidor.
 # - App OAuth do e-mail da conta: quem reconectar a caixa manda o código de autorização ao app configurado.
 # - Relatório de anúncios por WhatsApp: vai ao número que o pedido diz.
+# - SAML: URL, certificado do provedor e `role_mappings` decidem quem entra, e com que papel, no próximo login.
+# - Responder ou apagar comentário (posts e anúncios da Meta), em público ou no privado: sai na rede social na hora.
+# - Criar issue no Linear: título e descrição vão para fora.
 #
 # O webhook da caixa API vai pela `CredencialDaCaixa`, junto do resto de como a caixa se conecta.
 module Autonomia::Guide::SaiDaPlataforma
@@ -30,8 +33,14 @@ module Autonomia::Guide::SaiDaPlataforma
     'POST autonomia/agents/:agent_id/tools', 'PATCH autonomia/agents/:agent_id/tools/:id', 'PUT autonomia/agents/:agent_id/tools/:id',
     'POST autonomia/agents/:agent_id/tools/:id/test',
     'PATCH email_oauth_apps/:provider', 'PUT email_oauth_apps/:provider',
-    'PATCH crm/meta_ads_connection/whatsapp_report', 'PUT crm/meta_ads_connection/whatsapp_report',
-    'POST crm/meta_ads_connection/whatsapp_report/test'
+    'PATCH crm/meta_ads_connection/whatsapp_report', 'POST crm/meta_ads_connection/whatsapp_report/test',
+    'POST saml_settings', 'PATCH saml_settings', 'PUT saml_settings', 'DELETE saml_settings',
+    'POST seus_posts/posts/:post_id/comments/:comment_id/reply', 'POST seus_posts/posts/:post_id/comments/:comment_id/private_reply',
+    'DELETE seus_posts/posts/:post_id/comments/:comment_id',
+    'POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply',
+    'POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/reply',
+    'POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply',
+    'POST integrations/linear/create_issue'
   ].freeze
   # O papel de administrador, pelo nome ou pelo número do enum (`role: 1`, revisão do Codex).
   ADMINISTRADOR = ['administrator', AccountUser.roles['administrator'].to_s].freeze

@@ -46,6 +46,12 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(acoes.desfazivel?('POST captain/custom_tools/test', { corpo: { endpoint_url: 'https://fora.example' } })).to be(false)
   end
 
+  it 'trocar o SAML e responder comentário na rede social pedem confirmação' do
+    expect(acoes.desfazivel?('PATCH saml_settings', { corpo: { role_mappings: { admins: { role: 1 } } } })).to be(false)
+    expect(acoes.desfazivel?('POST seus_posts/posts/:post_id/comments/:comment_id/reply',
+                             { caminho: { post_id: 1, comment_id: 2 }, corpo: { mensagem: 'Oi' } })).to be(false)
+  end
+
   it 'promover agente a administrador pede confirmação; trocar o nome segue direto' do
     agente = create(:user, account: conta, role: :agent)
 
