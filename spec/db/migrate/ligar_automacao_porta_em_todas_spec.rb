@@ -106,6 +106,19 @@ RSpec.describe LigarAutomacaoPortaEmTodas do
     expect(registro).to be_nil
   end
 
+  it 'down desliga também a conta criada depois do up, que nasceu com a flag pelo padrão', :aggregate_failures do
+    antiga = conta(com_a_flag: true)
+    described_class.new.up
+    travel 1.minute
+    nova = create(:account)
+    expect(nova.feature_enabled?(feature)).to be(true)
+
+    described_class.new.down
+
+    expect(nova.reload.feature_enabled?(feature)).to be(false)
+    expect(antiga.reload.feature_enabled?(feature)).to be(true)
+  end
+
   it 'down sem o registro não desliga conta nenhuma' do
     sem = conta(com_a_flag: false)
     described_class.new.up

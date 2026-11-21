@@ -27,17 +27,24 @@ class LigarAutomacaoPortaEmTodas < ActiveRecord::Migration[7.2]
     GlobalConfig.clear_cache
   end
 
-  # Volta o padrão das contas novas e desliga a flag só nas contas que o `up` ligou. Sem o registro (já desfeito ou
-  # apagado), nenhuma conta é desligada: o caminho é o backup do log.
+  # Volta o padrão das contas novas e desliga a flag só nas contas que o `up` ligou e nas criadas depois dele (que
+  # nasceram com ela pelo padrão). Sem o registro (já desfeito ou apagado), nenhuma conta é desligada: o caminho é o
+  # backup do log.
   def down
     FeatureFlagRollout.padrao!(FEATURE, false)
     registro = InstallationConfig.find_by(name: REGISTRO)
-    FeatureFlagRollout.desligar_nas_contas!(FEATURE, Array(registro&.value), log_tag: LOG_TAG)
+    FeatureFlagRollout.desligar_nas_contas!(FEATURE, contas_do_rollout(registro), log_tag: LOG_TAG)
     registro&.destroy!
     GlobalConfig.clear_cache
   end
 
   private
+
+  def contas_do_rollout(registro)
+    return [] unless registro
+
+    (Array(registro.value) + Account.where(created_at: registro.created_at..).pluck(:id)).uniq
+  end
 
   # Rodar o `up` de novo soma as contas novas às que já estavam no registro, sem perder nenhuma.
   def registrar(ids)
