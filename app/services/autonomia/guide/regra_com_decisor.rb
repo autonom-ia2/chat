@@ -36,7 +36,8 @@ class Autonomia::Guide::RegraComDecisor
   def etapa_ligada?(acao, dados)
     corpo = corpo(dados, :stage_automation)
     automacao = acao.start_with?('POST') ? nil : @account.crm_stage_automations.find_by(id: caminho(dados)[:id])
-    passos = corpo.key?(:steps) ? corpo[:steps] : automacao&.steps&.map(&:attributes)
+    # Como o Persister: passos vazios mantêm os gravados (#3106, revisão do Codex: `steps: []` ligava com o Decisor).
+    passos = corpo[:steps].presence || automacao&.steps&.map(&:attributes)
     ligada?(corpo, :enabled, automacao&.enabled) && com_decisor?(passos, :action_type)
   end
 

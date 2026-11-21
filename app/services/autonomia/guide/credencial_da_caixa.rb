@@ -3,15 +3,17 @@
 # trocou. Então trocar credencial não tem desfazer e passa pela confirmação da pessoa (`Acoes#desfazivel?`), como
 # as rotas de credencial que já estão em `Acoes::SEM_DESFAZER`.
 #
-# Os nomes são os campos de segredo dos canais (`encrypts` nos modelos de `Channel::*`, mais a configuração do
-# provedor do WhatsApp e o token HMAC). A lista é explícita porque o `encrypts` só vale com a criptografia configurada.
+# Os nomes são os de como a caixa se conecta, que a própria plataforma já trata como credencial
+# (`InboxCredentialGuard::CREDENTIAL_ATTRS`: logins, senhas, servidores de e-mail, o webhook da caixa API, para onde os
+# eventos passam a ir), mais os segredos dos canais que não passam por aquele guarda (`encrypts` nos modelos de
+# `Channel::*` e o token HMAC). A lista dos segredos é explícita porque o `encrypts` só vale com a criptografia ligada.
 module Autonomia::Guide::CredencialDaCaixa
   ACOES = ['PATCH inboxes/:id', 'PUT inboxes/:id'].freeze
-  CAMPOS = %w[
-    bot_token imap_password smtp_password access_token refresh_token auth_token api_key provider_config
-    line_channel_secret line_channel_token business_management_token page_access_token user_access_token
+  SEGREDOS = %w[
+    access_token refresh_token api_key business_management_token page_access_token user_access_token
     twitter_access_token twitter_access_token_secret hmac_token secret
   ].freeze
+  CAMPOS = (::Api::V1::Accounts::Concerns::InboxCredentialGuard::CREDENTIAL_ATTRS + SEGREDOS).uniq.freeze
 
   module_function
 

@@ -11,7 +11,7 @@ RSpec.describe 'MCP platform tools', type: :request do
   let(:scopes) { 'platform:read platform:write' }
   let(:access_token) do
     Doorkeeper::AccessToken.create!(application: application, resource_owner_id: admin.id, account_id: account.id, scopes: scopes,
-                                    expires_in: 2.hours)
+                                    all_accounts: true, expires_in: 2.hours)
   end
 
   before do

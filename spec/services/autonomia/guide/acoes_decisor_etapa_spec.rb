@@ -37,6 +37,17 @@ RSpec.describe Autonomia::Guide::Acoes do
                              { caminho: { stage_automation_id: desligada.id }, corpo: passo_do_decisor })).to be(true)
   end
 
+  # #3106 (revisão do Codex): o Persister ignora `steps: []` e mantém os passos gravados, então ligar assim liga com o Decisor.
+  it 'ligar com passos vazios também pede confirmação, porque os passos gravados ficam' do
+    desligada = automacao(enabled: false)
+    desligada.steps.create!(account: conta, **passo_do_decisor)
+
+    %w[PATCH PUT].each do |verbo|
+      expect(acoes.desfazivel?("#{verbo} crm/stage_automations/:id", { caminho: { id: desligada.id }, corpo: { enabled: true, steps: [] } }))
+        .to be(false)
+    end
+  end
+
   # MOTIVO: trocar o Decisor ou a resposta que segue numa automação ligada muda o que ela faz sozinha.
   it 'mudar só a configuração do passo do Decisor numa automação ligada pede confirmação' do
     ligada = automacao(enabled: true)

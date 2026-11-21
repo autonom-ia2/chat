@@ -17,6 +17,15 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
   end
 
+  # #3106 (revisão do Codex): trocar o webhook da caixa API manda os eventos seguintes para outro endereço.
+  it 'trocar o webhook ou o servidor de e-mail da caixa pede confirmação' do
+    webhook = { caminho: { id: caixa.id }, corpo: { channel: { webhook_url: 'https://outro-destino.example/webhook' } } }
+    servidor = { caminho: { id: caixa.id }, corpo: { channel: { smtp_address: 'smtp.outro.example' } } }
+
+    expect(acoes.desfazivel?('PATCH inboxes/:id', webhook)).to be(false)
+    expect(acoes.desfazivel?('PUT inboxes/:id', servidor)).to be(false)
+  end
+
   it 'mudar o nome da caixa segue direto, com desfazer' do
     expect(acoes.desfazivel?('PATCH inboxes/:id', { caminho: { id: caixa.id }, corpo: { name: 'Vendas' } })).to be(true)
   end
