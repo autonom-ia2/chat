@@ -52,8 +52,8 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
     patch "#{base}/leituras/#{importacao.id}/colunas/#{indice}", params: { destino: destino }, headers: cabecalhos(quem), as: :json
   end
 
-  def listas(quem: admin)
-    get "#{base}/listas", headers: cabecalhos(quem)
+  def listas(quem: admin, **params)
+    get "#{base}/listas", params: params, headers: cabecalhos(quem)
   end
 
   def andamento(importacao, quem: admin)
@@ -520,30 +520,36 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
   end
 
   describe 'GET listas' do
+    # A marca das listas que nasceram nesta tela. Sem ela, a lista é uma planilha da tela antiga de Contatos.
+    let(:pela_tela) { { 'trazer' => {} } }
+
     it 'devolve as listas trazidas por arquivo, a mais nova primeiro, no formato da tela' do
       travel_to(Time.zone.parse('2026-11-08 14:03:00')) do
         marina = create(:user, account: account, role: :administrator, name: 'Marina Pavanelli')
-        antiga = lista(user: marina, linhas: { imported: 3 }, confirmed_at: 3.days.ago, created_at: 4.days.ago)
+        antiga = lista(user: marina, linhas: { imported: 3 }, confirmed_at: 3.days.ago, created_at: 4.days.ago, opcoes: pela_tela)
         entrando = lista(situacao: :importing, user: marina, linhas: { imported: 1, valid: 3 }, confirmed_at: 1.minute.ago,
-                         created_at: 1.hour.ago, import_started_at: 1.minute.ago)
+                         created_at: 1.hour.ago, import_started_at: 1.minute.ago, opcoes: pela_tela)
 
         listas
 
         expect(response).to have_http_status(:ok)
         expect(response.parsed_body).to eq(
           [
-            { 'id' => entrando.id, 'arquivo' => 'Clientes de setembro.xlsx', 'quando' => '2026-11-08T14:02:00Z', 'quem' => 'Marina Pavanelli',
-              'total' => 4, 'situacao' => 'trazendo', 'porcentagem' => 25, 'pode_tentar' => false, 'pode_desfazer' => false },
-            { 'id' => antiga.id, 'arquivo' => 'Clientes de setembro.xlsx', 'quando' => '2026-11-05T14:03:00Z', 'quem' => 'Marina Pavanelli',
-              'total' => 3, 'situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false, 'pode_desfazer' => true }
+            { 'id' => entrando.id, 'arquivo' => 'Clientes de setembro.xlsx', 'origem' => 'trazer', 'quando' => '2026-11-08T14:02:00Z',
+              'quem' => 'Marina Pavanelli', 'total' => 4, 'situacao' => 'trazendo', 'porcentagem' => 25, 'pode_tentar' => false,
+              'pode_desfazer' => false },
+            { 'id' => antiga.id, 'arquivo' => 'Clientes de setembro.xlsx', 'origem' => 'trazer', 'quando' => '2026-11-05T14:03:00Z',
+              'quem' => 'Marina Pavanelli', 'total' => 3, 'situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false,
+              'pode_desfazer' => true }
           ]
         )
       end
     end
 
-    it 'deixa de fora as da automação, os Públicos, os rascunhos e as de outra conta' do
-      trazida = lista
-      lista(opcoes: { 'origem' => CampaignImport::AUTOMATION_ORIGIN })
+    it 'mostra todas as importações de contatos e deixa de fora os Públicos, os rascunhos e as de outra conta' do
+      trazida = lista(opcoes: pela_tela, created_at: 1.hour.ago)
+      da_tela_antiga = lista(created_at: 2.hours.ago)
+      da_automacao = lista(opcoes: { 'origem' => CampaignImport::AUTOMATION_ORIGIN }, created_at: 3.hours.ago)
       lista(opcoes: { 'flow' => CampaignImport::AUDIENCE_FLOW })
       lista(conta: create(:account))
       %i[uploaded validating validation_failed ready_to_confirm needs_column_choice cancelled expired].each { |rascunho| lista(situacao: rascunho) }
@@ -551,26 +557,73 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
 
       listas
 
-      expect(response.parsed_body.pluck('id')).to eq([trazida.id])
+      expect(response.parsed_body.pluck('id', 'origem')).to eq(
+        [[trazida.id, 'trazer'], [da_tela_antiga.id, 'planilha_antiga'], [da_automacao.id, 'automacao']]
+      )
     end
 
-    it 'devolve só as mais recentes quando a conta tem mais listas que o teto' do
-      stub_const('Relacionamentos::Trazer::Historico::TETO', 2)
-      lista(created_at: 3.days.ago)
-      recentes = [lista(created_at: 1.day.ago), lista(created_at: 2.days.ago)]
+    # #3083 — a lista do passo "para cada item" não tem arquivo: aparece com o nome da automação, e sem Desfazer.
+    it 'mostra a lista da automação com o nome dela, a origem e sem Desfazer, pronta ou parada' do
+      automacao = { 'origem' => CampaignImport::AUTOMATION_ORIGIN, 'automacao_id' => 7, 'execucao_id' => 9 }
+      pronta = lista(opcoes: automacao, linhas: { imported: 2 }, name: 'Boas-vindas aos leads', source_filename: nil,
+                     import_started_at: 2.hours.ago, created_at: 2.hours.ago)
+      parada = lista(situacao: :failed, opcoes: automacao, linhas: { imported: 1, valid: 1 }, name: 'Lista da feira',
+                     source_filename: nil, import_started_at: 1.hour.ago, created_at: 1.hour.ago)
 
       listas
 
-      expect(response.parsed_body.pluck('id')).to eq(recentes.map(&:id))
+      por_id = response.parsed_body.index_by { |item| item['id'] }
+      expect(por_id[pronta.id]).to include('arquivo' => 'Boas-vindas aos leads', 'origem' => 'automacao', 'situacao' => 'pronto',
+                                           'pode_tentar' => false, 'pode_desfazer' => false)
+      expect(por_id[parada.id]).to include('arquivo' => 'Lista da feira', 'origem' => 'automacao', 'situacao' => 'falhou',
+                                           'pode_tentar' => false, 'pode_desfazer' => false)
+    end
+
+    # #3083 — a planilha da tela antiga não anota o que preencheu: o Desfazer dela não tiraria ninguém, então não aparece.
+    it 'mostra a planilha da tela antiga sem Desfazer, a não ser para terminar um desfazer que parou no meio' do
+      pronta = lista(linhas: { imported: 3 })
+      parada = lista(situacao: :failed, linhas: { imported: 1, valid: 1 }, import_started_at: 1.hour.ago)
+      desfazer_parado = lista(undo_status: :processing, updated_at: (CampaignImports::Config.stalled_import_after + 1.minute).ago)
+
+      listas
+
+      por_id = response.parsed_body.index_by { |item| item['id'] }
+      expect(por_id[pronta.id]).to include('origem' => 'planilha_antiga', 'situacao' => 'pronto', 'pode_desfazer' => false)
+      expect(por_id[parada.id]).to include('origem' => 'planilha_antiga', 'situacao' => 'falhou', 'pode_desfazer' => false)
+      expect(por_id[desfazer_parado.id]).to include('origem' => 'planilha_antiga', 'situacao' => 'desfazendo', 'pode_desfazer' => true)
+    end
+
+    it 'devolve as listas de página em página, a mais nova primeiro' do
+      stub_const('Relacionamentos::Trazer::Historico::POR_PAGINA', 2)
+      ids = [1, 2, 3].map { |dias| lista(opcoes: pela_tela, created_at: dias.days.ago).id }
+
+      listas
+      expect(response.parsed_body.pluck('id')).to eq(ids.first(2))
+
+      listas(pagina: 2)
+      expect(response.parsed_body.pluck('id')).to eq([ids.last])
+
+      listas(pagina: 3)
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq([])
+
+      # A página que não é número, ou é menor que 1, é a primeira; a enorme não quebra a consulta.
+      ['abc', '0', '-1', ''].each do |pagina|
+        listas(pagina: pagina)
+        expect(response.parsed_body.pluck('id')).to eq(ids.first(2)), pagina
+      end
+      listas(pagina: '99999999999999999999')
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq([])
     end
 
     it 'diz a situação de cada lista e quando dá para tentar de novo' do
-      desfeita = lista(undo_status: :completed)
-      desfazendo = lista(undo_status: :processing)
-      parou = lista(situacao: :failed, linhas: { imported: 1, valid: 1 }, import_started_at: 1.hour.ago)
+      desfeita = lista(undo_status: :completed, opcoes: pela_tela)
+      desfazendo = lista(undo_status: :processing, opcoes: pela_tela)
+      parou = lista(situacao: :failed, linhas: { imported: 1, valid: 1 }, import_started_at: 1.hour.ago, opcoes: pela_tela)
       parou.normalized_csv.attach(io: StringIO.new("row_number\n2\n"), filename: 'normalized.csv', content_type: 'text/csv')
-      sem_arquivo = lista(situacao: :failed, linhas: { valid: 2 }, import_started_at: 1.hour.ago)
-      com_falhas = lista(situacao: :completed_with_failures, linhas: { imported: 1, import_failed: 1 })
+      sem_arquivo = lista(situacao: :failed, linhas: { valid: 2 }, import_started_at: 1.hour.ago, opcoes: pela_tela)
+      com_falhas = lista(situacao: :completed_with_failures, linhas: { imported: 1, import_failed: 1 }, opcoes: pela_tela)
 
       listas
 
@@ -584,7 +637,7 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
     end
 
     it 'volta a oferecer o Desfazer na lista em que ele parou no meio' do
-      parou = lista(undo_status: :processing)
+      parou = lista(undo_status: :processing, opcoes: pela_tela)
 
       travel_to((CampaignImports::Config.stalled_import_after + 1.minute).from_now) { listas }
 
@@ -644,13 +697,23 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect(response.parsed_body).to include('porcentagem' => 25, 'situacao' => 'falhou', 'total' => 4)
     end
 
-    it 'responde 404 para o rascunho, a lista de outra conta e a da automação' do
-      [lista(situacao: :ready_to_confirm), lista(conta: create(:account)),
-       lista(opcoes: { 'origem' => CampaignImport::AUTOMATION_ORIGIN })].each do |de_fora|
+    it 'responde 404 para o rascunho e a lista de outra conta' do
+      [lista(situacao: :ready_to_confirm), lista(conta: create(:account))].each do |de_fora|
         andamento(de_fora)
 
         expect(response).to have_http_status(:not_found)
       end
+    end
+
+    # #3083 — a lista da automação está no histórico: a tela acompanha a que ainda está entrando.
+    it 'conta o andamento da lista da automação que está entrando' do
+      da_automacao = lista(situacao: :importing, opcoes: { 'origem' => CampaignImport::AUTOMATION_ORIGIN }, linhas: { imported: 1, valid: 1 },
+                           source_filename: nil, import_started_at: 1.minute.ago)
+
+      andamento(da_automacao)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('porcentagem' => 50, 'situacao' => 'trazendo', 'total' => 2)
     end
   end
 end

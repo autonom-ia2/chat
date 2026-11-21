@@ -347,9 +347,19 @@ export const leituraComProblema = (
 
 // ---- as listas que a conta já trouxe ---------------------------------------
 
+// #3083 — de onde a lista veio: desta tela (`trazer`), da tela antiga de
+// Contatos (`planilha_antiga`) ou da automação (`automacao`, que não tem
+// arquivo: `arquivo` é o nome dela). Sem a origem, é desta tela.
+export const ORIGENS_DA_LISTA = Object.freeze({
+  TRAZER: 'trazer',
+  PLANILHA_ANTIGA: 'planilha_antiga',
+  AUTOMACAO: 'automacao',
+});
+
 export const listaDaTela = lista => ({
   id: lista.id,
   arquivo: lista.arquivo,
+  origem: lista.origem ?? ORIGENS_DA_LISTA.TRAZER,
   quando: Date.parse(lista.quando),
   // Quem trouxe pode já ter saído da conta.
   quem: lista.quem ?? '',
@@ -358,7 +368,8 @@ export const listaDaTela = lista => ({
   porcentagem: lista.porcentagem,
   podeTentar: lista.pode_tentar === true,
   // Quem diz se dá para desfazer é o servidor: a lista pronta, a que parou no
-  // meio depois de pôr gente na base e a que teve o desfazer travado.
+  // meio depois de pôr gente na base e a que teve o desfazer travado. A da
+  // automação e a da tela antiga não têm Desfazer.
   podeDesfazer: lista.pode_desfazer === true,
   // Só a lista desfeita em que alguém devia ter saído e ficou traz o número.
   ficaram: lista.ficaram ?? 0,

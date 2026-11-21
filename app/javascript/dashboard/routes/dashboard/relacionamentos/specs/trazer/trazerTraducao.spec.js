@@ -493,6 +493,7 @@ describe('listaDaTela', () => {
     expect(listaDaTela({ ...DO_SERVIDOR, pode_desfazer: true })).toEqual({
       id: 812,
       arquivo: 'Clientes 2025.xlsx',
+      origem: 'trazer',
       quando: Date.UTC(2026, 10, 8, 14, 3),
       quem: 'Marina Pavanelli',
       total: 195,
@@ -532,6 +533,18 @@ describe('listaDaTela', () => {
 
   it('sem `pode_desfazer` não pode desfazer', () => {
     expect(listaDaTela(DO_SERVIDOR).podeDesfazer).toBe(false);
+  });
+
+  // #3083 — de onde a lista veio; sem a origem, ela é desta tela.
+  it.each(['trazer', 'planilha_antiga', 'automacao'])(
+    '`origem` %s passa como veio',
+    origem => {
+      expect(listaDaTela({ ...DO_SERVIDOR, origem }).origem).toBe(origem);
+    }
+  );
+
+  it('sem `origem` a lista é desta tela', () => {
+    expect(listaDaTela(DO_SERVIDOR).origem).toBe('trazer');
   });
 
   it.each([

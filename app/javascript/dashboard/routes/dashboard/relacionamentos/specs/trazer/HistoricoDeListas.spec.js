@@ -397,3 +397,118 @@ describe('Desfazer sem prazo', () => {
     expect(botao.classes()).toContain('min-h-11');
   });
 });
+
+// #3083 — a lista que não veio desta tela tem um selo de onde veio, ao lado do
+// selo da situação, e não tem Desfazer (o servidor diz `podeDesfazer: false`).
+// A da automação aparece com o nome dela. A desta tela não tem selo de origem.
+describe('de onde veio a lista', () => {
+  const lista = (id, origem, extra = {}) => ({
+    id,
+    arquivo: `${id}.xlsx`,
+    origem,
+    quando: Date.UTC(2020, 0, 1, 15),
+    quem: 'Marina Dornelaz',
+    total: 5,
+    situacao: 'pronto',
+    porcentagem: 100,
+    podeDesfazer: false,
+    ...extra,
+  });
+  const montar = listas =>
+    mount(HistoricoDeListas, { props: { temDesfazer: true, listas } });
+  const selo = (w, id) => w.find(`[data-lista="${id}"] [data-origem]`);
+
+  it('diz "Pela automação" e "Pela tela antiga", ao lado do selo da situação, sem Desfazer', () => {
+    const w = montar([
+      lista('auto', 'automacao', { arquivo: 'Boas-vindas aos leads' }),
+      lista('antiga', 'planilha_antiga'),
+    ]);
+    expect(selo(w, 'auto').text()).toBe('Pela automação');
+    expect(selo(w, 'auto').attributes('data-origem')).toBe('automacao');
+    expect(selo(w, 'antiga').text()).toBe('Pela tela antiga');
+    expect(selo(w, 'antiga').attributes('data-origem')).toBe('planilha_antiga');
+    // O nome da automação é o que aparece na linha.
+    expect(w.get('[data-lista="auto"] p').text()).toBe('Boas-vindas aos leads');
+    ['auto', 'antiga'].forEach(id => {
+      const grupo = selo(w, id).element.parentElement;
+      expect(grupo.querySelector('span[data-situacao]').textContent).toBe(
+        'Pronto'
+      );
+      expect(grupo.querySelectorAll('button')).toHaveLength(0);
+    });
+    expect(w.findAll('button')).toHaveLength(0);
+    expect(w.text()).not.toContain('Desfazer');
+  });
+
+  it('a lista desta tela não tem selo de origem e continua com o Desfazer', () => {
+    const w = montar([
+      lista('daqui', 'trazer', { podeDesfazer: true }),
+      lista('sem-origem', undefined, { podeDesfazer: true }),
+    ]);
+    expect(w.find('[data-origem]').exists()).toBe(false);
+    expect(
+      w.find('[data-lista="daqui"] [data-relacionamentos="desfazer"]').exists()
+    ).toBe(true);
+  });
+
+  it('a lista da automação que parou diz onde olhar, com o selo e sem botão', () => {
+    const w = montar([
+      lista('auto', 'automacao', { situacao: 'falhou', podeTentar: false }),
+    ]);
+    expect(w.get('[data-lista="auto"] p[data-situacao="falhou"]').text()).toBe(
+      'A automação não conseguiu trazer esta lista. Veja em Automações o que aconteceu.'
+    );
+    expect(selo(w, 'auto').text()).toBe('Pela automação');
+    expect(w.findAll('button')).toHaveLength(0);
+  });
+});
+
+// #3083 — mais listas do que cabem numa página: "Ver mais" pede as próximas.
+describe('Ver mais', () => {
+  const uma = {
+    id: 'a',
+    arquivo: 'a.xlsx',
+    quando: Date.UTC(2020, 0, 1, 15),
+    quem: 'Marina Dornelaz',
+    total: 5,
+    situacao: 'pronto',
+    porcentagem: 100,
+  };
+  const montar = props =>
+    mount(HistoricoDeListas, { props: { listas: [uma], ...props } });
+  const verMais = w => w.find('[data-relacionamentos="ver-mais"]');
+
+  it('aparece só quando o servidor tem mais, com 44 px, e pede as próximas', async () => {
+    expect(verMais(montar()).exists()).toBe(false);
+    const w = montar({ temMais: true });
+    expect(verMais(w).text()).toBe('Ver mais');
+    expect(verMais(w).classes()).toContain('min-h-11');
+    await verMais(w).trigger('click');
+    expect(w.emitted('verMais')).toHaveLength(1);
+  });
+
+  it('fica ocupado enquanto busca', () => {
+    const w = montar({ temMais: true, carregandoMais: true });
+    expect(verMais(w).attributes('disabled')).toBeDefined();
+  });
+
+  it('quando falha, diz e o botão continua lá', () => {
+    const w = montar({ temMais: true, erroDoMais: true });
+    const erro = w.get('[data-relacionamentos="erro-do-ver-mais"]');
+    expect(erro.text()).toBe(
+      'Não consegui mostrar mais listas. Tente de novo.'
+    );
+    expect(erro.attributes('role')).toBe('alert');
+    expect(verMais(w).exists()).toBe(true);
+  });
+
+  it('não aparece no carregando, no erro do histórico nem sem listas', () => {
+    expect(verMais(montar({ temMais: true, carregando: true })).exists()).toBe(
+      false
+    );
+    expect(verMais(montar({ temMais: true, comErro: true })).exists()).toBe(
+      false
+    );
+    expect(verMais(montar({ temMais: true, listas: [] })).exists()).toBe(false);
+  });
+});

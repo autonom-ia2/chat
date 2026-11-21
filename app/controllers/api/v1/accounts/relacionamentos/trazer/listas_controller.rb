@@ -1,16 +1,18 @@
-# "Trazer minha lista" (#2896): as listas que a conta já trouxe, o andamento de uma que ainda está entrando e o
-# "Desfazer" de uma lista gravada, com a prévia do que ele faria.
+# "Trazer minha lista" (#2896): as listas que a conta já trouxe, de página em página (#3083), o andamento de uma que
+# ainda está entrando e o "Desfazer" de uma lista gravada, com a prévia do que ele faria.
 #
 # O Desfazer pede a mesma permissão das outras rotas (importar contatos): ele só tira o que a própria lista pôs e em que
 # ninguém tocou. O clique só marca a lista como "desfazendo" e põe o job na fila; a resposta diz a situação de agora
 # ("desfazendo", ou "desfeito" quando ela já tinha sido desfeita). A lista que ainda está entrando é recusada com
 # `nao_pode_desfazer`, na prévia também; a que quebrou no meio da gravação pode ser desfeita. Se o job não chega à fila,
-# a marca de "desfazendo" volta (a lista não fica presa) e o erro sobe.
+# a marca de "desfazendo" volta (a lista não fica presa) e o erro sobe. A lista da automação aparece no histórico, mas a
+# prévia e o Desfazer dela são recusados com `nao_pode_desfazer` (Relacionamentos::Trazer::Desfazer.pode?).
 class Api::V1::Accounts::Relacionamentos::Trazer::ListasController < Api::V1::Accounts::Relacionamentos::Trazer::BaseController
   NAO_PODE = ::Relacionamentos::Trazer::Desfazer::NAO_PODE
 
+  # GET listas?pagina=
   def index
-    render json: ::Relacionamentos::Trazer::Historico.new(importacoes).call
+    render json: ::Relacionamentos::Trazer::Historico.new(importacoes, pagina: params.permit(:pagina)[:pagina]).call
   end
 
   # GET listas/:id/andamento

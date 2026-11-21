@@ -1,6 +1,7 @@
 import { effectScope } from 'vue';
 import {
   INTERVALO_DO_HISTORICO_MS,
+  LISTAS_POR_PAGINA,
   useHistoricoDeListas,
 } from '../../trazer/useHistoricoDeListas';
 
@@ -605,5 +606,170 @@ describe('tentar de novo', () => {
     expect(await historico.tentarDeNovo(falhou)).toBe(false);
     expect(historico.semAcesso.value).toBe(true);
     expect(avisar).not.toHaveBeenCalled();
+  });
+});
+
+// #3083 — o servidor manda as listas de página em página: "Ver mais" pede a
+// próxima e a junta embaixo; a carga de sempre relê só a primeira.
+describe('Ver mais', () => {
+  const pagina = (prefixo, quantas) =>
+    Array.from({ length: quantas }, (_, i) =>
+      lista(`${prefixo}${i}`, 'pronto')
+    );
+
+  it('só há mais quando a página vem cheia', async () => {
+    const curta = montar({ historico: vi.fn(async () => pagina('a', 3)) });
+    await curta.historico.carregar();
+    expect(curta.historico.temMais.value).toBe(false);
+
+    const cheia = montar({
+      historico: vi.fn(async () => pagina('a', LISTAS_POR_PAGINA)),
+    });
+    await cheia.historico.carregar();
+    expect(cheia.historico.temMais.value).toBe(true);
+  });
+
+  it('pede a página seguinte e a junta embaixo, sem repetir lista', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    // Uma lista nova empurrou a última da primeira página para a segunda.
+    const segunda = [primeira.at(-1), ...pagina('b', 2)];
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockResolvedValueOnce(segunda);
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+
+    const carga = historico.verMais();
+    expect(historico.carregandoMais.value).toBe(true);
+    await carga;
+
+    expect(historicoDaFonte).toHaveBeenLastCalledWith(2);
+    expect(historico.carregandoMais.value).toBe(false);
+    expect(historico.listas.value.map(l => l.id)).toEqual([
+      ...primeira.map(l => l.id),
+      'b0',
+      'b1',
+    ]);
+    // A segunda página veio curta: acabou.
+    expect(historico.temMais.value).toBe(false);
+    await historico.verMais();
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+  });
+
+  it('devolve o id da primeira lista nova, para a tela levar o foco até ela', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockResolvedValueOnce([primeira.at(-1), ...pagina('b', 2)])
+      .mockRejectedValueOnce(new Error('caiu'));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+
+    expect(await historico.verMais()).toBe('b0');
+    // Acabou a última página: não pede nada e não há para onde levar o foco.
+    expect(await historico.verMais()).toBeNull();
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+  });
+
+  it('devolve nulo quando falha', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(pagina('a', LISTAS_POR_PAGINA))
+      .mockRejectedValueOnce(new Error('caiu'));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    expect(await historico.verMais()).toBeNull();
+    expect(historico.erroDoMais.value).toBe(true);
+  });
+
+  it('a carga de sempre relê todas as páginas na tela, sem repetir lista', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const paginas = { 1: primeira, 2: pagina('b', 2) };
+    const historicoDaFonte = vi.fn(async (n = 1) => paginas[n]);
+    const { historico, parar } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    // Uma lista nova empurra a última da primeira página para a segunda.
+    paginas[1] = [lista('nova', 'pronto'), ...primeira.slice(0, -1)];
+    paginas[2] = [primeira.at(-1), ...pagina('b', 2)];
+    historicoDaFonte.mockClear();
+    await historico.carregar({ silencioso: true });
+    parar();
+
+    expect(historicoDaFonte.mock.calls.map(([n]) => n)).toEqual([1, 2]);
+    const ids = historico.listas.value.map(l => l.id);
+    expect(ids[0]).toBe('nova');
+    expect(ids.slice(-3)).toEqual([primeira.at(-1).id, 'b0', 'b1']);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(LISTAS_POR_PAGINA + 3);
+    expect(historico.temMais.value).toBe(false);
+  });
+
+  it('quando falha, liga `erroDoMais`, mantém as listas e deixa tentar de novo', async () => {
+    const primeira = pagina('a', LISTAS_POR_PAGINA);
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(primeira)
+      .mockRejectedValueOnce(new Error('caiu'))
+      .mockResolvedValueOnce(pagina('b', 1));
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    expect(historico.erroDoMais.value).toBe(true);
+    expect(historico.temMais.value).toBe(true);
+    expect(historico.listas.value).toHaveLength(LISTAS_POR_PAGINA);
+
+    await historico.verMais();
+    expect(historicoDaFonte).toHaveBeenLastCalledWith(2);
+    expect(historico.erroDoMais.value).toBe(false);
+    expect(historico.listas.value).toHaveLength(LISTAS_POR_PAGINA + 1);
+  });
+
+  it('recusa por falta de acesso liga `semAcesso`, não o erro', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce(pagina('a', LISTAS_POR_PAGINA))
+      .mockRejectedValueOnce(
+        Object.assign(new Error('401'), { name: 'SEM_ACESSO' })
+      );
+    const { historico } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    expect(historico.semAcesso.value).toBe(true);
+    expect(historico.erroDoMais.value).toBe(false);
+  });
+});
+
+// #3083 — a lista de uma página que veio pelo "Ver mais" também é acompanhada
+// enquanto está sendo desfeita.
+describe('Ver mais e a lista sendo desfeita', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('pergunta de novo pelas páginas na tela até a lista da segunda ficar desfeita', async () => {
+    const paginas = {
+      1: Array.from({ length: LISTAS_POR_PAGINA }, (_, i) =>
+        lista(`a${i}`, 'pronto')
+      ),
+      2: [lista('velha', 'pronto', { podeDesfazer: true })],
+    };
+    const historicoDaFonte = vi.fn(async (n = 1) => paginas[n]);
+    const { historico, parar } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    await historico.verMais();
+    paginas[2] = [lista('velha', 'desfazendo')];
+    await historico.carregar({ silencioso: true });
+    paginas[2] = [lista('velha', 'desfeito')];
+    historicoDaFonte.mockClear();
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+    expect(historicoDaFonte.mock.calls.map(([n]) => n)).toEqual([1, 2]);
+    expect(historico.listas.value.at(-1).situacao).toBe('desfeito');
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 3);
+    expect(historicoDaFonte).toHaveBeenCalledTimes(2);
+    parar();
   });
 });
