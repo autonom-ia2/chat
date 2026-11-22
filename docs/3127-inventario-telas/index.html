@@ -72,6 +72,7 @@ td small{color:var(--muted);display:block;font-size:12px}
   <span class="eyebrow">Diretor de arte · Issue #3127</span>
   <h1>Inventário de telas do painel</h1>
   <p>Todas as telas do painel que ainda estão no visual ou na jornada originais do Chatwoot, julgadas pela regra de ouro: design premium e uma jornada tão simples que alguém de QI 70, sem conhecimento de tecnologia, consegue usar.</p>
+  <p class="meta"><b>Só telas originais do Chatwoot.</b> Telas feitas pelo nosso time ficam fora. Nas parciais, entra só a parte que ainda é original.</p>
   <p class="meta">Base: <code>origin/main b81859f3be</code>, comparada com o Chatwoot <code>v4.18.0</code>. Upgrade considerado: <code>v4.20.1</code>. Data: 22/11/2026.</p>
 </header>
 
@@ -103,7 +104,7 @@ td small{color:var(--muted);display:block;font-size:12px}
       <li><b>Botões só de ícone com 32 px e sem nome.</b><span class="why">Lápis, lixeira, emoji, anexo e áudio: abaixo dos 44 px e mudos para o leitor de tela. No celular, um toque errado abre a exclusão.</span></li>
     </ul></div>
   </div>
-  <p class="meta">Atenção técnica: os textos das telas originais estão em catálogos do Chatwoot. Editar o pt_BR deles some na próxima sincronização da tradução, então a troca vai por chave do fork (<code>config/fork_i18n.json</code>). Boa notícia: nenhuma tela do painel usa <code>&lt;select&gt;</code> nativo. Só o Captain, que fica fora do menu.</p>
+  <p class="meta">Atenção técnica: os textos das telas originais estão em catálogos do Chatwoot. Editar o pt_BR deles some na próxima sincronização da tradução, então a troca vai por chave do fork (<code>config/fork_i18n.json</code>). Boa notícia: nenhuma tela do painel usa <code>&lt;select&gt;</code> nativo. Só o Captain usa, e ele fica fora do menu.</p>
 </section>
 
 <section>
@@ -146,7 +147,7 @@ td small{color:var(--muted);display:block;font-size:12px}
 <script>
 const LOTES=[
  {id:1,nome:"Textos que enganam",tam:"P",livre:true,txt:"Só texto e um diálogo de confirmação. Resolve os 4 críticos menos o Site, e a maior parte dos altos.",itens:["Caixa de resposta: anotação × enviar ao cliente","Notificações: confirmar antes de apagar tudo","Apagar canal diz o que se perde","Título de cada tela igual ao do cartão","Pessoa = usuário; IA = agente (relatórios, canais, times)","Times, Respostas prontas, Robôs, Login, Histórico: textos","Relatórios: Satisfação, Dentro/Fora do prazo, Passou para uma pessoa"]},
- {id:2,nome:"Uma tela por assunto",tam:"M",livre:true,txt:"Aposentar as telas duplicadas e os becos sem saída.",itens:["Ficha, lista de contatos e empresas antigas redirecionam para Relacionamentos","Cmd+K, Alt+V e Guia apontam para as telas novas","Editor antigo de portais redireciona para a Central de Ajuda","Esconder cartões sem saída: Login da empresa (sem SAML) e Trazer de outro sistema","Apagar settings/sla (código morto) e tirar a Automação antiga do Cmd+K","Aposentar o caminho antigo da lista e do painel do contato, se as chaves estiverem ligadas"]},
+ {id:2,nome:"Uma tela por assunto",tam:"M",livre:true,txt:"Aposentar as telas duplicadas e os becos sem saída.",itens:["Ficha, lista de contatos e empresas antigas redirecionam para Relacionamentos","Cmd+K e Alt+V deixam de abrir as telas antigas","Editor antigo de portais redireciona para a Central de Ajuda","Login da empresa e Importar dados deixam de ser becos sem saída","Apagar settings/sla (código morto) e tirar a Automação antiga do Cmd+K","Aposentar o caminho antigo da lista e do painel do contato, se as chaves estiverem ligadas"]},
  {id:3,nome:"Configurações › Pessoas e atendimento",tam:"G",livre:true,txt:"Telas novas no padrão de Automações (herói, cartão-frase, uma ação por tela).",itens:["Usuários","Times (uma tela no lugar do passo a passo de 3 etapas)","Respostas prontas","Etiquetas (bolinha de cor, sem código hexadecimal)","Regras para encerrar (com prévia da mensagem ao cliente)","Botões com 44 px e nome para leitor de tela"]},
  {id:4,nome:"Avisos, chamadas e busca",tam:"M",livre:true,txt:"O que o atendente usa em volta da conversa.",itens:["Notificações","Chamadas","Busca","Filtros salvos (um nome só)","Filtro avançado com filtros prontos","Ações em massa com texto nos botões"]},
  {id:5,nome:"Canais: criar e configurar",tam:"G",livre:false,txt:"A jornada de maior impacto para conta nova. O upgrade muda 36 arquivos aqui.",itens:["Escolher canal: os dois WhatsApps em destaque, o resto recolhido","WhatsApp Oficial sem Twilio e com texto da Meta","Configurações da caixa: o básico em cima, o resto em Mais opções","Abas renomeadas; dados técnicos por último, só para administrador","Pesquisa de satisfação e perguntas antes do chat"]},
@@ -158,11 +159,10 @@ const LOTES=[
 // s: original | parcial | nossa | morta ; up: upgrade muda muito (espera) ; be: precisa backend
 const T=[
  ["Atender"],
- ["Lista de conversas","conversation/ChatList","parcial",6,"Ao filtrar, volta o cabeçalho antigo","Cabeçalho novo também com filtro e pasta","M",4,1,""],
+ ["Lista de conversas","conversation/ChatList","parcial",6,"Ao filtrar, aparece o cabeçalho original do Chatwoot","Redesenhar o cabeçalho original de filtro e pasta","M",4,1,""],
  ["Filtro avançado","components-next/filter","original",3,"Construtor de consulta com E/OU e \"Está presente\"","Filtros prontos; operadores em frase; esconder campos técnicos","M",4,0,""],
  ["Ações em massa","conversationBulkActions","original",4,"Cinco ícones sem nome; \"Limpar\" com 24 px","Ícone com texto; 44 px","P",4,0,""],
  ["Painel da conversa e caixa de resposta","widgets/conversation, WootWriter","parcial",5,"\"Mensagem Privada\" e \"Enviar\" nos dois modos","Anotação interna × Enviar ao cliente; botões com nome","M","1 e 6",1,""],
- ["Painel lateral do contato","conversation/ContactPanel","nossa",7,"Sem a chave, volta o painel antigo com lixeira de 32 px","Aposentar o caminho antigo","P",2,0,""],
  ["Notificações","routes/dashboard/inbox","original",3,"Título \"Caixa de Entrada\"; \"Excluir todas\" sem confirmar","Confirmação; título Notificações; vazio com frase e botão","M","1 e 4",0,""],
  ["Chamadas","routes/dashboard/calls","original",4,"Erro cru do sistema; vazio sem saída para o atendente","Texto de erro; vazio por papel","P",4,0,""],
  ["Busca","modules/search","original",4,"\"3 ou mais caracteres\"; erro \"Messagem\"","\"Procure pelo nome, telefone ou e-mail\"","M",4,0,""],
@@ -173,7 +173,6 @@ const T=[
  ["Lista de canais","settings/inbox/Index","parcial",6,"Apagar canal não diz que as conversas somem","Texto de exclusão; botões com 44 px","P","1 e 5",1,""],
  ["Criar canal: escolher tipo","settings/inbox/ChannelList","parcial",3,"14 cartões iguais, dois WhatsApps sem diferença","Dois WhatsApps em destaque; resto recolhido","M",5,1,""],
  ["Criar: WhatsApp Oficial","channels/Whatsapp, CloudWhatsapp","original",2,"\"Provedor de API\", \"metade\" no lugar de Meta, Twilio","Texto da Meta; esconder Twilio","M",5,1,""],
- ["Criar: WhatsApp pelo QR Code","channels/WhatsappApi","nossa",6,"Telefone \"55DDDNÚMERO\" num campo cru","Campo de telefone padrão; 44 px","P",5,1,""],
  ["Criar: Instagram e Facebook","channels/Instagram, Facebook","parcial",5,"Avisos da Meta em linguagem técnica","Texto; uma ação por tela","M",5,1,""],
  ["Criar: e-mail, site, SMS, API, Telegram, Line, voz","channels/*","original",3,"Webhook, token do robô, Twilio","Recolher em Outros canais","M",5,1,""],
  ["Criar: quem atende e final","AddAgents, FinishSetup","original",3,"\"Agentes\" para pessoas; \"Então!\"","\"Quem atende\"; \"Pronto!\" e o próximo passo","P","1 e 5",1,""],
@@ -188,15 +187,14 @@ const T=[
  ["Integrações","settings/integrations","parcial",5,"\"Chatwoot se integra…\"; botão pequeno","Cartão inteiro clicável; esconder Linear, Slack, Dialogflow","M",8,1,"Descrições das integrações estão no config/locales do servidor"],
  ["Integrações › Webhooks, Painel de aplicativos","Webhooks, DashboardApps","original",2,"Tela de desenvolvedor","Só administrador; texto","M",8,1,""],
  ["Agentes externos (Robôs)","settings/agentBots","original",2,"Cartão diz Agentes externos, tela diz Robôs e pede URL","Título e descrição; tirar coluna de URL","P","1 e 8",0,""],
- ["Importar dados","settings/data","original",1,"Só Intercom e Freshdesk; aba Exportar \"Em breve\"","Esconder o cartão ou levar à importação por planilha","P",2,1,""],
+ ["Importar dados","settings/data","original",1,"Só Intercom e Freshdesk; aba Exportar \"Em breve\"","Tirar a aba vazia; dizer em uma frase o que dá para trazer","P",2,1,""],
  ["Dados da empresa","settings/account","parcial",6,"ID da conta e versão do sistema à vista","Esconder ID e versão; \"Salvar\"","P",8,1,""],
- ["Login da empresa","settings/security","original",1,"Só diz \"SSO via SAML desativado\" a quem administra","Esconder o cartão sem SAML","P",2,1,""],
+ ["Login da empresa","settings/security","original",1,"Só diz \"SSO via SAML desativado\" a quem administra","Dizer o que fazer: \"O login pela empresa não está ligado. Para ligar, fale com o suporte.\"","P",2,1,""],
  ["Histórico","settings/auditlogs","parcial",4,"\"Logs de Auditoria\"; registro mostra \"(#12)\" no lugar do nome","Texto; filtros em frase","M",1,0,"Mandar o nome do item no registro, não só o número"],
  ["Configurações › Pessoas e atendimento"],
- ["Usuários","settings/agents","parcial",4,"Cartão diz Usuários, tela diz Agentes; função só ao passar o mouse","Nome igual; função no toque; tirar a criação de canal do convite","M",3,0,""],
+ ["Usuários","settings/agents","parcial",4,"Cartão diz Usuários, tela diz Agentes; função só ao passar o mouse","Nome igual; função no toque, não só ao passar o mouse","M",3,0,""],
  ["Times","settings/teams","original",4,"\"Agente excluído\" ao apagar um time","Textos; uma tela no lugar de 3 etapas","M",3,0,""],
  ["Atribuição › Políticas e capacidade","settings/assignmentPolicy","parcial",5,"\"Política de atribuição\", \"Rodízio\", selo Premium","Frase do dia a dia; padrão de Automações","G",9,0,""],
- ["Funções","settings/funcoesDaEquipe","nossa",8,"Cartão e tela com nomes diferentes","Igualar o nome","P",1,0,""],
  ["Respostas prontas","settings/canned","original",4,"Botão de salvar diz \"Enviar\"","\"Salvar resposta\"; erro sem \"servidor Woot\"","P",3,0,""],
  ["Etiquetas","settings/labels","parcial",5,"Coluna Cor mostra o código hexadecimal","Só a bolinha da cor; botões com nome","P",3,0,""],
  ["Campos personalizados","settings/attributes","parcial",3,"Pede \"Chave\" e \"Expressão Regex\"","Chave sai do nome; sem expressão regular","M",9,0,""],
@@ -228,7 +226,7 @@ const count=s=>rows.filter(r=>r[2]===s).length;
 const notas=rows.map(r=>r[3]).filter(n=>n!==null);
 const media=(notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1).replace('.',',');
 document.getElementById('stats').innerHTML=[
- [rows.length,'telas avaliadas'],[count('original'),'ainda originais'],[count('parcial'),'parciais'],[count('nossa'),'já nossas (com sobra)'],[media,'nota média (0 a 10)'],[rows.filter(r=>r[9]).length,'pedem backend']
+ [rows.length,'telas avaliadas'],[count('original'),'ainda originais'],[count('parcial'),'parciais'],[media,'nota média (0 a 10)'],[rows.filter(r=>r[9]).length,'pedem backend']
 ].map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
 document.getElementById('lotes').innerHTML=LOTES.map(l=>`<article class="lote"><header><h3>${l.id}. ${l.nome}</h3><span class="pill ${l.livre?'p-livre':'p-espera'}">${l.livre?'Pode começar':'Espera o upgrade'}</span></header><p>${l.txt} <span class="meta">Tamanho ${l.tam}.</span></p><ul>${l.itens.map(i=>`<li>${i}</li>`).join('')}</ul></article>`).join('');
 const label={original:['Original','p-orig'],parcial:['Parcial','p-parc'],nossa:['Nossa','p-nossa'],morta:['Código morto','p-morta']};
