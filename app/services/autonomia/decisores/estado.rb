@@ -106,9 +106,10 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
 
   # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta. Sem o anúncio de origem (#2558): o
   # exemplo fica no Decisor, e quem tem automation_view o lê.
+  # #3082: o significado dos campos não entra no exemplo: ele não é dado da pessoa, e ocuparia o teto do texto guardado.
   def texto_do_exemplo
     lido = @anuncio && dados[:card] ? dados.merge(ler_card(anuncio: false)) : dados
-    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].to_json}" if lido[chave] }
+    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].except(:attribute_meanings).to_json}" if lido[chave] }
     [lido[:subject], *lido[:messages], lido[:last_message], lido[:text], *blocos]
       .compact_blank.join("\n\n").first(Autonomia::Decisor::MAX_TEXTO_DO_EXEMPLO)
   end

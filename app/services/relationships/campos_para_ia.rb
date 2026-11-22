@@ -12,11 +12,15 @@ class Relationships::CamposParaIa
   end
 
   def valores(atributos, modelo)
+    return atributos.to_h if @account.nil?
+
     guardadas = chaves_guardadas(modelo)
     atributos.to_h.reject { |chave, _valor| guardadas.include?(chave.to_s) }
   end
 
   def significados(chaves, modelo)
+    return {} if @account.nil? || chaves.empty?
+
     definicoes(modelo).slice(*chaves.map(&:to_s)).transform_values do |definicao|
       { name: definicao.attribute_display_name.to_s.first(MAX_TEXTO),
         purpose: definicao.attribute_description.to_s.strip.first(MAX_TEXTO).presence }.compact

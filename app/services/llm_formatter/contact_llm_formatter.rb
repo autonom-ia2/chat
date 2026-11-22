@@ -35,7 +35,7 @@ class LlmFormatter::ContactLlmFormatter < LlmFormatter::DefaultLlmFormatter
 
   # #3082: o nome do campo e, quando a conta escreveu, o "Para que serve", que a tela avisa que a IA lê.
   def rotulo(attribute)
-    proposito = attribute.attribute_description.to_s.strip
+    proposito = attribute.attribute_description.to_s.squish.first(300)
     proposito.present? ? "#{attribute.attribute_display_name} (#{proposito})" : attribute.attribute_display_name
   end
 end
