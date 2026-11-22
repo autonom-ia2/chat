@@ -149,21 +149,22 @@
     "CONFIGURE_RECORD_DESCRIPTION": "Escolha o que aparece na ficha.",
     "RECORD_RULE": "Ligado: aparece sempre, mesmo vazio. Desligado: só aparece quando estiver preenchido.",
     "USE_FIELD": "Usar este campo",
-    "SHOW_HELP": "Desligado, o campo some de todas as telas. O que já foi escrito fica guardado.",
+    "SHOW_HELP": "Desligado, o campo some das telas, mas a IA continua usando. Para tirar da IA também, apague o campo.",
     "DELETE": {
       "OPEN": "Apagar este campo",
       "TITLE": "Apagar o campo “{name}”?",
-      "GONE": "Ele sai da ficha, das gavetas e das IAs.",
+      "GONE": "Ele some da ficha e das outras telas, e a IA para de usar.",
       "KEPT": "O que já foi escrito nele fica guardado. Você pode trazer o campo de volta quando quiser, com tudo o que estava escrito.",
       "CONFIRM": "Apagar campo",
-      "ERROR": "Não consegui apagar o campo. Tente de novo."
+      "ERROR": "Não consegui apagar o campo. Tente de novo.",
+      "DONE": "“{name}” foi apagado. Ele está em “Campos apagados”, no fim da lista."
     },
     "DELETED": {
       "TITLE": "Campos apagados",
       "HELP": "O que foi escrito neles está guardado.",
       "BRING_BACK": "Trazer de volta",
       "BRING_BACK_TITLE": "Trazer o campo de volta",
-      "BRING_BACK_DESCRIPTION": "Ele volta com tudo o que estava escrito. Confira o nome e o “Para que serve”."
+      "BRING_BACK_DESCRIPTION": "Ele volta com tudo o que estava escrito. Se quiser, mude o nome antes."
     },
     "DESCRIPTION_REQUIRED": "Para que serve (obrigatório)",
     "SAVE_NEEDS": {
@@ -191,7 +192,7 @@
     "NO_DEFINITIONS": "Ainda não há campos. Use Novo campo para criar o primeiro.",
     "SELECTION_SUMMARY": "{selected} de {total} aparecem",
     "BREADCRUMB_LABEL": "Navegação de Relacionamentos",
-    "GLOBAL_NOTE": "Vale para toda a equipe. Esconder um campo não apaga o que já foi escrito nele.",
+    "GLOBAL_NOTE": "Vale para toda a equipe. O que já foi escrito fica guardado, ao esconder ou ao apagar um campo.",
     "MORE_ACTIONS": "Mais ações",
     "VISIT_SITE": "Ver site",
     "OPEN_PANEL": "Abrir acompanhamento",
