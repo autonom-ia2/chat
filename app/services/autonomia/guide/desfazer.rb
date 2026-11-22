@@ -56,11 +56,16 @@ class Autonomia::Guide::Desfazer
 
   # O registro que sabe como sair no desfazer responde por si (#2889: a versão da automação é só-leitura e não sai por
   # `destroy!`); devolve o motivo do conflito quando não pode sair. Os outros saem por `destroy!`, como sempre.
+  # #3122: com algo de outra pessoa pendurado, não sai — o `destroy!` levaria junto, por exemplo, as conversas do
+  # contato. E a recusa do próprio model vira conflito: antes estourava no meio do desfazer, sem resposta para a pessoa.
   def apagar(registro)
     return registro.apagar_ao_desfazer if registro.respond_to?(:apagar_ao_desfazer)
+    return 'has_children' if registro && ::Autonomia::Guide::FilhosQueFicam.algum?(registro)
 
     registro&.destroy!
     nil
+  rescue ActiveRecord::RecordNotDestroyed
+    'not_destroyed'
   end
 
   def restaurar_alterado(mudanca)

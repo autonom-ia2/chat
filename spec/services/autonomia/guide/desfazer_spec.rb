@@ -153,6 +153,33 @@ RSpec.describe 'Caderno e desfazer do Guia' do
       expect(relatorio['conflitos'].first).to include('motivo' => 'changed_after', 'campos' => ['title'])
     end
 
+    # #3122: apagar o contato pelo model levava junto as conversas que o cliente abriu depois.
+    it 'não apaga o que o Guia criou quando outra pessoa já pendurou algo nele', :aggregate_failures do
+      contato = nil
+      gravando { contato = create(:contact, account: conta) }
+      conversa = create(:conversation, account: conta, contact: contato)
+
+      relatorio = desfazer
+
+      expect(Contact.exists?(contato.id)).to be(true)
+      expect(Conversation.exists?(conversa.id)).to be(true)
+      expect(relatorio['conflitos'].first).to include('motivo' => 'has_children', 'texto' => be_present)
+    end
+
+    # O funil com card recusa sair (`restrict_with_error`). Antes isso estourava no meio do desfazer, sem resposta.
+    it 'no funil que ganhou card depois, conta o conflito em vez de quebrar', :aggregate_failures do
+      funil = nil
+      gravando { funil = Crm::Pipeline.create!(account: conta, name: 'Novo funil') }
+      etapa = Crm::PipelineStage.create!(account: conta, pipeline: funil, name: 'Entrada')
+      Crm::Card.create!(account: conta, pipeline: funil, stage: etapa, title: 'Cliente', currency: 'BRL')
+
+      relatorio = desfazer
+
+      expect(Crm::Pipeline.exists?(funil.id)).to be(true)
+      expect(relatorio['conflitos'].first).to include('motivo' => 'has_children')
+      expect(execucao.reload.desfeita_em).to be_present
+    end
+
     it 'desfaz o turno inteiro, de trás para frente', :aggregate_failures do
       funil = nil
       gravando(0) { funil = Crm::Pipeline.create!(account: conta, name: 'Vendas') }
