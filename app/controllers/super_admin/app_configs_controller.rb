@@ -44,7 +44,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       return render json: { error: I18n.t('super_admin.typesafe.invalid_configuration') }, status: :unprocessable_entity
     end
 
-    errors = shopify_partner_config_errors + typesafe_config_errors
+    errors = shopify_partner_config_errors + stripe_config_errors + typesafe_config_errors
     persist_typesafe_api_key(errors) if errors.empty?
     persist_meta_ads_token(errors) if errors.empty?
     persist_app_configs(errors) if errors.empty?
@@ -71,6 +71,14 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
 
   private
 
+  def stripe_config_errors
+    return [] unless @config == 'stripe'
+
+    values = InstallationConfig.where(name: @allowed_configs).to_h { |config| [config.name, config.value] }
+    values.merge!(params.fetch('app_config', {}).permit(*@allowed_configs).to_h)
+    Integrations::Stripe::Oauth.configuration_errors(url: values['STRIPE_APP_AUTHORIZE_URL'], key: values['STRIPE_APP_SECRET_KEY'])
+  end
+
   def set_config
     @config = params[:config] || 'general'
   end
@@ -84,6 +92,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'microsoft' => %w[AZURE_APP_ID AZURE_APP_SECRET],
       'email' => %w[MAILER_INBOUND_EMAIL_DOMAIN ACCOUNT_EMAILS_LIMIT ACCOUNT_EMAILS_PLAN_LIMITS],
       'linear' => %w[LINEAR_CLIENT_ID LINEAR_CLIENT_SECRET],
+      'stripe' => %w[STRIPE_APP_AUTHORIZE_URL STRIPE_APP_SECRET_KEY STRIPE_APP_WEBHOOK_SECRET],
       'slack' => %w[SLACK_CLIENT_ID SLACK_CLIENT_SECRET SLACK_SIGNING_SECRET],
       'instagram' => %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN INSTAGRAM_API_VERSION ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT
                         INSTAGRAM_WEBHOOK_RELAY_URLS],
@@ -91,7 +100,8 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT],
+      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT
+                      CAPTAIN_OPENROUTER_API_KEY CAPTAIN_OPENROUTER_DECISION_MODEL_ENDPOINT],
       'typesafe' => TYPESAFE_CONFIGS,
       'meta_ads' => META_ADS_CONFIGS
     }

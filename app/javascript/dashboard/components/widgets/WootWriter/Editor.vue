@@ -69,6 +69,7 @@ import {
 import {
   hasPressedEnterAndNotCmdOrShift,
   hasPressedCommandAndEnter,
+  isComposing,
   isEscape,
 } from 'shared/helpers/KeyboardHelpers';
 import { createTypingIndicator } from '@chatwoot/utils';
@@ -823,6 +824,7 @@ function handleLineBreakWhenCmdAndEnterToSendEnabled(event) {
 }
 
 function onKeydown(event) {
+  if (isComposing(event)) return false;
   if (isEscape(event)) {
     collapseSelection(editorView);
     return true;
@@ -1091,7 +1093,7 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
       hidden
       @change="onFileChange"
     />
-    <div ref="editor" />
+    <div ref="editor" class="editor-mount" />
     <slot name="footer" />
   </div>
 </template>

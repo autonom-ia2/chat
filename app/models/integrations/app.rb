@@ -58,10 +58,12 @@ class Integrations::App
 
   def active?(account)
     case params[:id]
+    when 'stripe'
+      stripe_enabled?(account)
     when 'slack'
       GlobalConfigService.load('SLACK_CLIENT_SECRET', nil).present?
     when 'linear'
-      account.feature_enabled?('linear_integration') && GlobalConfigService.load('LINEAR_CLIENT_ID', nil).present?
+      linear_enabled?(account)
     when 'shopify'
       shopify_enabled?(account)
     when 'leadsquared'
@@ -107,8 +109,9 @@ class Integrations::App
       # AI runs on a system API key fallback (Crm::Ai::CredentialResolver) with no
       # Integrations::Hook, so reflect actual credential availability instead of a hook.
       ::Crm::Ai::CredentialResolver.new(account: account).configured?
-    when 'shopify'
+    when 'shopify', 'stripe'
       account.hooks.exists?(app_id: id, status: :enabled)
+
     else
       account.hooks.exists?(app_id: id)
     end
@@ -143,6 +146,14 @@ class Integrations::App
   end
 
   private
+
+  def stripe_enabled?(account)
+    account.feature_enabled?('stripe_integration') && Integrations::Stripe::Oauth.configured?
+  end
+
+  def linear_enabled?(account)
+    account.feature_enabled?('linear_integration') && GlobalConfigService.load('LINEAR_CLIENT_ID', nil).present?
+  end
 
   def shopify_enabled?(account)
     Shopify::FeatureGate.enabled?(account: account) &&

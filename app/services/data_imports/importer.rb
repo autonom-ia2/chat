@@ -1350,3 +1350,5 @@ class DataImports::Importer
   end
 end
 # rubocop:enable Metrics/ClassLength, Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/MethodLength, Rails/SkipsModelValidations
+# Fork (upgrade 4.19.1, #3119): the Enterprise extension (#15966) asks conversation monitors to scan each imported
+# message. Monitors are Captain and not used here; prepending it would add one query per imported message. Not prepended.

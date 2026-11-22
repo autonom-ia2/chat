@@ -53,7 +53,10 @@ class Notification < ApplicationRecord
     # #2931 — an automation asks for approval (the actor is the step's `Autonomia::Automacao::Registro`). In-app only.
     automacao_aprovacao: 13,
     # #2898 — insurance policies entered renewal today (the actor is the account's `Carteira::RenovacaoConfig`). In-app only.
-    carteira_renovacao: 14
+    carteira_renovacao: 14,
+    # Upgrade 4.19.1: the upstream uses 9 for this one, which the fork already gave to crm_followup_reminder.
+    voice_call_missed: 15
+
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -245,3 +248,5 @@ class Notification < ApplicationRecord
     }
   end
 end
+
+Notification.prepend_mod_with('Notification')

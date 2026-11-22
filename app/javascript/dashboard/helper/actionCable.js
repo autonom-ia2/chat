@@ -58,6 +58,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.mentionUnreadCountsRetryTimer = null;
     this.filteredUnreadCountsRetryTimer = null;
     this.events = {
+      'monitor.updated': this.onMonitorUpdated,
       'message.created': this.onMessageCreated,
       'message.updated': this.onMessageUpdated,
       'conversation.created': this.onConversationCreated,
@@ -82,7 +83,11 @@ class ActionCableConnector extends BaseActionCableConnector {
         this.onConversationUnreadCountChanged,
       'account.cache_invalidated': this.onCacheInvalidate,
       'account.enrichment_completed': this.onEnrichmentCompleted,
+      'account.billing_updated': this.onBillingUpdated,
       'copilot.message.created': this.onCopilotMessageCreated,
+      // The store upserts by ID, so an updated approval card replaces the old one.
+      'copilot.message.updated': this.onCopilotMessageCreated,
+      'captain.playground.response': this.onCaptainPlaygroundResponse,
       'voice_call.incoming': this.onVoiceCallIncoming,
       'voice_call.accepted': this.onVoiceCallAccepted,
       'voice_call.outbound_connected': this.onVoiceCallOutboundConnected,
@@ -110,6 +115,11 @@ class ActionCableConnector extends BaseActionCableConnector {
   // eslint-disable-next-line class-methods-use-this
   onReconnect = () => {
     emitter.emit(BUS_EVENTS.WEBSOCKET_RECONNECT);
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  onMonitorUpdated = data => {
+    emitter.emit(BUS_EVENTS.MONITOR_UPDATED, data);
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -400,6 +410,11 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.app.$store.dispatch('autonomiaBuildThreads/buildThreadUpdated', data);
   };
 
+  // eslint-disable-next-line class-methods-use-this
+  onCaptainPlaygroundResponse = data => {
+    emitter.emit(BUS_EVENTS.CAPTAIN_PLAYGROUND_RESPONSE, data);
+  };
+
   onEnrichmentCompleted = () => {
     this.app.$store.dispatch('accounts/get', { silent: true });
   };
@@ -463,6 +478,13 @@ class ActionCableConnector extends BaseActionCableConnector {
     if (!this.isAValidEvent(data)) return;
 
     emitter.emit(BUS_EVENTS.PROSPECTING_LEAD_UPDATED, data);
+  };
+
+  onBillingUpdated = data => {
+    this.app.$store.dispatch('accounts/get', {
+      accountId: data.account_id,
+      silent: true,
+    });
   };
 
   onCacheInvalidate = data => {

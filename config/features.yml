@@ -158,6 +158,7 @@
   enabled: false
   premium: true
   chatwoot_internal: true
+  deprecated: true
 - name: contact_chatwoot_support_team
   display_name: Contact Chatwoot Support Team
   enabled: true
@@ -187,6 +188,7 @@
   display_name: Captain V2
   enabled: false
   premium: true
+  deprecated: true
 - name: whatsapp_embedded_signup
   display_name: WhatsApp Embedded Signup
   enabled: false
@@ -1460,4 +1462,47 @@
 - name: agente_modelos_seguro
   display_name: Agentes › modelos prontos por ramo de seguro
   enabled: false
+  column: feature_flags_ext_2
+# Upgrade Chatwoot 4.19.1 (#3119): as 8 flags novas do upstream vêm na feature_flags_ext_1, nas posições 8–15, que o
+# fork já usa (relationships_*, meta_ads_hub, customer_base...). Aqui elas vão para a feature_flags_ext_2, nas posições
+# 51–58, depois das do fork. A posição de cada flag é gravada no banco: nunca mova nem reordene. O spec
+# spec/models/concerns/featurable_positions_spec.rb confere a posição de todas.
+- name: captain_classifier
+  display_name: Captain Classifier
+  enabled: false
+  column: feature_flags_ext_2
+- name: conversation_monitors
+  display_name: Conversation Monitors
+  enabled: false
+  premium: true
+  column: feature_flags_ext_2
+- name: campaign_analytics
+  display_name: Campaign Analytics
+  enabled: false
+  premium: true
+  column: feature_flags_ext_2
+- name: company_enrichment
+  display_name: Company Enrichment
+  enabled: false
+  premium: true
+  column: feature_flags_ext_2
+- name: stripe_integration
+  display_name: Stripe Integration
+  enabled: false
+  column: feature_flags_ext_2
+- name: mobile_voice_push
+  display_name: Calls on mobile
+  # Fork (upgrade 4.19.1): off. The upstream turns it on for every account (migration 20261014152259, emptied here).
+  enabled: false
+  hidden: true
+  column: feature_flags_ext_2
+- name: auto_translate
+  display_name: Auto Translate
+  enabled: false
+  premium: true
+  column: feature_flags_ext_2
+- name: copilot_workflows
+  display_name: Copilot workflows
+  enabled: false
+  premium: true
   column: feature_flags_ext_2

@@ -1366,6 +1366,20 @@
         "MODES": {
           "SANDBOX": "Sandbox",
           "LIVE": "Em tempo real"
+        },
+        "QUALITY": {
+          "GREEN": "Verde",
+          "YELLOW": "Amarelo",
+          "RED": "Vermelho"
+        },
+        "TIER_NAMES": {
+          "TIER_250": "Nível 250",
+          "TIER_1000": "Nível 1K",
+          "TIER_1K": "Nível 1K",
+          "TIER_2K": "Nível 2K",
+          "TIER_10K": "Nível 10K",
+          "TIER_100K": "Nível 100K",
+          "TIER_UNLIMITED": "Ilimitado"
         }
       },
       "BUSINESS_PROFILE": {

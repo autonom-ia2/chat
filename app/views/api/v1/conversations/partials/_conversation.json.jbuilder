@@ -26,7 +26,7 @@ json.meta do
       json.partial! 'api/v1/models/agent_bot_slim', formats: [:json], resource: conversation.assigned_entity
     end
     json.assignee_type 'AgentBot'
-  elsif conversation.assignee_type == 'User'
+  elsif conversation.assigned_entity.is_a?(User)
     json.assignee do
       json.partial! 'api/v1/models/agent', formats: [:json], resource: conversation.assigned_entity
     end
@@ -81,6 +81,7 @@ json.contact_info_request do
   json.reason nil
   json.delivery_mode nil
 end
+json.anonymous_caller conversation.contact_inbox.anonymous_caller?
 json.contact_last_seen_at conversation.contact_last_seen_at.to_i
 json.custom_attributes conversation.custom_attributes
 json.inbox_id conversation.inbox_id

@@ -16,6 +16,10 @@ class AutomationsAPI extends ApiClient {
   ensaio(automationId, quantidade) {
     return axios.post(`${this.url}/${automationId}/ensaio`, { quantidade });
   }
+
+  linkedToMonitor(monitorId, signal) {
+    return axios.get(this.url, { params: { monitor_id: monitorId }, signal });
+  }
 }
 
 export default new AutomationsAPI();
