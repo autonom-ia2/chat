@@ -28,8 +28,14 @@ class LlmFormatter::ContactLlmFormatter < LlmFormatter::DefaultLlmFormatter
     attributes << "Location: #{@record.location}"
     attributes << "Country Code: #{@record.country_code}"
     @record.account.custom_attribute_definitions.with_attribute_model('contact_attribute').each do |attribute|
-      attributes << "#{attribute.attribute_display_name}: #{@record.custom_attributes[attribute.attribute_key]}"
+      attributes << "#{rotulo(attribute)}: #{@record.custom_attributes[attribute.attribute_key]}"
     end
     attributes.join("\n")
+  end
+
+  # #3082: o nome do campo e, quando a conta escreveu, o "Para que serve", que a tela avisa que a IA lê.
+  def rotulo(attribute)
+    proposito = attribute.attribute_description.to_s.squish.first(300)
+    proposito.present? ? "#{attribute.attribute_display_name} (#{proposito})" : attribute.attribute_display_name
   end
 end
