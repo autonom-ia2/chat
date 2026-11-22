@@ -118,7 +118,6 @@ class Captain::CustomTool < ApplicationRecord
   validate :validate_headers
   validate :validate_auth_config
 
-
   scope :enabled, -> { where(enabled: true) }
   scope :from_github, lambda { |repository, path|
     where("source_metadata->>'source' = 'github'")

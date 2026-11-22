@@ -12,6 +12,7 @@ const formatTime = timestamp =>
   });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <Banner v-if="usage?.limit_reached" color="amber" role="status" class="mb-4">
     <div class="flex items-start gap-2">

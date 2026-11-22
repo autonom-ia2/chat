@@ -126,6 +126,7 @@ export default {
       <p class="mt-4 -mb-1 text-sm text-n-slate-11">
         {{ $t('RESET_PASSWORD.GO_BACK_TO_LOGIN') }}
         <router-link :to="loginRoute" class="text-link text-n-brand">
+          <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
           {{ $t('COMMON.CLICK_HERE') }}.
         </router-link>
       </p>

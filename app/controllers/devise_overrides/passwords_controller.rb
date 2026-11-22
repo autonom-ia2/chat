@@ -1,6 +1,5 @@
 class DeviseOverrides::PasswordsController < Devise::PasswordsController
   include AuthHelper
-  include MfaAuthenticationHelper
 
   skip_before_action :require_no_authentication, raise: false
   skip_before_action :authenticate_user!, raise: false
@@ -21,8 +20,8 @@ class DeviseOverrides::PasswordsController < Devise::PasswordsController
     reset_password_token = Devise.token_generator.digest(self, :reset_password_token, original_token)
     @recoverable = User.find_by(reset_password_token: reset_password_token)
     if @recoverable && reset_password_and_confirmation(@recoverable)
-      return render_mfa_sign_in_required if mfa_sign_in_required?(@recoverable)
-
+      # Fork (upgrade 4.19.1, #3119): the upstream sends MFA users back to sign in after a reset
+      # (render_mfa_sign_in_required). Neutralized like the other flow-changing security fixes; see the Issue in the PR.
       send_auth_headers(@recoverable)
       render partial: 'devise/auth', formats: [:json], locals: { resource: @recoverable }
     else

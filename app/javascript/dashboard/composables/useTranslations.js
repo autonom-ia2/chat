@@ -37,7 +37,7 @@ export function useTranslations(contentAttributes, contactSide) {
     const { translations } = contentAttributes.value ?? {};
     if (!translations || !Object.keys(translations).length) return null;
     // Contact-side messages read in the agent language; a reply or template shows its author's own text.
-    if (autoTranslate.value.enabled) {
+    if (autoTranslate.value?.enabled) {
       const own = translations[autoTranslate.value.locale];
       if (unref(contactSide)) return own ?? null;
       return own ?? Object.values(translations)[0];

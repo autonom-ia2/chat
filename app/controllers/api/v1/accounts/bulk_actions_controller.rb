@@ -1,5 +1,5 @@
 class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseController
-  before_action :validate_assignment_targets, only: :create, if: -> { normalized_type == 'Conversation' }
+  # Fork (upgrade 4.19.1, #3119): `validate_assignment_targets` (upstream) is not wired, as in ConversationsController.
 
   def create
     case normalized_type

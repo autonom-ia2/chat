@@ -17,7 +17,7 @@ module ConversationMonitors::MessageTracking
   end
 
   def request_monitor_evaluation
-    return unless (incoming? || outgoing?) && !private?
+    return unless monitor_tracked_message?
 
     if !monitor_automation_origin? && conversation.account.feature_enabled?('automations') &&
        ConversationMonitors::Configuration.enabled?(conversation.account)
@@ -29,7 +29,7 @@ module ConversationMonitors::MessageTracking
   end
 
   def catch_up_monitor_activation
-    return unless (incoming? || outgoing?) && !private?
+    return unless monitor_tracked_message?
 
     # Creation or catch-up scans can finish before this message commits.
     # Enroll late commits while preserving each resumed monitor's activity window.
@@ -50,12 +50,24 @@ module ConversationMonitors::MessageTracking
   def invalidate_monitor_evaluation
     return if activity? || template?
     return if conversation.nil?
+    return unless monitors_enabled?
 
     live_activity_at = @monitor_live_activity_at unless private? || content_attributes['deleted']
     @monitor_work_requested = ConversationMonitors::Scheduler.request(
       conversation, invalidate: true, live_activity_at: live_activity_at
     ).present?
     @monitor_content_invalidated = @monitor_work_requested
+  end
+
+  # Fork (upgrade 4.19.1, #3119): skip the monitor queries on every message unless the account has monitors on.
+  # The flags are in-memory bits, so accounts without the feature pay nothing on the message hot path.
+  def monitors_enabled?
+    account = conversation&.account
+    account.present? && ConversationMonitors::Configuration.enabled?(account)
+  end
+
+  def monitor_tracked_message?
+    monitors_enabled? && (incoming? || outgoing?) && !private?
   end
 
   def monitor_content_changed?

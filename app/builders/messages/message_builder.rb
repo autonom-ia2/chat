@@ -53,7 +53,6 @@ class Messages::MessageBuilder
 
   def process_attachments
     (Array(@attachments) + forwarded_attachments).each_with_index do |uploaded_attachment, posicao|
-
       attachment = @message.attachments.build(
         account_id: @message.account_id,
         file: uploaded_attachment

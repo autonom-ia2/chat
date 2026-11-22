@@ -162,6 +162,18 @@ RSpec.describe 'Shopify Integration API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/:account_id/integrations/shopify/auth' do
+    # #2027: starting the connection ends with the store token on the account, like connecting any hook.
+    it 'returns unauthorized for an agent' do
+      post "/api/v1/accounts/#{account.id}/integrations/shopify/auth",
+           params: { shop_domain: 'test-store.myshopify.com' },
+           headers: agent.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
   describe 'POST /api/v1/accounts/:account_id/integrations/shopify/complete_install' do
     let(:account) { create(:account, internal_attributes: { billing_provider: 'shopify', signup_source: 'shopify' }) }
     let(:admin) { create(:user, account: account, role: :administrator) }

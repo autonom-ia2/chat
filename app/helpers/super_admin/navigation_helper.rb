@@ -80,7 +80,6 @@ module SuperAdmin::NavigationHelper
       group_key = SETTINGS_GROUPS.keys.find { |key| SETTINGS_GROUPS[key].include?(feature_key) }
       { label: attrs['name'], url: attrs['path'] || super_admin_app_config_path(config: attrs['config_key']), group: (t(group_key) if group_key),
         icon: attrs['icon'], active: attrs['path'] ? controller_name == 'instagram_automations' : attrs['config_key'] == current_config }
-
     end
   end
 
@@ -107,7 +106,6 @@ module SuperAdmin::NavigationHelper
         active: controller_name == 'carteira_medidas' },
       { label: t('super_admin.navigation.sidekiq_dashboard'), url: sidekiq_web_path, icon: 'i-lucide-layers', external: true }
     ]
-
   end
 
   def nav_resources

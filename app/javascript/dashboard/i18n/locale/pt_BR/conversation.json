@@ -154,7 +154,8 @@
       "JOIN_CALL": "Entrar na chamada",
       "CALL_BACK": "Retornar chamada",
       "TRANSCRIPT_SHOW_MORE": "Ver mais",
-      "TRANSCRIPT_SHOW_LESS": "Mostrar menos"
+      "TRANSCRIPT_SHOW_LESS": "Mostrar menos",
+      "MISSED_CALL_OUTSIDE_HOURS": "Fora do horário de atendimento"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolver",
@@ -456,6 +457,7 @@
     "VIEW_TRANSLATED_IN": "Ver tradução ({language})",
     "TRANSLATION_FAILED": "Não foi possível traduzir; foi enviada como digitada",
     "CONTACT_TRANSLATION_FAILED": "Não foi possível traduzir",
+    "ANONYMOUS_CALLER_CANNOT_REPLY": "Não é possível enviar mensagens porque o número de telefone de quem ligou não está disponível.",
     "UNSUPPORTED_MESSAGE_WHATSAPP_TITLE": "Conteúdo da mensagem indisponível",
     "UNSUPPORTED_MESSAGE_WHATSAPP_DETAILS": "Para mais detalhes, consulte {documentation}.",
     "UNSUPPORTED_MESSAGE_WHATSAPP_LEARN_MORE": "Documentação da Meta",

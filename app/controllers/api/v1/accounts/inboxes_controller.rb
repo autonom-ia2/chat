@@ -110,7 +110,6 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   # membership-based: it also decides which mailboxes feed the CRM calendar. Upgrade 4.19.1: keeps the upstream name
   # (inbox_scope), which the Enterprise controller extends with super.
   def inbox_scope
-
     return Current.account.inboxes if Current.account_user&.permission_granted?('inbox_view')
 
     policy_scope(Current.account.inboxes)

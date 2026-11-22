@@ -541,7 +541,6 @@ RSpec.describe Account do
         account.settings = { auto_resolve_after: nil }
         expect(account).to be_valid
       end
-
     end
 
     context 'when auto_resolve_message' do

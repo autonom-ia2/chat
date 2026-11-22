@@ -88,16 +88,9 @@ RSpec.describe ReplyMailbox do
         expect(account.conversations.last.messages.last.content).to include('Reply from the supplier')
       end
 
-      it 'keeps replies from different forward recipients in separate conversations' do
-        described_class.receive supplier_reply
-        vendor_reply = create_inbound_email_from_mail(from: 'vendor@example.com', to: email_channel.email, subject: 'Re: Fwd: Hello',
-                                                      in_reply_to: '<forward/1@example.com>', body: 'Reply from the vendor')
-
-        expect { described_class.receive vendor_reply }.to change(account.conversations, :count).by(1)
-
-        expect(account.conversations.last.contact.email).to eq('vendor@example.com')
-        expect(account.conversations.find_by(contact: Contact.from_email('supplier@example.com')).messages.count).to eq(1)
-      end
+      # Fork (upgrade 4.19.1, #3119): o upstream separa por remetente as respostas a um mesmo encaminhamento
+      # (`NewConversationStrategy#find_conversation_by_in_reply_to` por contato). Aqui a estratégia segue a do fork
+      # (inventário #17/#18): a busca por `in_reply_to` é da conta inteira.
     end
 
     context 'when new conversation email contains null bytes' do

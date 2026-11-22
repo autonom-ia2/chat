@@ -2737,7 +2737,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
     t.index ["copilot_tool_call_id"], name: "index_copilot_runs_on_copilot_tool_call_id", unique: true
     t.index ["source_run_id"], name: "index_copilot_runs_on_source_run_id"
     t.index ["status"], name: "index_copilot_runs_awaiting_approval", where: "((status)::text = 'awaiting_approval'::text)"
-    t.index ["status"], name: "index_copilot_runs_claimable", where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying])::text[]))"
+    t.index ["status"], name: "index_copilot_runs_claimable", where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["user_id"], name: "index_copilot_runs_on_user_id"
   end
 
@@ -2751,6 +2751,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
     t.index ["account_id"], name: "index_copilot_threads_on_account_id"
     t.index ["assistant_id"], name: "index_copilot_threads_on_assistant_id"
     t.index ["user_id"], name: "index_copilot_threads_on_user_id"
+  end
+
+  create_table "copilot_tool_calls", force: :cascade do |t|
+    t.bigint "copilot_run_id", null: false
+    t.string "call_id", null: false
+    t.string "name", null: false
+    t.string "status", default: "queued", null: false
+    t.jsonb "arguments", default: {}, null: false
+    t.jsonb "result"
+    t.integer "attempts", default: 0, null: false
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["copilot_run_id", "call_id"], name: "index_copilot_tool_calls_on_copilot_run_id_and_call_id", unique: true
+    t.index ["status"], name: "index_copilot_tool_calls_running", where: "((status)::text = 'running'::text)"
   end
 
   create_table "crm_activities", force: :cascade do |t|
@@ -3939,21 +3954,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
     t.index ["conversation_id", "state"], name: "idx_crm_subject_decisions_conversation_state"
     t.index ["message_id"], name: "index_crm_subject_decisions_on_message_id"
     t.index ["pipeline_id"], name: "index_crm_subject_decisions_on_pipeline_id"
-  end
-
-  create_table "copilot_tool_calls", force: :cascade do |t|
-    t.bigint "copilot_run_id", null: false
-    t.string "call_id", null: false
-    t.string "name", null: false
-    t.string "status", default: "queued", null: false
-    t.jsonb "arguments", default: {}, null: false
-    t.jsonb "result"
-    t.integer "attempts", default: 0, null: false
-    t.string "error"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["copilot_run_id", "call_id"], name: "index_copilot_tool_calls_on_copilot_run_id_and_call_id", unique: true
-    t.index ["status"], name: "index_copilot_tool_calls_running", where: "((status)::text = 'running'::text)"
   end
 
   create_table "csat_survey_responses", force: :cascade do |t|
@@ -5533,6 +5533,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
   add_foreign_key "conversation_audience_searches", "accounts", on_delete: :cascade
   add_foreign_key "conversation_audience_searches", "campaign_imports", on_delete: :nullify
   add_foreign_key "conversation_audience_searches", "users", on_delete: :nullify
+  add_foreign_key "conversation_monitor_daily_usages", "accounts", on_delete: :cascade
+  add_foreign_key "conversation_monitor_evaluations", "accounts", on_delete: :cascade
+  add_foreign_key "conversation_monitor_evaluations", "conversation_monitors", column: "monitor_id", on_delete: :cascade
+  add_foreign_key "conversation_monitor_evaluations", "conversations", on_delete: :cascade
+  add_foreign_key "conversation_monitor_scans", "conversation_monitors", column: "monitor_id", on_delete: :cascade
+  add_foreign_key "conversation_monitor_work_items", "accounts", on_delete: :cascade
+  add_foreign_key "conversation_monitor_work_items", "conversations", on_delete: :cascade
+  add_foreign_key "conversation_monitors", "accounts", on_delete: :cascade
+  add_foreign_key "conversation_monitors", "users", on_delete: :nullify
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade
@@ -5722,15 +5731,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
   add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"
-  add_foreign_key "conversation_monitor_daily_usages", "accounts", on_delete: :cascade
-  add_foreign_key "conversation_monitor_evaluations", "accounts", on_delete: :cascade
-  add_foreign_key "conversation_monitor_evaluations", "conversation_monitors", column: "monitor_id", on_delete: :cascade
-  add_foreign_key "conversation_monitor_evaluations", "conversations", on_delete: :cascade
-  add_foreign_key "conversation_monitor_scans", "conversation_monitors", column: "monitor_id", on_delete: :cascade
-  add_foreign_key "conversation_monitor_work_items", "accounts", on_delete: :cascade
-  add_foreign_key "conversation_monitor_work_items", "conversations", on_delete: :cascade
-  add_foreign_key "conversation_monitors", "accounts", on_delete: :cascade
-  add_foreign_key "conversation_monitors", "users", on_delete: :nullify
   add_foreign_key "inboxes", "portals"
   add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "accounts"

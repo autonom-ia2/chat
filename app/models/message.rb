@@ -249,7 +249,6 @@ class Message < ApplicationRecord
                                 .where("(additional_attributes->'campaign_id') is null")
                                 .where("(additional_attributes->'whatsapp_api_campaign_id') is null").count > 1
 
-
     true
   end
 
