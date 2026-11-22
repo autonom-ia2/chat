@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 // #2211 (decisão do Rodrigo, rodada 4) — "Escrever" na busca abre a própria tela da conversa,
 // vazia: cabeçalho com o nome e o telefone, o fundo da conversa sem mensagens e a caixa de
 // resposta embaixo. Uma caixa possível: já pronta para escrever. Mais de uma: a gaveta
@@ -78,10 +79,10 @@ const emit = defineEmits(['voltar']);
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
+const ficha = useFichaDoContato();
 const { isCloudFeatureEnabled } = useAccount();
 const caixasDaConta = useMapGetter('inboxes/getInboxes');
 const caixaPorId = useMapGetter('inboxes/getInbox');
-const contaId = useMapGetter('getCurrentAccountId');
 
 const doContato = useNovaConversaContato();
 const peloTelefone = computed(() => Boolean(props.telefone));
@@ -421,10 +422,7 @@ watch(nova.erro, erro => {
           }}
           <RouterLink
             v-if="semComoFalar && contato?.id"
-            :to="{
-              name: 'contacts_edit',
-              params: { accountId: contaId, contactId: contato.id },
-            }"
+            :to="ficha.pessoa(contato.id)"
             class="inline-flex items-center font-medium min-h-11 text-n-blue-11"
             data-completar-contato
           >

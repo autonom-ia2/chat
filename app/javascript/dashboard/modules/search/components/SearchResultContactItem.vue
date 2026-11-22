@@ -1,7 +1,10 @@
 <script setup>
+import {
+  rotaDaPessoa,
+  useFichaDoContato,
+} from 'dashboard/composables/useFichaDoContato';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { frontendURL } from 'dashboard/helper/URLHelper';
 import countries from 'shared/constants/countries';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
@@ -46,12 +49,13 @@ const props = defineProps({
 });
 
 const { locale } = useI18n();
+const { fichaNova } = useFichaDoContato();
 
 const exactTimestamp = useExactTimestamp();
 
-const navigateTo = computed(() => {
-  return frontendURL(`accounts/${props.accountId}/contacts/${props.id}`);
-});
+const navigateTo = computed(() =>
+  rotaDaPessoa(props.accountId, props.id, fichaNova.value)
+);
 
 const countriesMap = computed(() => {
   return countries.reduce((acc, country) => {

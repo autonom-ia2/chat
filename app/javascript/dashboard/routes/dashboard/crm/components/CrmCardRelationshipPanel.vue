@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { computed, ref, watch, useId } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
@@ -35,6 +36,7 @@ const emit = defineEmits(['edit', 'linked', 'guard']);
 const { t, te } = useI18n();
 const label = textosCom({ t, te }, props.textos, 'CRM_KANBAN.RELATIONSHIP');
 const router = useRouter();
+const ficha = useFichaDoContato();
 const { accountId, currentAccount, isCloudFeatureEnabled } = useAccount();
 const companiesEnabled = computed(() =>
   Boolean(currentAccount.value?.id && isCloudFeatureEnabled('companies'))
@@ -168,13 +170,9 @@ const openProfile = (entity, recordId) => {
     recordId || (entity === 'contact' ? person.value?.id : company.value?.id);
   if (!id) return;
   // New tab preserves the current opportunity and any unsaved commercial draft.
-  const target = router.resolve({
-    name: entity === 'contact' ? 'contacts_edit' : 'companies_dashboard_show',
-    params: {
-      accountId: accountId.value,
-      [entity === 'contact' ? 'contactId' : 'companyId']: id,
-    },
-  });
+  const target = router.resolve(
+    entity === 'contact' ? ficha.pessoa(id) : ficha.empresa(id)
+  );
   window.open(target.href, '_blank', 'noopener,noreferrer');
 };
 const reset = () => {

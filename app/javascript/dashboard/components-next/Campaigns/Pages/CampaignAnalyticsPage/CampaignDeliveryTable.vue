@@ -1,7 +1,7 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import DeliveryStatusBadge from './DeliveryStatusBadge.vue';
@@ -28,7 +28,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const route = useRoute();
+const ficha = useFichaDoContato();
 
 const headers = computed(() => [
   t('CAMPAIGN.WHATSAPP.ANALYTICS.TABLE.CONTACT'),
@@ -49,13 +49,7 @@ const messageContent = delivery =>
   delivery.message_content ||
   t('CAMPAIGN.WHATSAPP.ANALYTICS.TABLE.MESSAGE_NOT_GENERATED');
 
-const contactDetailsRoute = contactId => ({
-  name: 'contacts_edit',
-  params: {
-    accountId: route.params.accountId,
-    contactId,
-  },
-});
+const contactDetailsRoute = contactId => ficha.pessoa(contactId);
 
 const isEmpty = computed(() => props.deliveries.length === 0);
 </script>

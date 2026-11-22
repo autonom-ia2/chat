@@ -11,6 +11,13 @@ import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
 const context = vi.hoisted(() => ({ store: null }));
 vi.mock('dashboard/composables/store', () => ({
   useStore: () => context.store,
+  // #3130 — a conta 1 tem a ficha nova de Relacionamentos.
+  useMapGetter: key => ({
+    value: {
+      getCurrentAccountId: 1,
+      'accounts/isFeatureEnabledonAccount': () => true,
+    }[key],
+  }),
 }));
 const routing = vi.hoisted(() => ({
   resolve: vi.fn(() => ({ href: '/resolved-profile' })),
@@ -163,7 +170,7 @@ it('opens the actual profile in another tab while keeping the card context', asy
   await flushPromises();
   await wrapper.vm.openProfile('company');
   expect(routing.resolve).toHaveBeenCalledWith({
-    name: 'companies_dashboard_show',
+    name: 'relacionamentos_empresa',
     params: { accountId: 1, companyId: 7 },
   });
   expect(open).toHaveBeenCalledWith(
@@ -312,7 +319,7 @@ it('keeps the prospecting business company distinct from the shared contact comp
     .find('[data-relationship-deal-company] button')
     .trigger('click');
   expect(routing.resolve).toHaveBeenCalledWith({
-    name: 'companies_dashboard_show',
+    name: 'relacionamentos_empresa',
     params: { accountId: 1, companyId: 9 },
   });
   expect(open).toHaveBeenCalledWith(

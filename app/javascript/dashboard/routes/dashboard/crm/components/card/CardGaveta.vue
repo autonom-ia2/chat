@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { computed, provide, ref, useId, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
@@ -113,6 +114,7 @@ const { t, te, locale } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+const ficha = useFichaDoContato();
 const { canManageRelationshipRecords, canViewRelationshipRecords } =
   useRelationshipPermissions();
 const formato = useFormato({ t, locale });
@@ -374,15 +376,7 @@ const abrirConversa = (numero = card.value.conversation?.display_id) => {
   );
 };
 const voltarAoContato = () =>
-  guardar(() =>
-    router.push({
-      name: 'contacts_edit',
-      params: {
-        accountId: route.params.accountId,
-        contactId: props.initialContact.id,
-      },
-    })
-  );
+  guardar(() => router.push(ficha.pessoa(props.initialContact.id)));
 
 // ——— Ações ———
 const dialogoGanhou = ref(null);

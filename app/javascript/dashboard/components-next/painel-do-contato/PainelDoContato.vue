@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 // #2138 — o painel do contato na conversa (Proposta 1, versão 4), atrás da chave
 // `painel_contato_enxuto` da conta (o ContactPanel escolhe entre este e o antigo).
 // Responde três perguntas: quem é a pessoa, quem cuida da conversa e o que foi
@@ -43,9 +44,9 @@ const emit = defineEmits(['fechar']);
 
 const { t } = useI18n();
 const router = useRouter();
+const ficha = useFichaDoContato();
 const store = useStore();
 const { width } = useWindowSize();
-const contaId = useMapGetter('getCurrentAccountId');
 const { canManageRelationshipRecords } = useRelationshipPermissions();
 const { canViewCrm } = useCrmPermissions();
 const fase2 = useFase2();
@@ -140,11 +141,7 @@ const linhas = computed(() =>
   ].filter(linha => linha.so && linha.count > 0)
 );
 
-const verPagina = () =>
-  router.push({
-    name: 'contacts_edit',
-    params: { accountId: contaId.value, contactId: props.contact.id },
-  });
+const verPagina = () => router.push(ficha.pessoa(props.contact.id));
 </script>
 
 <template>

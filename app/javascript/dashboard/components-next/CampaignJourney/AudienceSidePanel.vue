@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Painel lateral do público (#993, PRD §6.6, §7 "37rem", F1–F3, B8): channel badges, people,
@@ -26,6 +27,7 @@ const emit = defineEmits(['close', 'use', 'delete']);
 
 const NS = 'CAMPAIGN_JOURNEY.AUDIENCES.PANEL';
 const { t, locale } = useI18n();
+const ficha = useFichaDoContato();
 const n = value => formatNumber(value, locale.value);
 
 const detail = ref(null);
@@ -310,10 +312,7 @@ onMounted(load);
               :data-contact="contact.id"
             >
               <router-link
-                :to="{
-                  name: 'contacts_edit',
-                  params: { contactId: contact.id },
-                }"
+                :to="ficha.pessoa(contact.id)"
                 class="flex min-h-11 flex-col justify-center rounded-lg px-2 py-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
               >
                 <span class="text-sm font-medium text-n-slate-12">

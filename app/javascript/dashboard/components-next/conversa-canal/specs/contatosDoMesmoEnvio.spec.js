@@ -21,7 +21,14 @@ import {
   semDuplicadasNaPele,
 } from '../midia/contatos';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
+  useRouter: () => ({
+    resolve: ({ name, params }) => ({
+      href: `/app/accounts/${params.accountId}/${name}/${params.contactId}`,
+    }),
+  }),
+}));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({
@@ -362,7 +369,7 @@ describe('cartão de vários contatos do mesmo envio (#1702)', () => {
     document.querySelector('[data-salvar-contato]').click();
     await flushPromises();
     expect(abrir).toHaveBeenCalledWith(
-      expect.stringContaining('/contacts/9'),
+      expect.stringContaining('/contacts_edit/9'),
       '_blank'
     );
     abrir.mockRestore();

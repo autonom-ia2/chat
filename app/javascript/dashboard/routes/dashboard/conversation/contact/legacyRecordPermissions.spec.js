@@ -88,6 +88,7 @@ function mountPanel(component, props = {}) {
       getCurrentUser: () => ({ id: 1 }),
       canOperateConversation: () => () => true,
       getCurrentAccountId: () => 1,
+      'accounts/isFeatureEnabledonAccount': () => () => true,
       'contactNotes/getUIFlags': () => ({}),
       'contactNotes/getAllNotesByContactId': () => () => [
         { id: 3, content: 'Preserve note', user: { id: 1 } },
@@ -101,7 +102,15 @@ function mountPanel(component, props = {}) {
     props,
     global: {
       plugins: [store],
-      mocks: { $route: { params: { accountId: 1 } } },
+      mocks: {
+        $route: { params: { accountId: 1 } },
+        // #3130 — o link da ficha sai do roteador, com o caminho da rota.
+        $router: {
+          resolve: ({ name, params }) => ({
+            href: `/app/accounts/${params.accountId}/${name}/${params.contactId}`,
+          }),
+        },
+      },
       stubs: {
         transition: { template: '<div><slot /></div>' },
         InlineInput: {
@@ -131,7 +140,7 @@ it('shows contact data and navigation without inline editors, merge or edit draw
   const { wrapper, dispatch } = mountPanel(ContactInfo, { contact: record });
   expect(wrapper.text()).toContain('Mariana');
   expect(wrapper.find('a[target="_blank"]').attributes('href')).toContain(
-    '/contacts/12'
+    '/relacionamentos_pessoa/12'
   );
   expect(
     wrapper
