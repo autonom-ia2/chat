@@ -18,8 +18,11 @@ module Enterprise::Concerns::Inbox
     include ::PortalDaCaixa
   end
 
+  # Fork (upgrade 4.20.1, #3120): only Twilio calls go through the upstream call routing (#16637, #16711): ring steps,
+  # the per-call ring list, the out-of-hours decline and the auto-assignment hold. WhatsApp calls ring as on the fork,
+  # from Whatsapp::IncomingCallService#broadcast_incoming. Every routing branch reads this one predicate.
   def rings_for_calls?
-    twilio? || whatsapp?
+    twilio?
   end
 
   def closed_for_calls?

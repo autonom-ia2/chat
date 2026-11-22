@@ -22,8 +22,9 @@ class Voice::InboundCallBuilder
   end
 
   # A call widens its ring every step; see Voice::RingNextAgentJob
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call rings once, as on the fork; see Inbox#rings_for_calls?
   def self.widen_ring_in_steps(call)
-    return unless call.ringing?
+    return unless call.inbox.rings_for_calls? && call.ringing?
 
     ActiveRecord.after_all_transactions_commit do
       Voice::RingNextAgentJob.set(wait: call.inbox.channel.ring_step_seconds.seconds).perform_later(call.id, call.ring_step)
@@ -80,8 +81,12 @@ class Voice::InboundCallBuilder
   # ringing card, the push and a missed-call notice go to the same agents even when the
   # conversation is reassigned before the job runs, and a call the caller ends as soon as it
   # is visible still has them.
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call records them only for the phone push, as on the fork, so its missed-call
+  # notice and push keep the fork's audience; see Inbox#rings_for_calls?
   def record_ring_audience(call)
     rings_phones = account.feature_enabled?('channel_voice') && account.feature_enabled?('mobile_voice_push')
+    return unless inbox.rings_for_calls? || rings_phones
+
     state = { 'ring_recipient_ids' => Voice::VoipPushService.recipients_for(call).map(&:id), 'rings_phones' => rings_phones }
     call.update_columns(ring_state: call.ring_state.merge(state)) # rubocop:disable Rails/SkipsModelValidations
   end
@@ -160,8 +165,11 @@ class Voice::InboundCallBuilder
   # who could answer is online. One whose agents are all busy waits.
   # Read once, so a call that crosses a working-hours boundary or an agent's status change is not
   # held for a ring it never gets.
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call always rings, out of business hours too, as on the fork; see
+  # Inbox#rings_for_calls?
   def announced_end_reason(conversation)
     return @announced_end_reason if defined?(@announced_end_reason)
+    return @announced_end_reason = nil unless inbox.rings_for_calls?
 
     @announced_end_reason = if inbox.closed_for_calls?
                               Call::OUTSIDE_WORKING_HOURS

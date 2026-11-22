@@ -33,6 +33,10 @@ const store = useStore();
 const { t } = useI18n();
 const label = key => t(`INBOX_MGMT.CALL_SETTINGS.${key}`);
 
+// Fork (upgrade 4.20.1, #3120): WhatsApp calls stay off the upstream call routing (Inbox#rings_for_calls?), so the
+// page leaves out who rings, business hours (and their check with Meta) and wrap-up.
+const ROUTES_CALLS = false;
+
 const savedValues = () => ({
   ...sharedSavedValues(props.inbox),
   permissionRequestBody:
@@ -113,7 +117,7 @@ const callHoursApplied = computed(
 
 const checkCallHours = async () => {
   callHoursMatch.value = null;
-  if (!callingEnabled.value) return;
+  if (!ROUTES_CALLS || !callingEnabled.value) return;
   isCheckingCallHours.value = true;
   try {
     const { data } = await InboxesAPI.getWhatsappCallHours(props.inbox.id);
@@ -211,7 +215,9 @@ const applyInboxHours = async () => {
         class="flex flex-col divide-y divide-n-weak"
         :class="{ 'pointer-events-none opacity-60': isSaving }"
       >
+        <!-- Fork (upgrade 4.20.1, #3120): a WhatsApp call rings as on the fork (Inbox#rings_for_calls? is Twilio only), so who rings, business hours and wrap-up stay off this page. -->
         <CallSettingsSection
+          v-if="ROUTES_CALLS"
           :title="label('INCOMING.TITLE')"
           :description="label('INCOMING.WHATSAPP_DESCRIPTION')"
         >
@@ -225,6 +231,7 @@ const applyInboxHours = async () => {
         </CallSettingsSection>
 
         <CallSettingsSection
+          v-if="ROUTES_CALLS"
           :title="label('OUT_OF_HOURS.TITLE')"
           :description="label('OUT_OF_HOURS.DESCRIPTION')"
         >
@@ -292,6 +299,7 @@ const applyInboxHours = async () => {
             v-model:recording-enabled="form.recordingEnabled"
             v-model:transcription-enabled="form.transcriptionEnabled"
             :saved-cooldown-seconds="inbox.call_cooldown_seconds"
+            :show-wrap-up="ROUTES_CALLS"
           />
         </CallSettingsSection>
 

@@ -34,7 +34,8 @@ describe('dismissing a ringing call', () => {
     isLocalWhatsappCall.mockReturnValue(false);
   });
 
-  it('stops the ring for a WhatsApp call on the server, so it moves on to the next agent', async () => {
+  // Fork (upgrade 4.20.1, #3120): the server routes only Twilio calls, so a WhatsApp ring is dismissed here only
+  it('dismisses a WhatsApp ring on this tab only, as on the fork', async () => {
     callsStore.calls = [
       {
         callSid: 'wacid_1',
@@ -46,7 +47,7 @@ describe('dismissing a ringing call', () => {
 
     await useCallActions().dismissCall('wacid_1');
 
-    expect(WhatsappCallsAPI.dismiss).toHaveBeenCalledWith(9);
+    expect(WhatsappCallsAPI.dismiss).not.toHaveBeenCalled();
     expect(VoiceAPI.dismissRing).not.toHaveBeenCalled();
     expect(callsStore.dismissCall).toHaveBeenCalledWith('wacid_1');
   });
@@ -73,35 +74,19 @@ describe('dismissing a ringing call', () => {
   });
 
   it('keeps the card when the server could not dismiss it', async () => {
-    WhatsappCallsAPI.dismiss.mockRejectedValue({ response: { status: 500 } });
+    VoiceAPI.dismissRing.mockRejectedValue({ response: { status: 500 } });
     callsStore.calls = [
       {
-        callSid: 'wacid_2',
-        callId: 10,
-        provider: 'whatsapp',
+        callSid: 'CA2',
+        provider: 'twilio',
         callDirection: 'inbound',
+        inboxId: 3,
+        conversationId: 42,
       },
     ];
 
-    await useCallActions().dismissCall('wacid_2');
+    await useCallActions().dismissCall('CA2');
 
-    expect(callsStore.dismissCall).not.toHaveBeenCalled();
-  });
-
-  it('keeps a WhatsApp call this tab accepted while the dismiss was on its way', async () => {
-    callsStore.calls = [
-      {
-        callSid: 'wacid_3',
-        callId: 11,
-        provider: 'whatsapp',
-        callDirection: 'inbound',
-      },
-    ];
-    isLocalWhatsappCall.mockImplementation(callId => callId === 11);
-
-    await useCallActions().dismissCall('wacid_3');
-
-    expect(WhatsappCallsAPI.dismiss).toHaveBeenCalledWith(11);
     expect(callsStore.dismissCall).not.toHaveBeenCalled();
   });
 });

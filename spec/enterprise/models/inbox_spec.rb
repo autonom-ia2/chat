@@ -404,8 +404,9 @@ RSpec.describe Inbox do
       end
     end
 
-    it 'holds off auto-assignment for the calls of Twilio and WhatsApp inboxes only' do
-      expect([twilio_inbox, whatsapp_inbox].map(&:rings_for_calls?)).to eq([true, true])
+    # Fork (upgrade 4.20.1, #3120): WhatsApp calls stay out of the upstream call routing and its auto-assignment hold
+    it 'holds off auto-assignment for the calls of Twilio inboxes only' do
+      expect([twilio_inbox, whatsapp_inbox].map(&:rings_for_calls?)).to eq([true, false])
       expect(inbox.rings_for_calls?).to be false
     end
   end

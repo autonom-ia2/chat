@@ -61,6 +61,7 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
 | #16420, #16722, #16623 | Limite de altura da imagem (colide com #1702), arrastar e soltar no e-mail novo, `openCopilot` | Telas iguais ao fork |
 | #15938, #16074 | Reading mode e recolher o editor | ReplyBox e MessagesView do fork |
 | #16548 | App secret obrigatório para criar caixa WhatsApp Cloud manual, migrar para manual ou apagar o segredo; aviso de conta e de modelo aceito sem assinatura quando a caixa da URL ainda não tem segredo | `channel/whatsapp.rb` sem a validação; campo opcional nas 3 telas; `access_loss` e `templates/webhook_entry.rb` mantêm a assinatura obrigatória nos avisos |
+| #16637, #16711 | Chamada de WhatsApp roteada como a da Twilio: toque em degraus, lista de quem toca, recusa fora do horário, espera da distribuição, card só para a lista do servidor | `Inbox#rings_for_calls?` volta a ser só Twilio; `IncomingCallService#broadcast_incoming` da main (responsável, senão online da caixa, senão membros e admins, com o funil #1148); a aba Chamadas do WhatsApp esconde quem toca, horário e tempo pós-chamada. Decidido com dado de produção: 5 caixas com chamada ligada na Hub2You |
 | #16620 | Checagem própria do callback da Bandwidth ligada por padrão em caixa nova | Migration `20261104104833` deixa o padrão `false`, como nas caixas existentes; o `CONFIG_KEYS` aceita as credenciais de callback do fork (#1027) |
 
 ## Traduções
@@ -106,7 +107,8 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
   o robô e abre a conversa, como a atribuição manual. A produção tem 0 regras ativas.
 - **WhatsApp Cloud**: faixa e campo de app secret na caixa manual (#16548), visíveis só para o administrador. O campo é
   opcional (ver a tabela). Com o segredo salvo, o webhook passa a conferir a assinatura da caixa.
-- **Voz e Twilio** (sem uso): ficou o upstream. A aba de voz passa a se chamar "Chamadas".
+- **Voz e Twilio** (sem uso): ficou o upstream. A aba de voz passa a se chamar "Chamadas". O tempo pós-chamada usa o
+  `ChoiceSelect` no lugar do `<select>` nativo (`CallAfterCall.vue`).
 
 ## CI, rodada 2 (`038615fac3` e seguinte)
 

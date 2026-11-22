@@ -1,7 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Select from 'dashboard/components-next/select/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CallSettingsOption from './CallSettingsOption.vue';
 import { durationOptions } from './callDurations';
 
@@ -11,6 +11,11 @@ const props = defineProps({
   savedCooldownSeconds: {
     type: Number,
     default: null,
+  },
+  // Fork (upgrade 4.20.1, #3120): a WhatsApp call does not go through the call routing, so its wrap-up has no effect
+  showWrapUp: {
+    type: Boolean,
+    default: true,
   },
 });
 
@@ -39,12 +44,12 @@ watch(recordingEnabled, recording => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-1.5">
+    <div v-if="showWrapUp" class="flex flex-col gap-1.5">
       <label
         class="flex items-center gap-2 mb-0 text-body-main text-n-slate-12"
       >
         {{ label('WRAP_UP') }}
-        <Select
+        <ChoiceSelect
           v-model="callCooldownSeconds"
           :options="wrapUpOptions"
           :aria-label="label('WRAP_UP')"

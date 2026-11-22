@@ -49,6 +49,8 @@ class Voice::CallMessageBuilder
   end
 
   # call_source lets the FE disambiguate WhatsApp vs Twilio without re-fetching the Call.
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call's message names no ring, since its card shows as on the fork; see
+  # Inbox#rings_for_calls?
   def build_data_payload
     {
       'call_id' => call.id,
@@ -56,7 +58,7 @@ class Voice::CallMessageBuilder
       'call_source' => call.provider,
       'call_direction' => call.direction_label,
       'status' => call.display_status
-    }.compact.merge(call.incoming? ? ring_data : {})
+    }.compact.merge(call.incoming? && call.inbox.rings_for_calls? ? ring_data : {})
   end
 
   # Who an inbound call's ringing card shows for: those it rang who have not dismissed it.

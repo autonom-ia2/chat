@@ -11,6 +11,7 @@ class Voice::RingRecipients
 
   # The agents the ring starts with
   def agents
+    return fork_agents unless inbox.rings_for_calls?
     return [assignee] if assignee_first?
     return ordered.first(1) if inbox.channel.sequential_ringing?
 
@@ -37,6 +38,13 @@ class Voice::RingRecipients
   def assignee = conversation.assignee
 
   def assignable = (@assignable ||= inbox.assignable_agents.to_a)
+
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call rings phones as on the fork: the assignee alone when they can still
+  # be assigned the inbox (nobody when the assignee is not online), else everyone who can be, keeping those online who
+  # may open the conversation; no busy, wrap-up or routing order. See Inbox#rings_for_calls?
+  def fork_agents
+    openers(assignable.include?(assignee) ? [assignee] : assignable)
+  end
 
   def eligible
     @eligible ||= openers(assignable).reject { |user| dismissed_user_ids.to_a.include?(user.id) }
