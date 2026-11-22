@@ -6,17 +6,8 @@ import {
 } from '../validations';
 
 describe('validateSingleFilter', () => {
-  it.each([0, false])('accepts the explicit value %s', values => {
-    expect(
-      validateSingleFilter({
-        attribute_key: 'custom_value',
-        filter_operator: 'equal_to',
-        values,
-      })
-    ).toBeNull();
-  });
-
-  it.each([undefined, null, '', [], {}])(
+  // Fork (upgrade 4.19.1, #3119): 0 and false still count as empty, as before the merge.
+  it.each([undefined, null, '', [], {}, 0, false])(
     'rejects an empty value %s',
     values => {
       expect(
@@ -28,16 +19,6 @@ describe('validateSingleFilter', () => {
       ).toBe('VALUE_REQUIRED');
     }
   );
-
-  it('still rejects zero days before', () => {
-    expect(
-      validateSingleFilter({
-        attribute_key: 'created_at',
-        filter_operator: 'days_before',
-        values: 0,
-      })
-    ).toBe('VALUE_MUST_BE_BETWEEN_1_AND_998');
-  });
 });
 
 describe('validateAutomation', () => {

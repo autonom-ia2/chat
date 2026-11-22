@@ -45,7 +45,6 @@ import {
   getMessageVariables,
   getUndefinedVariablesInMessage,
 } from '@chatwoot/utils';
-import { isComposing } from 'shared/helpers/KeyboardHelpers';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
@@ -211,7 +210,6 @@ export default {
       },
       Enter: {
         action: e => {
-          if (isComposing(e)) return;
           if (proxy.isAValidEvent('enter')) {
             proxy.onSendReply();
             e.preventDefault();
@@ -220,8 +218,7 @@ export default {
         allowOnFocusedInput: true,
       },
       '$mod+Enter': {
-        action: e => {
-          if (isComposing(e)) return;
+        action: () => {
           if (copilot.isActive.value && proxy.isFocused) {
             proxy.onSubmitCopilotReply();
           } else if (proxy.isAValidEvent('cmd_enter')) {

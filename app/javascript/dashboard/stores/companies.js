@@ -409,8 +409,8 @@ export const useCompaniesStore = createStore({
               page
             )
           : await CompanyAPI.listConversations(companyId, page);
-        // Kept in the API shape so the shared conversation cards can render them.
-        const conversations = payload || [];
+        // Fork (upgrade 4.19.1, #3119): camelCase, as before the merge. The company history sidebar reads `inboxId`.
+        const conversations = camelcaseKeys(payload || [], { deep: true });
 
         if (
           this.companyConversationsRequestToken !== requestToken ||

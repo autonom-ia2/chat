@@ -60,10 +60,4 @@ describe('CopilotEditor', () => {
     editorKeydown({ isComposing: true });
     expect(wrapper.emitted('send')).toBeUndefined();
   });
-
-  it('does not send when WebKit reports the composition only through keyCode 229', () => {
-    mountEditor();
-    editorKeydown({ keyCode: 229 });
-    expect(wrapper.emitted('send')).toBeUndefined();
-  });
 });

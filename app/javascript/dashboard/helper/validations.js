@@ -8,7 +8,7 @@ export const ATLEAST_ONE_CONDITION_REQUIRED = 'ATLEAST_ONE_CONDITION_REQUIRED';
 export const ATLEAST_ONE_ACTION_REQUIRED = 'ATLEAST_ONE_ACTION_REQUIRED';
 
 export const isEmptyValue = value => {
-  if (value === null || value === undefined || value === '') {
+  if (!value) {
     return true;
   }
 

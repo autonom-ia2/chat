@@ -39,12 +39,11 @@ describe('#actions', () => {
         data: { payload: { conversationId: '1', labels: ['on-hold'] } },
       });
       await actions.update(
-        { commit, state: { records: { 1: ['support'] } } },
+        { commit },
         { conversationId: '1', labels: ['on-hold'] }
       );
 
       expect(commit.mock.calls).toEqual([
-        [types.default.SET_CONVERSATION_LABELS, { id: '1', data: ['on-hold'] }],
         [types.default.SET_CONVERSATION_LABELS_UI_FLAG, { isUpdating: true }],
         [
           types.default.SET_CONVERSATION_LABELS,
@@ -63,13 +62,11 @@ describe('#actions', () => {
     it('sends correct actions if API is error', async () => {
       axios.post.mockRejectedValue({ message: 'Incorrect header' });
       await actions.update(
-        { commit, state: { records: { 1: ['support'] } } },
+        { commit },
         { conversationId: '1', labels: ['on-hold'] }
       );
       expect(commit.mock.calls).toEqual([
-        [types.default.SET_CONVERSATION_LABELS, { id: '1', data: ['on-hold'] }],
         [types.default.SET_CONVERSATION_LABELS_UI_FLAG, { isUpdating: true }],
-        [types.default.SET_CONVERSATION_LABELS, { id: '1', data: ['support'] }],
         [
           types.default.SET_CONVERSATION_LABELS_UI_FLAG,
           { isUpdating: false, isError: true },

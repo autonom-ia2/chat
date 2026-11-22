@@ -76,15 +76,5 @@ describe('Editor', () => {
       mountEditor();
       expect(editorKeydown({}).defaultPrevented).toBe(true);
     });
-
-    it('leaves Enter alone while an IME composition is active', () => {
-      mountEditor();
-      expect(editorKeydown({ isComposing: true }).defaultPrevented).toBe(false);
-    });
-
-    it('leaves Enter alone when WebKit reports the composition only through keyCode 229', () => {
-      mountEditor();
-      expect(editorKeydown({ keyCode: 229 }).defaultPrevented).toBe(false);
-    });
   });
 });

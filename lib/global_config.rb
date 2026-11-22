@@ -20,16 +20,14 @@ class GlobalConfig
       load_from_cache(arg)
     end
 
-    # Fork: limpa só as chaves pedidas (sem argumento, todas). Upgrade 4.19.1: varre com SCAN em vez de KEYS, como o
-    # upstream (#15900), para não travar o Redis.
     def clear_cache(*config_keys)
-      $alfred.with do |conn|
-        cached_keys = if config_keys.empty?
-                        conn.scan_each(match: "#{VERSION}:#{KEY_PREFIX}:*", count: 1000).to_a
-                      else
-                        config_keys.compact.uniq.map { |config_key| "#{VERSION}:#{KEY_PREFIX}:#{config_key}" }
-                      end
-        conn.del(*cached_keys) if cached_keys.any?
+      cached_keys = if config_keys.empty?
+                      $alfred.with { |conn| conn.keys("#{VERSION}:#{KEY_PREFIX}:*") }
+                    else
+                      config_keys.compact.uniq.map { |config_key| "#{VERSION}:#{KEY_PREFIX}:#{config_key}" }
+                    end
+      (cached_keys || []).each do |cached_key|
+        $alfred.with { |conn| conn.expire(cached_key, 0) }
       end
     end
 

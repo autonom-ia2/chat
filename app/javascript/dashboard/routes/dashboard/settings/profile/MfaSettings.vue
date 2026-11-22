@@ -90,13 +90,9 @@ const completeMfaSetup = () => {
 const verifyCode = async verificationCode => {
   try {
     const response = await mfaAPI.verify(verificationCode);
-    // Store backup codes returned from verification; the wizard advances to
-    // the backup step when they arrive. Without fresh codes there is no
-    // backup step to show, so finish directly.
+    // Store backup codes returned from verification
     if (response.data.backup_codes) {
       backupCodes.value = response.data.backup_codes;
-    } else {
-      completeMfaSetup();
     }
     return true;
   } catch (error) {

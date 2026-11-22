@@ -46,8 +46,9 @@ describe('MfaVerification', () => {
     await flushPromises();
 
     expect(setAuthCredentials).toHaveBeenCalledWith(response);
-    expect(clearLocalStorageOnLogout).toHaveBeenCalledTimes(1);
-    expect(wrapper.emitted('verified')).toEqual([[user]]);
+    // Fork (upgrade 4.19.1, #3119): drafts survive MFA, and the event keeps the response body, as before the merge.
+    expect(clearLocalStorageOnLogout).not.toHaveBeenCalled();
+    expect(wrapper.emitted('verified')).toEqual([[response.data]]);
   });
 
   it('shows email copy and hides TOTP-only affordances for the email channel', () => {
