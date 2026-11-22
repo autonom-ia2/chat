@@ -926,9 +926,10 @@ describe('#getters', () => {
   describe('#getAutoTranslate', () => {
     const rootGetters = {
       getUISettings: { locale: 'en' },
+      // Fork (#3119): with no provider saved it is Google; these cases use Captain.
       'accounts/getAccount': () => ({
         locale: 'en',
-        settings: { auto_translate: true },
+        settings: { auto_translate: true, translation_provider: 'captain' },
       }),
       getCurrentAccountId: 1,
       'accounts/isFeatureEnabledonAccount': () => true,
@@ -945,6 +946,7 @@ describe('#getters', () => {
         getters.getAutoTranslate({}, chatIn('fr'), {}, rootGetters)
       ).toEqual({
         enabled: true,
+        requested: true,
         provider: 'captain',
         locale: 'en',
         sameLanguage: false,

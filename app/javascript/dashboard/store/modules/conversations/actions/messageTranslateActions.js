@@ -33,6 +33,11 @@ export default {
     { state, commit, dispatch, getters, rootGetters },
     conversationId
   ) {
+    // Fork (upgrade 4.19.1, #3119): with auto translate off, no request at all; loading the integrations is only to
+    // know whether Google is connected.
+    const { enabled: alreadyEnabled, requested } = getters.getAutoTranslate;
+    if (!alreadyEnabled && !requested) return;
+
     if (getters.getAutoTranslate.provider === TRANSLATION_PROVIDERS.GOOGLE) {
       await loadIntegrations(dispatch, rootGetters);
     }

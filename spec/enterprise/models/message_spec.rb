@@ -140,7 +140,7 @@ RSpec.describe Message do
 
     before do
       conversation.account.enable_features('auto_translate', 'captain_tasks')
-      conversation.account.update!(auto_translate: true)
+      conversation.account.update!(auto_translate: true, translation_provider: 'captain')
     end
 
     it 'marks templates and agent replies for the send job' do

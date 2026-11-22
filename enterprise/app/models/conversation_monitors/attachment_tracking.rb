@@ -14,6 +14,8 @@ module ConversationMonitors::AttachmentTracking
   end
 
   def request_transcript_evaluation
+    # Fork (upgrade 4.19.1, #3119): like MessageTracking, nothing runs while monitors are off (flags in memory).
+    return unless ConversationMonitors::Configuration.enabled?(message.account)
     return unless (message.incoming? || message.outgoing?) && !message.private?
     return if message.content.present? || message.content_attributes['deleted']
 

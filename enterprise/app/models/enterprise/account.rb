@@ -68,8 +68,11 @@ module Enterprise::Account
     feature_enabled?('auto_translate') && auto_translate == true && translation_service_available?
   end
 
+  # Fork (upgrade 4.19.1, #3119): with no provider saved, translation stays on the Google Translate hook, as before the
+  # upgrade (no hook, no translation). The upstream falls back to Captain, a paid AI call, also for accounts that connect
+  # Google after the deploy. Captain only translates when the account picks it.
   def translation_service
-    translation_provider.presence || 'captain'
+    translation_provider.presence || 'google_translate'
   end
 
   def google_translate_hook

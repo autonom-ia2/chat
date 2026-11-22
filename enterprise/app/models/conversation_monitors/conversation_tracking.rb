@@ -9,6 +9,9 @@ module ConversationMonitors::ConversationTracking
   private
 
   def invalidate_monitor_reports
+    # Fork (upgrade 4.19.1, #3119): like MessageTracking, nothing runs while monitors are off (flags in memory).
+    return unless account && ConversationMonitors::Configuration.enabled?(account)
+
     work = ConversationMonitors::WorkItem.find_by(conversation_id: id)
     return unless work
 

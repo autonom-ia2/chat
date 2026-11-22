@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Captain::Conversation::AgentMessageTranslationService do
-  let(:account) { create(:account, settings: { auto_translate: true }) }
+  let(:account) { create(:account, settings: { auto_translate: true, translation_provider: 'captain' }) }
   let(:user) { create(:user, account: account) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, additional_attributes: { 'conversation_language' => 'fr' }) }

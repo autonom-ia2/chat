@@ -250,13 +250,14 @@ const getters = {
       provider === TRANSLATION_PROVIDERS.GOOGLE
         ? googleConnected
         : isFeatureEnabled(FEATURE_FLAGS.CAPTAIN_TASKS);
-    const enabled =
+    const requested =
       isFeatureEnabled(FEATURE_FLAGS.AUTO_TRANSLATE) &&
-      account.settings?.auto_translate === true &&
-      serviceAvailable;
+      account.settings?.auto_translate === true;
+    const enabled = requested && serviceAvailable;
 
     return {
       enabled,
+      requested,
       provider,
       locale,
       sameLanguage:

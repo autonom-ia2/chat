@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe 'Auto translate messages API', type: :request do
-  let(:account) { create(:account, settings: { auto_translate: true }) }
+  let(:account) { create(:account, settings: { auto_translate: true, translation_provider: 'captain' }) }
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }

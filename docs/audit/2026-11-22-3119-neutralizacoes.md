@@ -132,6 +132,14 @@ Quarta rodada (CI do commit ea982a0d8d):
 - **`db/schema.rb`**: reordenado como o `db:schema:dump` da CI gera (tabela `copilot_tool_calls` e chaves dos monitores em ordem alfabética; índice parcial no formato do PG 18).
 - Vitest local: o `balaoDetalhes1702` falha só no fuso do Mac (BRT); com `TZ=UTC`, como na CI, passa.
 
+Quinta rodada (`/code-review` independente, nível high):
+- **Provedor de tradução (importante)**: sem provedor salvo, o upstream traduzia pelo Captain (chamada paga de IA), inclusive para conta que liga o Google Translate depois do deploy; a migration só cobria quem já tinha o hook. Agora o padrão é `google_translate` no servidor (`Enterprise::Account#translation_service`) e na tela (`translationProvider`): sem hook, sem tradução, como no fork. Captain só quando a conta escolhe. Os specs do upstream de tradução automática passam a escolher Captain explicitamente.
+- **Tradução automática desligada não faz pedido**: `autoTranslateMessages` saía para carregar as integrações (GET `/integrations/apps`) em conta com Google antes de olhar se a tradução automática estava ligada. Agora sai antes (`requested` no getter).
+- **Monitores**: os callbacks de anexo (áudio transcrito) e de exclusão de conversa ganharam o mesmo portão do `MessageTracking`.
+- **Configuração de notificação**: volta a do fork; o upstream ligava o push de "ligação perdida" para todo usuário novo, com uma gravação a mais.
+- Mantidos, com motivo: a tela da Shopify passa a exigir a flag `shopify_integration`, porque o backend inteiro do upstream (FeatureGate, callbacks, conta) usa essa flag; voltar só a rota deixaria a tela contra uma API que recusa. Uso da Shopify: zero. O "Ver original/Ver tradução" ganhou `truncate` num balão estreito (diferença visual pequena, vai ao diretor de arte).
+- Fragilidade que já existia, como achado: a pergunta do Guia fica a poucas letras do teto (ver quarta rodada).
+
 Conferido e mantido (comportamento igual ou inerte):
 - D1/D2/D3: envio síncrono, gate `whatsapp_campaign`, sem `RecoverWhatsappCampaignsJob`, sem `initialize_whatsapp_cursor`, sem `with_lock`/422 no `update`, sem `scheduled_at > Time.current`.
 - D4 #15871: estratégias de e-mail só mudam para mensagem encaminhada; `NewConversationStrategy` e IMAP = fork; `retry_content_attributes` = fork; cast de `private` recusado (fork); ação "Encaminhar" sem ligação na tela. Escopo `not_forwarded` e filtros de encaminhado ficam inertes.

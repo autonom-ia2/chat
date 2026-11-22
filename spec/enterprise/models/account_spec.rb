@@ -58,9 +58,21 @@ RSpec.describe Account, type: :model do
     end
   end
 
+  describe '#translation_service' do
+    # Fork (#3119): an account with no provider saved keeps translating with its Google Translate hook.
+    it 'is Google Translate until the account picks Captain' do
+      account = create(:account)
+
+      expect(account.translation_service).to eq('google_translate')
+      account.update!(translation_provider: 'captain')
+      expect(account.translation_service).to eq('captain')
+    end
+  end
+
   describe '#auto_translate_enabled?' do
+    # Fork (#3119): Captain translates only when the account picks it; with no provider saved it is Google.
     it 'needs both the auto translate flag and Captain tasks' do
-      account = create(:account, settings: { auto_translate: true })
+      account = create(:account, settings: { auto_translate: true, translation_provider: 'captain' })
       account.enable_features('auto_translate')
       account.disable_features('captain_tasks')
 
@@ -70,7 +82,7 @@ RSpec.describe Account, type: :model do
     end
 
     it 'stays off until the account switches it on' do
-      account = create(:account)
+      account = create(:account, settings: { translation_provider: 'captain' })
       account.enable_features('auto_translate', 'captain_tasks')
 
       expect(account).not_to be_auto_translate_enabled
