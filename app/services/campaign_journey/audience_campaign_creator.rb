@@ -66,8 +66,15 @@ class CampaignJourney::AudienceCampaignCreator
 
   def create_campaign_and_link!
     campaign = @account.campaigns.create!(campaign_attributes.merge({ sender: @sender }.compact))
-    CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import, **link_attributes)
+    link = CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import, **link_attributes)
+    medir!(link)
     campaign
+  end
+
+  # #3098: a janela de compra e o grupo de controle escolhidos na revisão, com o sorteio, na mesma transação: o envio
+  # nunca vê a campanha sem o grupo já separado.
+  def medir!(link)
+    CampaignJourney::Medicao.new(link).aplicar!(@attributes) { CampaignJourney::Medicao.publico(link, @channel) }
   end
 
   def inbox

@@ -33,6 +33,7 @@ import { CAMPAIGN_CHANNELS } from 'dashboard/components-next/CampaignJourney/cam
 import ResultHeader from './ResultHeader.vue';
 import ResultKpiStrip from './ResultKpiStrip.vue';
 import ResultCrmBand from './ResultCrmBand.vue';
+import ResultVendas from './ResultVendas.vue';
 import ResultLinkClicks from './ResultLinkClicks.vue';
 import ResultRepliedList from './ResultRepliedList.vue';
 import EmailResultActions from './EmailResultActions.vue';
@@ -479,6 +480,7 @@ watch(
       </div>
 
       <ResultCrmBand :name="result.campaign.name" :crm="result.crm" />
+      <ResultVendas v-if="result.vendas" :vendas="result.vendas" />
       <ResultRepliedList
         :channel="CHANNEL"
         :campaign-id="campaignId"

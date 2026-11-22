@@ -327,6 +327,8 @@ export const buildCampaignPayload = ({
   defaults,
   extras = {},
   freeText = '',
+  // #3098: janela de compra e grupo de controle (medicaoDaCampanha).
+  medicao = {},
 }) => ({
   campaign_import_id: audienceId,
   channel: 'whatsapp_cloud',
@@ -348,5 +350,6 @@ export const buildCampaignPayload = ({
       ])
     ),
     variable_defaults: cleanDefaults(defaults),
+    ...medicao,
   },
 });

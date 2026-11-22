@@ -445,6 +445,8 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
           2: { source: 'column', value: 'Vencimento' },
         },
         variable_defaults: {},
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
       },
     });
     expect(push).toHaveBeenCalledWith({

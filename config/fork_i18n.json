@@ -161,6 +161,9 @@
     },
     {
       "file": "relacionamentosCompras.json"
+    },
+    {
+      "file": "campanhaVendas.json"
     }
   ],
   "pacotes": {

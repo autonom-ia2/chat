@@ -32,7 +32,32 @@ class CampaignJourney::RecipientPreview
     @channel == 'email' ? email_preview : whatsapp_preview
   end
 
+  # #3098: os contact_ids de quem vai receber (o `receive` acima, pelas mesmas regras), base do sorteio do grupo de
+  # controle. Assim a revisão promete "45 de 450" sobre o mesmo "Vão receber" que o sorteio usa.
+  def receive_ids
+    raise ArgumentError, 'unsupported_channel' unless CHANNELS.include?(@channel)
+
+    @channel == 'email' ? email_receive_ids : whatsapp_receive_ids
+  end
+
   private
+
+  def whatsapp_receive_ids
+    return [] unless phone_channel_enabled?
+
+    ids = CampaignJourney::AudienceContacts.whatsapp_contact_ids(@campaign_import, account: @account)
+    preloaded(@account.contacts.where(id: ids).campaign_reachable).find_each.select { |contact| missing_keys(contact).empty? }.map(&:id)
+  end
+
+  def email_receive_ids
+    return [] unless CampaignJourney::AudienceContacts.email_enabled?(@campaign_import)
+
+    matches = CampaignJourney::AudienceContacts.email_matches(@campaign_import, account: @account)
+    refused = refusals_by_id(@account.contacts.where(id: matches.map(&:contact_id)))
+    reachable = matches.reject { |match| refused.key?(match.contact_id) }
+    blocked = EmailSuppression.blocking_reasons_for(@account, reachable.map(&:email))
+    reachable.reject { |match| blocked.key?(match.email.to_s.strip.downcase) }.map(&:contact_id).uniq
+  end
 
   def result(total, reasons, missing_by_variable = {})
     reasons = reasons.select { |_reason, count| count.positive? }

@@ -3803,15 +3803,15 @@
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:149",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:71",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:70",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:234",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:220",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:243",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:229",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:227",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:66",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -4407,6 +4407,38 @@
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:80",
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:59",
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:71"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH campaign_journey/email_medicoes/:id": {
+    "campos": {
+      "grupo_de_controle_pct": {
+        "padrao": 0,
+        "tipo": "inteiro",
+        "um_de": [
+          0,
+          5,
+          10,
+          20
+        ]
+      },
+      "janela_de_compra_dias": {
+        "padrao": 7,
+        "tipo": "inteiro",
+        "um_de": [
+          7,
+          15,
+          30
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
+    "modelo": "CampaignAudienceLink",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -11628,7 +11660,7 @@
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:52",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:55"
     ],
     "sem_corpo": false
@@ -11638,7 +11670,7 @@
     "controller": "api/v1/accounts/autonomia/automacoes#desligar",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:89",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": true
   },
@@ -11657,10 +11689,10 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:108",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:181",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:190",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:109",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -11678,7 +11710,7 @@
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:78",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:82",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -11732,8 +11764,8 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:113",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:181",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:190",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167"
     ],
     "sem_corpo": false
   },
@@ -13222,10 +13254,12 @@
       "free_text": {},
       "from_email": {},
       "from_name": {},
+      "grupo_de_controle_pct": {},
       "inbox_id": {
         "obrigatorio": "pelo_modelo",
         "tipo": "inteiro"
       },
+      "janela_de_compra_dias": {},
       "message": {
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
@@ -13273,7 +13307,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:19",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:122",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:128",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:129",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:33",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:105",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:68",
@@ -13289,6 +13323,8 @@
       "free_text",
       "from_email",
       "from_name",
+      "grupo_de_controle_pct",
+      "janela_de_compra_dias",
       "preheader",
       "reply_to_inbox_id",
       "sender_identity_id",
@@ -24235,15 +24271,15 @@
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:149",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:71",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:70",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:234",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:220",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:243",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:229",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:227",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:66",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -24788,6 +24824,38 @@
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:80",
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:59",
       "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:71"
+    ],
+    "sem_corpo": false
+  },
+  "PUT campaign_journey/email_medicoes/:id": {
+    "campos": {
+      "grupo_de_controle_pct": {
+        "padrao": 0,
+        "tipo": "inteiro",
+        "um_de": [
+          0,
+          5,
+          10,
+          20
+        ]
+      },
+      "janela_de_compra_dias": {
+        "padrao": 7,
+        "tipo": "inteiro",
+        "um_de": [
+          7,
+          15,
+          30
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
+    "modelo": "CampaignAudienceLink",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
     ],
     "sem_corpo": false
   },

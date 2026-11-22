@@ -29,6 +29,12 @@ const usedDefaults = (messageBody, defaults) =>
     )
   );
 
+/** #3098: "Quem comprou depois" da revisão (dias da janela e porcentagem do grupo de controle). */
+export const medicaoDaCampanha = draft => ({
+  janela_de_compra_dias: draft.janelaDeCompra || 7,
+  grupo_de_controle_pct: draft.grupoDeControle || 0,
+});
+
 export const buildWhatsappApiPayload = ({
   audienceId,
   draft,
@@ -43,6 +49,7 @@ export const buildWhatsappApiPayload = ({
     message_body: draft.messageBody,
     ...(draft.apiTemplateId ? { template_id: draft.apiTemplateId } : {}),
     variable_defaults: usedDefaults(draft.messageBody, draft.defaults),
+    ...medicaoDaCampanha(draft),
   },
 });
 
@@ -56,6 +63,7 @@ export const buildSmsPayload = ({ audienceId, draft, scheduledAt }) => ({
     scheduled_at: scheduledAt,
     message: draft.messageBody,
     variable_defaults: usedDefaults(draft.messageBody, draft.defaults),
+    ...medicaoDaCampanha(draft),
   },
 });
 

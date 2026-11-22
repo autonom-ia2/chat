@@ -10,6 +10,7 @@ import { acharPasso } from '../receita';
 import { RAMOS_QUE_SALVAM, chaveDoNome } from '../passosNovos/passosNovos';
 import { abaixoDoMinimo, dolares } from '../custoDaIa';
 import { detalheDoHistorico } from '../passosNovos/frasesDosNovos';
+import ComprasDaAutomacao from './ComprasDaAutomacao.vue';
 
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
@@ -28,6 +29,8 @@ const execucoes = ref([]);
 const versoes = ref({});
 const pagina = ref(1);
 const mais = ref(false);
+// #3098: quanto compraram as pessoas com quem ela agiu (só na primeira página; nulo sem o CRM).
+const compras = ref(null);
 const aberta = ref(null);
 
 const ESTADO = {
@@ -220,6 +223,7 @@ const carregar = async (proxima = 1) => {
     };
     pagina.value = data.pagina;
     mais.value = data.mais;
+    if (proxima === 1) compras.value = data.compras ?? null;
     if (proxima === 1) aberta.value = data.execucoes[0]?.id ?? null;
     estado.value = 'pronto';
   } catch {
@@ -255,6 +259,11 @@ onMounted(() => carregar());
         {{ $t('AUTOMACAO_LIVRE.HISTORICO.SUBTITULO') }}
       </p>
     </div>
+
+    <ComprasDaAutomacao
+      v-if="estado === 'pronto' && compras?.passaram"
+      :resumo="compras"
+    />
 
     <div
       v-if="estado === 'carregando'"

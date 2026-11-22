@@ -167,6 +167,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['CampaignRecipient', :por_conta],
     ['CampaignFreeTextDelivery', :por_conta],
     ['CampaignFreeText', :por_conta],
+    # Grupo de controle da campanha (#3098): sai antes do link a que pertence.
+    ['CampaignControlContact', :por_conta],
     ['CampaignAudienceLink', :por_conta],
     ['CampaignPause', :por_conta],
     ['CampaignReplyCode', :por_conta],

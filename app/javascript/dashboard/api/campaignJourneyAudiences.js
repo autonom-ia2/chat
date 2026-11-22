@@ -95,6 +95,10 @@ export const audiencesAPI = new AudiencesAPI();
 const campaignsClient = new ApiClient('campaign_journey/campaigns', {
   accountScoped: true,
 });
+// #3098: "Quem comprou depois" do e-mail, gravado logo antes de agendar ou enviar.
+const emailMedicoesClient = new ApiClient('campaign_journey/email_medicoes', {
+  accountScoped: true,
+});
 const previewsClient = new ApiClient('campaign_journey/recipient_previews', {
   accountScoped: true,
 });
@@ -128,4 +132,6 @@ export const journeyCampaignsAPI = {
   },
   // "Vão receber" before creating (exact, each person once).
   preview: payload => previewsClient.create(payload),
+  medirEmail: (emailCampaignId, medicao) =>
+    emailMedicoesClient.update(emailCampaignId, medicao),
 };

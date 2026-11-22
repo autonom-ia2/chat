@@ -38,8 +38,8 @@ class CampaignJourney::EmailAudienceRecipients
   def sync!
     return { added: 0, removed: 0 } unless syncable?
 
-    candidates = self.class.candidates(@link.campaign_import)
-    removed = remove_stale(candidates.to_set(&:email))
+    candidates = sem_o_grupo(self.class.candidates(@link.campaign_import))
+    removed = remove_stale(candidates.to_set(&:email)) + remove_grupo
     added = add_missing(candidates)
     @campaign.refresh_counters! if (added + removed).positive?
     ActiveRecord.after_all_transactions_commit { EmailCampaigns::RecipientPreflightJob.enqueue(@campaign.id) } if added.positive?
@@ -50,7 +50,7 @@ class CampaignJourney::EmailAudienceRecipients
   def preview
     return { to_add: 0, to_remove: 0 } unless syncable?
 
-    candidates = self.class.candidates(@link.campaign_import)
+    candidates = sem_o_grupo(self.class.candidates(@link.campaign_import))
     eligible = candidates.to_set(&:email)
     existing = existing_emails
     { to_add: candidates.count { |candidate| existing.exclude?(candidate.email) },
@@ -58,6 +58,23 @@ class CampaignJourney::EmailAudienceRecipients
   end
 
   private
+
+  # #3098: quem foi sorteado para o grupo de controle não recebe (e o pendente que já estava lá sai no remove_stale).
+  def sem_o_grupo(candidates)
+    fora = CampaignJourney::GrupoDeControle.new(@link).ids
+    fora.empty? ? candidates : candidates.reject { |candidate| fora.include?(candidate.contact.id) }
+  end
+
+  # #3098: a linha de quem foi sorteado que ainda não saiu (pendente, suprimida ou outra, sem envio e sem evento) sai,
+  # para o grupo não aparecer em "não enviados" nem no elegível.
+  def remove_grupo
+    fora = CampaignJourney::GrupoDeControle.new(@link).ids
+    return 0 if fora.empty?
+
+    recipients = @campaign.email_campaign_recipients
+    with_events = EmailEvent.where(recipient_id: recipients.select(:id)).select(:recipient_id)
+    recipients.where(contact_id: fora.to_a, sent_at: nil).where.not(id: with_events).delete_all
+  end
 
   def syncable?
     @link.present? && (@campaign.draft? || @campaign.scheduled?) && !@campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
