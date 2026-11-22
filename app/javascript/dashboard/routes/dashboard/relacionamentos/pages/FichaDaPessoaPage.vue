@@ -169,6 +169,7 @@ const campos = computed(() =>
     ? camposDaPessoa({
         definicoes: camposDaConta.definicoes.value,
         escolhidos: camposDaConta.escolhidos.value,
+        guardadas: camposDaConta.guardadas.value,
         valores: ficha.pessoa.value.custom_attributes ?? {},
       })
     : []
@@ -702,6 +703,7 @@ watch(
       :buscar-empresas="fonte.buscarEmpresas"
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
+      :guardadas="camposDaConta.guardadas.value"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
     />
