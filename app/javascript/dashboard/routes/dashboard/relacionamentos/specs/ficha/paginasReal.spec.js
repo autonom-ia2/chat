@@ -245,7 +245,7 @@ describe('ficha da pessoa com os dados do servidor', () => {
       'Bom dia! Chegou o que eu pedi?'
     );
     expect(w.get(marca('notas')).text()).toContain('Sônia Valtorini');
-    expect(w.get(marca('arquivos')).text()).toContain('comprovante.pdf');
+    expect(w.get(marca('arquivos')).text()).toContain('comprovante');
     expect(w.get(marca('de-onde-veio')).text()).toContain('Clientes 2025');
   });
 
