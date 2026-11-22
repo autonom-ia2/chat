@@ -26,7 +26,7 @@ const dinheiro = valor => wonValueText(valor, idioma.value);
 const quantas = computed(() => props.vendas.compraram?.pessoas ?? 0);
 const contando = computed(() => Boolean(props.vendas.contando_ate));
 // #3115: a campanha não chegou a ninguém (público 0, nada enviado): não há janela nem compra para contar.
-const ninguemRecebeu = computed(() => (props.vendas.receberam ?? 0) === 0);
+const ninguemRecebeu = computed(() => props.vendas.receberam === 0);
 
 const situacao = computed(() => {
   const { contando_ate: ate, janela_dias: dias } = props.vendas;
@@ -181,7 +181,7 @@ const lados = computed(() => {
     </template>
 
     <div
-      v-if="comparacao"
+      v-if="comparacao && !ninguemRecebeu"
       class="flex flex-col gap-4 pt-5 border-t border-n-weak"
       data-comparacao
     >
