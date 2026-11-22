@@ -36,6 +36,7 @@ import PainelDoContato from 'dashboard/components-next/painel-do-contato/PainelD
 import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
 // #2897: os seguros de quem está na conversa, só na conta que tem a carteira de seguros.
 import { useSegurosNoPainel } from 'dashboard/routes/dashboard/relacionamentos/carteira/segurosNoPainel';
+import StripeCustomer from 'dashboard/components/widgets/conversation/StripeCustomer.vue';
 
 const props = defineProps({
   conversationId: {
@@ -91,6 +92,10 @@ const isLinearConnected = computed(
 );
 
 const store = useStore();
+const stripeIntegration = useFunctionGetter(
+  'integrations/getIntegration',
+  'stripe'
+);
 const currentChat = useMapGetter('getSelectedChat');
 // Quem só lê (#1800) não atribui, não mexe em participantes nem roda macro.
 const canOperate = useCanOperateConversation(currentChat);
@@ -159,8 +164,7 @@ onMounted(() => {
   conversationSidebarItems.value = conversationSidebarItemsOrder.value;
   getContactDetails();
   store.dispatch('attributes/get', 0);
-  // Load integrations to ensure linear integration state is available
-  store.dispatch('integrations/get', 'linear');
+  store.dispatch('integrations/get');
 });
 </script>
 
@@ -365,6 +369,28 @@ onMounted(() => {
               "
             >
               <ShopifyOrdersList :contact-id="contactId" />
+            </AccordionItem>
+          </div>
+          <div
+            v-else-if="
+              element.name === 'stripe_customer' &&
+              isCloudFeatureEnabled(FEATURE_FLAGS.STRIPE) &&
+              stripeIntegration.enabled
+            "
+          >
+            <AccordionItem
+              :title="$t('STRIPE_INTEGRATION.TITLE')"
+              :is-open="isContactSidebarItemOpen('is_stripe_customer_open')"
+              compact
+              @toggle="
+                value => toggleSidebarUIState('is_stripe_customer_open', value)
+              "
+            >
+              <StripeCustomer
+                v-if="isContactSidebarItemOpen('is_stripe_customer_open')"
+                :conversation-id="conversationId"
+                :contact-email="contact.email"
+              />
             </AccordionItem>
           </div>
           <div v-else-if="element.name === 'contact_notes' && podeVerContatos">

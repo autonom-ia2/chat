@@ -25,6 +25,7 @@ Layout/LineLength:
 Metrics/ClassLength:
   Max: 175
   Exclude:
+    - 'app/builders/messages/message_builder.rb'
     - 'app/models/message.rb'
     - 'app/models/conversation.rb'
     # Upstream controller already above the limit (190 lines on main before #452).

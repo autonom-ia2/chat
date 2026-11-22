@@ -200,7 +200,8 @@
         "PARTICIPATING_CONVERSATION_NEW_MESSAGE": "Enviar notificações por email quando uma nova mensagem é criada em uma conversa que você participa",
         "SLA_MISSED_FIRST_RESPONSE": "Enviar notificações por e-mail quando uma conversa perder a primeira resposta SLA",
         "SLA_MISSED_NEXT_RESPONSE": "Enviar notificações por e-mail quando uma conversa perder o próximo SLA de resposta",
-        "SLA_MISSED_RESOLUTION": "Enviar notificações por e-mail quando uma conversa perder o SLA de resolução"
+        "SLA_MISSED_RESOLUTION": "Enviar notificações por e-mail quando uma conversa perder o SLA de resolução",
+        "VOICE_CALL_MISSED": "Enviar notificações por e-mail quando você perder uma chamada"
       },
       "NOTIFICATIONS": {
         "TITLE": "Preferências de notificação",
@@ -218,7 +219,8 @@
           "SLA_MISSED_RESOLUTION": "Uma conversa perde o SLA de resolução",
           "CRM_FOLLOWUP_REMINDER": "Um lembrete de retorno do CRM está vencido",
           "CONVERSATION_HANDOFF_REQUEST": "Um cliente precisa de atendimento humano e a IA chama você",
-          "GUIDE_ALERT": "O Guia tem um aviso urgente para você"
+          "GUIDE_ALERT": "O Guia tem um aviso urgente para você",
+          "VOICE_CALL_MISSED": "Você perdeu uma chamada"
         },
         "BROWSER_PERMISSION": "Ative notificações push em seu navegador para poder recebê-las"
       },
@@ -238,7 +240,8 @@
         "REQUEST_PUSH": "Habilitar notificações push",
         "SLA_MISSED_FIRST_RESPONSE": "Enviar notificações quando uma conversa perder a primeira resposta SLA",
         "SLA_MISSED_NEXT_RESPONSE": "Enviar notificações quando uma conversa perder a próxima resposta SLA",
-        "SLA_MISSED_RESOLUTION": "Enviar notificações quando uma conversa perder resolução de resolução SLA"
+        "SLA_MISSED_RESOLUTION": "Enviar notificações quando uma conversa perder resolução de resolução SLA",
+        "VOICE_CALL_MISSED": "Enviar notificações push quando você perder uma chamada"
       },
       "PROFILE_IMAGE": {
         "LABEL": "Imagem do Perfil"
@@ -326,6 +329,10 @@
       "MESSAGE_CLOUD": "Você não faz parte de nenhuma conta no momento. Se acreditar que isso é um engano, entre em contato com nossa equipe de suporte.",
       "MESSAGE_SELF_HOSTED": "Você não faz parte de nenhuma conta no momento. Entre em contato com o seu administrador.",
       "LOGOUT": "Encerrar sessão"
+    },
+    "IMPERSONATION": {
+      "MESSAGE": "Você está atuando como {name} ({email}). Todas as suas ações aparecerão como realizadas por esse usuário.",
+      "STOP": "Deixar de atuar como usuário"
     }
   },
   "COMPONENTS": {
@@ -757,6 +764,10 @@
         "GO_BACK": "Voltar",
         "CONFIRM_PURCHASE": "Confirmar Compra"
       }
+    },
+    "PAYMENT_RECOVERY": {
+      "DESCRIPTION": "Seu pagamento está em atraso. Atualize sua forma de pagamento ou pague a fatura pendente no portal de cobrança para manter sua assinatura ativa.",
+      "ACTION": "Resolver pagamento"
     }
   },
   "SECURITY_SETTINGS": {
@@ -829,7 +840,8 @@
         "TITLE": "Informações do Provedor de Serviço",
         "TOOLTIP": "Copie esses valores e configure-os no seu Provedor de Identidade para estabelecer a conexão SAML"
       }
-    }
+    },
+    "NO_SETTINGS_AVAILABLE": "Nenhuma configuração de segurança está disponível para esta instalação. Configure as chaves de criptografia de MFA para habilitar a exigência de autenticação de dois fatores."
   },
   "CONVERSATION_WORKFLOW": {
     "INDEX": {

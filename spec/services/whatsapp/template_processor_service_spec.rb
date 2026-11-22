@@ -135,4 +135,7 @@ describe Whatsapp::TemplateProcessorService do
                                          ])
     end
   end
+
+  # Fork (upgrade 4.19.1, #3119): `TemplateParameterConverterService#valid_buttons?` stays the fork's (#15409),
+  # so a `nil` button is not read as the enhanced format and the upstream example was removed.
 end

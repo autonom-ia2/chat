@@ -87,6 +87,57 @@ describe('ActionCableConnector - Copilot Tests', () => {
     });
   });
 
+  describe('Captain Playground event handlers', () => {
+    it('registers the captain.playground.response event handler', () => {
+      expect(actionCable.events['captain.playground.response']).toBe(
+        actionCable.onCaptainPlaygroundResponse
+      );
+    });
+
+    it('emits the Playground response on the dashboard event bus', () => {
+      const playgroundData = {
+        account_id: 1,
+        request_id: 'playground-request-1',
+        response: 'Hello from Captain',
+      };
+
+      actionCable.onReceived({
+        event: 'captain.playground.response',
+        data: playgroundData,
+      });
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        BUS_EVENTS.CAPTAIN_PLAYGROUND_RESPONSE,
+        playgroundData
+      );
+    });
+  });
+
+  describe('monitor.updated', () => {
+    it('forwards updates for the active account', () => {
+      const data = { account_id: 1, monitor_id: 2, data_revision: 3 };
+
+      actionCable.onReceived({ event: 'monitor.updated', data });
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        BUS_EVENTS.MONITOR_UPDATED,
+        data
+      );
+    });
+
+    it('ignores updates from another account', () => {
+      actionCable.onReceived({
+        event: 'monitor.updated',
+        data: { account_id: 2, monitor_id: 2 },
+      });
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        BUS_EVENTS.MONITOR_UPDATED,
+        expect.anything()
+      );
+    });
+  });
+
   describe('conversation unread count event handlers', () => {
     it('should register the conversation.unread_count_changed event handler', () => {
       expect(Object.keys(actionCable.events)).toContain(

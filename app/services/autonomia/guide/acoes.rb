@@ -134,7 +134,8 @@ class Autonomia::Guide::Acoes
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.
-  FORA_DO_GUIA = ['POST client_errors'].freeze
+  # #3119: as rotas que o upgrade 4.19.1 trouxe para recursos sem uso ficam fora como antes dele (ver o módulo).
+  FORA_DO_GUIA = ['POST client_errors', *::Autonomia::Guide::RotasDoUpgradeFora::ACOES].freeze
 
   def self.fora_do_catalogo?(acao) = SO_NA_TELA.key?(acao.to_s) || FORA_DO_GUIA.include?(acao.to_s)
 

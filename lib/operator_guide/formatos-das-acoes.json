@@ -366,18 +366,25 @@
     "controller": "api/v1/accounts/captain/assistants#destroy",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:25",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:120"
+      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:122"
     ],
     "sem_corpo": true
   },
   "DELETE captain/custom_tools/:id": {
+    "campos": {
+      "assistant_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
     "completo": true,
     "controller": "api/v1/accounts/captain/custom_tools#destroy",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:22",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:44"
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:36",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:110",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:114"
     ],
-    "sem_corpo": true
+    "sem_corpo": false
   },
   "DELETE captain/documents/:id": {
     "campos": {
@@ -401,9 +408,9 @@
     "controller": "api/v1/accounts/companies/contacts#destroy",
     "modelo": "Contact",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies/contacts_controller.rb:35",
-      "enterprise/app/controllers/api/v1/accounts/companies/base_controller.rb:14",
-      "enterprise/app/controllers/api/v1/accounts/companies/contacts_controller.rb:47"
+      "app/controllers/api/v1/accounts/companies/contacts_controller.rb:35",
+      "app/controllers/api/v1/accounts/companies/base_controller.rb:14",
+      "app/controllers/api/v1/accounts/companies/contacts_controller.rb:47"
     ],
     "sem_corpo": true
   },
@@ -412,8 +419,8 @@
     "controller": "api/v1/accounts/companies#destroy",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:59",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
+      "app/controllers/api/v1/accounts/companies_controller.rb:59",
+      "app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": true
   },
@@ -422,8 +429,8 @@
     "controller": "api/v1/accounts/companies#avatar",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:69",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
+      "app/controllers/api/v1/accounts/companies_controller.rb:69",
+      "app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": true
   },
@@ -523,7 +530,7 @@
     "modelo": "Message",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations/messages_controller.rb:2",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:133",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -550,8 +557,8 @@
     "controller": "api/v1/accounts/conversations#destroy",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:141",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:143",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": true
   },
@@ -957,7 +964,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:102",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -967,7 +974,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:31",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -977,7 +984,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:92",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -1009,10 +1016,10 @@
       "leitura crua sem tipo: call_sid"
     ],
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:30",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:58",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:44",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:53"
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:32",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:74",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:60",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -1039,13 +1046,39 @@
     "sem_corpo": true
   },
   "DELETE integrations/hooks/:id": {
+    "campos": {
+      "app_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "inbox_id": {
+        "obrigatorio": "condicional",
+        "tipo": "inteiro"
+      },
+      "settings": {
+        "tipo": "objeto_livre"
+      },
+      "status": {
+        "padrao": "enabled",
+        "tipo": "string",
+        "um_de": [
+          "disabled",
+          "enabled"
+        ]
+      }
+    },
     "completo": true,
     "controller": "api/v1/accounts/integrations/hooks#destroy",
+    "corpo_plano": true,
+    "envelope": "hook",
+    "modelo": "Integrations::Hook",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:28",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:36"
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:29",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:49",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:45"
     ],
-    "sem_corpo": true
+    "sem_corpo": false
   },
   "DELETE integrations/linear": {
     "completo": true,
@@ -1067,7 +1100,7 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:39"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:58"
     ],
     "sem_corpo": true
   },
@@ -4578,9 +4611,7 @@
     "campos": {
       "config": {
         "campos": {
-          "auto_resolve_after": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "auto_resolve_after": {},
           "auto_resolve_mode": {},
           "feature_citation": {},
           "feature_contact_attributes": {},
@@ -4591,9 +4622,7 @@
           "product_name": {},
           "resolution_message": {},
           "response_window": {},
-          "send_inactivity_resolution_message": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "send_inactivity_resolution_message": {},
           "temperature": {},
           "welcome_message": {}
         },
@@ -4626,7 +4655,7 @@
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:154",
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:144",
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:142",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:120"
+      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:122"
     ],
     "sem_corpo": false
   },
@@ -4656,12 +4685,18 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "headers": {
+        "tipo": "objeto_livre"
+      },
       "http_method": {
         "padrao": "GET",
         "tipo": "string",
         "um_de": [
           "GET",
-          "POST"
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
         ]
       },
       "param_schema": {
@@ -4669,11 +4704,17 @@
           "description": {},
           "name": {},
           "required": {},
+          "source": {},
           "type": {}
         },
         "esquema": {
           "items": {
             "additionalProperties": false,
+            "if": {
+              "required": [
+                "source"
+              ]
+            },
             "properties": {
               "description": {
                 "type": "string"
@@ -4684,6 +4725,11 @@
               "required": {
                 "type": "boolean"
               },
+              "source": {
+                "enum": [
+                  "verified.email"
+                ]
+              },
               "type": {
                 "type": "string"
               }
@@ -4693,6 +4739,13 @@
               "type",
               "description"
             ],
+            "then": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              }
+            },
             "type": "object"
           },
           "type": "array"
@@ -4705,6 +4758,21 @@
       "response_template": {
         "tipo": "string"
       },
+      "settings": {
+        "campos": {
+          "requires_email_verification": {}
+        },
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "requires_email_verification": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
       "title": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -4714,11 +4782,24 @@
     "controller": "api/v1/accounts/captain/custom_tools#update",
     "corpo_plano": true,
     "envelope": "custom_tool",
+    "fora_do_envelope": {
+      "assistant_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
     "modelo": "Captain::CustomTool",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:18",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:57",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:44"
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:27",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:130",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:110",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:114",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:69",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:68",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:78",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:92",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -4752,6 +4833,7 @@
         "campos": {
           "assistant": {},
           "audio_transcription": {},
+          "call_announcement": {},
           "conversation_faq_generation": {},
           "conversation_faq_matching": {},
           "copilot": {},
@@ -4761,6 +4843,8 @@
           "help_center_query_translation": {},
           "help_center_search": {},
           "label_suggestion": {},
+          "language_detection": {},
+          "message_translation": {},
           "onboarding_content_generation": {},
           "pdf_faq_generation": {}
         },
@@ -4771,6 +4855,7 @@
         "campos": {
           "assistant": {},
           "audio_transcription": {},
+          "call_announcement": {},
           "conversation_faq_generation": {},
           "conversation_faq_matching": {},
           "copilot": {},
@@ -4780,6 +4865,8 @@
           "help_center_query_translation": {},
           "help_center_search": {},
           "label_suggestion": {},
+          "language_detection": {},
+          "message_translation": {},
           "onboarding_content_generation": {},
           "pdf_faq_generation": {}
         },
@@ -4828,9 +4915,9 @@
     "envelope": "company",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:43",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
+      "app/controllers/api/v1/accounts/companies_controller.rb:43",
+      "app/controllers/api/v1/accounts/companies_controller.rb:100",
+      "app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -4844,6 +4931,7 @@
       "auto_resolve_ignore_waiting": {},
       "auto_resolve_label": {},
       "auto_resolve_message": {},
+      "auto_translate": {},
       "company_size": {},
       "conversation_required_attributes": {
         "tipo": "lista"
@@ -4910,6 +4998,7 @@
         "tipo": "string"
       },
       "timezone": {},
+      "translation_provider": {},
       "user_role": {},
       "website": {}
     },
@@ -4917,11 +5006,11 @@
     "controller": "api/v1/accounts#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts_controller.rb:57",
-      "app/controllers/api/v1/accounts_controller.rb:121",
-      "app/controllers/api/v1/accounts_controller.rb:117",
-      "app/controllers/api/v1/accounts_controller.rb:113",
-      "app/controllers/api/v1/accounts_controller.rb:102"
+      "app/controllers/api/v1/accounts_controller.rb:55",
+      "app/controllers/api/v1/accounts_controller.rb:148",
+      "app/controllers/api/v1/accounts_controller.rb:144",
+      "app/controllers/api/v1/accounts_controller.rb:125",
+      "app/controllers/api/v1/accounts_controller.rb:114"
     ],
     "sem_corpo": false
   },
@@ -5038,9 +5127,9 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
       "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
@@ -5133,7 +5222,7 @@
     "modelo": "Message",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:133",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -5191,11 +5280,11 @@
     "controller": "api/v1/accounts/conversations#update",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:47",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:49",
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:155",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -5352,7 +5441,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
       "title": {},
@@ -7328,7 +7417,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
       "working_hours": {
@@ -7381,11 +7470,11 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:240",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:142",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:226",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:201",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": false
   },
@@ -7465,6 +7554,15 @@
   },
   "PATCH integrations/hooks/:id": {
     "campos": {
+      "app_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "inbox_id": {
+        "obrigatorio": "condicional",
+        "tipo": "inteiro"
+      },
       "settings": {
         "tipo": "objeto_livre"
       },
@@ -7483,9 +7581,9 @@
     "envelope": "hook",
     "modelo": "Integrations::Hook",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:10",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:40",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:36"
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:11",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:49",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -8566,6 +8664,9 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "metadata_url": {
+        "tipo": "string"
+      },
       "role_mappings": {
         "tipo": "objeto_livre"
       },
@@ -8584,7 +8685,7 @@
     "modelo": "AccountSamlSettings",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:18",
-      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -13105,11 +13206,11 @@
     "controller": "api/v1/accounts/bulk_actions#create",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:2",
-      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:65",
-      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:49",
-      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:39",
-      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:19"
+      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:4",
+      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:80",
+      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:64",
+      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:54",
+      "app/controllers/api/v1/accounts/bulk_actions_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -13644,9 +13745,7 @@
     "campos": {
       "config": {
         "campos": {
-          "auto_resolve_after": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "auto_resolve_after": {},
           "auto_resolve_mode": {},
           "feature_citation": {},
           "feature_contact_attributes": {},
@@ -13657,9 +13756,7 @@
           "product_name": {},
           "resolution_message": {},
           "response_window": {},
-          "send_inactivity_resolution_message": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "send_inactivity_resolution_message": {},
           "temperature": {},
           "welcome_message": {}
         },
@@ -13774,7 +13871,8 @@
           }
         },
         "tipo": "objeto"
-      }
+      },
+      "request_id": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/captain/assistants#playground",
@@ -13790,9 +13888,8 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:30",
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:162",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:197",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:193",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:120"
+      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:177",
+      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:122"
     ],
     "sem_corpo": false
   },
@@ -13898,12 +13995,18 @@
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
+      "headers": {
+        "tipo": "objeto_livre"
+      },
       "http_method": {
         "padrao": "GET",
         "tipo": "string",
         "um_de": [
           "GET",
-          "POST"
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
         ]
       },
       "param_schema": {
@@ -13911,11 +14014,17 @@
           "description": {},
           "name": {},
           "required": {},
+          "source": {},
           "type": {}
         },
         "esquema": {
           "items": {
             "additionalProperties": false,
+            "if": {
+              "required": [
+                "source"
+              ]
+            },
             "properties": {
               "description": {
                 "type": "string"
@@ -13926,6 +14035,11 @@
               "required": {
                 "type": "boolean"
               },
+              "source": {
+                "enum": [
+                  "verified.email"
+                ]
+              },
               "type": {
                 "type": "string"
               }
@@ -13935,6 +14049,13 @@
               "type",
               "description"
             ],
+            "then": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              }
+            },
             "type": "object"
           },
           "type": "array"
@@ -13947,6 +14068,21 @@
       "response_template": {
         "tipo": "string"
       },
+      "settings": {
+        "campos": {
+          "requires_email_verification": {}
+        },
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "requires_email_verification": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
       "title": {
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
@@ -13956,10 +14092,23 @@
     "controller": "api/v1/accounts/captain/custom_tools#create",
     "corpo_plano": true,
     "envelope": "custom_tool",
+    "fora_do_envelope": {
+      "assistant_id": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "inteiro"
+      }
+    },
     "modelo": "Captain::CustomTool",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:12",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:57"
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:21",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:130",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:114",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:69",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:68",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:78",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:92",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -13989,12 +14138,18 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "headers": {
+        "tipo": "objeto_livre"
+      },
       "http_method": {
         "padrao": "GET",
         "tipo": "string",
         "um_de": [
           "GET",
-          "POST"
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
         ]
       },
       "param_schema": {
@@ -14002,11 +14157,17 @@
           "description": {},
           "name": {},
           "required": {},
+          "source": {},
           "type": {}
         },
         "esquema": {
           "items": {
             "additionalProperties": false,
+            "if": {
+              "required": [
+                "source"
+              ]
+            },
             "properties": {
               "description": {
                 "type": "string"
@@ -14017,6 +14178,11 @@
               "required": {
                 "type": "boolean"
               },
+              "source": {
+                "enum": [
+                  "verified.email"
+                ]
+              },
               "type": {
                 "type": "string"
               }
@@ -14026,6 +14192,13 @@
               "type",
               "description"
             ],
+            "then": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              }
+            },
             "type": "object"
           },
           "type": "array"
@@ -14038,6 +14211,21 @@
       "response_template": {
         "tipo": "string"
       },
+      "settings": {
+        "campos": {
+          "requires_email_verification": {}
+        },
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "requires_email_verification": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
       "title": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -14047,10 +14235,19 @@
     "controller": "api/v1/accounts/captain/custom_tools#test",
     "corpo_plano": true,
     "envelope": "custom_tool",
+    "fora_do_envelope": {
+      "assistant_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
     "modelo": "Captain::CustomTool",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:27",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:57"
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:41",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:130",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:114",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:69",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:68"
     ],
     "sem_corpo": false
   },
@@ -14298,8 +14495,8 @@
     "envelope": "company",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:38",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100"
+      "app/controllers/api/v1/accounts/companies_controller.rb:38",
+      "app/controllers/api/v1/accounts/companies_controller.rb:100"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -14317,9 +14514,9 @@
     "controller": "api/v1/accounts/companies/contacts#create",
     "modelo": "Contact",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies/contacts_controller.rb:30",
-      "enterprise/app/controllers/api/v1/accounts/companies/contacts_controller.rb:31",
-      "enterprise/app/controllers/api/v1/accounts/companies/base_controller.rb:14"
+      "app/controllers/api/v1/accounts/companies/contacts_controller.rb:30",
+      "app/controllers/api/v1/accounts/companies/contacts_controller.rb:31",
+      "app/controllers/api/v1/accounts/companies/base_controller.rb:14"
     ],
     "sem_corpo": false
   },
@@ -14333,10 +14530,10 @@
     "controller": "api/v1/accounts/companies#destroy_custom_attributes",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:47",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:126",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:127",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
+      "app/controllers/api/v1/accounts/companies_controller.rb:47",
+      "app/controllers/api/v1/accounts/companies_controller.rb:126",
+      "app/controllers/api/v1/accounts/companies_controller.rb:127",
+      "app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false
   },
@@ -14345,8 +14542,8 @@
     "controller": "api/v1/accounts#update_active_at",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts_controller.rb:67",
-      "app/controllers/api/v1/accounts_controller.rb:102"
+      "app/controllers/api/v1/accounts_controller.rb:65",
+      "app/controllers/api/v1/accounts_controller.rb:114"
     ],
     "sem_corpo": true
   },
@@ -14453,9 +14650,9 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:181",
       "app/controllers/api/v1/accounts/contacts_controller.rb:177",
       "app/controllers/api/v1/accounts/contacts_controller.rb:175",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25"
     ],
     "sem_corpo": false
   },
@@ -14555,10 +14752,10 @@
     "modelo": "Call",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:5",
-      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:36",
-      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:28",
-      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:51",
-      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:49"
+      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:37",
+      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:52",
+      "enterprise/app/controllers/api/v1/accounts/contacts/calls_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -14714,15 +14911,15 @@
       "leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:40",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:43",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:42",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:45",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:207",
       "app/controllers/api/v1/accounts/conversations_controller.rb:205",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:203",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:214",
       "app/controllers/api/v1/accounts/conversations_controller.rb:212",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:210",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:222",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:224",
       "app/controllers/concerns/hmac_concern.rb:3",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:234"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:236"
     ],
     "sem_corpo": false
   },
@@ -14791,7 +14988,7 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/contact_info_requests#create",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/contact_info_requests_controller.rb:2",
+      "app/controllers/api/v1/accounts/conversations/contact_info_requests_controller.rb:10",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": true
@@ -14803,8 +15000,8 @@
       "termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:17",
-      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:37"
+      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:35"
     ],
     "sem_corpo": false
   },
@@ -14847,7 +15044,7 @@
     ],
     "origem": [
       "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:15",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:81",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:80",
       "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:29",
       "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:28",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
@@ -14891,8 +15088,8 @@
     "controller": "api/v1/accounts/conversations/messages#retry",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:38",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:40",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:133",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -14917,7 +15114,7 @@
     "modelo": "Message",
     "origem": [
       "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:8",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:133",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -14971,7 +15168,7 @@
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:2",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:3",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:6",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -14987,7 +15184,7 @@
     "origem": [
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:11",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:12",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -14996,8 +15193,8 @@
     "controller": "api/v1/accounts/conversations#mute",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:62",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:64",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": true
   },
@@ -15020,11 +15217,11 @@
     "controller": "api/v1/accounts/conversations#toggle_priority",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:109",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:111",
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:155",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -15048,12 +15245,12 @@
     "controller": "api/v1/accounts/conversations#toggle_status",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:82",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:185",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:184",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:86",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:101",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:84",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:187",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:186",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:88",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:103",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -15082,7 +15279,7 @@
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:27",
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:26",
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:25",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -15097,10 +15294,10 @@
       "leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:72",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:77",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:73",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:74",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:79",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:75",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -15109,8 +15306,8 @@
     "controller": "api/v1/accounts/conversations#unmute",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:67",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:69",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": true
   },
@@ -15120,7 +15317,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:20",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": true
   },
@@ -15138,7 +15335,7 @@
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
       "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:14",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -15147,13 +15344,13 @@
     "controller": "api/v1/accounts/conversations#filter",
     "modelo": "Conversation",
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52)",
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:54)",
       "params inteiro repassado a ::Conversations::FilterService.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:51",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:53",
       "app/controllers/concerns/ensure_current_account_helper.rb:10",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:52"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:54"
     ],
     "sem_corpo": false
   },
@@ -16527,7 +16724,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       }
     },
@@ -19205,7 +19402,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
       "working_hours_enabled": {
@@ -19218,8 +19415,8 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:36",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:113"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:240",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:116"
     ],
     "sem_corpo": false
   },
@@ -19228,8 +19425,8 @@
     "controller": "api/v1/accounts/inboxes#disable_whatsapp_calling",
     "modelo": "Inbox",
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:17",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:18",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19239,7 +19436,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:83",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19248,8 +19445,8 @@
     "controller": "api/v1/accounts/inboxes#enable_whatsapp_calling",
     "modelo": "Inbox",
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:8",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:9",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19259,7 +19456,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19269,7 +19466,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:4",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19279,7 +19476,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19294,8 +19491,8 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:123"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:124"
     ],
     "sem_corpo": false
   },
@@ -19314,10 +19511,10 @@
     "controller": "api/v1/accounts/inboxes#set_call_recording",
     "modelo": "Inbox",
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:45",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:46",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:52",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:51",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": false
   },
@@ -19332,9 +19529,9 @@
     "controller": "api/v1/accounts/inboxes#set_inbound_calls",
     "modelo": "Inbox",
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:31",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:36",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": false
   },
@@ -19344,7 +19541,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": true
   },
@@ -19363,6 +19560,10 @@
   },
   "POST inboxes/:inbox_id/conference": {
     "campos": {
+      "attempt_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "call_sid": {},
       "conversation_id": {
         "obrigatorio": "pelo_modelo",
@@ -19377,9 +19578,11 @@
     ],
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:13",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:58",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:44",
-      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:53"
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:20",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:74",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:60",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:55",
+      "enterprise/app/controllers/api/v1/accounts/conference_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -19644,24 +19847,50 @@
     "envelope": "hook",
     "modelo": "Integrations::Hook",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:6",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:40"
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:7",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:49"
     ],
     "sem_corpo": false
   },
   "POST integrations/hooks/:id/process_event": {
     "campos": {
-      "event": {}
+      "app_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "inbox_id": {
+        "obrigatorio": "condicional",
+        "tipo": "inteiro"
+      },
+      "settings": {
+        "tipo": "objeto_livre"
+      },
+      "status": {
+        "padrao": "enabled",
+        "tipo": "string",
+        "um_de": [
+          "disabled",
+          "enabled"
+        ]
+      }
     },
     "completo": false,
     "controller": "api/v1/accounts/integrations/hooks#process_event",
+    "corpo_plano": true,
+    "envelope": "hook",
+    "fora_do_envelope": {
+      "event": {}
+    },
+    "modelo": "Integrations::Hook",
     "motivos": [
       "leitura crua sem tipo: event (repassada a @hook.process_event)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:14",
       "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:15",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:36"
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:49",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:16",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -19739,16 +19968,16 @@
   },
   "POST integrations/shopify/auth": {
     "campos": {
-      "shop_domain": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      }
+      "shop_domain": {}
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/integrations/shopify#auth",
+    "motivos": [
+      "leitura crua sem tipo: shop_domain"
+    ],
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:12",
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:13"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:11",
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:12"
     ],
     "sem_corpo": false
   },
@@ -20944,6 +21173,9 @@
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
+      "metadata_url": {
+        "tipo": "string"
+      },
       "role_mappings": {
         "tipo": "objeto_livre"
       },
@@ -20962,7 +21194,7 @@
     "modelo": "AccountSamlSettings",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:9",
-      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -24995,9 +25227,7 @@
     "campos": {
       "config": {
         "campos": {
-          "auto_resolve_after": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "auto_resolve_after": {},
           "auto_resolve_mode": {},
           "feature_citation": {},
           "feature_contact_attributes": {},
@@ -25008,9 +25238,7 @@
           "product_name": {},
           "resolution_message": {},
           "response_window": {},
-          "send_inactivity_resolution_message": {
-            "so_se": "só com captain_integration_v2 ligado na conta"
-          },
+          "send_inactivity_resolution_message": {},
           "temperature": {},
           "welcome_message": {}
         },
@@ -25043,7 +25271,7 @@
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:154",
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:144",
       "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:142",
-      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:120"
+      "enterprise/app/controllers/api/v1/accounts/captain/assistants_controller.rb:122"
     ],
     "sem_corpo": false
   },
@@ -25073,12 +25301,18 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "headers": {
+        "tipo": "objeto_livre"
+      },
       "http_method": {
         "padrao": "GET",
         "tipo": "string",
         "um_de": [
           "GET",
-          "POST"
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
         ]
       },
       "param_schema": {
@@ -25086,11 +25320,17 @@
           "description": {},
           "name": {},
           "required": {},
+          "source": {},
           "type": {}
         },
         "esquema": {
           "items": {
             "additionalProperties": false,
+            "if": {
+              "required": [
+                "source"
+              ]
+            },
             "properties": {
               "description": {
                 "type": "string"
@@ -25101,6 +25341,11 @@
               "required": {
                 "type": "boolean"
               },
+              "source": {
+                "enum": [
+                  "verified.email"
+                ]
+              },
               "type": {
                 "type": "string"
               }
@@ -25110,6 +25355,13 @@
               "type",
               "description"
             ],
+            "then": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              }
+            },
             "type": "object"
           },
           "type": "array"
@@ -25122,6 +25374,21 @@
       "response_template": {
         "tipo": "string"
       },
+      "settings": {
+        "campos": {
+          "requires_email_verification": {}
+        },
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "requires_email_verification": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
       "title": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -25131,11 +25398,24 @@
     "controller": "api/v1/accounts/captain/custom_tools#update",
     "corpo_plano": true,
     "envelope": "custom_tool",
+    "fora_do_envelope": {
+      "assistant_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
     "modelo": "Captain::CustomTool",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:18",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:57",
-      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:44"
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:27",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:130",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:110",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:114",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:69",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:68",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:78",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:92",
+      "enterprise/app/controllers/api/v1/accounts/captain/custom_tools_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -25169,6 +25449,7 @@
         "campos": {
           "assistant": {},
           "audio_transcription": {},
+          "call_announcement": {},
           "conversation_faq_generation": {},
           "conversation_faq_matching": {},
           "copilot": {},
@@ -25178,6 +25459,8 @@
           "help_center_query_translation": {},
           "help_center_search": {},
           "label_suggestion": {},
+          "language_detection": {},
+          "message_translation": {},
           "onboarding_content_generation": {},
           "pdf_faq_generation": {}
         },
@@ -25188,6 +25471,7 @@
         "campos": {
           "assistant": {},
           "audio_transcription": {},
+          "call_announcement": {},
           "conversation_faq_generation": {},
           "conversation_faq_matching": {},
           "copilot": {},
@@ -25197,6 +25481,8 @@
           "help_center_query_translation": {},
           "help_center_search": {},
           "label_suggestion": {},
+          "language_detection": {},
+          "message_translation": {},
           "onboarding_content_generation": {},
           "pdf_faq_generation": {}
         },
@@ -25245,9 +25531,9 @@
     "envelope": "company",
     "modelo": "Company",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:43",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:100",
-      "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:96"
+      "app/controllers/api/v1/accounts/companies_controller.rb:43",
+      "app/controllers/api/v1/accounts/companies_controller.rb:100",
+      "app/controllers/api/v1/accounts/companies_controller.rb:96"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -25261,6 +25547,7 @@
       "auto_resolve_ignore_waiting": {},
       "auto_resolve_label": {},
       "auto_resolve_message": {},
+      "auto_translate": {},
       "company_size": {},
       "conversation_required_attributes": {
         "tipo": "lista"
@@ -25327,6 +25614,7 @@
         "tipo": "string"
       },
       "timezone": {},
+      "translation_provider": {},
       "user_role": {},
       "website": {}
     },
@@ -25334,11 +25622,11 @@
     "controller": "api/v1/accounts#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts_controller.rb:57",
-      "app/controllers/api/v1/accounts_controller.rb:121",
-      "app/controllers/api/v1/accounts_controller.rb:117",
-      "app/controllers/api/v1/accounts_controller.rb:113",
-      "app/controllers/api/v1/accounts_controller.rb:102"
+      "app/controllers/api/v1/accounts_controller.rb:55",
+      "app/controllers/api/v1/accounts_controller.rb:148",
+      "app/controllers/api/v1/accounts_controller.rb:144",
+      "app/controllers/api/v1/accounts_controller.rb:125",
+      "app/controllers/api/v1/accounts_controller.rb:114"
     ],
     "sem_corpo": false
   },
@@ -25408,9 +25696,9 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
       "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
@@ -25485,7 +25773,7 @@
     "modelo": "Message",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:133",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -25525,11 +25813,11 @@
     "controller": "api/v1/accounts/conversations#update",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:47",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:49",
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:155",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -25686,7 +25974,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
       "title": {},
@@ -27686,7 +27974,7 @@
       "timezone": {
         "padrao": "UTC",
         "tipo": "string",
-        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "um_de_resumo": "598 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
       "working_hours": {
@@ -27739,11 +28027,11 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:240",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:142",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:226",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:201",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": false
   },
@@ -27760,7 +28048,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:60",
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:61",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:119"
     ],
     "sem_corpo": false
   },
@@ -27840,6 +28128,15 @@
   },
   "PUT integrations/hooks/:id": {
     "campos": {
+      "app_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "inbox_id": {
+        "obrigatorio": "condicional",
+        "tipo": "inteiro"
+      },
       "settings": {
         "tipo": "objeto_livre"
       },
@@ -27858,9 +28155,9 @@
     "envelope": "hook",
     "modelo": "Integrations::Hook",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:10",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:40",
-      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:36"
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:11",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:49",
+      "app/controllers/api/v1/accounts/integrations/hooks_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -28837,6 +29134,9 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "metadata_url": {
+        "tipo": "string"
+      },
       "role_mappings": {
         "tipo": "objeto_livre"
       },
@@ -28855,7 +29155,7 @@
     "modelo": "AccountSamlSettings",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:18",
-      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+      "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:47"
     ],
     "sem_corpo": false
   },

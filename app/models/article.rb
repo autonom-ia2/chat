@@ -28,6 +28,7 @@
 #  index_articles_on_account_id             (account_id)
 #  index_articles_on_associated_article_id  (associated_article_id)
 #  index_articles_on_author_id              (author_id)
+#  index_articles_on_category_id            (category_id)
 #  index_articles_on_portal_id              (portal_id)
 #  index_articles_on_slug                   (slug) UNIQUE
 #  index_articles_on_status                 (status)
@@ -130,6 +131,17 @@ class Article < ApplicationRecord
     article.associated_article_id || article.id
   end
 
+  def translation_family
+    root_id = associated_article_id || id
+    articles = portal.articles
+
+    articles.where(id: root_id).or(articles.where(associated_article_id: root_id))
+  end
+
+  def public_locale
+    category.present? ? category.locale : locale
+  end
+
   def draft!
     update(status: :draft)
   end
@@ -224,6 +236,7 @@ class Article < ApplicationRecord
     self.account_id = portal&.account_id
   end
 
+  # Fork (upgrade 4.19.1, #3119): slug generated and accepted as before (no random suffix, no format check).
   def ensure_article_slug
     self.slug ||= "#{Time.now.utc.to_i}-#{title.underscore.parameterize(separator: '-')}" if title.present?
   end

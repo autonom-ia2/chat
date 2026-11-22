@@ -44,6 +44,19 @@ export default {
     isCrmEnabled() {
       return window.globalConfig?.CRM_KANBAN_ENABLED === 'true';
     },
+    // Missed-call notifications are produced only where phones are rung for calls
+    isMissedCallNotificationEnabled() {
+      return (
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.CHANNEL_VOICE
+        ) &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.MOBILE_VOICE_PUSH
+        )
+      );
+    },
     filteredNotificationTypes() {
       return this.notificationTypes.filter(notification => {
         if (
@@ -66,6 +79,12 @@ export default {
         if (
           notification.value === 'guide_alert' &&
           this.currentRole !== 'administrator'
+        ) {
+          return false;
+        }
+        if (
+          !this.isMissedCallNotificationEnabled &&
+          notification.value === 'voice_call_missed'
         ) {
           return false;
         }

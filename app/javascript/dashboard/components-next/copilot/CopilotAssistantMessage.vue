@@ -24,6 +24,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  canUseReply: {
+    type: Boolean,
+    default: true,
+  },
 });
 const hasEmptyMessageContent = computed(() => !props.message?.content);
 
@@ -31,7 +35,8 @@ const showUseButton = computed(() => {
   return (
     !hasEmptyMessageContent.value &&
     props.message.reply_suggestion &&
-    props.isLastMessage
+    props.isLastMessage &&
+    props.canUseReply
   );
 });
 

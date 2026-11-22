@@ -795,7 +795,9 @@
   },
   "captain/assistants/tools": {
     "controller": "api/v1/accounts/captain/assistants#tools",
-    "parametros": []
+    "parametros": [
+      "assistant_id"
+    ]
   },
   "captain/copilot_threads": {
     "controller": "api/v1/accounts/captain/copilot_threads#index",
@@ -811,11 +813,15 @@
   },
   "captain/custom_tools": {
     "controller": "api/v1/accounts/captain/custom_tools#index",
-    "parametros": []
+    "parametros": [
+      "assistant_id"
+    ]
   },
   "captain/custom_tools/:id": {
     "controller": "api/v1/accounts/captain/custom_tools#show",
-    "parametros": []
+    "parametros": [
+      "assistant_id"
+    ]
   },
   "captain/custom_tools/:id/edit": {
     "controller": "api/v1/accounts/captain/custom_tools#edit",

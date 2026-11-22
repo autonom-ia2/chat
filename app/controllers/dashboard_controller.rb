@@ -29,6 +29,8 @@ class DashboardController < ActionController::Base
     DEPLOYMENT_ENV
     INSTALLATION_PRICING_PLAN
     OAUTH_PROVIDER_ENABLED
+    CAPTAIN_TOOLS_MANIFEST_ENABLED
+    CAPTAIN_TOOLS_CATALOG_URL
   ].freeze
 
   before_action :redirect_to_autonomia_sso_if_needed, only: [:index]
@@ -110,17 +112,25 @@ class DashboardController < ActionController::Base
       SIDEBAR_BACKGROUND_COLOR: ENV['SIDEBAR_BACKGROUND_COLOR'].presence ||
         GlobalConfigService.load('SIDEBAR_BACKGROUND_COLOR', ''),
       IS_ENTERPRISE: ChatwootApp.enterprise?,
+      IS_COMPANY_ENRICHMENT_ENABLED: ChatwootApp.enterprise? && GlobalConfigService.load('CONTEXT_DEV_API_KEY', nil).present?,
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       GIT_SHA: GIT_HASH,
       ALLOWED_LOGIN_METHODS: allowed_login_methods,
-      ACTIVE_PLATFORM_BANNERS: active_platform_banners
+      ACTIVE_PLATFORM_BANNERS: active_platform_banners,
+      ACTIVE_FEATURE_ANNOUNCEMENTS: active_feature_announcements
     }
   end
 
   def active_platform_banners
     return [] unless ChatwootApp.chatwoot_cloud?
 
-    PlatformBanner.active.order(created_at: :desc).as_json(only: %i[id banner_message banner_type updated_at])
+    PlatformBanner.active.not_feature_announcement.order(created_at: :desc).as_json(only: %i[id banner_message banner_type updated_at])
+  end
+
+  def active_feature_announcements
+    return [] unless ChatwootApp.chatwoot_cloud?
+
+    PlatformBanner.active.feature_announcement.order(created_at: :desc).as_json(only: %i[id title banner_message video_url updated_at])
   end
 
   def allowed_login_methods

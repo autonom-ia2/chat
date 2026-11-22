@@ -2601,6 +2601,9 @@
 - onboarding_inbox_setup: etapa do cadastro, fora do painel
 - oauth_authorize: tela de consentimento OAuth aberta pelo app que conecta (Em d.ia, Claude, ChatGPT), não é caminho do painel (#3090)
 - oauth_authorize_link: casca de roteamento do consentimento OAuth, não é tela
+- monitor_reports_: monitores de conversa do Chatwoot, desligados nesta instalação (upgrade 4.19.1, #3119)
+- settings_integrations_stripe: integração Stripe do Chatwoot, desligada nesta instalação (upgrade 4.19.1, #3119)
+- shopify_select_account: escolha de conta na instalação do app da Shopify, sem uso nesta instalação (upgrade 4.19.1, #3119)
 
 ### abrir_relacionamentos
 - titulo: Abrir Relacionamentos

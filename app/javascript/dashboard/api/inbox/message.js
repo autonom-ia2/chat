@@ -11,12 +11,15 @@ export const buildCreatePayload = ({
   ccEmails = '',
   bccEmails = '',
   toEmails = '',
+  subject,
   templateParams,
   isVoiceMessage = false,
   documentIndexes = [],
   ficarComAConversa,
   ficarComAConversaDe,
   reabrirAoEscrever = false,
+  emailHtmlContent,
+  forwardedAttachmentIds,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -34,6 +37,9 @@ export const buildCreatePayload = ({
 
     if (toEmails) {
       payload.append('to_emails', toEmails);
+    }
+    if (subject) {
+      payload.append('subject', subject);
     }
     if (contentAttributes) {
       payload.append('content_attributes', JSON.stringify(contentAttributes));
@@ -64,6 +70,12 @@ export const buildCreatePayload = ({
     if (reabrirAoEscrever) {
       payload.append('reabrir_ao_escrever', true);
     }
+    if (emailHtmlContent) {
+      payload.append('email_html_content', emailHtmlContent);
+    }
+    forwardedAttachmentIds?.forEach(id => {
+      payload.append('forwarded_attachment_ids[]', id);
+    });
   } else {
     payload = {
       content: message,
@@ -73,6 +85,7 @@ export const buildCreatePayload = ({
       cc_emails: ccEmails,
       bcc_emails: bccEmails,
       to_emails: toEmails,
+      subject,
       template_params: templateParams,
       // #2067: o ícone "ficar com a conversa ao enviar" e o dono que a tela viu; sem eles
       // (flag desligada), o servidor segue a regra de antes.
@@ -80,6 +93,8 @@ export const buildCreatePayload = ({
       ficar_com_a_conversa_de: ficarComAConversaDe,
       // #2216: só a gaveta Nova conversa manda (ver acima).
       ...(reabrirAoEscrever ? { reabrir_ao_escrever: true } : {}),
+      email_html_content: emailHtmlContent,
+      forwarded_attachment_ids: forwardedAttachmentIds,
     };
   }
   return payload;
@@ -100,12 +115,15 @@ class MessageApi extends ApiClient {
     ccEmails = '',
     bccEmails = '',
     toEmails = '',
+    subject,
     templateParams,
     isVoiceMessage = false,
     documentIndexes = [],
     ficarComAConversa,
     ficarComAConversaDe,
     reabrirAoEscrever = false,
+    emailHtmlContent,
+    forwardedAttachmentIds,
   }) {
     return axios({
       method: 'post',
@@ -119,12 +137,15 @@ class MessageApi extends ApiClient {
         ccEmails,
         bccEmails,
         toEmails,
+        subject,
         templateParams,
         isVoiceMessage,
         documentIndexes,
         ficarComAConversa,
         ficarComAConversaDe,
         reabrirAoEscrever,
+        emailHtmlContent,
+        forwardedAttachmentIds,
       }),
     });
   }
@@ -154,6 +175,12 @@ class MessageApi extends ApiClient {
         target_language: targetLanguage,
       }
     );
+  }
+
+  autoTranslate(conversationId, messageIds) {
+    return axios.post(`${this.url}/${conversationId}/messages/auto_translate`, {
+      message_ids: messageIds,
+    });
   }
 }
 

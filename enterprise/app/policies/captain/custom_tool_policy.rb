@@ -16,6 +16,18 @@ class Captain::CustomToolPolicy < ApplicationPolicy
     integration_manage?
   end
 
+  def installed?
+    true
+  end
+
+  def preview?
+    @account_user.administrator?
+  end
+
+  def install?
+    @account_user.administrator?
+  end
+
   def update?
     integration_manage?
   end

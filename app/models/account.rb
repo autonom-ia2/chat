@@ -71,11 +71,12 @@ class Account < ApplicationRecord
 
   store_accessor :settings, :auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting
 
-  store_accessor :settings, :audio_transcriptions, :auto_resolve_label
+  store_accessor :settings, :audio_transcriptions, :auto_resolve_label, :auto_translate, :translation_provider
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
   store_accessor :settings, :keep_pending_on_bot_failure
-  store_accessor :settings, :captain_auto_resolve_mode, :captain_false_promise_harness_enabled
+  store_accessor :settings, :captain_auto_resolve_mode
+  store_accessor :settings, :enforce_mfa
   include AccountCaptainAutoResolve
 
   has_many :account_users, dependent: :destroy_async
@@ -128,6 +129,7 @@ class Account < ApplicationRecord
   has_many :canned_responses, dependent: :destroy_async
   has_many :categories, dependent: :destroy_async, class_name: '::Category'
   has_many :contacts, dependent: :destroy_async
+  has_many :companies, dependent: :destroy_async
   has_many :conversations, dependent: :destroy_async
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :custom_attribute_definitions, dependent: :destroy_async
@@ -225,6 +227,10 @@ class Account < ApplicationRecord
 
   def api_and_webhooks_enabled?
     true
+  end
+
+  def enforce_mfa?
+    Chatwoot.mfa_enabled? && enforce_mfa == true
   end
 
   def locale_english_name
