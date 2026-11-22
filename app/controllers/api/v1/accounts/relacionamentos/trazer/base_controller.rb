@@ -1,7 +1,10 @@
 # Base de "Trazer minha lista" (#2896): a planilha de contatos que a pessoa envia pela tela nova de Relacionamentos.
 # Toda rota, leitura inclusive, pede a chave da conta (404 sem ela), a importação de contatos por planilha ligada na
 # instalação (404 sem ela) e a permissão de importar contatos de hoje (ContactPolicy#import?: administrador ou função com
-# contact_manage). Aqui só entram as importações de contatos por arquivo da conta: nunca as da automação nem os Públicos.
+# contact_manage). Aqui entram todas as importações de contatos da conta (#3083): as desta tela, as planilhas da tela
+# antiga de Contatos e as listas do passo "para cada item" da automação. Os Públicos e as bases de campanha não. O que
+# cada uma pode (o Desfazer, por exemplo) é decidido por quem a usa: a automação não é desfeita
+# (Relacionamentos::Trazer::Desfazer.pode?), e a conferência só aceita o que nasceu aqui (`marcadas`).
 #
 # Os arquivos da conferência são enviados ao armazenamento depois que a transação da leitura termina. Nesse intervalo o
 # anexo já existe no banco e o arquivo ainda não: quem lê recebe "lendo" (a tela pergunta de novo, como já faz) e quem
@@ -42,12 +45,13 @@ class Api::V1::Accounts::Relacionamentos::Trazer::BaseController < Api::V1::Acco
   end
 
   def importacoes
-    Current.account.campaign_imports.contact_imports.where("COALESCE(options->>'origem', '') <> ?", CampaignImport::AUTOMATION_ORIGIN)
+    Current.account.campaign_imports.contact_imports
   end
 
-  # As importações que nasceram nesta tela (a marca options['trazer']), em qualquer estado.
+  # As importações que nasceram nesta tela (a marca options['trazer']), em qualquer estado. A da automação nunca é
+  # conferida aqui, nem se levar a marca.
   def marcadas
-    importacoes.where("options -> 'trazer' IS NOT NULL")
+    importacoes.where("options -> 'trazer' IS NOT NULL").where("COALESCE(options->>'origem', '') <> ?", CampaignImport::AUTOMATION_ORIGIN)
   end
 
   # A leitura é o rascunho que nasceu nesta tela; depois de trazida ela vira lista.

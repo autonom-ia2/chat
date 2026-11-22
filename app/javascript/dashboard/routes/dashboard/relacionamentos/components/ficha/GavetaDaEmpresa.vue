@@ -19,6 +19,7 @@ import GavetaLateral from './GavetaLateral.vue';
 // gaveta para "Nova empresa": com `empresa` vazia (`{}`), `titulo` e
 // `rotuloSalvar` trocam os textos. Fechar pelo X, pelo Esc ou pelo fundo com
 // algo escrito pergunta antes ("Sair sem salvar?"); "Cancelar" fecha direto.
+// #3082 — os campos personalizados vêm logo depois do nome.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   empresa: { type: Object, default: null },
@@ -141,19 +142,27 @@ const salvar = () => {
         :foto="formulario.foto"
         @mudar="foto => mudar('foto', foto)"
       />
-      <CampoDeTexto
-        v-for="item in CAMPOS"
-        :key="item.campo"
-        :model-value="formulario[item.campo]"
-        :rotulo="item.rotulo"
-        :inputmode="item.modo"
-        :placeholder="item.exemplo"
-        :maxlength="item.maximo"
-        :data-foco="item.foco ? '' : undefined"
-        :data-campo="item.campo"
-        :erro="mensagem(erros[item.campo])"
-        @update:model-value="valor => mudar(item.campo, valor)"
-      />
+      <template v-for="item in CAMPOS" :key="item.campo">
+        <CampoDeTexto
+          :model-value="formulario[item.campo]"
+          :rotulo="item.rotulo"
+          :inputmode="item.modo"
+          :placeholder="item.exemplo"
+          :maxlength="item.maximo"
+          :data-foco="item.foco ? '' : undefined"
+          :data-campo="item.campo"
+          :erro="mensagem(erros[item.campo])"
+          @update:model-value="valor => mudar(item.campo, valor)"
+        />
+        <CamposDaConta
+          v-if="item.campo === 'nome' && campos.length"
+          :campos="campos"
+          :valores="formulario.atributos"
+          :iniciais="inicial.atributos"
+          :erros="erros"
+          @mudar="mudarAtributo"
+        />
+      </template>
       <CampoDeTexto
         :model-value="formulario.sobre"
         :rotulo="re('SOBRE')"
@@ -163,14 +172,6 @@ const salvar = () => {
         :ajuda="re('SOBRE_AJUDA')"
         data-relacionamentos="sobre-a-empresa"
         @update:model-value="texto => mudar('sobre', texto)"
-      />
-      <CamposDaConta
-        v-if="campos.length"
-        :campos="campos"
-        :valores="formulario.atributos"
-        :iniciais="inicial.atributos"
-        :erros="erros"
-        @mudar="mudarAtributo"
       />
     </form>
     <template #rodape>

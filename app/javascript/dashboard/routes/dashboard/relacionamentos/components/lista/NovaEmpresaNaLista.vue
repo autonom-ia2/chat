@@ -8,8 +8,8 @@ import GavetaDaEmpresa from '../ficha/GavetaDaEmpresa.vue';
 
 // #3078 — "Nova empresa" da aba Empresas (o "Criar empresa" da lista antiga,
 // que pedia nome, site e descrição): a gaveta da empresa vazia, com tudo o que
-// a ficha muda (foto, CNPJ, cidade e os campos personalizados da empresa, na
-// ordem da conta: a lista não lê o configurador da ficha). Depois de criar,
+// a ficha muda (foto, CNPJ, cidade e os campos personalizados da empresa;
+// #3082 — os escolhidos para a ficha vêm logo depois do nome). Depois de criar,
 // emite `criada` com a empresa (a página abre a ficha dela, o próximo passo
 // de quem acabou de cadastrar).
 // Se a empresa ficou gravada e só a foto (ou um campo) falhou, a gaveta fica
@@ -24,10 +24,7 @@ const props = defineProps({
 const emit = defineEmits(['criada']);
 
 const { t } = useI18n();
-const camposDaConta = useCamposDaConta({
-  comConfiguracao: false,
-  de: DA_EMPRESA,
-});
+const camposDaConta = useCamposDaConta({ de: DA_EMPRESA });
 const aberta = ref(false);
 const salvando = ref(false);
 const retomada = ref(null);
@@ -95,6 +92,7 @@ defineExpose({ abrir });
     :titulo="t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.TITULO')"
     :rotulo-salvar="t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.SALVAR')"
     :definicoes="camposDaConta.definicoes.value"
+    :escolhidos="camposDaConta.escolhidos.value"
     @fechar="aberta = false"
     @salvar="salvar"
   />

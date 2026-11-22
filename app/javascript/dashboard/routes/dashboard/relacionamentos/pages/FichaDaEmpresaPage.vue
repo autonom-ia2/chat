@@ -75,6 +75,8 @@ const LembreteGaveta = defineAsyncComponent(
 // "Ver todas" na tela de mídias; Lembrete; e Apagar, que pergunta antes e
 // volta para a aba Empresas. Na demonstração tudo roda na memória
 // (demo/ficha.js); só o lembrete avisa.
+// #3082 — os campos personalizados da empresa ganharam o bloco "Seus campos",
+// do lado, antes de Informações, com "Novo campo" e "Escolher campos da ficha".
 const { t } = useI18n();
 const route = useRoute();
 const idioma = useIdioma();
@@ -150,11 +152,7 @@ const campos = computed(() =>
 );
 const linhas = computed(() =>
   ficha.empresa.value
-    ? linhasDaEmpresa(ficha.empresa.value, {
-        campos: campos.value,
-        idioma: idioma.value,
-        agora,
-      })
+    ? linhasDaEmpresa(ficha.empresa.value, { idioma: idioma.value, agora })
     : []
 );
 const abrirSegurado = ({ tipo, id: donoId }) =>
@@ -437,6 +435,7 @@ watch(
             :notas="ficha.notas.value"
             :midias="ficha.midias.value"
             :linhas="linhas"
+            :campos="campos"
             :agora="agora"
             :falhas="ficha.falhas.value"
             :tirando="tirandoId"
@@ -457,6 +456,7 @@ watch(
             @ver-todas-as-midias="acoes.verMidiasDaEmpresa(id)"
             @alterar="alterar"
             @escolher-campos="configurador?.open()"
+            @criar-campo="configurador?.open(null, true)"
           >
             <template v-if="comSeguros" #depoisDasPessoas>
               <SegurosDaFicha

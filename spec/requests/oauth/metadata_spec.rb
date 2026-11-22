@@ -42,7 +42,7 @@ RSpec.describe 'OAuth Authorization Server Metadata', type: :request do
         'code_challenge_methods_supported' => ['S256']
       )
       expect(response.parsed_body['scopes_supported']).to match_array(
-        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read]
+        %w[conversations:read conversations:write messages:write contacts:read contacts:write reports:read platform:read platform:write]
       )
     end
   end

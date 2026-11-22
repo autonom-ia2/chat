@@ -363,8 +363,9 @@ const listasTrazidas = () => ({
   async andamento(trazidaId) {
     return andamentoDaTela(await doServidor(TrazerAPI.andamento(trazidaId)));
   },
-  async historico() {
-    const listas = await doServidor(TrazerAPI.listas());
+  // As listas de uma página, a mais nova primeiro (#3083: "Ver mais").
+  async historico(pagina = 1) {
+    const listas = await doServidor(TrazerAPI.listas(pagina));
     return listas.map(listaDaTela);
   },
   async previaDoDesfazer(trazidaId) {

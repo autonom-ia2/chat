@@ -29,21 +29,17 @@ export const REDES = [
 
 const preenchido = valor => String(valor ?? '').trim() !== '';
 
-// As linhas de Informações: CPF, cidade, país, "Sobre a pessoa" e os campos
-// personalizados que aparecem na ficha (`campos`, de camposDaPessoa). Telefone,
+// As linhas de Informações: CPF, cidade, país e "Sobre a pessoa". Telefone,
 // e-mail e empresa ficam só no cabeçalho; a gaveta os edita. Cada linha:
-// { chave, valor, rotulo?, tipo?, copiar?, longo? }. O valor dos campos
-// personalizados vai como está gravado (a lista formata pelo `tipo`).
-export const linhasDaPessoa = (
-  pessoa,
-  { idioma = 'pt-BR', campos = [] } = {}
-) => {
+// { chave, valor, copiar?, longo? }. #3082 — os campos personalizados saíram
+// daqui para o bloco "Seus campos" (atributos.js#linhasDosCampos).
+export const linhasDaPessoa = (pessoa, { idioma = 'pt-BR' } = {}) => {
   const adicionais = pessoa.additional_attributes ?? {};
   const cpf = pessoa.custom_attributes?.[CHAVE_DO_CPF];
   // A regra da tela: aparece sempre, com "Não informado" quando vazio, o que a
-  // conta pede (CPF, cidade e os campos escolhidos no configurador); o resto
-  // (país, "Sobre a pessoa" e os outros campos da conta) só quando preenchido.
-  const fixas = [
+  // conta pede (CPF e cidade); o resto (país e "Sobre a pessoa") só quando
+  // preenchido.
+  return [
     { chave: 'cpf', valor: cpf ? formatarCpf(cpf) : '', copiar: true },
     { chave: 'cidade', valor: adicionais.city },
     { chave: 'pais', valor: paisNaTela(adicionais, idioma), soCheia: true },
@@ -59,15 +55,6 @@ export const linhasDaPessoa = (
       ...linha,
       valor: preenchido(linha.valor) ? String(linha.valor).trim() : '',
     }));
-  const daConta = campos
-    .filter(campo => campo.principal)
-    .map(campo => ({
-      chave: `conta:${campo.chave}`,
-      rotulo: campo.rotulo,
-      tipo: campo.tipo,
-      valor: temValor(campo.valor) ? campo.valor : '',
-    }));
-  return [...fixas, ...daConta];
 };
 
 export const redesPreenchidas = pessoa =>

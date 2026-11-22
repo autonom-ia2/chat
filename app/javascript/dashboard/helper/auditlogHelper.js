@@ -50,6 +50,8 @@ const translationKeys = {
   'account:guide_action': `AUDIT_LOGS.GUIDE.ACTION`,
   // Ação feita por uma automação da Automação livre, em nome de quem a ligou (#2459, F3.9).
   'account:automacao_action': `AUDIT_LOGS.AUTOMACAO.ACTION`,
+  // Ação feita por um app conectado pelo MCP (Em d.ia, Claude, ChatGPT), em nome de quem conectou (#3106).
+  'account:mcp_action': `AUDIT_LOGS.MCP.ACTION`,
   'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
   // Excluir de vez no CRM (#2096): uma frase por alvo; o contato tem uma para cada escolha dos cards.
   'account:crm_hard_delete:cards': `AUDIT_LOGS.CRM_EXCLUIR.CARDS`,
@@ -239,6 +241,12 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     translationPayload.frase = auditLogItem.audited_changes?.frase || '';
     translationPayload.automacaoId =
       auditLogItem.audited_changes?.automacao_id ?? '';
+  }
+
+  // O app conectado diz o passo (a frase dele) e o próprio nome (#3106).
+  if (auditableType === 'account' && action === 'mcp_action') {
+    translationPayload.frase = auditLogItem.audited_changes?.frase || '';
+    translationPayload.app = auditLogItem.audited_changes?.app || '';
   }
 
   // Só ids e contagens: o que foi apagado não volta pela Auditoria (#2096).

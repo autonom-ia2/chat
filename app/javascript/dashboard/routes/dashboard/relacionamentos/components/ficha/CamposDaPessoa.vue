@@ -22,7 +22,8 @@ import FotoDaPessoa from './FotoDaPessoa.vue';
 // outros ficam atrás de "Mais campos", que abre sozinho quando um deles tem
 // erro. O nome escrito na busca da empresa e ainda não escolhido sobe como
 // `mudar('empresaPendente', nome)`. #3078 — os campos da conta moram em
-// CamposDaConta (a gaveta da empresa usa o mesmo).
+// CamposDaConta (a gaveta da empresa usa o mesmo). #3082 — eles vêm logo
+// depois do nome, antes do telefone.
 const props = defineProps({
   formulario: { type: Object, required: true },
   // O formulário de quando a gaveta abriu: o que cada campo tinha.
@@ -91,6 +92,14 @@ const empresa = computed(() => ({
         :data-foco="item.foco ? '' : undefined"
         :erro="mensagem(erros[item.campo])"
         @update:model-value="valor => emit('mudar', item.campo, valor)"
+      />
+      <CamposDaConta
+        v-if="item.campo === 'nome' && campos.length"
+        :campos="campos"
+        :valores="formulario.atributos"
+        :iniciais="inicial.atributos"
+        :erros="erros"
+        @mudar="(chave, valor) => emit('mudarAtributo', chave, valor)"
       />
       <CampoDeTelefone
         v-if="item.campo === 'nome'"
@@ -169,14 +178,5 @@ const empresa = computed(() => ({
         />
       </div>
     </div>
-
-    <CamposDaConta
-      v-if="campos.length"
-      :campos="campos"
-      :valores="formulario.atributos"
-      :iniciais="inicial.atributos"
-      :erros="erros"
-      @mudar="(chave, valor) => emit('mudarAtributo', chave, valor)"
-    />
   </form>
 </template>

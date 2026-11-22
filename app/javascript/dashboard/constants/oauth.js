@@ -16,4 +16,6 @@ export const OAUTH_SCOPE_LABELS = {
   'contacts:read': 'OAUTH.SCOPES.CONTACTS_READ',
   'contacts:write': 'OAUTH.SCOPES.CONTACTS_WRITE',
   'reports:read': 'OAUTH.SCOPES.REPORTS_READ',
+  'platform:read': 'OAUTH.SCOPES.PLATFORM_READ',
+  'platform:write': 'OAUTH.SCOPES.PLATFORM_WRITE',
 };

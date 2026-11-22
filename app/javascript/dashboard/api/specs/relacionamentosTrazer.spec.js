@@ -64,9 +64,18 @@ describe('#RelacionamentosTrazerAPI', () => {
     );
   });
 
-  it('listas lê o histórico, sem params', () => {
+  it('listas lê o histórico na página pedida', () => {
+    trazer.listas(2);
+    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/listas`, {
+      params: { pagina: 2 },
+    });
+  });
+
+  it('listas sem página pede a primeira', () => {
     trazer.listas();
-    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/listas`);
+    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/listas`, {
+      params: { pagina: 1 },
+    });
   });
 
   it('andamento lê o andamento da lista pelo id', () => {
