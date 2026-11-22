@@ -62,6 +62,9 @@ class CustomAttributeDefinition < ApplicationRecord
   after_destroy :sync_widget_pre_chat_custom_fields, unless: :outside_pre_chat?
   after_update_commit :invalidate_filtered_unread_count_filters_update, if: :conversation_attribute_before_or_after?
   after_destroy_commit :invalidate_filtered_unread_count_filters_destroy, if: :conversation_attribute?
+  # #3082: o campo de pessoa ou empresa apagado fica "guardado escondido"; criar de novo com a mesma chave o traz de volta.
+  after_destroy_commit { Relationships::CamposGuardados.new(account).guardar!(self) }
+  after_create_commit { Relationships::CamposGuardados.new(account).esquecer!(self) }
 
   private
 

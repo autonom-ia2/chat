@@ -150,6 +150,21 @@
     "RECORD_RULE": "Turned on: always shows, even when empty. Turned off: only shows once it is filled in.",
     "USE_FIELD": "Use this field",
     "SHOW_HELP": "When off, the field disappears from every screen. What was written stays saved.",
+    "DELETE": {
+      "OPEN": "Delete this field",
+      "TITLE": "Delete the field “{name}”?",
+      "GONE": "It leaves the record, the forms and the AIs.",
+      "KEPT": "What was already written in it stays saved. You can bring the field back whenever you want, with everything that was written.",
+      "CONFIRM": "Delete field",
+      "ERROR": "Could not delete the field. Try again."
+    },
+    "DELETED": {
+      "TITLE": "Deleted fields",
+      "HELP": "What was written in them is saved.",
+      "BRING_BACK": "Bring back",
+      "BRING_BACK_TITLE": "Bring the field back",
+      "BRING_BACK_DESCRIPTION": "It comes back with everything that was written. Check the name and “What it is for”."
+    },
     "DESCRIPTION_REQUIRED": "What it is for (required)",
     "SAVE_NEEDS": {
       "BOTH": "To save, write the name and what it is for.",

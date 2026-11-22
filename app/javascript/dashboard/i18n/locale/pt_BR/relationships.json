@@ -150,6 +150,21 @@
     "RECORD_RULE": "Ligado: aparece sempre, mesmo vazio. Desligado: só aparece quando estiver preenchido.",
     "USE_FIELD": "Usar este campo",
     "SHOW_HELP": "Desligado, o campo some de todas as telas. O que já foi escrito fica guardado.",
+    "DELETE": {
+      "OPEN": "Apagar este campo",
+      "TITLE": "Apagar o campo “{name}”?",
+      "GONE": "Ele sai da ficha, das gavetas e das IAs.",
+      "KEPT": "O que já foi escrito nele fica guardado. Você pode trazer o campo de volta quando quiser, com tudo o que estava escrito.",
+      "CONFIRM": "Apagar campo",
+      "ERROR": "Não consegui apagar o campo. Tente de novo."
+    },
+    "DELETED": {
+      "TITLE": "Campos apagados",
+      "HELP": "O que foi escrito neles está guardado.",
+      "BRING_BACK": "Trazer de volta",
+      "BRING_BACK_TITLE": "Trazer o campo de volta",
+      "BRING_BACK_DESCRIPTION": "Ele volta com tudo o que estava escrito. Confira o nome e o “Para que serve”."
+    },
     "DESCRIPTION_REQUIRED": "Para que serve (obrigatório)",
     "SAVE_NEEDS": {
       "BOTH": "Para salvar, escreva o nome e para que serve.",
