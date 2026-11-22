@@ -132,11 +132,13 @@ RSpec.describe Channel::Whatsapp do
       end
     end
 
-    it 'is required to create a manual whatsapp cloud channel' do
+    # Fork (upgrade 4.20.1, #3120): upstream #16548 requires the app secret on these saves; the fork keeps them working
+    # without it (the channel stays "pending" and the webhook keeps accepting it, as before the upgrade).
+    it 'is not required to create a manual whatsapp cloud channel' do
       channel = build_manual_channel(manual_config)
 
-      expect(channel).not_to be_valid
-      expect(channel.errors[:provider_config]).to include('App secret is required')
+      expect(channel).to be_valid
+      expect(channel.app_secret_pending?).to be(true)
     end
 
     it 'creates a manual whatsapp cloud channel with an app secret' do
@@ -169,15 +171,15 @@ RSpec.describe Channel::Whatsapp do
       end
     end
 
-    it 'cannot be removed once configured' do
+    it 'can be removed once configured, as before the upgrade' do
       channel = build_manual_channel(manual_config.merge('app_secret' => 'secret'))
       channel.save!
       channel.provider_config = channel.provider_config.except('app_secret')
 
-      expect(channel).not_to be_valid
+      expect(channel).to be_valid
     end
 
-    it 'is required when a 360dialog channel switches to whatsapp cloud' do
+    it 'is not required when a 360dialog channel switches to whatsapp cloud' do
       channel = build(:channel_whatsapp, account: account, provider: 'default').tap do |dialog_channel|
         allow(dialog_channel).to receive(:validate_provider_config)
         allow(dialog_channel).to receive(:sync_templates)
@@ -185,16 +187,15 @@ RSpec.describe Channel::Whatsapp do
       channel.save!
       channel.assign_attributes(provider: 'whatsapp_cloud', provider_config: manual_config)
 
-      expect(channel).not_to be_valid
-      expect(channel.errors[:provider_config]).to include('App secret is required')
+      expect(channel).to be_valid
     end
 
-    it 'is required when an embedded signup channel moves to manual setup' do
+    it 'is not required when an embedded signup channel moves to manual setup' do
       channel = build_manual_channel(manual_config.merge('source' => 'embedded_signup'))
       channel.save!
       channel.provider_config = channel.provider_config.merge('source' => 'manual_setup_v2')
 
-      expect(channel).not_to be_valid
+      expect(channel).to be_valid
     end
   end
 

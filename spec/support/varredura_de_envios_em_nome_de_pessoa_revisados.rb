@@ -29,6 +29,12 @@ module VarreduraDeEnviosEmNomeDePessoa
       'ela (Current.user). O que a cotação manda sozinha vai sem remetente (Envio#mandar e #texto)',
     'enterprise/app/services/mcp/tools/send_message.rb#Mcp::Tools::SendMessage#perform' =>
       'MCP (#3090): a pessoa pede no app que conectou (Claude, ChatGPT, Em d.ia); remetente é ela (Current.user)',
+    'enterprise/app/services/captain/copilot/actions/send_reply.rb#Captain::Copilot::Actions::SendReply#perform' =>
+      'Copilot do upstream (4.20.1, #16509): só sai depois que o atendente lê o texto no cartão e aprova no painel; ' \
+      'remetente é ele, como a macro',
+    'enterprise/app/services/captain/copilot/actions/add_private_note.rb#Captain::Copilot::Actions::AddPrivateNote#perform' =>
+      'Copilot do upstream (4.20.1, #16509): nota privada aprovada pelo atendente no painel; nota privada nunca é ' \
+      '"da pessoa" (PessoaDaEquipe.da_pessoa? exige !private?)',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

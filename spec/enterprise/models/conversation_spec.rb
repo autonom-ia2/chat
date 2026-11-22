@@ -25,39 +25,15 @@ RSpec.describe Conversation, type: :model do
 
       before { account.enable_features!('captain_integration') }
 
-      it 'clears Captain when the conversation opens' do
-        conversation.update!(status: :open)
-
-        expect(conversation.reload).to have_attributes(status: 'open', ai_assignee_type: nil, assignee_agent_bot_id: nil)
-        expect(inbox.conversations.unassigned).to include(conversation)
-      end
+      # Fork (upgrade 4.20.1, #3120): upstream #16391 cleared Captain whenever the conversation turned open (on open,
+      # on snooze expiry, before legacy auto-assignment), and #16584 widened it to every AI assignee. The fork refuses
+      # both: only a human assignee clears the bot (#1377). Those examples were dropped; the fork behavior is locked in
+      # spec/models/conversation_robo_ao_reabrir_spec.rb.
 
       it 'keeps Captain on unrelated updates while pending' do
         conversation.update!(priority: :high)
 
         expect(conversation.reload).to have_attributes(status: 'pending', ai_assignee: assistant)
-      end
-
-      it 'clears Captain when the snooze expires' do
-        conversation.update!(status: :snoozed, snoozed_until: 1.minute.ago)
-
-        Conversations::ReopenSnoozedConversationsJob.perform_now
-
-        expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: nil, ai_assignee_type: nil)
-        expect(inbox.conversations.unassigned).to include(conversation)
-      end
-
-      it 'clears Captain before legacy auto-assignment runs on snooze expiry' do
-        account.disable_features!('assignment_v2')
-        agent = create(:user, account: account, auto_offline: false)
-        create(:inbox_member, inbox: inbox, user: agent)
-        OnlineStatusTracker.set_status(account.id, agent.id, 'online')
-        conversation.update!(status: :snoozed, snoozed_until: 1.minute.ago)
-        inbox.update!(enable_auto_assignment: true)
-
-        Conversations::ReopenSnoozedConversationsJob.perform_now
-
-        expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: nil, ai_assignee_type: nil, assignee: agent)
       end
     end
   end

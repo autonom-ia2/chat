@@ -189,9 +189,8 @@ const guideUrl = WHATSAPP_MANUAL_MIGRATION_GUIDE_URL;
 const hasBusinessDetails = computed(
   () => form.value.wabaId.trim() && form.value.phoneNumberId.trim()
 );
-const hasAccessToken = computed(
-  () => form.value.accessToken.trim() && form.value.appSecret.trim()
-);
+// Fork (upgrade 4.20.1, #3120): the app secret (#16548) is optional; the fork never required it to move to manual setup.
+const hasAccessToken = computed(() => form.value.accessToken.trim());
 const canContinue = computed(() => {
   if (currentStep.value === 1) return hasBusinessDetails.value;
   if (currentStep.value === 2) return hasAccessToken.value;

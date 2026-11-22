@@ -60,6 +60,8 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
 | #13856 | Carregador de traduções por glob, com junção rasa | Recusado (ver "Traduções") |
 | #16420, #16722, #16623 | Limite de altura da imagem (colide com #1702), arrastar e soltar no e-mail novo, `openCopilot` | Telas iguais ao fork |
 | #15938, #16074 | Reading mode e recolher o editor | ReplyBox e MessagesView do fork |
+| #16548 | App secret obrigatório para criar caixa WhatsApp Cloud manual, migrar para manual ou apagar o segredo; aviso de conta e de modelo aceito sem assinatura quando a caixa da URL ainda não tem segredo | `channel/whatsapp.rb` sem a validação; campo opcional nas 3 telas; `access_loss` e `templates/webhook_entry.rb` mantêm a assinatura obrigatória nos avisos |
+| #16620 | Checagem própria do callback da Bandwidth ligada por padrão em caixa nova | Migration `20261104104833` deixa o padrão `false`, como nas caixas existentes; o `CONFIG_KEYS` aceita as credenciais de callback do fork (#1027) |
 
 ## Traduções
 
@@ -102,8 +104,29 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
   (#1828) roda depois do `getRecipients` e limpa Para, Cc e Cco. Quem pediu para sair da cópia continua fora.
 - **Atribuição**: automação ou macro que atribui uma pessoa passa pelo serviço de atribuição do fork (#16475), que tira
   o robô e abre a conversa, como a atribuição manual. A produção tem 0 regras ativas.
-- **WhatsApp Cloud**: faixa e campo de app secret na caixa manual (#16548), visíveis só para o administrador.
+- **WhatsApp Cloud**: faixa e campo de app secret na caixa manual (#16548), visíveis só para o administrador. O campo é
+  opcional (ver a tabela). Com o segredo salvo, o webhook passa a conferir a assinatura da caixa.
 - **Voz e Twilio** (sem uso): ficou o upstream. A aba de voz passa a se chamar "Chamadas".
+
+## CI, rodada 2 (`038615fac3` e seguinte)
+
+- `Captain::McpTool` usava a forma do upstream (`validates_with JsonSchemaValidator`); o validador do fork é um
+  `EachValidator`. A classe não carregava e derrubava uns 90 exemplos. Passou para a forma do `Captain::CustomTool`.
+- `db/schema.rb` no formato do dump do Rails 8.
+- `20261107075626`: a remoção da coluna de `captain_mcp_servers` (tabela criada nesta mesma entrega) foi para dentro do
+  `safety_assured`.
+- **Rails 8 e `as_json(only:)`**: as chaves saem na ordem da lista, e não mais na das colunas. Os payloads da
+  Prospecção voltaram a sair iguais byte a byte. Outros `as_json(only:)` só mudam a ordem das chaves, e quem lê pelo
+  nome não percebe.
+- **#16342 e o rodízio**: os ids de quem está online agora passam pela lista de `account_users` com
+  `accepts_conversations`. Em produção os ids já vinham do Redis em texto, então o rodízio atribui como antes. Os
+  specs do `HandoffExecutor` simulavam a presença com id inteiro, o que desligava o rodízio por acaso; agora a caixa
+  do teste nasce com o rodízio desligado.
+- **Captain**: `captain_active?` agora exige a flag `captain_integration` (#16391). O Captain não é usado; conferir antes
+  do deploy que nenhuma conta o usa sem essa flag.
+- **Bandwidth**: a tela de criar caixa passa a pedir client ID e secret (OAuth, #16052). Há 0 caixas SMS.
+- Specs do upstream que testavam comportamento neutralizado saíram ou voltaram ao fork: robô tirado ao reabrir
+  (#16584), PUT do portal (#501/#502) e POST `/bot` do `WebhookServer` (o POST continua no controller do fork).
 
 ## Arquivos gerados
 

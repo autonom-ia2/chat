@@ -39,7 +39,8 @@ export default {
     inboxName: { required },
     phoneNumber: { required, isPhoneE164OrEmpty },
     apiKey: { required },
-    appSecret: { required },
+    // Fork (upgrade 4.20.1, #3120): the app secret (#16548) is optional, as the fork never required it to create the inbox.
+    appSecret: {},
     phoneNumberId: { required, isNumber },
     businessAccountId: { required, isNumber },
   },

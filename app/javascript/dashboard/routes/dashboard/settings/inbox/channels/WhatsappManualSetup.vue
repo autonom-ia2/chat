@@ -72,8 +72,9 @@ const idsComplete = computed(
   () => form.wabaId.trim() && form.phoneNumberId.trim()
 );
 
+// Fork (upgrade 4.20.1, #3120): the app secret (#16548) is optional; the fork never required it to connect a number.
 const detailsComplete = computed(
-  () => idsComplete.value && form.accessToken.trim() && form.appSecret.trim()
+  () => idsComplete.value && form.accessToken.trim()
 );
 
 const connectionReady = computed(

@@ -55,6 +55,12 @@ module Whatsapp::Templates::WebhookEntry
     template_events_only? || super
   end
 
+  # Fork (upgrade 4.20.1, #3120): upstream #16548 lets an unsigned POST through when the URL inbox is a manual one still
+  # without its own secret. A template notice is of the WABA, not of the URL inbox: its signature stays mandatory.
+  def app_secret_pending?
+    template_events_only? ? false : super
+  end
+
   def meta_app_secrets
     return super unless template_events_only?
 

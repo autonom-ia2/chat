@@ -668,7 +668,9 @@ RSpec.describe 'Inboxes API', type: :request do
           expect(Channel::Whatsapp.last.provider_config['app_secret']).to eq('test_app_secret')
         end
 
-        it 'rejects a request without the app secret, which the documented contract also rejects' do
+        # Fork (upgrade 4.20.1, #3120): upstream #16548 rejects this request; the fork keeps creating the inbox without the
+        # app secret, as before the upgrade, and the inbox shows the "app secret pending" banner.
+        it 'still creates the inbox without the app secret' do
           whatsapp_params[:channel][:provider_config] = provider_config.except(:app_secret)
 
           post "/api/v1/accounts/#{account.id}/inboxes",
@@ -676,8 +678,8 @@ RSpec.describe 'Inboxes API', type: :request do
                params: whatsapp_params,
                as: :json
 
-          expect(response).to have_http_status(:unprocessable_entity)
-          expect(response).not_to conform_request_schema
+          expect(response).to have_http_status(:success)
+          expect(Channel::Whatsapp.last.app_secret_pending?).to be(true)
         end
       end
 

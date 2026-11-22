@@ -83,7 +83,9 @@ RSpec.describe 'Enterprise Conversations API', type: :request do
 
       before do
         account.enable_features!(:auto_translate, :captain_tasks)
-        account.update!(auto_translate: true)
+        # Fork (upgrade 4.20.1, #3120): the fork default provider is Google Translate (#3119), which needs a hook, so
+        # the account picks Captain to have auto translate on.
+        account.update!(auto_translate: true, translation_provider: 'captain')
         create(:inbox_member, user: agent, inbox: conversation.inbox)
       end
 

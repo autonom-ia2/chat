@@ -1,7 +1,9 @@
 require 'rails_helper'
 
 RSpec.describe Captain::Conversation::MessageLanguageService do
-  let(:account) { create(:account) }
+  # Fork (upgrade 4.20.1, #3120): the fork default provider is Google Translate (#3119), so the account picks Captain,
+  # whose language detection this spec stubs.
+  let(:account) { create(:account, settings: { translation_provider: 'captain' }) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, additional_attributes: { 'conversation_language' => 'en' }) }
   let(:languages) do

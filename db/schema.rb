@@ -2225,7 +2225,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "secret"
-    t.boolean "callback_auth_enforced", default: true, null: false
+    t.boolean "callback_auth_enforced", default: false, null: false
     t.index ["phone_number"], name: "index_channel_sms_on_phone_number", unique: true
   end
 

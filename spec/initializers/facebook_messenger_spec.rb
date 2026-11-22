@@ -2,31 +2,6 @@ require 'rails_helper'
 
 describe 'Facebook Messenger webhook', type: :request do
   let(:verify_token) { 'test-fb-verify-token' }
-  let(:app_secret) { 'test-fb-app-secret' }
-  let(:page_id) { '1234567890' }
-  let(:body) do
-    {
-      object: 'page',
-      entry: [{
-        id: page_id,
-        time: 1_700_000_000_000,
-        messaging: [{
-          sender: { id: '42' },
-          recipient: { id: page_id },
-          timestamp: 1_700_000_000_000,
-          message: { mid: 'm_1', text: 'hello' }
-        }]
-      }]
-    }.to_json
-  end
-
-  def signature_for(payload, secret = app_secret)
-    "sha1=#{OpenSSL::HMAC.hexdigest('SHA1', secret, payload)}"
-  end
-
-  def post_bot(payload, headers: {})
-    post '/bot', params: payload, headers: { 'CONTENT_TYPE' => 'application/json' }.merge(headers)
-  end
 
   before do
     InstallationConfig.where(name: %w[FB_VERIFY_TOKEN FB_APP_SECRET]).delete_all
@@ -73,49 +48,9 @@ describe 'Facebook Messenger webhook', type: :request do
     end
   end
 
-  describe 'POST /bot' do
-    it 'enqueues the event when the signature is valid' do
-      with_modified_env FB_APP_SECRET: app_secret do
-        expect { post_bot(body, headers: { 'X-Hub-Signature' => signature_for(body) }) }
-          .to have_enqueued_job(Webhooks::FacebookEventsJob)
-      end
-
-      expect(response).to have_http_status(:ok)
-    end
-
-    it 'resolves the app secret once per event' do
-      allow(Facebook::Messenger.config.provider).to receive(:app_secret_for).and_call_original
-
-      with_modified_env FB_APP_SECRET: app_secret do
-        post_bot(body, headers: { 'X-Hub-Signature' => signature_for(body) })
-      end
-
-      expect(Facebook::Messenger.config.provider).to have_received(:app_secret_for).once
-    end
-
-    it 'rejects the event when the signature is missing' do
-      with_modified_env FB_APP_SECRET: app_secret do
-        expect { post_bot(body) }.not_to have_enqueued_job(Webhooks::FacebookEventsJob)
-      end
-
-      expect(response).to have_http_status(:bad_request)
-    end
-
-    it 'rejects the event when the signature is invalid' do
-      with_modified_env FB_APP_SECRET: app_secret do
-        expect { post_bot(body, headers: { 'X-Hub-Signature' => signature_for(body, 'other-secret') }) }
-          .not_to have_enqueued_job(Webhooks::FacebookEventsJob)
-      end
-
-      expect(response).to have_http_status(:bad_request)
-    end
-
-    it 'rejects the event when no app secret is configured' do
-      with_modified_env FB_APP_SECRET: '' do
-        expect { post_bot(body) }.not_to have_enqueued_job(Webhooks::FacebookEventsJob)
-      end
-
-      expect(response).to have_http_status(:bad_request)
-    end
-  end
+  # Fork (upgrade 4.20.1, #3120): POST /bot is served by the fork route `webhooks/facebook_page#events` (#2200), declared
+  # before this mount in config/routes.rb, as on main. It checks X-Hub-Signature-256 against FB_APP_SECRET or
+  # WHATSAPP_APP_SECRET and answers 401 when the signature is missing or wrong; its spec is
+  # spec/controllers/webhooks/facebook_page_controller_spec.rb. Upstream's POST examples for this mount (#16576) never
+  # reach it here, so they were removed; the mount still answers the GET verification above.
 end

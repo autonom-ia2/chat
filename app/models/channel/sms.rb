@@ -3,7 +3,7 @@
 # Table name: channel_sms
 #
 #  id                     :bigint           not null, primary key
-#  callback_auth_enforced :boolean          default(TRUE), not null
+#  callback_auth_enforced :boolean          default(FALSE), not null
 #  phone_number           :string           not null
 #  provider               :string           default("default")
 #  provider_config        :jsonb
@@ -23,7 +23,11 @@ class Channel::Sms < ApplicationRecord
 
   self.table_name = 'channel_sms'
   EDITABLE_ATTRS = [:phone_number, :callback_auth_enforced, { provider_config: {} }].freeze
-  CONFIG_KEYS = %w[account_id application_id api_key api_secret client_id client_secret].freeze
+  # Fork (upgrade 4.20.1, #3120): callback_username/callback_password are the fork's per-channel Bandwidth
+  # callback credentials (#1027, SmsWebhookSignature::BandwidthVerifier, docs/runbooks/sms-webhook-signature.md).
+  # The upstream key allowlist would reject them, so a channel configured by the runbook could no longer be saved.
+  FORK_CALLBACK_KEYS = %w[callback_username callback_password].freeze
+  CONFIG_KEYS = (%w[account_id application_id api_key api_secret client_id client_secret] + FORK_CALLBACK_KEYS).freeze
   OAUTH_REQUIRED_KEYS = %w[account_id application_id client_id client_secret].freeze
   LEGACY_REQUIRED_KEYS = %w[account_id application_id api_key api_secret].freeze
   CALLBACK_USERNAME = 'chatwoot'.freeze

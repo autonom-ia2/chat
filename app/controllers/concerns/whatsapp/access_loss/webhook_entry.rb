@@ -54,6 +54,18 @@ module Whatsapp::AccessLoss::WebhookEntry
     account_update_only? || super
   end
 
+  # Fork (upgrade 4.20.1, #3120): upstream #16548 lets an unsigned POST through when the URL inbox is a manual one still
+  # without its own secret, and #16549 checks the 360dialog token of the URL inbox. Neither applies to the app notice:
+  # the signature stays mandatory, and the URL inbox is not even looked up (a `value` that is not an object would crash
+  # the lookup of `metadata`).
+  def app_secret_pending?
+    account_update_only? ? false : super
+  end
+
+  def verify_webhook_token!
+    super unless account_update_only?
+  end
+
   def meta_app_secrets
     return super unless account_update_only?
 

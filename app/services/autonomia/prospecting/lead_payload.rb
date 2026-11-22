@@ -1,15 +1,16 @@
 # O lead como a API devolve (GET leads/:id). Mora fora do controller porque o evento ao vivo
 # (prospecting.lead.updated, #678) precisa mandar exatamente o mesmo objeto, de dentro de um job.
 class Autonomia::Prospecting::LeadPayload
+  # Fork (upgrade 4.20.1, #3120): Rails 8 `as_json(only:)` emits keys in the order of this list (Rails 7.2 used the column
+  # order), so the list follows the table's column order to keep the JSON byte for byte.
   ATTRIBUTES = [
-    :id, :provider, :provider_place_id, :name, :phone, :website, :address, :city, :state, :country,
-    :latitude, :longitude, :rating, :reviews_count, :category, :status, :discard_reason,
+    :id, :contact_id, :crm_card_id, :provider, :provider_place_id, :name, :phone, :website, :address, :city, :state, :country,
+    :latitude, :longitude, :rating, :reviews_count, :category, :status, :created_at, :updated_at, :discard_reason,
     :score, :priority_score, :priority_position, :search_rank, :score_breakdown, :negative_factors, :human_insight,
     :enrichment_status, :enrichment_requested_at, :enrichment_completed_at, :enrichment_source, :enrichment_error,
     :enriched_data, :decision_name, :decision_role, :decision_confidence, :decision_source_url, :decision_linkedin,
     :decision_instagram, :enriched_email, :enriched_whatsapp, :enriched_instagram, :enriched_linkedin,
-    :enriched_facebook, :enriched_cnpj, :enrichment_summary,
-    :consent_refused_at, :contact_id, :crm_card_id, :created_at, :updated_at
+    :enriched_facebook, :enriched_cnpj, :enrichment_summary, :consent_refused_at
   ].freeze
 
   # O que o payload lê de outras tabelas. Quem monta a lista de leads carrega junto, para não fazer uma consulta por

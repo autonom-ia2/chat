@@ -153,40 +153,14 @@ RSpec.describe Message do
       expect(conversation.reload).to have_attributes(status: 'pending', ai_assignee: assistant)
     end
 
-    it 'opens a resolved conversation and clears Captain when the feature is disabled' do
-      create(:message, conversation: conversation, message_type: :incoming)
-
-      expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: nil, ai_assignee_type: nil)
-    end
-
-    it 'opens a resolved conversation and clears Captain when credits are exhausted' do
-      account.enable_features!('captain_integration')
-      account.update!(limits: { 'captain_responses' => 0 })
-
-      create(:message, conversation: conversation, message_type: :incoming)
-
-      expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: nil, ai_assignee_type: nil)
-    end
-
-    it 'opens a snoozed conversation and clears Captain' do
-      account.enable_features!('captain_integration')
-      conversation.snoozed!
-
-      create(:message, conversation: conversation, message_type: :incoming)
-
-      expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: nil, ai_assignee_type: nil)
-    end
+    # Fork (upgrade 4.20.1, #3120): upstream #16391 also cleared Captain when a contact reply reopened the conversation
+    # as open (feature off, credits exhausted, snoozed). The fork refuses it, like #16584: only a human assignee clears
+    # the bot (#1377). Those examples were dropped; see spec/models/conversation_robo_ao_reabrir_spec.rb.
   end
 
-  it 'preserves AgentBot ownership when a resolved conversation reopens' do
-    agent_bot = create(:agent_bot, account: conversation.account)
-    create(:agent_bot_inbox, inbox: conversation.inbox, agent_bot: agent_bot)
-    conversation.update!(status: :resolved, ai_assignee: agent_bot)
-
-    create(:message, conversation: conversation, message_type: :incoming)
-
-    expect(conversation.reload).to have_attributes(status: 'pending', ai_assignee: agent_bot)
-  end
+  # Fork (upgrade 4.20.1, #3120): the upstream example "preserves AgentBot ownership when a resolved conversation
+  # reopens" expected Pending for a webhook bot. In the fork a webhook bot inbox reopens as Open and keeps the bot, which
+  # spec/models/message_spec.rb locks ("reopens as open and keeps the AI assignee"); non-webhook bots still go Pending.
 
   describe 'translation flag' do
     let(:conversation) { create(:conversation, additional_attributes: { 'conversation_language' => 'fr' }) }

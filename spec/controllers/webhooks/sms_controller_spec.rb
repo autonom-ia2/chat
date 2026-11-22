@@ -2,7 +2,8 @@ require 'rails_helper'
 
 RSpec.describe 'Webhooks::SmsController', type: :request do
   describe 'POST /webhooks/sms/{:phone_number}' do
-    let(:channel) { create(:channel_sms, phone_number: '+15550001111') }
+    # Fork (upgrade 4.20.1, #3120): inboxes are created with callback_auth_enforced false, so the spec turns it on.
+    let(:channel) { create(:channel_sms, phone_number: '+15550001111', callback_auth_enforced: true) }
     let(:event) { { type: 'message-received', to: channel.phone_number, message: { id: 'msg-1', from: '+15559990000', text: 'hello' } } }
     let(:credentials) { { 'HTTP_AUTHORIZATION' => basic_auth(Channel::Sms::CALLBACK_USERNAME, channel.secret) } }
 
@@ -47,14 +48,14 @@ RSpec.describe 'Webhooks::SmsController', type: :request do
       end
 
       it 'challenges events for an enforced inbox routed through it' do
-        sibling = create(:channel_sms, account: channel.account)
+        sibling = create(:channel_sms, account: channel.account, callback_auth_enforced: true)
         expect { post_event('15550001111', event.merge(to: sibling.phone_number)) }.not_to have_enqueued_job(Webhooks::SmsEventsJob)
         expect(response).to have_http_status(:unauthorized)
       end
     end
 
     context 'when inboxes share a Bandwidth application' do
-      let(:sibling) { create(:channel_sms, account: channel.account) }
+      let(:sibling) { create(:channel_sms, account: channel.account, callback_auth_enforced: true) }
 
       it 'accepts the credentials of another inbox on the application' do
         headers = { 'HTTP_AUTHORIZATION' => basic_auth(Channel::Sms::CALLBACK_USERNAME, sibling.secret) }
@@ -62,7 +63,7 @@ RSpec.describe 'Webhooks::SmsController', type: :request do
       end
 
       it 'rejects the credentials of an inbox on another application' do
-        other = create(:channel_sms, account: channel.account, provider_config: provider_config('app-2'))
+        other = create(:channel_sms, account: channel.account, provider_config: provider_config('app-2'), callback_auth_enforced: true)
         headers = { 'HTTP_AUTHORIZATION' => basic_auth(Channel::Sms::CALLBACK_USERNAME, other.secret) }
         expect { post_event('15550001111', event, headers) }.not_to have_enqueued_job(Webhooks::SmsEventsJob)
         expect(response).to have_http_status(:unauthorized)
@@ -71,7 +72,7 @@ RSpec.describe 'Webhooks::SmsController', type: :request do
 
     context 'when the event number does not match the route' do
       it 'accepts an inbox from the same account authenticated with the routed inbox credentials' do
-        sibling = create(:channel_sms, account: channel.account)
+        sibling = create(:channel_sms, account: channel.account, callback_auth_enforced: true)
         expect { post_event('15550001111', event.merge(to: sibling.phone_number), credentials) }
           .to have_enqueued_job(Webhooks::SmsEventsJob).with(hash_including('to' => sibling.phone_number))
       end
