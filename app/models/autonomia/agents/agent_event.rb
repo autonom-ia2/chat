@@ -71,13 +71,13 @@ module Autonomia
       # `handoff_reason`: o código.
       # atribuicao_nao_avaliou (#2154): depois do aviso, a IA de Atribuição não avaliou; `metadata.motivo` diz por quê
       # (sem_card, sem_passagem, pipeline_ai_disabled, credentials_missing...). Ninguém foi chamado: precisa aparecer.
-      enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
-                         skipped_escolhas_incompletas: 4, parado_sem_onde_trabalhar: 5, consulted: 6, consult_failed: 7,
-                         skipped_assunto_atrasou: 8, silenciado_pessoa_respondeu: 9, skipped_recuperada_tarde: 10,
-                         skipped_recuperacao_falhou: 11, skipped_recuperacao_acordar_falhou: 12,
-                         skipped_recuperacao_passagem_falhou: 13, skipped_recuperada_so_contexto: 14,
-                         skipped_mensagem_sem_suporte: 15, skipped_mensagem_apagada: 16, skipped_escolha_retirada: 17,
-                         avisou_que_chama_alguem: 18, atribuicao_nao_avaliou: 19 }
+      enum :event_type, { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
+                          skipped_escolhas_incompletas: 4, parado_sem_onde_trabalhar: 5, consulted: 6, consult_failed: 7,
+                          skipped_assunto_atrasou: 8, silenciado_pessoa_respondeu: 9, skipped_recuperada_tarde: 10,
+                          skipped_recuperacao_falhou: 11, skipped_recuperacao_acordar_falhou: 12,
+                          skipped_recuperacao_passagem_falhou: 13, skipped_recuperada_so_contexto: 14,
+                          skipped_mensagem_sem_suporte: 15, skipped_mensagem_apagada: 16, skipped_escolha_retirada: 17,
+                          avisou_que_chama_alguem: 18, atribuicao_nao_avaliou: 19 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
       # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento

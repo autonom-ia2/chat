@@ -918,6 +918,7 @@ export default {
             :voice-enabled="inbox.voice_enabled"
             class="shrink-0"
           />
+          <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
           <span v-if="inboxIdentifier" aria-hidden="true">·</span>
         </template>
         <bdi

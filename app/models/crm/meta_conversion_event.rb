@@ -37,7 +37,7 @@ class Crm::MetaConversionEvent < ApplicationRecord
   belongs_to :account
   belongs_to :card, class_name: 'Crm::Card', optional: true
 
-  enum status: { pending: 0, accepted: 1, skipped: 2, error: 3 }
+  enum :status, { pending: 0, accepted: 1, skipped: 2, error: 3 }
 
   # Meta may have received the event without answering, or a send stopped midway (#2738):
   # such a row is never sent again, since Meta does not dedup and the sale would count twice.

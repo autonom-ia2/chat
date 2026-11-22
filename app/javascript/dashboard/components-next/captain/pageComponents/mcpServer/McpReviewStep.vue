@@ -142,6 +142,7 @@ const paramChips = tool =>
             :class="SOURCE_STYLES[chip.source]"
           >
             <span class="font-mono">{{ chip.name }}</span>
+            <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
             <span class="opacity-60">·</span>
             <span class="truncate">{{ chip.label }}</span>
           </span>

@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file */
 import { flushPromises, mount } from '@vue/test-utils';
 import { useCommandBar } from '@chatwoot/jumpbar';
 import { KeepAlive, defineComponent, h, nextTick, ref } from 'vue';

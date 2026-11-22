@@ -67,6 +67,7 @@ const hoursSummary = computed(() =>
     >
       <span>
         <span class="font-medium">{{ label('INBOX_HOURS') }}</span>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         {{ hoursSummary || label('ALWAYS_CLOSED') }} · {{ inbox.timezone }}
       </span>
       <NextButton

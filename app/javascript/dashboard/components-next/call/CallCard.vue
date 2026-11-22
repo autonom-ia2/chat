@@ -303,6 +303,7 @@ const channelIcon = computed(() =>
             icon="i-ph-chat-circle-text-bold"
             class="size-3.5 text-n-call-widget-sub-text shrink-0"
           />
+          <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
           <span class="text-sm tracking-tight tabular-nums">
             #{{ call.conversationId }}
           </span>

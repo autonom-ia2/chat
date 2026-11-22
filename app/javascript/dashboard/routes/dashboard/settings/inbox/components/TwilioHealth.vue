@@ -449,6 +449,7 @@ const handleRegisterWebhook = () => emit('registerWebhook');
               :key="note.reason"
               class="text-label-small text-n-slate-11"
             >
+              <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
               <span class="text-n-amber-11">{{ note.reasonLabel }}</span>
               &mdash; {{ note.hint }}
             </p>

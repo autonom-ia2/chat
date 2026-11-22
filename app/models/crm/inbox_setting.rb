@@ -38,9 +38,9 @@ class Crm::InboxSetting < ApplicationRecord
   belongs_to :default_pipeline, class_name: 'Crm::Pipeline', optional: true
   belongs_to :default_stage, class_name: 'Crm::PipelineStage', optional: true
 
-  enum visibility_mode: { all_inbox_cards: 0, assigned_only: 1 }
+  enum :visibility_mode, { all_inbox_cards: 0, assigned_only: 1 }
   # Multifunil (#1145): o que a IA faz quando identifica o assunto da conversa. Desligada é o padrão.
-  enum subject_ai_mode: { off: 0, suggest: 1, auto: 2 }, _prefix: :subject_ai
+  enum :subject_ai_mode, { off: 0, suggest: 1, auto: 2 }, prefix: :subject_ai
 
   after_update_commit :expirar_sugestoes_de_assunto, if: :saiu_do_modo_sugerir?
 

@@ -39,10 +39,12 @@ export default {
     </h5>
     <ul class="ml-0 list-none">
       <li>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="inline-block mr-1">❌</span>
         <span v-dompurify-html="deleteWarning" />
       </li>
       <li>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="inline-block mr-1">✅</span>
         <span v-dompurify-html="attributeWarning" />
       </li>
