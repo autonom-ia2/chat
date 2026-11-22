@@ -93,6 +93,7 @@ defineExpose({ abrir });
     :rotulo-salvar="t('RELACIONAMENTOS.LISTA.NOVA_EMPRESA.SALVAR')"
     :definicoes="camposDaConta.definicoes.value"
     :escolhidos="camposDaConta.escolhidos.value"
+    :guardadas="camposDaConta.guardadas.value"
     @fechar="aberta = false"
     @salvar="salvar"
   />

@@ -149,21 +149,22 @@
     "CONFIGURE_RECORD_DESCRIPTION": "Choose what shows on the profile.",
     "RECORD_RULE": "Turned on: always shows, even when empty. Turned off: only shows once it is filled in.",
     "USE_FIELD": "Use this field",
-    "SHOW_HELP": "When off, the field disappears from every screen. What was written stays saved.",
+    "SHOW_HELP": "When off, the field disappears from the screens, but the AI keeps using it. To remove it from the AI too, delete the field.",
     "DELETE": {
       "OPEN": "Delete this field",
       "TITLE": "Delete the field “{name}”?",
-      "GONE": "It leaves the record, the forms and the AIs.",
+      "GONE": "It disappears from the record and the other screens, and the AI stops using it.",
       "KEPT": "What was already written in it stays saved. You can bring the field back whenever you want, with everything that was written.",
       "CONFIRM": "Delete field",
-      "ERROR": "Could not delete the field. Try again."
+      "ERROR": "Could not delete the field. Try again.",
+      "DONE": "“{name}” was deleted. It is in “Deleted fields”, at the end of the list."
     },
     "DELETED": {
       "TITLE": "Deleted fields",
       "HELP": "What was written in them is saved.",
       "BRING_BACK": "Bring back",
       "BRING_BACK_TITLE": "Bring the field back",
-      "BRING_BACK_DESCRIPTION": "It comes back with everything that was written. Check the name and “What it is for”."
+      "BRING_BACK_DESCRIPTION": "It comes back with everything that was written. You can change the name first."
     },
     "DESCRIPTION_REQUIRED": "What it is for (required)",
     "SAVE_NEEDS": {
@@ -191,7 +192,7 @@
     "NO_DEFINITIONS": "There are no fields yet. Use New field to create the first one.",
     "SELECTION_SUMMARY": "{selected} of {total} show",
     "BREADCRUMB_LABEL": "Relationships navigation",
-    "GLOBAL_NOTE": "This applies to the whole team. Hiding a field does not delete what was already written in it.",
+    "GLOBAL_NOTE": "This applies to the whole team. What was written is never lost, neither when hiding nor when deleting a field.",
     "MORE_ACTIONS": "More actions",
     "VISIT_SITE": "Visit website",
     "OPEN_PANEL": "Open relationship panel",

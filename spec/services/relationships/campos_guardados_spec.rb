@@ -45,10 +45,19 @@ RSpec.describe Relationships::CamposGuardados do
     expect(guardados).to be_empty
   end
 
-  it 'mantém só os mais recentes' do
-    stub_const("#{described_class}::LIMITE", 2)
+  it 'guarda todos, o mais recente primeiro' do
     %w[a b c].each { |chave| campo(attribute_key: chave, attribute_display_name: chave).destroy! }
 
-    expect(guardados.pluck('attribute_key')).to eq(%w[c b])
+    expect(guardados.pluck('attribute_key')).to eq(%w[c b a])
+  end
+
+  it 'tira a anotação mesmo quando a conta foi lida antes do apagar' do
+    lida_antes = Account.find(account.id)
+    campo.destroy!
+
+    create(:custom_attribute_definition, account: lida_antes, attribute_model: 'contact_attribute', attribute_key: 'placa',
+                                         attribute_display_name: 'Placa')
+
+    expect(guardados).to be_empty
   end
 end

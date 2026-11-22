@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref, watch, useId, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, useId, onBeforeUnmount, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
@@ -138,6 +139,25 @@ const bringBack = item => {
   listOptions.value = (item.attribute_values || []).join('\n');
   initialOptions = listOptions.value;
 };
+const withoutField = (surfacesById, id) =>
+  Object.fromEntries(
+    Object.entries(surfacesById).map(([name, selection]) => [
+      name,
+      selection?.ids
+        ? { ...selection, ids: selection.ids.filter(item => item !== id) }
+        : selection,
+    ])
+  );
+const openDeleting = async () => {
+  deleting.value = true;
+  await nextTick();
+  dialog.value?.$el?.querySelector?.('[data-voltar-da-conferencia]')?.focus();
+};
+const closeDeleting = async () => {
+  deleting.value = false;
+  await nextTick();
+  dialog.value?.$el?.querySelector?.('[data-abrir-apagar]')?.focus();
+};
 const backToList = () => {
   deleting.value = false;
   draft.value = null;
@@ -148,12 +168,17 @@ const deleteField = async () => {
   busy.value = true;
   error.value = '';
   try {
+    const { id, attribute_display_name: name } = draft.value;
     await remove(draft.value, openedAccount.value);
     if (current !== generation || accountId.value !== openedAccount.value)
       return;
+    // O campo apagado sai das áreas: salvar depois com o id dele daria erro.
+    layout.value = withoutField(layout.value, id);
+    initialSurfaces = withoutField(initialSurfaces, id);
     // Volta para a lista, onde o campo aparece em "Campos apagados".
     directEntry.value = false;
     backToList();
+    useAlert(t('RELATIONSHIPS.DELETE.DONE', { name }));
   } catch {
     if (current === generation) error.value = t('RELATIONSHIPS.DELETE.ERROR');
   } finally {
@@ -360,10 +385,15 @@ const submit = async () => {
   const broughtBack = restoring.value;
   try {
     await save(payload, openedAccount.value);
-    // O campo trazido de volta sai da lista de apagados: uma leitura nova.
-    if (broughtBack) load();
-    if (current === generation && accountId.value === openedAccount.value)
-      dialog.value.close();
+    if (current !== generation || accountId.value !== openedAccount.value)
+      return;
+    // Trazido de volta: a lista de novo, com o campo nela e fora de "Campos
+    // apagados" (uma leitura nova). Os outros salvares fecham a janela.
+    if (broughtBack) {
+      directEntry.value = false;
+      backToList();
+      load();
+    } else dialog.value.close();
   } catch (e) {
     if (current !== generation) return;
     error.value =
@@ -609,8 +639,9 @@ defineExpose({ open });
               ruby
               icon="i-lucide-trash-2"
               class="relative before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']"
+              data-abrir-apagar
               :label="t('RELATIONSHIPS.DELETE.OPEN')"
-              @click="deleting = true"
+              @click="openDeleting"
             />
           </div>
         </template>
@@ -776,7 +807,8 @@ defineExpose({ open });
             :label="
               t(deleting ? 'RELATIONSHIPS.BACK' : 'DIALOG.BUTTONS.CANCEL')
             "
-            @click="deleting ? (deleting = false) : dialog.close()"
+            :data-voltar-da-conferencia="deleting || undefined"
+            @click="deleting ? closeDeleting() : dialog.close()"
           />
           <Button
             type="submit"

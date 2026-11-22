@@ -63,10 +63,14 @@ class CustomAttributeDefinition < ApplicationRecord
   after_update_commit :invalidate_filtered_unread_count_filters_update, if: :conversation_attribute_before_or_after?
   after_destroy_commit :invalidate_filtered_unread_count_filters_destroy, if: :conversation_attribute?
   # #3082: o campo de pessoa ou empresa apagado fica "guardado escondido"; criar de novo com a mesma chave o traz de volta.
-  after_destroy_commit { Relationships::CamposGuardados.new(account).guardar!(self) }
-  after_create_commit { Relationships::CamposGuardados.new(account).esquecer!(self) }
+  after_destroy_commit(if: :guardado_escondido?) { Relationships::CamposGuardados.new(account).guardar!(self) }
+  after_create_commit(if: :guardado_escondido?) { Relationships::CamposGuardados.new(account).esquecer!(self) }
 
   private
+
+  def guardado_escondido?
+    Relationships::CamposGuardados::MODELOS.include?(attribute_model)
+  end
 
   def pessoa_so_no_card
     errors.add(:attribute_display_type, I18n.t('errors.custom_attribute_definition.pessoa_so_no_card')) if pessoa? && !card_attribute?

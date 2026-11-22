@@ -11,8 +11,6 @@
 class Relationships::CamposGuardados
   CHAVE = 'campos_guardados'.freeze
   MODELOS = %w[contact_attribute company_attribute].freeze
-  # Só os mais recentes: a anotação é para trazer de volta, não um histórico. Os valores ficam mesmo assim.
-  LIMITE = 100
   CAMPOS = %w[attribute_key attribute_model attribute_display_name attribute_display_type attribute_description attribute_values].freeze
 
   def initialize(account)
@@ -26,12 +24,13 @@ class Relationships::CamposGuardados
   def guardar!(definition)
     return unless anota?(definition)
 
-    mudar! { |itens| [registro(definition), *sem(itens, definition)].first(LIMITE) }
+    mudar! { |itens| [registro(definition), *sem(itens, definition)] }
   end
 
-  # Quase toda criação é de campo que nunca foi apagado: sem anotação dele, nem trava a conta.
+  # A conferência é feita depois de travar e reler a conta: com a conta lida antes, um apagar da mesma chave feito no
+  # meio passaria despercebido e o campo trazido de volta ficaria em "Campos apagados".
   def esquecer!(definition)
-    return unless anota?(definition) && sem(lista, definition) != lista
+    return unless anota?(definition)
 
     mudar! { |itens| sem(itens, definition) }
   end
@@ -43,6 +42,9 @@ class Relationships::CamposGuardados
     @account.present? && !@account.destroyed? && MODELOS.include?(definition.attribute_model)
   end
 
+  # A anotação roda depois do commit do apagar, numa transação própria: travar a conta dentro dele inverteria a ordem
+  # das travas de Relationships::Configuration#update! (conta, depois definição). Se ela falhar, o campo já saiu e o
+  # valor aparece na ficha como campo solto, sem perder nada; criar o campo de novo com o mesmo nome o traz de volta.
   def mudar!
     @account.with_lock do
       atual = lista

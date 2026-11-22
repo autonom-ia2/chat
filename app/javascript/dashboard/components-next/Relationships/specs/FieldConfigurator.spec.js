@@ -691,5 +691,52 @@ it('brings a deleted field back with the same key, type and purpose', async () =
     attribute_display_type: 'text',
     attribute_description: 'Placa do carro',
   });
+  // Volta para a lista, onde a pessoa vê o campo de novo.
+  expect(wrapper.find('dialog').element.open).toBe(true);
+  expect(wrapper.find('input[type="search"]').exists()).toBe(true);
+  wrapper.unmount();
+});
+
+it('saves the layout after a deletion without the deleted field id', async () => {
+  const comPlaca = leitura([
+    campoPlaca,
+    {
+      ...campoPlaca,
+      id: 43,
+      attribute_key: 'cor',
+      attribute_display_name: 'Cor',
+    },
+  ]);
+  comPlaca.data.configuration.surfaces = {
+    contact_sidebar: { mode: 'custom', ids: [41, 43] },
+  };
+  axios.get.mockResolvedValue(comPlaca);
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
+  await click(wrapper, 'RELATIONSHIPS.DELETE.OPEN');
+  axios.delete.mockResolvedValue({ status: 204 });
+  axios.get.mockResolvedValue(
+    leitura(
+      [
+        {
+          ...campoPlaca,
+          id: 43,
+          attribute_key: 'cor',
+          attribute_display_name: 'Cor',
+        },
+      ],
+      [guardadoPlaca]
+    )
+  );
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  axios.patch.mockResolvedValue({
+    data: { configuration: { version: 1, revision: 5, surfaces: {} } },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(
+    JSON.stringify(axios.patch.mock.calls[0][1].configuration.surfaces)
+  ).not.toContain('41');
   wrapper.unmount();
 });
