@@ -106,3 +106,12 @@ https://claude.ai/artifact/Wf9osoyu2idv7dAzHntR6s
   "Feito pelo Guia" (últimos 5 dias) no cabeçalho do painel.
 - **Limpeza**: `Autonomia::Guide::LimparExecucoesJob`, todo dia às 04:30, apaga o
   que passou dos 5 dias.
+
+## #3117 — o Guia faz para todos
+
+Decidido com o Rodrigo em 22/11/2026: o Guia faz para qualquer pessoa da conta, dentro da permissão dela. A trava por
+papel saiu de `Acoes#garantir_permitida!` e das tarefas longas; quem decide é a policy da plataforma, pelo token da
+pessoa, como na tela. A recusa por permissão (401/403) vira uma frase traduzida (`RecusaDaPlataforma`). As regras
+automáticas ainda passam pelo `PorteiroDaAutomacao`, para a recusa dizer qual chave falta. Continuam só de
+administrador: as anotações "da corretora", as vigias e os avisos. O MCP segue só para quem administra
+(`Mcp::Plataforma::Acoes#so_administrador?`) até decisão própria.

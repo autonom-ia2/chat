@@ -180,13 +180,14 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(conta.campaigns.count).to eq(0)
     end
 
-    it 'não muda nada para quem não administra a conta' do
+    # #3117: o Guia não recusa pelo papel. O que o perfil não alcança, a plataforma nega, e a ferramenta repassa.
+    it 'para quem não administra, repassa a negativa da plataforma e não muda nada', :aggregate_failures do
       agente_comum, = create_crm_agent(account: conta)
       comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
 
-      expect { executar(pedido, quem: comum) }.not_to change(conta.labels, :count)
-      # Recusado antes de abrir: nada de turno vazio na lista "Feito pelo Guia".
-      expect(Autonomia::Guide::Execucao.where(user: agente_comum)).to be_empty
+      resposta = nil
+      expect { resposta = executar(pedido, quem: comum) }.not_to change(conta.labels, :count)
+      expect(resposta).to include(I18n.t('autonomia.guide.not_permitted'))
     end
 
     it 'não aponta para registro que não leu', :aggregate_failures do
@@ -239,15 +240,14 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(resposta).to be_present
     end
 
-    # Quem não administra não escreve. A `Acoes` já barra; aqui o que se garante
-    # é que a ferramenta repassa a recusa em vez de propor assim mesmo.
-    it 'não prepara mudança para quem não administra a conta', :aggregate_failures do
+    # #3117: quem não administra também recebe o cartão; quem decide é a plataforma, no clique, com o token dele.
+    it 'prepara a mudança para quem não administra, sem tocar no banco', :aggregate_failures do
       agente_comum, = create_crm_agent(account: conta)
       comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
 
       propor(pedido, quem: comum)
 
-      expect(comum.proposta).to be_nil
+      expect(comum.proposta[:nome]).to eq('POST campaigns')
       expect(conta.campaigns.count).to eq(0)
     end
 

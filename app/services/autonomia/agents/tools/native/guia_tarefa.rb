@@ -16,7 +16,7 @@ class Autonomia::Agents::Tools::Native::GuiaTarefa < Autonomia::Agents::Tools::N
       'Planeja um trabalho grande na conta (mais de uns 20 registros, até 5.000): aplica a MESMA ação a ' \
         'cada registro de uma leitura, em lotes, com desfazer. NÃO muda nada agora: devolve a amostra de 10 ' \
         '(antes e depois), o custo e o tempo, e a tela mostra o botão Começar para a pessoa. Mensagem em ' \
-        'massa não entra (é campanha). Só funciona para quem administra a conta.'
+        'massa não entra (é campanha). Cada registro muda com a permissão de quem pediu.'
     end
 
     def params

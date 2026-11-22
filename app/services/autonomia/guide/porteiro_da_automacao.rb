@@ -1,5 +1,7 @@
 # #2414 F1.3 (D2/D4): montar e ligar automação pelo Guia vale para quem tem a chave de automação, não só para quem
-# administra a conta. Fora estas ações, o catálogo segue só para quem administra (Acoes#garantir_permitida!).
+# administra a conta. Desde a #3117 o Guia faz tudo para qualquer pessoa da conta, e quem decide é a policy; estas ações
+# continuam passando por aqui antes, para a recusa dizer qual chave falta na função. O MCP segue só para quem administra,
+# salvo estas ações (`so_administrador`).
 # As chaves de cada ação são as mesmas da policy do recurso (AutomationRulePolicy, Autonomia::DecisorPolicy e, na etapa
 # do CRM, StageAutomationPolicy), para o Guia não propor o que a plataforma vai recusar. Quem decide no fim é a policy,
 # pelo token da pessoa.
@@ -46,16 +48,24 @@ class Autonomia::Guide::PorteiroDaAutomacao
   # mudança sem as ações no corpo ficam com o controller, que olha a regra gravada.
   REGRA_COM_CORPO = ['POST automation_rules', 'PATCH automation_rules/:id', 'PUT automation_rules/:id'].freeze
 
-  # nil quando pode; senão a chave i18n da recusa. Sem a flag `automacao_fundacao`, o Guia segue só para quem administra.
+  # nil quando pode; senão a chave i18n da recusa. Ação que não é de automação, ou conta sem a flag `automacao_fundacao`
+  # (onde a etapa do CRM pede só a chave do funil): nil, quem decide é a policy (#3117).
   def self.recusa(acao, account_user, corpo = {})
-    return 'admin_only' unless Autonomia::Automacao.fundacao?(account_user&.account)
+    return 'admin_only' if account_user.nil?
 
     recusa = RECUSA_POR_ACAO[acao.to_s]
-    return 'admin_only' if recusa.nil?
-    return recusa if account_user.blank?
+    return if recusa.nil? || !Autonomia::Automacao.fundacao?(account_user&.account)
     return recusa unless cumpre?(recusa, account_user)
 
     'rule_funnel_manage_only' if mexe_no_funil_sem_chave?(acao, account_user, corpo)
+  end
+
+  # A regra de antes da #3117, que o MCP mantém: quem não administra só faz estas ações, e só com a flag
+  # `automacao_fundacao`.
+  def self.so_administrador(acao, account_user, corpo = {})
+    return 'admin_only' unless Autonomia::Automacao.fundacao?(account_user&.account) && RECUSA_POR_ACAO.key?(acao.to_s)
+
+    recusa(acao, account_user, corpo)
   end
 
   def self.mexe_no_funil_sem_chave?(acao, account_user, corpo)

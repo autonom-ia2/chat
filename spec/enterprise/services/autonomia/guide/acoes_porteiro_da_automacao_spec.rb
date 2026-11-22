@@ -3,7 +3,8 @@ require 'rails_helper'
 # #2414 F1.3 (D2/D4): o Guia só monta ou liga automação para quem tem `automation_manage`. Com a função
 # personalizada que dá a chave, funciona sem ser admin; sem ela, a pessoa ouve que não tem acesso. Automação de etapa
 # do CRM pede também `crm_manage_pipelines`, no Guia e na tela. Tudo isso só com a flag `automacao_fundacao`: sem ela,
-# o Guia segue só para quem administra e a etapa segue só com a chave do funil.
+# quem decide é a policy, como na tela, e a etapa segue só com a chave do funil.
+# #3117: fora das automações, o Guia não recusa pelo papel; quem decide é a policy da plataforma.
 RSpec.describe Autonomia::Guide::Acoes do
   let(:account_and_admin) { create_account_and_user }
   let(:account) { account_and_admin.first }
@@ -64,11 +65,13 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect { para(com_funil).executar('POST automation_rules', { corpo: move_card }) }.to change(AutomationRule, :count).by(1)
   end
 
-  it 'automation_manage não abre o resto do catálogo' do
+  it 'fora das automações, quem decide é a policy: sem a chave de etiquetas, a plataforma nega', :aggregate_failures do
     com_chave = com_funcao(%w[automation_view automation_manage])
 
-    expect { para(com_chave).executar('POST labels', { corpo: { title: 'x' } }) }
-      .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.admin_only'))
+    resultado = para(com_chave).executar('POST labels', { corpo: { title: 'x' } })
+
+    expect(resultado.ok).to be(false)
+    expect(resultado.mensagem).to eq(I18n.t('autonomia.guide.not_permitted'))
   end
 
   it 'o ensaio só lê: basta ver as regras (automation_view), como na tela' do
@@ -153,10 +156,17 @@ RSpec.describe Autonomia::Guide::Acoes do
   describe 'sem a flag automacao_fundacao' do
     before { account.disable_features!('automacao_fundacao') }
 
-    it 'o Guia segue só para quem administra, mesmo com automation_manage' do
+    it 'quem tem automation_manage monta pelo Guia, como na tela (#3117)' do
       com_chave = com_funcao(%w[automation_view automation_manage])
 
-      expect { para(com_chave).executar('POST automation_rules', { corpo: regra }) }
+      expect { para(com_chave).executar('POST automation_rules', { corpo: regra }) }.to change(AutomationRule, :count).by(1)
+    end
+
+    it 'o MCP segue só para quem administra, como antes da #3117' do
+      com_chave = com_funcao(%w[automation_view automation_manage])
+      mcp = Mcp::Plataforma::Acoes.new(app_name: 'Claude', account: account, user: com_chave)
+
+      expect { mcp.executar('POST automation_rules', { corpo: regra }) }
         .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.admin_only'))
     end
 

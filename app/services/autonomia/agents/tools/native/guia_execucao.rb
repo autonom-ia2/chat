@@ -32,7 +32,8 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
       'Faz uma mudança na conta AGORA (criar, alterar, apagar), com a permissão de quem pediu. Tudo o que ' \
         'você fizer pode ser desfeito pela pessoa por 5 dias. Chame uma vez por passo, na ordem: o retorno ' \
         'traz o que a plataforma respondeu, inclusive o id do que foi criado, para usar no passo seguinte. ' \
-        'Só funciona para quem administra a conta; regras automáticas também para quem tem a permissão delas.'
+        'Vale para qualquer pessoa da conta, até onde a permissão dela alcança: se a plataforma recusar por ' \
+        'permissão, diga isso e pare os passos que dependiam deste.'
     end
 
     def params

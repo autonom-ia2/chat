@@ -232,18 +232,11 @@ RSpec.describe Autonomia::Guide::Acoes do
         .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.unknown_action'))
     end
 
-    it 'recusa agente comum, mesmo pedindo direto ao serviço' do
+    # #3117 (decisão do Rodrigo, 22/11): o Guia não recusa pelo papel. Quem decide é a plataforma, pelo token da pessoa.
+    it 'não recusa agente comum na descrição: a confirmação dele vai à plataforma como a do admin' do
       agente, = create_crm_agent(account: conta)
 
-      expect { para(agente).executar('POST labels', { corpo: { title: 'x' } }) }
-        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.admin_only'))
-    end
-
-    it 'recusa agente comum já na descrição, antes de qualquer confirmação' do
-      agente, = create_crm_agent(account: conta)
-
-      expect { para(agente).descrever('POST labels', { corpo: { title: 'x' }, descricao: 'Criar.' }) }
-        .to raise_error(described_class::Recusada)
+      expect(para(agente).descrever('POST labels', { corpo: { title: 'x' }, descricao: 'Criar.' })[:frase]).to eq('Criar.')
     end
 
     # Rota com `:id` vazio atingiria o registro errado, ou nenhum.
@@ -305,6 +298,29 @@ RSpec.describe Autonomia::Guide::Acoes do
       alheia = outra_conta.labels.create!(title: 'alheia')
 
       expect(para(admin).executar('DELETE labels/:id', { caminho: { id: alheia.id } }).ok).to be(false)
+    end
+
+    # #3117: o Guia faz para quem não administra o que a policy deixa, com o token dele.
+    it 'faz para agente comum o que o perfil dele alcança', :aggregate_failures do
+      agente, = create_crm_agent(account: conta)
+      contato = create(:contact, account: conta, name: 'MARIA SOUZA')
+
+      resultado = para(agente).executar('PATCH contacts/:id', { caminho: { id: contato.id }, corpo: { name: 'Maria Souza' } })
+
+      expect(resultado.ok).to be(true)
+      expect(contato.reload.name).to eq('Maria Souza')
+    end
+
+    # O que o perfil não alcança, a policy nega (401): a pessoa lê a frase traduzida, nunca o "not authorized" da plataforma,
+    # e o motivo cru vai só para o modelo.
+    it 'quando a policy nega a agente comum, diz que o perfil não tem permissão', :aggregate_failures do
+      agente, = create_crm_agent(account: conta)
+
+      resultado = para(agente).executar('POST labels', { corpo: { title: 'x' } })
+
+      expect(resultado.ok).to be(false)
+      expect(resultado.mensagem).to eq(I18n.t('autonomia.guide.not_permitted'))
+      expect(conta.labels.find_by(title: 'x')).to be_nil
     end
 
     it 'não derruba a resposta quando a chamada interna estoura' do
