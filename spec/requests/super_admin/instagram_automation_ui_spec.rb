@@ -215,6 +215,7 @@ RSpec.describe 'Super Admin Instagram automation UI', type: :request do
     get path
     expect(response).to have_http_status(:ok)
     # Upgrade 4.19.1 (#3119): the redesign shows the Settings links as the sidebar section, not a <details> submenu.
-    expect(page.at_css("aside nav a[href='#{path}'][aria-current='page']")).to be_present
+    # `page` is memoized from the first request, so read this response directly.
+    expect(Nokogiri::HTML(response.body).at_css("aside nav a[href='#{path}'][aria-current='page']")).to be_present
   end
 end

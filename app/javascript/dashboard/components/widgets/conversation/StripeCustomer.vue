@@ -1,5 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { dateFormat } from 'shared/helpers/timeHelper';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import {
@@ -9,6 +10,7 @@ import {
 import StripeAPI from 'dashboard/api/integrations/stripe';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Label from 'dashboard/components-next/label/Label.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import StripeSubscription from './StripeSubscription.vue';
 
 const props = defineProps({
@@ -16,10 +18,22 @@ const props = defineProps({
   contactEmail: { type: String, default: '' },
 });
 
+const { t } = useI18n();
 const { run, isPending } = useAbortableRequest();
 const summary = ref(null);
 const customerId = ref('');
 const error = ref(false);
+
+// Upgrade 4.19.1 (#3119): the repository forbids the native <select>; customers are picked with ChoiceSelect.
+const customerOptions = computed(() =>
+  (summary.value?.customers || []).map(customer => ({
+    value: customer.id,
+    label: t('STRIPE_INTEGRATION.CUSTOMER_OPTION', {
+      name: customer.name || customer.email,
+      id: customer.id,
+    }),
+  }))
+);
 
 const load = async () => {
   error.value = false;
@@ -64,23 +78,12 @@ watch(
       <template v-else>
         <label v-if="summary.customers.length > 1" class="flex flex-col gap-2">
           {{ $t('STRIPE_INTEGRATION.SELECT') }}
-          <select v-model="customerId" class="!mb-0" @change="load">
-            <option value="" disabled>
-              {{ $t('STRIPE_INTEGRATION.SELECT') }}
-            </option>
-            <option
-              v-for="customer in summary.customers"
-              :key="customer.id"
-              :value="customer.id"
-            >
-              {{
-                $t('STRIPE_INTEGRATION.CUSTOMER_OPTION', {
-                  name: customer.name || customer.email,
-                  id: customer.id,
-                })
-              }}
-            </option>
-          </select>
+          <ChoiceSelect
+            v-model="customerId"
+            :options="customerOptions"
+            :placeholder="$t('STRIPE_INTEGRATION.SELECT')"
+            @change="load"
+          />
         </label>
         <p
           v-if="summary.has_more_customers"

@@ -69,7 +69,11 @@ class CreateCopilotRuns < ActiveRecord::Migration[7.2]
   # Captain::Copilot::RecoverRunsJob checks every account for unfinished runs and running tool calls, a small part of
   # tables that keep growing.
   def add_recovery_indexes
-    add_index :copilot_runs, :status, where: "status IN ('queued', 'running')", name: 'index_copilot_runs_claimable'
+    # Fork (upgrade 4.19.1, #3119): the predicate is written the way PostgreSQL prints it back, so schema.rb and the
+    # migration build the same index (an `IN (...)` list deparses differently), as in 20261108580000.
+    add_index :copilot_runs, :status,
+              where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))",
+              name: 'index_copilot_runs_claimable'
     add_index :copilot_tool_calls, :status, where: "status = 'running'", name: 'index_copilot_tool_calls_running'
   end
 end

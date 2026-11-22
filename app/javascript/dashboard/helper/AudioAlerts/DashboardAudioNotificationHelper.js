@@ -88,7 +88,8 @@ export class DashboardAudioNotificationHelper {
       tone: audioAlertTone,
     };
 
-    if (previousAudioTone !== audioAlertTone) {
+    // Upgrade 4.19.1 (#3119), approved by Rodrigo: also load the audio when none is loaded yet, so the default tone plays.
+    if (!this.audioConfig.audio || previousAudioTone !== audioAlertTone) {
       this.intializeAudio();
     }
 

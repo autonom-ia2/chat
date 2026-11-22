@@ -71,7 +71,7 @@ contagens de uso citadas são agregadas.
 - Super Admin: o redesenho (#16137) apagou o playground do Super Admin (`superadmin_pages/views/playground`); o fork não mexia nele.
 - Checagem estática de imports (parser do Vue/Babel, `tools/imports_check.cjs`): nenhum import quebrado nem nome não exportado além da linha de base da main (só o alias `test-i18n` de spec, que também aparece na main).
 
-## Modelos de IA (#16266) — DECISÃO DO RODRIGO PENDENTE
+## Modelos de IA (#16266) — decidido: troca aceita (Rodrigo, 22/11; ver oitava rodada)
 - O upstream troca os padrões: texto GPT‑4.1/4.1‑mini → `gpt-6-luna`; transcrição `whisper-1`/`gpt-4o-mini-transcribe` → `gpt-transcribe`; e a migration `20261015063804` regrava `CAPTAIN_OPEN_AI_MODEL` (se começa com `gpt-4`, só no endpoint padrão) e `captain_models` das contas com modelo aposentado.
 - Quem usa em produção: 1 conta com integração `openai` (sugestão/reescrita/resumo no editor) e, talvez, a transcrição de áudio nativa (contagem não feita). Captain: zero.
 - Motivo de não neutralizar por conta própria: a OpenAI desligou o `gpt-4.1-nano` em 23/10/2026, desliga a série GPT‑4 em 14/01/2027 e os modelos antigos de transcrição em 26/02/2027. Ficar com o modelo do fork mantém o comportamento por ~2 meses e depois quebra.
@@ -216,3 +216,25 @@ Sétima rodada (CI do bcd48c10b6: 151 testes de RSpec falhando, 136 já vinham d
   - IMAP sem a trava de e-mail duplicado do upstream;
   - texto e `_target` do link da pesquisa de satisfação (bug antigo do fork).
 - **Para o diretor de arte:** cartões de recurso com 44 px (eram 40); menu da conta sem identidade na página do Instagram; campo de nicho dentro da linha de campo do redesenho. O `instagram_assisted_onboarding_field/_form` (só fora do Enterprise) ainda usa as classes antigas.
+
+Oitava rodada (CI do 960887f9ce e decisões do Rodrigo, 22/11):
+- **CI 5:** das 151 falhas, sobraram 3.
+  - `contacts/conversations_controller_spec`: teste do upstream de ordenar as conversas do contato pela última atividade. Como as conversas do contato seguem ordenadas por `created_at desc` (#46, fork), o spec voltou ao fork.
+  - `instagram_automation_ui_spec`: o `page` do spec é memoizado da primeira requisição, então a checagem olhava a página de configurações. Agora lê a resposta da página de automação. O spec do fork tinha o mesmo vício.
+  - `Migrations do lote`: o `where: "status IN (...)"` de `index_copilot_runs_claimable` gera no Postgres um predicado que nenhum texto carregado do `schema.rb` reproduz (conferido num Postgres local, em tabela temporária). A migration passa a escrever o predicado como o Postgres o imprime, igual à `20261108580000` do fork.
+- **Decisões do Rodrigo:**
+
+| Item | Decisão | No código |
+|---|---|---|
+| #3133 MFA depois de redefinir senha | manter como hoje | segue neutralizado; Issue fechada como não planejada |
+| #3135 MFA na confirmação de e-mail e no token de API | manter como hoje | segue neutralizado; Issue fechada como não planejada |
+| Limite de tentativas de MFA (`rack_attack`) | manter como hoje | `config/initializers/rack_attack.rb` = fork inteiro. As outras mudanças do arquivo só serviam ao MFA obrigatório, ao Bearer e ao log, e saem junto. O `spec/initializers/rack_attack_spec.rb` (só do upstream) sai |
+| #3134 atendente ou time de outra conta | ligar depois, em PR próprio, conferindo antes robôs e n8n | segue neutralizado; decisão comentada na Issue |
+| Modelos de IA (#16266) | aceitar a troca agora | já estava no branch: `config/llm.yml` do upstream e migration `20261015063804` |
+| Alerta sonoro com o toque padrão | aplicar a correção do upstream | `DashboardAudioNotificationHelper.js`: carrega o áudio também quando nenhum foi carregado |
+| Assinatura do webhook de voz do Twilio | manter a conferência | sem mudança (código do upstream; só voz) |
+| IMAP sem trava de e-mail duplicado | ligar depois, em PR próprio | Issue #3136 |
+| Campanha inexistente | 404 agora | `campaigns_controller` com `find_by!`; teste do upstream de volta ao spec |
+| Link da pesquisa de satisfação | corrigir depois, em PR próprio | Issue #3137 |
+| `<select>` nativo em `StripeCustomer.vue` | trocar agora | `ChoiceSelect` com as mesmas opções e o mesmo `load` na troca |
+| Layout do Super Admin | só o Rodrigo usa; precisa funcionar | sem diretor de arte para o Super Admin |

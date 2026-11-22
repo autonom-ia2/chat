@@ -43,7 +43,7 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   end
 
   def campaign
-    @campaign ||= Current.account.campaigns.find_by(display_id: params[:id])
+    @campaign ||= Current.account.campaigns.find_by!(display_id: params[:id])
   end
 
   def campaign_params
