@@ -37,6 +37,7 @@
       "POUCOS": "Not enough to compare yet: few people were left out.",
       "SO_CONTAGEM": "The purchase value is hidden for you. The account admin can grant access.",
       "NINGUEM_FECHADO": "Nobody who got it bought within the {dias} days.",
+      "NINGUEM_RECEBEU": "No one received this campaign, so there are no purchases to count.",
       "UM_POUCO_MAIS": "Those who got it bought more than those left out.",
       "POUCAS_COMPRAS": "Can't be sure yet: too few purchases to compare.",
       "DE_CADA": "Out of every {escala} who received it, {n} bought. | Out of every {escala} who received it, {n} bought. | Out of every {escala} who received it, {n} bought.",

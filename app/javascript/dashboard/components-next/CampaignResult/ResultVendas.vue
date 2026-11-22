@@ -25,6 +25,8 @@ const veValores = computed(() => Array.isArray(props.vendas.compraram?.valor));
 const dinheiro = valor => wonValueText(valor, idioma.value);
 const quantas = computed(() => props.vendas.compraram?.pessoas ?? 0);
 const contando = computed(() => Boolean(props.vendas.contando_ate));
+// #3115: a campanha não chegou a ninguém (público 0, nada enviado): não há janela nem compra para contar.
+const ninguemRecebeu = computed(() => (props.vendas.receberam ?? 0) === 0);
 
 const situacao = computed(() => {
   const { contando_ate: ate, janela_dias: dias } = props.vendas;
@@ -106,11 +108,24 @@ const lados = computed(() => {
       <h2 class="m-0 text-base font-semibold text-n-slate-12">
         {{ t(`${NS}.TITULO`) }}
       </h2>
-      <p class="m-0 text-sm text-n-slate-11" data-situacao>{{ situacao }}</p>
+      <p
+        v-if="!ninguemRecebeu"
+        class="m-0 text-sm text-n-slate-11"
+        data-situacao
+      >
+        {{ situacao }}
+      </p>
     </div>
 
     <p
-      v-if="quantas === 0"
+      v-if="ninguemRecebeu"
+      class="m-0 text-lg font-medium text-n-slate-12"
+      data-ninguem-recebeu
+    >
+      {{ t(`${NS}.NINGUEM_RECEBEU`) }}
+    </p>
+    <p
+      v-else-if="quantas === 0"
       class="m-0 text-lg font-medium text-n-slate-12"
       data-ninguem
     >
@@ -197,7 +212,11 @@ const lados = computed(() => {
       </ul>
     </div>
 
-    <p v-if="!veValores" class="m-0 text-xs text-n-slate-11" data-so-contagem>
+    <p
+      v-if="!veValores && !ninguemRecebeu"
+      class="m-0 text-xs text-n-slate-11"
+      data-so-contagem
+    >
       {{ t(`${NS}.SO_CONTAGEM`) }}
     </p>
   </section>
