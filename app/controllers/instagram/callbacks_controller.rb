@@ -2,6 +2,7 @@ class Instagram::CallbacksController < ApplicationController
   include InstagramConcern
   include Instagram::IntegrationHelper
 
+  # Fork (upgrade 4.20.1, #3120): no Unified Login path (#16645/#16646, PendingConnection) and no expired-state retry page.
   def show
     @oauth_payload = instagram_token_payload(params[:state])
     return redirect_to '/app' unless @oauth_payload

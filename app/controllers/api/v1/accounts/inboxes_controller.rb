@@ -10,6 +10,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   include Api::V1::Accounts::Concerns::InboxSecretManagement
   include Api::V1::Accounts::Concerns::InboxCredentialGuard
   before_action :check_credential_change, only: [:update]
+  include Api::V1::Accounts::Concerns::BandwidthConfiguration
+  before_action :prepare_bandwidth_configuration, only: [:create, :update]
 
   def index
     @inboxes = inbox_scope
@@ -58,8 +60,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
       inbox_params = permitted_params.except(:channel, :csat_config)
       inbox_params[:csat_config] = format_csat_config(permitted_params[:csat_config]) if permitted_params[:csat_config].present?
       @inbox.update!(inbox_params)
-      update_inbox_working_hours
       update_channel if channel_update_required?
+      update_inbox_working_hours
     end
 
     return unless continue_update

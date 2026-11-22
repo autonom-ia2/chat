@@ -2604,6 +2604,7 @@
 - monitor_reports_: monitores de conversa do Chatwoot, desligados nesta instalação (upgrade 4.19.1, #3119)
 - settings_integrations_stripe: integração Stripe do Chatwoot, desligada nesta instalação (upgrade 4.19.1, #3119)
 - shopify_select_account: escolha de conta na instalação do app da Shopify, sem uso nesta instalação (upgrade 4.19.1, #3119)
+- settings_data_export_show: página de exportação do Chatwoot; a exportação de contatos continua mandando o arquivo por e-mail, sem link para ela (upgrade 4.20.1, #3120)
 
 ### abrir_relacionamentos
 - titulo: Abrir Relacionamentos

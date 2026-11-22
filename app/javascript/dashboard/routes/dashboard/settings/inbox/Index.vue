@@ -181,6 +181,7 @@ const openDelete = inbox => {
             </div>
           </div>
           <div class="flex gap-3 justify-end shrink-0">
+            <!-- Fork (upgrade 4.20.1, #3120): the "view conversations" button of upstream #16496 stays out; the inbox list keeps the fork actions. -->
             <router-link
               :to="{
                 name: 'settings_inbox_show',

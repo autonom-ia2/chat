@@ -288,8 +288,14 @@ onMounted(() => {
               :key="`${accountId}:${route.params.contactId}`"
               :read-only="!canManageRelationshipRecords"
             />
-            <ContactHistory v-if="activeTab === 'history'" />
-            <ContactMedia v-if="activeTab === 'media'" />
+            <ContactHistory
+              v-if="activeTab === 'history'"
+              :key="`${accountId}:${route.params.contactId}`"
+            />
+            <ContactMedia
+              v-if="activeTab === 'media'"
+              :key="`${accountId}:${route.params.contactId}`"
+            />
             <ContactMerge
               v-if="activeTab === 'merge' && canManageRelationshipRecords"
               ref="contactMergeRef"

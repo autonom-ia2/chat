@@ -67,8 +67,8 @@ class Whatsapp::IncomingCallService
 
     return accept_outbound_call(call, payload) if call.outgoing?
 
-    Rails.logger.info "[WHATSAPP CALL] Duplicate inbound connect for #{payload[:id]}; ignoring"
-    Voice::InboundCallBuilder.queue_ring(call)
+    Rails.logger.info "[WHATSAPP CALL] Duplicate inbound connect for #{payload[:id]}; requeueing its ring"
+    Voice::InboundCallBuilder.queue_ring_jobs(call)
   end
 
   def inbound_offer?(payload)
@@ -84,11 +84,11 @@ class Whatsapp::IncomingCallService
 
     sdp_offer = payload.dig(:session, :sdp)
     call = build_inbound_call(payload, sdp_offer)
-
+    Whatsapp::DeclineCallJob.perform_later(inbox, payload[:id]) if call.end_reason == Call::OUTSIDE_WORKING_HOURS
     return if call.terminal? # terminated before pickup; no ringing widget to surface
 
     update_conversation(call)
-    broadcast_incoming(call, sdp_offer)
+    Whatsapp::IncomingCallBroadcast.new(call: call, user_ids: call.ring_state.fetch('ring_recipient_ids', [])).perform
   end
 
   # If a terminate already arrived (caller hung up before pickup), finalize it in the
@@ -213,32 +213,8 @@ class Whatsapp::IncomingCallService
     )
   end
 
-  # Ring the assignee if any, else online inbox agents, else fall back to the
-  # inbox's own agents and account admins. Never the whole-account stream, which
-  # would ring online agents from unrelated inboxes.
-  def broadcast_incoming(call, sdp_offer)
-    contact = call.contact
-    token = call.conversation.assignee&.pubsub_token
-    streams = token ? [token] : (online_agent_streams(call).presence || fallback_agent_streams(call))
-    broadcast(call, 'voice_call.incoming',
-              streams: streams,
-              direction: call.direction_label, inbox_id: call.inbox_id,
-              sdp_offer: sdp_offer, ice_servers: Call.default_ice_servers,
-              recording_enabled: call.recording_enabled?,
-              caller: { name: contact.name, phone: contact.phone_number, avatar: contact.avatar_url })
-  end
-
-  # Acesso por funil (#1148): a chamada não toca para quem o funil esconde.
-  def online_agent_streams(call)
-    blocked = Crm::Access::Recipients.new(call.conversation).blocked_user_ids
-    inbox.available_agents.where.not(users: { id: blocked }).pluck('users.pubsub_token').compact
-  end
-
-  def fallback_agent_streams(call)
-    user_ids = (inbox.member_ids - Crm::Access::Recipients.new(call.conversation).blocked_user_ids) | inbox.account.administrators.ids
-    User.where(id: user_ids).pluck(:pubsub_token).compact
-  end
-
+  # Acesso por funil (#1148): call events go only to who can see the conversation, not the whole account stream.
+  # Fork (upgrade 4.20.1, #3120): the ring itself now follows Voice::RingRecipients, which checks ConversationPolicy.
   def broadcast(call, event, streams: Crm::Access::CallStreams.for(call.conversation), **extra)
     payload = { event: event, data: base_payload(call).merge(extra) }
     streams.each { |s| ActionCable.server.broadcast(s, payload) }

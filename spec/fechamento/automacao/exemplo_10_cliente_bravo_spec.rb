@@ -243,7 +243,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
     end
 
     # Passo 2 (G15): "tirar ele da mão do robô". Passar a conversa para a Fernanda tira a agente de IA dela: a plataforma
-    # solta o robô quando uma pessoa assume (Conversation#reset_agent_bot_when_assignee_present).
+    # solta o robô quando uma pessoa assume (Conversation#clear_invalid_ai_assignee).
     context 'with a agente de IA atendendo (passo 2)' do
       let(:robo) { create(:agent_bot, account: account) }
       let(:conversa) do

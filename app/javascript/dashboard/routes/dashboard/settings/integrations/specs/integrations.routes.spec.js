@@ -40,6 +40,8 @@ describe('integration settings routes', () => {
     mocks.isFeatureEnabled.mockReset();
   });
 
+  // Fork (upgrade 4.20.1, #3120): the route keeps meta.featureFlag, which the
+  // Platform Guide reads as the route gate; upstream dropped it for custom apps.
   it('protects the Shopify route with the Shopify feature flag', () => {
     const shopifyRoute = integrationsRoutes.routes
       .flatMap(route => route.children || [])
@@ -69,8 +71,14 @@ describe('integration settings routes', () => {
     );
   });
 
-  it('allows direct navigation when Shopify is enabled', async () => {
-    mocks.isFeatureEnabled.mockReturnValue(true);
+  it.each([
+    [true, false],
+    [false, true],
+    [true, true],
+  ])('allows navigation with main=%s and custom=%s', async (main, custom) => {
+    mocks.isFeatureEnabled.mockImplementation((accountId, flag) =>
+      flag === FEATURE_FLAGS.SHOPIFY ? main : custom
+    );
     const next = vi.fn();
 
     await redirectShopifyIfUnavailable(

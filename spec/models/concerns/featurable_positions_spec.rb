@@ -58,7 +58,7 @@ RSpec.describe Featurable do
       relacionamentos_novo agente_ferramentas_prontas_ip_proprio automacao_passos_novos automacao_no_crm
       carteira_seguros agente_modelos_seguro captain_classifier conversation_monitors
       campaign_analytics company_enrichment stripe_integration mobile_voice_push
-      auto_translate copilot_workflows
+      auto_translate copilot_workflows shopify_custom_apps captain_mcp_servers
     ]
   }.freeze
 
@@ -73,9 +73,9 @@ RSpec.describe Featurable do
     expect(described_class.feature_flag_mappings_for(described_class::FEATURE_LIST)['feature_flags_ext_3']).to eq({})
   end
 
-  it 'brings the flags of the upstream 4.19.1 turned off' do
+  it 'brings the flags of the upstream 4.19.1 and 4.20.1 turned off' do
     novas = %w[captain_classifier conversation_monitors campaign_analytics company_enrichment stripe_integration
-               mobile_voice_push auto_translate copilot_workflows]
+               mobile_voice_push auto_translate copilot_workflows shopify_custom_apps captain_mcp_servers]
     ligadas = described_class::FEATURE_LIST.select { |flag| novas.include?(flag['name']) && flag['enabled'] }
     expect(ligadas).to be_empty
   end

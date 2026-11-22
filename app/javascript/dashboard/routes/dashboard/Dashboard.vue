@@ -9,6 +9,7 @@ import UpgradePage from 'dashboard/routes/dashboard/upgrade/UpgradePage.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useFusoAutomatico } from 'dashboard/composables/useFusoAutomatico';
+import { useRingingCallsOnLoad } from 'dashboard/composables/useRingingCallsOnLoad';
 import { useWindowSize } from '@vueuse/core';
 
 import wootConstants from 'dashboard/constants/globals';
@@ -16,6 +17,9 @@ import { isUpgradePageBypassRoute } from 'dashboard/helper/routeHelpers';
 
 const CommandBar = defineAsyncComponent(
   () => import('./commands/commandbar.vue')
+);
+const CommandBarV2 = defineAsyncComponent(
+  () => import('dashboard/modules/command-bar/CommandBar.vue')
 );
 
 const FloatingCallWidget = defineAsyncComponent(
@@ -47,6 +51,7 @@ export default {
   components: {
     NextSidebar,
     CommandBar,
+    CommandBarV2,
     WootKeyShortcutModal,
     AddAccountModal,
     UpgradePage,
@@ -74,6 +79,7 @@ export default {
     // Barra fixa na base da tela fica fora do fluxo e não cabe nesta faixa: ela
     // começa depois do botão (ps-20), regra cobrada por barrasFixasDoCelular.spec.js.
     const telaDeConversa = useTelaDeConversa();
+    useRingingCallsOnLoad();
 
     return {
       uiSettings,
@@ -105,6 +111,11 @@ export default {
     },
     isAccountPaywalled() {
       return this.upgradePageRef?.isAccountPaywalled;
+    },
+    hasCommandBarV2() {
+      // Fork (upgrade 4.20.1, #3120): the new command bar (jumpbar, #16503) stays off,
+      // because ⌘K focuses the conversation list search (#2211).
+      return false;
     },
     bypassUpgradePage() {
       return isUpgradePageBypassRoute(this.$route.name);
@@ -200,7 +211,8 @@ export default {
         <CrmFollowUpReminderModal />
         <EmailCampaignAiToast />
       </template>
-      <CommandBar :is-paywalled="isAccountPaywalled" />
+      <CommandBarV2 v-if="hasCommandBarV2" :is-paywalled="isAccountPaywalled" />
+      <CommandBar v-else :is-paywalled="isAccountPaywalled" />
       <AddAccountModal
         :show="showCreateAccountModal"
         @close-account-create-modal="closeCreateAccountModal"

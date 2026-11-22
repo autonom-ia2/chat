@@ -1,4 +1,6 @@
 class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
+  wrap_parameters format: []
+
   include Sift
   sort_on :email, type: :string
   sort_on :name, internal_name: :order_on_name, type: :scope, scope_params: [:direction]
@@ -32,16 +34,20 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   def import
-    render json: { error: I18n.t('errors.contacts.import.failed') }, status: :unprocessable_entity and return if params[:import_file].blank?
+    return render json: { error: I18n.t('errors.contacts.import.failed') }, status: :unprocessable_entity if params[:import_file].blank?
 
-    ActiveRecord::Base.transaction do
-      import = Current.account.data_imports.create!(data_type: 'contacts')
-      import.import_file.attach(params[:import_file])
-    end
+    source_params = { source_provider: 'csv', import_file: params[:import_file] }
+    data_import = DataImports::CreationService.new(account: Current.account, initiated_by: Current.user, source_params: source_params).perform
+    return render json: { error: 'Another data import is already in progress.' }, status: :unprocessable_entity unless data_import
 
     head :ok
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # Fork (upgrade 4.20.1, #3120): export keeps the fork job, which e-mails the CSV itself. Upstream (#16541, #16649) sends
+  # a link to the Data exports page instead, and that page needs data_import plus admin or integration_manage, so a
+  # custom-role exporter would get a link they cannot open.
   def export
     column_names = params['column_names']
     filter_params = { :payload => params.permit!['payload'], :label => params.permit!['label'] }
@@ -105,8 +111,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     if ::OnlineStatusTracker.get_presence(
       @contact.account.id, 'Contact', @contact.id
     )
-      return render_error({ message: I18n.t('contacts.online.delete', contact_name: @contact.name.capitalize) },
-                          :unprocessable_entity)
+      return render json: { message: I18n.t('contacts.online.delete', contact_name: @contact.name.capitalize) }, status: :unprocessable_entity
     end
 
     @contact.destroy!
@@ -220,10 +225,6 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def process_avatar_from_url
     ::Avatar::AvatarFromUrlJob.perform_later(@contact, params[:avatar_url]) if params[:avatar_url].present?
-  end
-
-  def render_error(error, error_status)
-    render json: error, status: error_status
   end
 end
 

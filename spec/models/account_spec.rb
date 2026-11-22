@@ -384,7 +384,9 @@ RSpec.describe Account do
         feature_captain_classifier: 1_125_899_906_842_624, feature_conversation_monitors: 2_251_799_813_685_248,
         feature_campaign_analytics: 4_503_599_627_370_496, feature_company_enrichment: 9_007_199_254_740_992,
         feature_stripe_integration: 18_014_398_509_481_984, feature_mobile_voice_push: 36_028_797_018_963_968,
-        feature_auto_translate: 72_057_594_037_927_936, feature_copilot_workflows: 144_115_188_075_855_872
+        feature_auto_translate: 72_057_594_037_927_936, feature_copilot_workflows: 144_115_188_075_855_872,
+        # Upgrade 4.20.1 (#3120): the next 2 upstream flags, off, at positions 59–60.
+        feature_shopify_custom_apps: 288_230_376_151_711_744, feature_captain_mcp_servers: 576_460_752_303_423_488
       )
     end
 
@@ -699,11 +701,11 @@ RSpec.describe Account do
 
     describe 'with saved model preferences' do
       it 'returns saved preferences merged with defaults' do
-        account.update!(captain_models: { 'editor' => 'gpt-5-mini', 'assistant' => 'gpt-5.2' })
+        account.update!(captain_models: { 'editor' => 'gpt-5.1', 'assistant' => 'gpt-5.2' })
 
         prefs = account.captain_preferences
 
-        expect(prefs[:models]['editor']).to eq('gpt-5-mini')
+        expect(prefs[:models]['editor']).to eq('gpt-5.1')
         expect(prefs[:models]['assistant']).to eq('gpt-5.2')
         expect(prefs[:models]['copilot']).to eq(Llm::Models.default_model_for('copilot'))
       end
@@ -730,7 +732,7 @@ RSpec.describe Account do
       end
 
       it 'accepts valid model for a feature' do
-        account.captain_models = { 'editor' => 'gpt-5-mini', 'help_center_query_translation' => 'gpt-5-mini' }
+        account.captain_models = { 'editor' => 'gpt-5.1', 'help_center_query_translation' => 'gpt-6-luna' }
 
         expect(account).to be_valid
       end

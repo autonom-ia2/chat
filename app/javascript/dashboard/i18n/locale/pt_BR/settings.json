@@ -478,6 +478,15 @@
       "SETTINGS": "Configurações"
     },
     "CHANNELS": "Canais",
+    "ACCEPT_CONVERSATIONS": {
+      "TEXT": "Receber conversas",
+      "INFO_SHORT": "Receba conversas novas atribuídas a você automaticamente."
+    },
+    "ACCEPT_CALLS": {
+      "TEXT": "Receber chamadas de voz",
+      "INFO_SHORT": "Receba chamadas no navegador e no celular."
+    },
+    "WORK_PAUSED": "Você não recebe conversas nem chamadas novas até voltar a ficar Online.",
     "SET_AUTO_OFFLINE": {
       "TEXT": "Marcar offline automaticamente",
       "INFO_TEXT": "Deixe o sistema marcar você automaticamente quando você não estiver usando o app ou o painel de controle.",

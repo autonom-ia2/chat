@@ -59,7 +59,7 @@ class Notification < ApplicationRecord
 
   }.freeze
 
-  enum notification_type: NOTIFICATION_TYPES
+  enum :notification_type, NOTIFICATION_TYPES
 
   # #2898 — what the insurance renewal notification has of its own (title, body, in-app only) lives in its module.
   prepend Carteira::NotificacaoDaRenovacao
