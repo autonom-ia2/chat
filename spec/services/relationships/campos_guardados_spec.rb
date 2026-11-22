@@ -3,7 +3,9 @@ require 'rails_helper'
 # #3082 — apagar campo de pessoa ou empresa é "guardar escondido".
 RSpec.describe Relationships::CamposGuardados do
   let(:account) { create(:account) }
-  let(:guardados) { described_class.new(account.reload).lista }
+
+  # Método, não `let`: cada conferência relê a conta (o `let` guardaria a primeira leitura).
+  def guardados = described_class.new(account.reload).lista
 
   def campo(**extra)
     create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'placa',
