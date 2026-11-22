@@ -166,8 +166,8 @@ RSpec.describe 'Caderno e desfazer do Guia' do
       expect(relatorio['conflitos'].first).to include('motivo' => 'has_children', 'texto' => be_present)
     end
 
-    # O funil com card recusa sair (`restrict_with_error`). Antes isso estourava no meio do desfazer, sem resposta.
-    it 'no funil que ganhou card depois, conta o conflito em vez de quebrar', :aggregate_failures do
+    # O card exige etapa do mesmo funil: quem chega primeiro é a etapa de outra pessoa, e o funil fica.
+    it 'no funil que ganhou etapa e card depois, conta o conflito em vez de apagar', :aggregate_failures do
       funil = nil
       gravando { funil = Crm::Pipeline.create!(account: conta, name: 'Novo funil') }
       etapa = Crm::PipelineStage.create!(account: conta, pipeline: funil, name: 'Entrada')
@@ -178,6 +178,27 @@ RSpec.describe 'Caderno e desfazer do Guia' do
       expect(Crm::Pipeline.exists?(funil.id)).to be(true)
       expect(relatorio['conflitos'].first).to include('motivo' => 'has_children')
       expect(execucao.reload.desfeita_em).to be_present
+    end
+
+    # A recusa do próprio model (callback que aborta) estourava no meio do desfazer, sem resposta para a pessoa.
+    it 'quando o model recusa sair, conta o conflito e devolve o que o savepoint apagou', :aggregate_failures do
+      etiqueta = nil
+      gravando { etiqueta = conta.labels.create!(title: 'presa') }
+      allow_any_instance_of(Label).to receive(:destroy!).and_raise(ActiveRecord::RecordNotDestroyed) # rubocop:disable RSpec/AnyInstance
+
+      relatorio = desfazer
+
+      expect(Label.exists?(etiqueta.id)).to be(true)
+      expect(relatorio['conflitos'].first).to include('motivo' => 'not_destroyed', 'texto' => be_present)
+    end
+
+    # O avatar do Gravatar chega depois, por job, fora do caderno: é mídia do contato, não trabalho de outra pessoa.
+    it 'não conta o anexo do próprio registro como algo de outra pessoa' do
+      contato = nil
+      gravando { contato = create(:contact, account: conta) }
+      contato.avatar.attach(io: StringIO.new('img'), filename: 'avatar.png', content_type: 'image/png')
+
+      expect { desfazer }.to change(Contact, :count).by(-1)
     end
 
     it 'desfaz o turno inteiro, de trás para frente', :aggregate_failures do

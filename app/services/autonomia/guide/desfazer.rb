@@ -62,7 +62,9 @@ class Autonomia::Guide::Desfazer
     return registro.apagar_ao_desfazer if registro.respond_to?(:apagar_ao_desfazer)
     return 'has_children' if registro && ::Autonomia::Guide::FilhosQueFicam.algum?(registro)
 
-    registro&.destroy!
+    # Savepoint: se um callback recusa depois do DELETE (o canal da caixa sai em after_destroy), o rollback dele
+    # devolve a linha antes do conflito. Sem isso o DELETE parcial ia junto no commit do desfazer.
+    ActiveRecord::Base.transaction(requires_new: true) { registro&.destroy! }
     nil
   rescue ActiveRecord::RecordNotDestroyed
     'not_destroyed'
