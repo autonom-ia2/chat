@@ -4,7 +4,8 @@ RSpec.describe 'Contact manager data operations', type: :request do
   let(:account) { create(:account) }
   let(:headers) { agent.create_new_auth_token }
   let(:agent) { create(:user) }
-  let(:custom_role) { create(:custom_role, account: account, permissions: ['contact_manage']) }
+  # Fork (upgrade 4.20.1, #3120): exporting needs contact_export in the fork (#1845); contact_manage covers the import.
+  let(:custom_role) { create(:custom_role, account: account, permissions: %w[contact_manage contact_export]) }
 
   before { create(:account_user, user: agent, account: account, role: :agent, custom_role: custom_role) }
 

@@ -31,6 +31,10 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
 
   # [modelo, como achar as linhas da conta]. A ordem é a das chaves estrangeiras: filho antes do pai.
   ETAPAS = [
+    # Exportação de dados e app próprio da Shopify (upgrade 4.20.1, #3120): chave para a conta sem cascata, e ninguém
+    # aponta para elas. O arquivo da exportação sai pelo anexo, como nas outras.
+    ['DataExport', :por_conta],
+    ['Shopify::CustomApp', :por_conta],
     # Contador do limite de mensagens por cliente (#3063): ninguém aponta para ele.
     ['Autonomia::EnvioAoCliente', :por_conta],
     # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.

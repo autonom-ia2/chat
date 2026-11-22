@@ -22,6 +22,8 @@ RSpec.describe Autonomia::ExclusaoDaConta do
       'attachments' => 'Message has_many :attachments, dependent: :destroy',
       'conversation_participants' => 'Conversation has_many :conversation_participants, dependent: :destroy_async',
       'captain_scenarios' => 'Captain::Assistant has_many :scenarios, dependent: :destroy_async',
+      'captain_mcp_servers' => 'Captain::Assistant has_many :mcp_servers, dependent: :destroy_async (upgrade 4.20.1, #3120)',
+      'captain_mcp_tools' => 'Captain::McpServer has_many :tools, dependent: :delete_all (upgrade 4.20.1, #3120)',
       'copilot_messages' => 'CopilotThread has_many :copilot_messages, dependent: :destroy_async',
       'copilot_runs' => 'CopilotThread has_many :copilot_runs, dependent: :destroy_async (upgrade 4.19.1, #3119)',
       'data_import_mappings' => 'DataImport has_many :mappings, dependent: :destroy_async',

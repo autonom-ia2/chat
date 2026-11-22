@@ -29,7 +29,11 @@ RSpec.describe DeleteObjectJob, type: :job do
 
   context 'when the object is an sla policy' do
     let(:sla_policy) { create(:sla_policy, account: account) }
-    let!(:conversations) { create_list(:conversation, 3, account: account, sla_policy: sla_policy) }
+    # Fork (upgrade 4.20.1, #3120): the fork creates the applied SLA only when the account has the `sla` feature.
+    let!(:conversations) do
+      account.enable_features!('sla')
+      create_list(:conversation, 3, account: account, sla_policy: sla_policy)
+    end
 
     it 'unlinks conversations in batches, purges applied slas and destroys the policy' do
       stub_const('DeleteObjectJob::BATCH_SIZE', 2)

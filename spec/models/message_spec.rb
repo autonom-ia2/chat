@@ -347,7 +347,8 @@ RSpec.describe Message do
     end
 
     it 'keeps marking the conversation as pending for a non-webhook bot (dialogflow)' do
-      create(:integrations_hook, :dialogflow, inbox: conversation.inbox)
+      # Upgrade 4.20.1 (#3120): the hook must belong to the inbox account (#16614).
+      create(:integrations_hook, :dialogflow, account: conversation.account, inbox: conversation.inbox)
       conversation.resolved!
       message.save!
       expect(conversation.reload.pending?).to be true
