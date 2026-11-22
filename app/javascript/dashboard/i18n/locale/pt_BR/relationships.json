@@ -148,8 +148,8 @@
     "CONFIGURE_DESCRIPTION": "Escolha os campos que aparecem em cada lugar.",
     "CONFIGURE_RECORD_DESCRIPTION": "Escolha o que aparece na ficha.",
     "RECORD_RULE": "Ligado: aparece sempre, mesmo vazio. Desligado: só aparece quando estiver preenchido.",
-    "USE_FIELD": "Usar este campo",
-    "SHOW_HELP": "Desligado, o campo some das telas, mas a IA continua usando. Para tirar da IA também, apague o campo.",
+    "USE_FIELD": "Mostrar nas telas",
+    "SHOW_HELP": "Desligado, o campo some das telas. O que já foi escrito fica guardado e continua valendo nos filtros, nas automações e nas IAs. Para tirar de tudo, apague o campo.",
     "DELETE": {
       "OPEN": "Apagar este campo",
       "TITLE": "Apagar o campo “{name}”?",
