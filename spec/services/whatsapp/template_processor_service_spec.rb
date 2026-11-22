@@ -136,28 +136,6 @@ describe Whatsapp::TemplateProcessorService do
     end
   end
 
-  context 'with a static button before a dynamic button' do
-    let(:template) do
-      {
-        'name' => 'offer', 'language' => 'en_US', 'status' => 'APPROVED',
-        'components' => [
-          { 'type' => 'BODY', 'text' => 'Your offer' },
-          { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'QUICK_REPLY', 'text' => 'Thanks' }, { 'type' => 'COPY_CODE' }] }
-        ]
-      }
-    end
-    let(:template_params) do
-      {
-        'name' => 'offer', 'language' => 'en_US',
-        'processed_params' => { 'buttons' => [nil, { 'type' => 'copy_code', 'parameter' => 'WELCOME' }] }
-      }
-    end
-
-    it 'preserves the dynamic button index through normalization and payload generation' do
-      expect(processed_components).to eq([
-                                           { type: 'button', sub_type: 'copy_code', index: 1,
-                                             parameters: [{ type: 'coupon_code', coupon_code: 'WELCOME' }] }
-                                         ])
-    end
-  end
+  # Fork (upgrade 4.19.1, #3119): `TemplateParameterConverterService#valid_buttons?` stays the fork's (#15409),
+  # so a `nil` button is not read as the enhanced format and the upstream example was removed.
 end

@@ -1,5 +1,6 @@
-<%# locals: (label:, icon: nil, help_url: nil, premium: false, disabled: false) -%>
-<label class="<%= class_names("flex min-h-10 items-center gap-2.5 rounded-lg border border-n-weak px-3 py-1.5 has-[:checked]:border-n-blue-6 has-[:checked]:bg-n-blue-2", disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-n-alpha-2") %>" data-filter-item>
+<%# locals: (label:, icon: nil, help_url: nil, premium: false, disabled: false, input_id: nil) -%>
+<%# Fork (upgrade 4.19.1, #3119): `input_id` names the wrapped control with `for`, and the tile keeps the 44 px touch target. %>
+<label <%= tag.attributes(for: input_id) %> class="<%= class_names("flex min-h-11 min-w-11 items-center gap-2.5 rounded-lg border border-n-weak px-3 py-1.5 has-[:checked]:border-n-blue-6 has-[:checked]:bg-n-blue-2", disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-n-alpha-2") %>" data-filter-item>
   <% if icon %>
     <span class="<%= icon %> size-4 shrink-0 text-n-slate-11"></span>
   <% end %>

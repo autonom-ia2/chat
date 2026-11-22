@@ -17,11 +17,14 @@ class AddMonitorAutomationEvents < ActiveRecord::Migration[7.1]
     add_column :conversation_monitor_evaluations, :first_matched_at, :datetime
     reversible do |direction|
       direction.up do
-        execute <<~SQL.squish
-          UPDATE conversation_monitor_evaluations
-          SET first_matched_at = matched_at
-          WHERE status = 'matched' AND matched_at IS NOT NULL
-        SQL
+        # Fork (upgrade 4.19.1, #3119): the table was created earlier in this same batch and is empty in production.
+        safety_assured do
+          execute <<~SQL.squish
+            UPDATE conversation_monitor_evaluations
+            SET first_matched_at = matched_at
+            WHERE status = 'matched' AND matched_at IS NOT NULL
+          SQL
+        end
       end
     end
   end

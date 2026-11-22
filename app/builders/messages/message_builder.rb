@@ -7,7 +7,7 @@ class Messages::MessageBuilder
 
   def initialize(user, conversation, params)
     @params = params
-    @private = params[:private] || false
+    @private = private_flag
     @conversation = conversation
     @user = user
     @account = conversation.account
@@ -76,6 +76,14 @@ class Messages::MessageBuilder
     return unless @is_voice_message && attachment.file_type == 'audio'
 
     attachment.meta = (attachment.meta || {}).merge('is_voice_message' => true)
+  end
+
+  # Fork (upgrade 4.19.1, #3119): keep the fork's `params[:private] || false` (the string "false" stays truthy).
+  # Only the dormant email forward (#15871), sent by no screen today, casts the flag like upstream.
+  def private_flag
+    return ActiveModel::Type::Boolean.new.cast(@params[:private]) || false if forwarded_message_id.present?
+
+    @params[:private] || false
   end
 
   def forwarded_message_id

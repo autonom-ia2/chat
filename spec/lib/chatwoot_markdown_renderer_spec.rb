@@ -127,12 +127,6 @@ RSpec.describe ChatwootMarkdownRenderer do
       expect(rendered_content).to eq("This is a test content with ^markdown^\n")
     end
 
-    context 'with a table' do
-      let(:markdown_content) { "Intro\n\n| Feature | Use |\n| --- | --- |\n| Captain | `replies` |\n\nOutro" }
-
-      it 'keeps the cell text without the table syntax' do
-        expect(rendered_content).to eq("Intro\n\nFeature Use Captain replies\n\nOutro\n")
-      end
-    end
+    # Fork (upgrade 4.19.1, #3119): no `:table` extension in the markdown renderer (#15830 refused).
   end
 end

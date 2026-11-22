@@ -97,11 +97,8 @@ RSpec.describe Mailbox::ConversationFinderStrategies::NewConversationStrategy do
           expect(described_class.new(mail).find).to eq(existing_conversation)
         end
 
-        it 'builds a new conversation when it belongs to another contact' do
-          mail.from = 'other@example.com'
-
-          expect(described_class.new(mail).find).to be_new_record
-        end
+        # Fork (upgrade 4.19.1, #3119): the `in_reply_to` lookup stays account-wide (inventory #17/#18),
+        # so the upstream example that splits replies by sender was removed.
       end
 
       context 'when mail is auto reply' do

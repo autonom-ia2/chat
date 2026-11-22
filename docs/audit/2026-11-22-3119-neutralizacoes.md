@@ -33,7 +33,7 @@ contagens de uso citadas são agregadas.
 - **#16077 (contato vira lead) neutralizado em todos os pontos**: `Conversation#mark_contact_as_lead` (after_create) removido; `Contacts::SyncAttributes` = fork (sem promover por `identifier`); `DataImport::ContactManager` e `DataImports::Importer#contact_attributes` = fork; `contacts#create` sem `contact_type: :lead`; merge sem `higher_contact_type`. Spec do upstream "marks a visitor contact as a lead" recusado.
 - `Contact#webhook_data` ganha `contact_type` (#16089): chave nova no payload do webhook (aditiva). Aceito — conferir com o revisor se algum consumidor n8n valida esquema fechado.
 - Facebook/Instagram HUMAN_AGENT: arquivos do fork inteiros (serviços e specs); `Facebook::HumanAgentTagHelpers` do upstream (#15932) apagado, o fork já tem `Meta::HumanAgentTag`.
-- Inventário (seção 5) aplicado no back: #11 gate `whatsapp_campaign` no `incoming_message_base_service`; #15 sem o 422 de campanha iniciada (`campaigns_controller` = fork); #17/#18 encadeamento de e-mail por `in_reply_to` do fork (`new_conversation_strategy`, `imap_mailbox` = fork, inclusive sem o `duplicate_email?` novo); #24 `auto_assignment_handler` = fork; #25–#28 API de empresas com 25/15 por página, conversas da empresa = as 20 mais recentes sem página (view sem `meta`), sem `validate_social_profiles`; #30 `Labelable::Persistence` fora; #31 sem `:table` no markdown (`markdown_renderer_service`, `chatwoot_markdown_renderer` = fork); #32 e-mails de continuidade = fork; #36/#37 um provedor de robô por caixa recusado (`agent_bot_inbox`, `hook`, `captain_inbox`, `inbox_bot_status` = fork; `hook` sem a validação de credencial do Google Translate e sem limite de tamanho do token); #42 `hook_execution_service` = fork; #43 log de auditoria de login/logout continua registrando personificação; #44 `api_access_token` tem precedência sobre Bearer; #45 `filter_service` = fork (sem fuso do navegador); #46 conversas do contato por `created_at desc`; #47 `contact_type` fora do `webhook_data`; #48 nome do contato Messenger = fork; #2/#4 `mobile_voice_push` desligada e migration do upstream vazia (mesma versão).
+- Inventário (seção 5) aplicado no back: #11 gate `whatsapp_campaign` no `incoming_message_base_service`; #15 sem o 422 de campanha iniciada (`campaigns_controller` = fork); #17/#18 encadeamento de e-mail por `in_reply_to` do fork (`new_conversation_strategy`, `imap_mailbox` = fork, inclusive sem o `duplicate_email?` novo); #24 `auto_assignment_handler` = fork, menos o #16154 (classe A: o job da Atribuição V2 entra na fila depois do commit; ver sétima rodada); #25–#28 API de empresas com 25/15 por página, conversas da empresa = as 20 mais recentes sem página (view sem `meta`), sem `validate_social_profiles`; #30 `Labelable::Persistence` fora; #31 sem `:table` no markdown (`markdown_renderer_service`, `chatwoot_markdown_renderer` = fork); #32 e-mails de continuidade = fork; #36/#37 um provedor de robô por caixa recusado (`agent_bot_inbox`, `hook`, `captain_inbox`, `inbox_bot_status` = fork; `hook` sem a validação de credencial do Google Translate e sem limite de tamanho do token); #42 `hook_execution_service` = fork; #43 log de auditoria de login/logout continua registrando personificação; #44 `api_access_token` tem precedência sobre Bearer; #45 `filter_service` = fork (sem fuso do navegador); #46 conversas do contato por `created_at desc`; #47 `contact_type` fora do `webhook_data`; #48 nome do contato Messenger = fork; #2/#4 `mobile_voice_push` desligada e migration do upstream vazia (mesma versão).
 - `contacts_controller#update`: tirado o `resolve_legacy_company` (#38).
 
 ## ruby_llm 1.15 → 2.0 (Gemfile do upstream: `~> 2.0.0`)
@@ -169,3 +169,50 @@ Super Admin (D28): o inventário mandava manter o do fork, mas a decisão 6 do �
 do upstream e reaplicar por cima o que é do fork, porque o `administrate` 1.0 da 4.20.1 exige o redesenho. Vale a decisão
 do épico; é o que está no commit (ver a linha "Super Admin" acima). Uma tentativa de voltar ao do fork foi desfeita.
 Mudança visual interna (só Super Admin): passa pelo diretor de arte antes do merge.
+
+Sétima rodada (CI do bcd48c10b6: 151 testes de RSpec falhando, 136 já vinham da CI do ea982a0d8d e não tinham sido tratados):
+- Classificação: 45 testes do fork, 97 do upstream, 9 sem classificação clara. A `main` está verde, então todas eram do upgrade.
+- **Regressões reais do fork, consertadas no código:**
+  - Super Admin (decisão 6, redesenho + fork por cima): o campo de nicho (#1429) volta ao formulário Enterprise da conta e à página da conta; as mensagens voltam a ter o gancho `.flashes`; a página de automação do Instagram volta a esconder nome, e-mail e foto do operador; a barra lateral ganha `role="navigation"`; a barra de comandos cai no inglês quando o `administrate` não tem a chave em `pt_BR`; cada cartão de recurso aponta a caixa de marcar com `for` e tem 44 px de alvo de toque.
+  - `marcel` volta à 1.1.0 do fork e fica fixo no Gemfile: a 1.2.1 veio no lock do upstream sem nenhuma gem exigir e muda a detecção do tipo de anexo (HTML, SVG e outros).
+  - O controller de automações volta a ser exatamente o do fork: sai o `prepend` do módulo Enterprise de monitores, que aceitava `monitor_id` na API e escondia do Guia o aviso de `delayed_automations`. O módulo fica no lugar, sem efeito. O spec só do upstream (`monitor_automation_rules_spec.rb`) sai.
+- **Specs do fork que o merge tinha trocado pelo texto do upstream** (o código já era o do fork): `inbox_members` ("User must exist"), portal público (idiomas), WhatsApp (`whatsapp_campaign`), importador do Intercom (`be_visitor`).
+- **Testes do upstream de comportamento já neutralizado**, apagados ou com o spec voltando ao do fork:
+  - condição Captain nas automações;
+  - um robô por caixa;
+  - contato virando lead e `contact_type` no webhook;
+  - robô de busca no `/widget`;
+  - `Labelable::Persistence`;
+  - regra de não trocar quem o administrador escolheu (#24);
+  - #3134 em `inbox_members`, `bulk_actions` e `conversations`;
+  - log de auditoria de personificação;
+  - Bearer x `api_access_token`;
+  - campanha em processamento;
+  - IMAP sem trava de duplicado;
+  - busca por assunto de e-mail e janela da busca;
+  - link da pesquisa de satisfação;
+  - tabela no markdown;
+  - correção de botão dinâmico em modelo de WhatsApp;
+  - logo do portal.
+- **Adaptação mecânica de spec:**
+  - ruby_llm 2.0 (`tokens` no lugar de `input_tokens`) na sugestão de etiquetas;
+  - provedor Captain escolhido explicitamente na tradução;
+  - data fixa dos monitores (correção que o upstream fez depois, #16551);
+  - webhook de voz assinado com o helper do próprio spec;
+  - push de ligação perdida ligado só no spec de notificação;
+  - preparo do Shopify no spec de permissão de leitura;
+  - seletor do período na carteira e da barra lateral no Instagram.
+- **Entrou do upstream (classe A):** #16154, o job da Atribuição V2 entra na fila só depois do commit, para enxergar a conversa recém-criada. Rollback da gravação deixa de enfileirar o job, o que é inofensivo.
+- **Código do upstream mantido para e-mail encaminhado (inerte):** o `private` é convertido como no upstream só quando há `forwarded_message_id`. Sem encaminhamento, que nenhuma tela manda, continua `params[:private] || false`.
+- **Migrations do upstream no padrão do fork** (`docs/migrations-em-lote.md`; mesma versão, mesmo schema final; ainda não rodaram em nenhum ambiente nosso):
+  - `20260907092035` e `20260922090000` (`campaign_recipients` tem linhas em produção) passam a criar e remover índice `CONCURRENTLY`;
+  - `20260925000000` e `20261009170254` usam `safety_assured` em tabela criada no mesmo lote, vazia em produção.
+- **Guia:** formatos regerados a partir do artefato do gerador da própria CI, com os trechos de automação iguais aos da `main`. A cobertura foi recalculada pelo `Relatorio` do gerador; o mesmo cálculo reproduz o artefato byte a byte.
+- **Fora do upgrade:** o QA de contraste do onboarding do Instagram ("Buscar perfil" 3,5:1 no escuro) também falha na `main`.
+- **Para o Rodrigo decidir:**
+  - verificação de assinatura do Twilio, só no webhook de voz (voz sem uso; com credencial errada a ligação seria recusada);
+  - campanha inexistente responder 404 em vez de 500;
+  - catálogo `administrate` em `pt_BR` (hoje sai em inglês, como no fork);
+  - IMAP sem a trava de e-mail duplicado do upstream;
+  - texto e `_target` do link da pesquisa de satisfação (bug antigo do fork).
+- **Para o diretor de arte:** cartões de recurso com 44 px (eram 40); menu da conta sem identidade na página do Instagram; campo de nicho dentro da linha de campo do redesenho. O `instagram_assisted_onboarding_field/_form` (só fora do Enterprise) ainda usa as classes antigas.

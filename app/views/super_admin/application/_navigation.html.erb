@@ -35,7 +35,8 @@ ones show, the rest sit behind "More".
       <%= render "kbd", label: request.user_agent.to_s.include?("Mac") ? "⌘K" : "Ctrl K" %>
     </button>
   </div>
-  <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3" aria-label="<%= section ? section[:label] : t("super_admin.navigation.label") %>">
+  <%# Fork (upgrade 4.19.1, #3119): the explicit role keeps the landmark hook the fork pages and specs look for. %>
+  <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3" role="navigation" aria-label="<%= section ? section[:label] : t("super_admin.navigation.label") %>">
     <% if section %>
       <ul class="mb-4">
         <%= render "nav_item", item: { label: t("super_admin.navigation.back"), url: super_admin_root_path, icon: "i-lucide-arrow-left" } %>

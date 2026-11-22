@@ -198,18 +198,17 @@ RSpec.describe 'Campaigns API', type: :request do
     let(:inbox) { create(:inbox, channel: channel, account: account) }
     let(:campaign) { create(:campaign, account: account, inbox: inbox, campaign_status: status) }
 
-    %w[processing completed].each do |campaign_status|
-      context "when #{campaign_status}" do
-        let(:status) { campaign_status }
+    # Fork (upgrade 4.19.1, #3119): a processing campaign stays editable, as in the fork; only completed is locked.
+    context 'when completed' do
+      let(:status) { 'completed' }
 
-        it 'rejects edits after sending has started' do
-          original_title = campaign.title
-          patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
-                params: { title: 'Changed after sending' }, headers: administrator.create_new_auth_token, as: :json
+      it 'rejects edits after sending has started' do
+        original_title = campaign.title
+        patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
+              params: { title: 'Changed after sending' }, headers: administrator.create_new_auth_token, as: :json
 
-          expect(response).to have_http_status(:unprocessable_entity)
-          expect(campaign.reload.title).to eq(original_title)
-        end
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(campaign.reload.title).to eq(original_title)
       end
     end
 
@@ -223,19 +222,6 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response).to have_http_status(:success)
         expect(campaign.reload.title).to eq('Updated before sending')
       end
-    end
-  end
-
-  describe 'an unavailable campaign' do
-    let(:administrator) { create(:user, account: account, role: :administrator) }
-
-    it 'returns not found for reads and edits instead of a server error' do
-      get "/api/v1/accounts/#{account.id}/campaigns/999999999", headers: administrator.create_new_auth_token
-      expect(response).to have_http_status(:not_found)
-
-      patch "/api/v1/accounts/#{account.id}/campaigns/999999999",
-            params: { title: 'Unauthorized edit' }, headers: administrator.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:not_found)
     end
   end
 

@@ -115,35 +115,8 @@ RSpec.describe Imap::ImapMailbox do
       end
     end
 
-    context 'when another fetch job has already saved the email' do
-      let(:inbound_mail) { create_inbound_email_from_mail(from: 'email@gmail.com', to: 'imap@gmail.com', subject: 'Hello!') }
-
-      it 'does not create a second conversation or message' do
-        create(:message, account: account, inbox: inbox, source_id: inbound_mail.mail.message_id)
-
-        expect do
-          class_instance.process(inbound_mail.mail, channel)
-        end.to not_change(Conversation, :count).and not_change(Message, :count)
-      end
-    end
-
-    context 'when another fetch job saves the email after this job cached its fetch-stage duplicate check' do
-      let(:inbound_mail) { create_inbound_email_from_mail(from: 'email@gmail.com', to: 'imap@gmail.com', subject: 'Hello!') }
-      let(:message_id) { inbound_mail.mail.message_id }
-
-      it 'does not create a second conversation or message' do
-        ActiveRecord::Base.cache do
-          inbox.messages.exists?(source_id: message_id)
-          # The other job writes on its own connection, so this job's query cache is not cleared
-          ActiveRecord::Base.uncached(dirties: false) { create(:message, account: account, inbox: inbox, source_id: message_id) }
-
-          class_instance.process(inbound_mail.mail, channel)
-        end
-
-        expect(inbox.messages.where(source_id: message_id).count).to eq(1)
-        expect(inbox.conversations.count).to eq(1)
-      end
-    end
+    # Fork (upgrade 4.19.1, #3119): no `duplicate_email?` advisory lock here; IMAP keeps the fork's flow
+    # (inventory #17/#18), so the upstream duplicate-fetch examples were removed.
 
     context 'when a new email contains null bytes' do
       let(:inbound_mail) do
@@ -248,34 +221,8 @@ RSpec.describe Imap::ImapMailbox do
       end
     end
 
-    context 'when a reply to a forwarded email' do
-      let(:prev_conversation) { create(:conversation, account: account, inbox: channel.inbox, assignee: agent) }
-      let(:supplier_reply) do
-        create_inbound_email_from_mail(from: 'supplier@example.com', to: 'imap@gmail.com', subject: 'Re: Fwd: Hello!',
-                                       in_reply_to: '<forward/1@example.com>')
-      end
-
-      before do
-        create(:message, conversation: prev_conversation, account: account, inbox: inbox, message_type: :outgoing,
-                         source_id: 'forward/1@example.com', content_attributes: { forwarded_message_id: 1, to_emails: ['supplier@example.com'] })
-      end
-
-      it 'starts a new conversation with the forward recipient instead of using the original conversation' do
-        expect { class_instance.process(supplier_reply.mail, channel) }.to change(Conversation, :count).by(1)
-
-        expect(prev_conversation.messages.incoming).to be_empty
-        expect(conversation.contact.email).to eq('supplier@example.com')
-      end
-
-      it 'keeps further replies from the same recipient in their conversation' do
-        class_instance.process(supplier_reply.mail, channel)
-        second_reply = create_inbound_email_from_mail(from: 'supplier@example.com', to: 'imap@gmail.com', subject: 'Re: Fwd: Hello!',
-                                                      in_reply_to: '<forward/1@example.com>')
-
-        expect { class_instance.process(second_reply.mail, channel) }.not_to change(Conversation, :count)
-        expect(conversation.messages.incoming.count).to eq(2)
-      end
-    end
+    # Fork (upgrade 4.19.1, #3119): upstream starts a new conversation for replies to a forwarded email.
+    # IMAP keeps the fork's `in_reply_to` threading (inventory #17/#18), so those examples were removed.
 
     context 'when a new conversation with nil in_reply_to' do
       let(:prev_conversation) { create(:conversation, account: account, inbox: channel.inbox, assignee: agent) }

@@ -90,12 +90,7 @@ RSpec.describe ConversationReplyMailer do
         expect(body).to include("<b>#{agent.available_name}</b>")
       end
 
-      it 'renders the csat survey prompt as a link' do
-        create(:message, message_type: 'template', content_type: 'input_csat', account: account, conversation: conversation, sender: agent)
-
-        body = mail.body.decoded
-        expect(body).to include(%(Click <a target="_blank" href="#{conversation.csat_survey_link}">here</a> to rate the conversation.))
-      end
+      # Fork (upgrade 4.19.1, #3119): email views stay the fork's (D13), so the CSAT prompt keeps its markup.
     end
 
     context 'without assignee' do

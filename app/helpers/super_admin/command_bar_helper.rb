@@ -13,14 +13,14 @@ module SuperAdmin::CommandBarHelper
   def record_commands(record)
     commands = [
       { action: :show, label: t('super_admin.command_bar.open'), url: [namespace, record], icon: 'i-lucide-arrow-right' },
-      { action: :edit, label: t('administrate.actions.edit'), url: [:edit, namespace, record], icon: 'i-lucide-pencil' }
+      { action: :edit, label: administrate_t('administrate.actions.edit'), url: [:edit, namespace, record], icon: 'i-lucide-pencil' }
     ].select { |command| accessible_action?(record, command[:action]) && !current_page?(command[:url]) }
     commands += user_commands(record) if record.is_a?(User)
     commands += account_commands(record) if record.is_a?(Account)
     return commands unless accessible_action?(record, :destroy)
 
-    commands << { label: t('administrate.actions.destroy'), url: [namespace, record], method: :delete, icon: 'i-lucide-trash-2', danger: true,
-                  form: { data: { confirm: t('administrate.actions.confirm') } } }
+    commands << { label: administrate_t('administrate.actions.destroy'), url: [namespace, record], method: :delete, icon: 'i-lucide-trash-2',
+                  danger: true, form: { data: { confirm: administrate_t('administrate.actions.confirm') } } }
   end
 
   def result_commands(resource, records)
@@ -37,9 +37,15 @@ module SuperAdmin::CommandBarHelper
 
   private
 
+  # Fork (upgrade 4.19.1, #3119): administrate ships pt-BR, not pt_BR, and the command bar is on every page (fork pages
+  # included). Fall back to its English text, as the production locale fallback already does.
+  def administrate_t(key, **)
+    t(key, **, default: t(key, **, locale: :en))
+  end
+
   def create_commands
     nav_resources.select { |resource| existing_action?(resource, :new) }.map do |resource|
-      { label: t('administrate.actions.new_resource', name: resource.singularize.titleize.downcase),
+      { label: administrate_t('administrate.actions.new_resource', name: resource.singularize.titleize.downcase),
         url: [:new, namespace, resource.singularize.to_sym], icon: 'i-lucide-plus' }
     end
   end

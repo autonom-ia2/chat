@@ -6,17 +6,17 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Ações |
 |---|---|
 | No catálogo | 764 |
-| Sem corpo | 214 |
-| Com corpo | 550 |
-| Com corpo e formato completo | 463 (84,2%) |
-| Com corpo e formato incompleto | 87 |
+| Sem corpo | 212 |
+| Com corpo | 552 |
+| Com corpo e formato completo | 464 (84,1%) |
+| Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 20 de 230 |
-| Leituras cruas tipadas | 229 de 322 |
+| Campos aninhados com vocabulário | 23 de 238 |
+| Leituras cruas tipadas | 230 de 324 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 73 |
+| leitura crua sem tipo | 74 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -77,7 +77,7 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/:conversation_id/messages` — params inteiro repassado a Messages::MessageBuilder.new
 - `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new; leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
-- `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
+- `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:54); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
@@ -105,6 +105,7 @@ Uma ação pode ter mais de um motivo.
 - `POST inboxes/:inbox_id/whatsapp_templates/media` — leitura crua sem tipo: file (repassada a manager.upload)
 - `POST instagram/authorization` — leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event (repassada a @hook.process_event)
+- `POST integrations/shopify/auth` — leitura crua sem tipo: shop_domain
 - `POST integrations/slack` — leitura crua sem tipo: code (repassada a Integrations::Slack::HookBuilder.new)
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
 - `POST portals/:portal_id/articles/reorder` — leitura crua sem tipo: positions_hash (repassada a Article.update_positions)
@@ -205,6 +206,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
 - `api/v1/accounts/instagram/authorizations#create` purpose — repassada a REAUTH_PURPOSES.[]
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
+- `api/v1/accounts/integrations/shopify#auth` shop_domain — o código não converte nem compara o valor
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor

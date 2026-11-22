@@ -530,7 +530,7 @@ GEM
       net-imap
       net-pop
       net-smtp
-    marcel (1.2.1)
+    marcel (1.1.0)
     matrix (0.4.3)
     maxminddb (0.1.22)
     mcp (1.7.0)
@@ -1137,6 +1137,7 @@ DEPENDENCIES
   liquid
   listen
   lograge (~> 0.14.0)
+  marcel (~> 1.1.0)
   matrix (~> 0.4)
   maxminddb
   mcp (~> 1.7)

@@ -278,15 +278,7 @@ describe SearchService do
         expect(search.perform[:conversations].map(&:id)).to include new_converstion.id
       end
 
-      it 'searches across conversations with email subject' do
-        random = create(:contact, account_id: account.id, name: 'random', email: 'random@random.test', identifier: 'random')
-        email_conversation = create(:conversation, contact: random, inbox: inbox, account: account,
-                                                   additional_attributes: { mail_subject: 'Order on hold for review' })
-        create(:conversation, contact: random, inbox: inbox, account: account, additional_attributes: { mail_subject: 'Size update' })
-        params = { q: 'order ON HOLD' }
-        search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation')
-        expect(search.perform[:conversations].map(&:id)).to eq([email_conversation.id])
-      end
+      # Fork (upgrade 4.19.1, #3119): the conversation search does not match `mail_subject` (refused, it changes the results).
     end
 
     context 'when article search' do
@@ -467,11 +459,8 @@ describe SearchService do
         expect(search.send(:message_base_query)).not_to include(old_message)
       end
 
-      it 'includes older messages when SEARCH_TIME_RANGE_LIMIT_DAYS is raised' do
-        with_modified_env SEARCH_TIME_RANGE_LIMIT_DAYS: '180' do
-          expect(search.send(:message_base_query)).to include(old_message)
-        end
-      end
+      # Fork (upgrade 4.19.1, #3119): the SQL search keeps its fixed three-month window, so
+      # SEARCH_TIME_RANGE_LIMIT_DAYS does not widen it.
     end
   end
 

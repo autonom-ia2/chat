@@ -65,6 +65,9 @@ gem 'aws-sdk-sesv2', require: false
 gem 'azure-blob', require: false
 gem 'google-cloud-storage', '>= 1.48.0', require: false
 gem 'image_processing'
+# Fork (upgrade 4.19.1, #3119): marcel 1.2 changes how attachment content types are detected (HTML, SVG and
+# others). Keep the fork version until a change to attachment typing is decided on purpose.
+gem 'marcel', '~> 1.1.0'
 
 ##-- for actionmailbox --##
 gem 'aws-actionmailbox-ses', '~> 0'

@@ -12,6 +12,7 @@ RSpec.describe 'Super Admin Carteira Medidas', type: :request do
 
   around { |example| travel_to(agora) { example.run } }
 
+  # Upgrade 4.19.1 (#3119): the redesign sidebar also marks its own link with aria-current, so the period is read in its nav.
   def pagina
     Nokogiri::HTML(response.body)
   end
@@ -57,7 +58,7 @@ RSpec.describe 'Super Admin Carteira Medidas', type: :request do
       get caminho, params: { periodo: 'mes_passado' }
 
       expect(numero(account.id, 'cotacao.proposta_pedida')).to eq('1')
-      expect(pagina.at_css('a[aria-current="page"]').text.strip).to eq('Mês passado')
+      expect(pagina.at_css('nav[aria-label="Período"] a[aria-current="page"]').text.strip).to eq('Mês passado')
       expect(pagina.css('select')).to be_empty
     end
 
@@ -66,7 +67,7 @@ RSpec.describe 'Super Admin Carteira Medidas', type: :request do
 
       get caminho, params: { periodo: 'ano_todo' }
 
-      expect([numero(account.id, 'cotacao.proposta_pedida'), pagina.at_css('a[aria-current="page"]').text.strip])
+      expect([numero(account.id, 'cotacao.proposta_pedida'), pagina.at_css('nav[aria-label="Período"] a[aria-current="page"]').text.strip])
         .to eq(['0', 'Este mês'])
     end
 

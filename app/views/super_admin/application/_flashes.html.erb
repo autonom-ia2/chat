@@ -7,7 +7,8 @@
       "error" => "i-lucide-circle-x text-n-ruby-10"
     }
   %>
-  <div class="pointer-events-none fixed inset-x-3 bottom-3 z-50 flex flex-col items-end gap-2 [body:has([data-form-actions])_&]:bottom-[4.5rem] lg:inset-x-auto lg:bottom-auto lg:end-6 lg:top-6 lg:max-w-sm">
+  <%# Fork (upgrade 4.19.1, #3119): `flashes` keeps the hook the fork pages and specs read the messages by. %>
+  <div class="flashes pointer-events-none fixed inset-x-3 bottom-3 z-50 flex flex-col items-end gap-2 [body:has([data-form-actions])_&]:bottom-[4.5rem] lg:inset-x-auto lg:bottom-auto lg:end-6 lg:top-6 lg:max-w-sm">
     <% flash.each do |type, message| %>
       <% sticky = type.to_s.in?(%w[alert error]) %>
       <%= tag.div class: "pointer-events-auto flex w-full items-start gap-2.5 rounded-xl border border-n-weak bg-n-solid-1 py-2.5 pe-2 ps-3.5 shadow-lg transition-opacity duration-300 motion-safe:animate-fade-in-up lg:w-auto",

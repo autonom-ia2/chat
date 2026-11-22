@@ -342,9 +342,7 @@ RSpec.describe 'Conversation Messages API', type: :request do
   end
 
   describe 'POST /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id/retry' do
-    let(:message) do
-      create(:message, account: account, status: :failed, content_attributes: { external_error: 'error', to_emails: ['vendor@example.com'] })
-    end
+    let(:message) { create(:message, account: account, status: :failed, content_attributes: { external_error: 'error' }) }
 
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
@@ -360,15 +358,15 @@ RSpec.describe 'Conversation Messages API', type: :request do
         create(:inbox_member, inbox: message.conversation.inbox, user: agent)
       end
 
-      it 'retries the message and keeps its delivery details' do
+      # Fork (upgrade 4.19.1, #3119): retry keeps the fork's reset of `content_attributes` (#15871 refused).
+      it 'retries the message' do
         post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
              headers: agent.create_new_auth_token,
              as: :json
 
         expect(response).to have_http_status(:success)
         expect(message.reload.status).to eq('sent')
-        expect(message.content_attributes['external_error']).to be_nil
-        expect(message.content_attributes['to_emails']).to eq(['vendor@example.com'])
+        expect(message.reload.content_attributes['external_error']).to be_nil
       end
     end
 

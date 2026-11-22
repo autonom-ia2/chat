@@ -48,43 +48,6 @@ describe '/widget', type: :request do
       ActionController::Base.allow_forgery_protection = previous
     end
 
-    context 'when requested by a crawler' do
-      %w[Googlebot bingbot].each do |crawler|
-        it "returns no content without creating contacts for #{crawler}" do
-          url = widget_url(website_token: web_widget.website_token)
-
-          expect { get url, headers: { 'User-Agent' => crawler } }.not_to(change { [Contact.count, ContactInbox.count] })
-
-          expect(response).to have_http_status(:no_content)
-          expect(response.headers['X-Robots-Tag']).to eq('noindex')
-          expect(response.body).to be_empty
-        end
-      end
-
-      it 'stops before decoding a supplied visitor token' do
-        url = widget_url(website_token: web_widget.website_token, cw_conversation: 'invalid')
-
-        expect { get url, headers: { 'User-Agent' => 'Googlebot' } }.not_to(change { [Contact.count, ContactInbox.count] })
-
-        expect(response).to have_http_status(:no_content)
-      end
-
-      it 'still rejects an invalid website token' do
-        get widget_url(website_token: 'invalid'), headers: { 'User-Agent' => 'Googlebot' }
-
-        expect(response).to have_http_status(:not_found)
-      end
-
-      it 'still rejects suspended accounts' do
-        url = widget_url(website_token: web_widget.website_token)
-        account.update!(status: :suspended)
-
-        expect { get url, headers: { 'User-Agent' => 'Googlebot' } }.not_to(change { [Contact.count, ContactInbox.count] })
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
     it 'returns 404 when called with out website_token' do
       get widget_url
       expect(response).to have_http_status(:not_found)

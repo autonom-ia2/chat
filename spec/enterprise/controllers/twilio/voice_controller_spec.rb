@@ -83,7 +83,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
         account.enable_features!('channel_voice', 'mobile_voice_push')
         expect(Voice::VoipPushService).not_to receive(:recipients_for)
 
-        2.times { post "/twilio/voice/call/#{digits}", params: inbound_call_params }
+        2.times { post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params }
 
         xml = Nokogiri::XML(response.body)
         expect(xml.at_xpath('//Say').text).to eq('Please call during business hours.')
@@ -98,7 +98,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       it 'plays the saved generated audio before hanging up' do
         inbox.out_of_hours_call_audio.attach(io: StringIO.new('audio'), filename: 'announcement.mp3', content_type: 'audio/mpeg')
 
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         xml = Nokogiri::XML(response.body)
         expect(xml.at_xpath('//Play').text).to include('announcement.mp3')
@@ -110,7 +110,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
         account.update!(locale: 'de')
         channel.update!(provider_config: channel.provider_config.merge('out_of_hours_call_message' => 'Bitte rufen Sie morgen an.'))
 
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         announcement = Nokogiri::XML(response.body).at_xpath('//Say')
         expect(announcement.text).to eq('Bitte rufen Sie morgen an.')
@@ -120,7 +120,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       it 'uses a supported default for account languages unavailable in the basic Twilio voice' do
         account.update!(locale: 'ml')
 
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         expect(Nokogiri::XML(response.body).at_xpath('//Say')['language']).to eq('en-US')
       end
@@ -128,7 +128,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       it 'rings normally when applying business hours to calls is disabled' do
         channel.update!(provider_config: channel.provider_config.merge('business_hours_calls_enabled' => false))
 
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         expect(Nokogiri::XML(response.body).at_xpath('//Conference')).to be_present
         expect(inbox.calls.sole).to have_attributes(status: 'ringing', end_reason: nil)
@@ -139,7 +139,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
           inbox.working_hours.find_by!(day_of_week: 1).update!(closed_all_day: false, open_hour: 9, open_minutes: 0,
                                                                close_hour: 17, close_minutes: 0)
 
-          post "/twilio/voice/call/#{digits}", params: inbound_call_params
+          post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
           expect(Nokogiri::XML(response.body).at_xpath('//Conference')).to be_present
           expect(inbox.calls.sole).to be_ringing
@@ -184,7 +184,7 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       let(:from_number) { 'anonymous' }
 
       it 'answers with conference TwiML and a phone-less contact' do
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         call = Call.find_by!(provider_call_id: call_sid)
         expect(response).to have_http_status(:ok)
@@ -194,11 +194,11 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       end
 
       it 'creates separate contacts and conversations for separate calls' do
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
         first = Call.find_by!(provider_call_id: call_sid)
         second_sid = "CA#{SecureRandom.hex(16)}"
 
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params.merge('CallSid' => second_sid)
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params.merge('CallSid' => second_sid)
         second = Call.find_by!(provider_call_id: second_sid)
 
         expect(response).to have_http_status(:ok)
@@ -207,10 +207,10 @@ RSpec.describe 'Twilio::VoiceController', type: :request do
       end
 
       it 'reuses the call, contact and conversation when Twilio retries' do
-        post "/twilio/voice/call/#{digits}", params: inbound_call_params
+        post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
 
         expect do
-          post "/twilio/voice/call/#{digits}", params: inbound_call_params
+          post_twilio_webhook "/twilio/voice/call/#{digits}", params: inbound_call_params
         end.not_to(change { [Call.count, Contact.count, Conversation.count] })
         expect(response).to have_http_status(:ok)
       end

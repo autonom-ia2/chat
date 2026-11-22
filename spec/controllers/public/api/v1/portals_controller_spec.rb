@@ -92,14 +92,7 @@ RSpec.describe Public::Api::V1::PortalsController, type: :request do
       expect(response).to have_http_status(:success)
     end
 
-    it 'links the header logo to the current locale' do
-      portal.update!(config: { allowed_locales: %w[en es], default_locale: 'en' })
-
-      get "/hc/#{portal.slug}/es"
-
-      expect(response.body).to include(%(href="/hc/#{portal.slug}/es"))
-      expect(response.body).not_to include(%(href="/hc/#{portal.slug}/en"))
-    end
+    # Fork (upgrade 4.19.1, #3119): the public portal logo keeps linking to the default locale (portal views = fork).
 
     it 'shows the active drafted locale in the switcher state on direct locale access' do
       portal.update!(config: { allowed_locales: %w[en es fr], draft_locales: ['es'], default_locale: 'en' })
@@ -116,11 +109,7 @@ RSpec.describe Public::Api::V1::PortalsController, type: :request do
       switchers.each do |switcher|
         options = switcher.css('option')
 
-        expect(options.map { |option| option['value'] }).to include(
-          "/hc/#{portal.slug}/en",
-          'es',
-          "/hc/#{portal.slug}/fr"
-        )
+        expect(options.map { |option| option['value'] }).to include('en', 'es', 'fr')
         expect(
           options.any? do |option|
             option['value'] == 'es' && option['selected'].present? && option['disabled'].present?

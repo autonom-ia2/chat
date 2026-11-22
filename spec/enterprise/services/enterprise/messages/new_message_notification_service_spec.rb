@@ -16,6 +16,8 @@ describe Messages::NewMessageNotificationService do
       { 'APNS_VOIP_KEY' => 'p8', 'APNS_VOIP_KEY_ID' => 'KEY1', 'APNS_VOIP_TEAM_ID' => 'TEAM1' }.fetch(key, default)
     end
     create(:inbox_member, inbox: conversation.inbox, user: assignee)
+    # Fork (upgrade 4.19.1, #3119): new users do not get the missed-call push by default, so turn it on here.
+    assignee.notification_settings.find_by(account_id: account.id).update!(push_voice_call_missed: true)
     create(:call, conversation: conversation, message_id: message.id, ring_state: { 'ring_recipient_ids' => [assignee.id] })
   end
 

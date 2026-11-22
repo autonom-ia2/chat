@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Captain::Conversation::ContactMessageTranslationService do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, settings: { translation_provider: 'captain' }) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, additional_attributes: { 'conversation_language' => 'en' }) }
   let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Bonjour') }
