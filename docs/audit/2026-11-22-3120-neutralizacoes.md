@@ -98,7 +98,8 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
   - Alpine com `apk upgrade`.
 - **Desempenho**: gzip, cache da conta e os índices novos.
 - **Filtro**: "contém" recusado em atributo numérico (#16610).
-- **E-mail**: "Para" entra no Cc ao responder a todos (#16476, `@chatwoot/utils` 0.0.58).
+- **E-mail**: "Para" entra no Cc ao responder a todos (#16476, `@chatwoot/utils` 0.0.58). O `semQuemSaiuDaCopia`
+  (#1828) roda depois do `getRecipients` e limpa Para, Cc e Cco. Quem pediu para sair da cópia continua fora.
 - **Atribuição**: automação ou macro que atribui uma pessoa passa pelo serviço de atribuição do fork (#16475), que tira
   o robô e abre a conversa, como a atribuição manual. A produção tem 0 regras ativas.
 - **WhatsApp Cloud**: faixa e campo de app secret na caixa manual (#16548), visíveis só para o administrador.
@@ -123,6 +124,23 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
 - Conferências que passaram: `check-fork-i18n.mjs`, `check-email-protection-i18n.mjs`, `guide-map/check.mjs` e
   `central-de-ajuda/conferir.mjs`.
 - RSpec só roda na CI: rspec é proibido neste Mac.
+
+## CI, rodada 1 (`1643fbc463`)
+
+- **Enums do Rails 8**: o Rails 8 tirou a forma `enum status: {...}, _prefix: x`, e os specs caíam todos ao carregar
+  `EmailCampaign`. Passaram para `enum :status, {...}, prefix: x` 54 declarações em 37 modelos do fork. Os valores, os
+  prefixos e os escopos são os mesmos. Não sobrou nenhuma na forma antiga em `app`, `enterprise` e `lib`.
+- **Ruby 3.4.13 na CI**: o `setup-ruby` fixado no SHA não conhecia essa versão. O pin passou para a v1.343.0 no
+  `testes.yml` e nos dois deploys blue/green.
+- **Trava de lint do e-mail**: ela bloqueia todo aviso de ESLint, menos o de chave dinâmica, em qualquer arquivo de
+  front que o PR mude. Os 10 avisos estavam em arquivos que vieram do upstream: texto solto (`·`, `#`, `—`, `❌`/`✅`),
+  `v-if` na raiz e dois componentes num spec. Cada um ganhou um `eslint-disable` de uma linha, no padrão que o repo já
+  usa. A marcação e o comportamento não mudaram.
+- **RuboCop** nos modelos mexidos: alinhamento de hash e uma linha longa de anotação, com 0 ofensas no fim.
+- **Já falhava na `main`, e não é desta etapa**:
+  - "Node synthetic contracts" estoura o teto de 10 min. O passo de recuperação do deploy leva de 7,5 a 8,5 min, e na
+    `main` `a9da74909c` também foi cancelado.
+  - "Component browser QA": o contraste do "Buscar perfil" (3,499) é o mesmo da `main`.
 
 ## Antes do deploy (Orquestração)
 

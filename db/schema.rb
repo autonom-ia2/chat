@@ -10,12 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
   # These extensions should be enabled to support this database
+  enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
-  enable_extension "plpgsql"
   enable_extension "vector"
 
   create_table "access_tokens", force: :cascade do |t|
@@ -2346,8 +2346,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
     t.datetime "updated_at", null: false
     t.boolean "hmac_verified", default: false
     t.string "pubsub_token"
-    t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
     t.index ["contact_id", "inbox_id"], name: "index_contact_inboxes_on_contact_id_and_inbox_id"
+    t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
     t.index ["inbox_id", "source_id"], name: "index_contact_inboxes_on_inbox_id_and_source_id", unique: true
     t.index ["inbox_id"], name: "index_contact_inboxes_on_inbox_id"
     t.index ["pubsub_token"], name: "index_contact_inboxes_on_pubsub_token", unique: true
@@ -4166,8 +4166,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_22_103417) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["data_import_id", "id"], name: "index_pending_data_import_items", where: "(status = 0)"
     t.index ["chatwoot_record_type", "chatwoot_record_id"], name: "idx_data_import_items_on_record"
+    t.index ["data_import_id", "id"], name: "index_pending_data_import_items", where: "(status = 0)"
     t.index ["data_import_id", "source_object_type", "source_object_id"], name: "idx_data_import_items_on_import_and_source", unique: true
     t.index ["data_import_id"], name: "index_data_import_items_on_data_import_id"
     t.index ["source_provider", "source_object_type", "source_object_id"], name: "idx_data_import_items_on_source"

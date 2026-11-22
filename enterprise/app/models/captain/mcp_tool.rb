@@ -45,9 +45,8 @@ class Captain::McpTool < ApplicationRecord
 
   validates :name, presence: true, uniqueness: { scope: :mcp_server_id }
   validates :approved_digest, format: { with: /\Asha256:[0-9a-f]{64}\z/ }
-  validates_with JsonSchemaValidator,
-                 schema: Captain::CustomTool::SETTINGS_VALIDATION,
-                 attribute_resolver: ->(record) { record.settings }
+  # Fork (upgrade 4.20.1, #3120): the fork JsonSchemaValidator is an EachValidator (see Captain::CustomTool).
+  validates :settings, json_schema: { schema: Captain::CustomTool::SETTINGS_VALIDATION }
   validates :enabled, inclusion: { in: [true, false] }
   # The name is set once on create, so only a new tool can clash
   validate :validate_captain_name, on: :create
