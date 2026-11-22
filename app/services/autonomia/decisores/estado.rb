@@ -188,11 +188,13 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
     { notes: textos(ultimas(conversation&.messages&.where(private: true))) }
   end
 
-  # Nome e atributos. O e-mail e o telefone ficam de fora sempre, inclusive como nome.
+  # Nome e atributos. O e-mail e o telefone ficam de fora sempre, inclusive como nome. #3082: sem os campos apagados, e
+  # com o nome e o "Para que serve" de cada campo que tem definição (`attribute_meanings`).
   def ler_contato
     return {} if contato.nil?
 
-    { contact: { name: (contato.name unless nome_provisorio?), attributes: curto(contato.custom_attributes) }.compact_blank }
+    { contact: { name: (contato.name unless nome_provisorio?),
+                 **campos_da_conta(contato.account, contato.custom_attributes, 'contact_attribute') }.compact_blank }
   end
 
   # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha: nunca
@@ -219,7 +221,15 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   def ler_empresa
     empresa = contato.respond_to?(:company) ? contato.company : nil
     nome = empresa&.name || contato&.additional_attributes.to_h['company_name']
-    { company: { name: nome, attributes: curto(empresa&.custom_attributes) }.compact_blank }
+    campos = empresa ? campos_da_conta(empresa.account, empresa.custom_attributes, 'company_attribute') : {}
+    { company: { name: nome, **campos }.compact_blank }
+  end
+
+  # #3082 (PR B): os atributos de pessoa ou empresa sem os campos apagados, e o significado dos que têm definição.
+  def campos_da_conta(conta, atributos, modelo)
+    leitor = Relationships::CamposParaIa.new(conta)
+    valores = curto(leitor.valores(atributos, modelo))
+    { attributes: valores, attribute_meanings: leitor.significados(valores.keys, modelo) }
   end
 
   # O nome que a plataforma pôs no lugar de um nome: o e-mail, o começo dele, ou o telefone em qualquer

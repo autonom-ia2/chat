@@ -118,7 +118,7 @@ module Crm
       # estágio ciente do que já se sabe e não re-extrair o que não mudou.
       def known_attributes
         {
-          contact: attribute_values(@card.try(:contact)),
+          contact: valores_do_contato,
           conversation: attribute_values(@card.primary_conversation),
           card: attribute_values(@card).except(*chaves_de_contato)
         }
@@ -129,6 +129,14 @@ module Crm
       def chaves_de_contato
         @card.account.custom_attribute_definitions.where(attribute_model: :card_attribute, attribute_display_type: :contato)
              .pluck(:attribute_key)
+      end
+
+      # #3082: o campo apagado (guardado escondido) não volta para a IA pelos valores; o schema já não o tem.
+      def valores_do_contato
+        contato = @card.try(:contact)
+        return {} if contato.nil?
+
+        ::Relationships::CamposParaIa.new(@card.account).valores(attribute_values(contato), 'contact_attribute')
       end
 
       def attribute_values(record)
