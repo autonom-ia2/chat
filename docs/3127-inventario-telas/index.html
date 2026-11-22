@@ -109,7 +109,7 @@ td small{color:var(--muted);display:block;font-size:12px}
 
 <section>
   <h2>Lotes propostos, em ordem</h2>
-  <p>Cada lote é um PR, com mockup em prints antes de implementar e revisão do diretor de arte com prints de antes e depois. Telas com muitos arquivos mudados pelo upgrade esperam o upgrade terminar. Nas outras, a construção é aditiva (tela nova em arquivo próprio, rota antiga redireciona), então o conflito fica pequeno.</p>
+  <p>Primeiro as telas novas, uma família por PR, com mockup em prints antes de implementar e revisão do diretor de arte com prints de antes e depois. Cada tela nova já nasce com os textos certos. Telas com muitos arquivos mudados pelo upgrade esperam o upgrade terminar. Tudo o que não é tela nova (telas duplicadas, atalhos, chaves antigas e backend) está na Issue #3129, para depois de todas as telas no ar.</p>
   <div class="lotes" id="lotes"></div>
 </section>
 
@@ -130,15 +130,15 @@ td small{color:var(--muted);display:block;font-size:12px}
 
 <section class="cols2">
   <div style="display:grid;gap:12px">
-    <h2>Pedem backend (Issues separadas)</h2>
+    <h2>Para depois das telas (Issue #3129)</h2>
     <ul class="list" id="backend"></ul>
   </div>
   <div style="display:grid;gap:12px">
-    <h2>Conferir antes de começar</h2>
+    <h2>Também na #3129</h2>
     <ul class="list">
       <li><b>Chaves ligadas em todas as contas?</b><span class="why"><code>lista_quem_espera</code>, <code>painel_contato_enxuto</code>, <code>funcoes_guiadas</code>, horário único por canal e agente de IA por caixa. Todas nascem ligadas no <code>features.yml</code>. Se alguma conta estiver sem, a pessoa cai na tela original. Leitura no banco pela Orquestração, quando a fila reabrir.</span></li>
       <li><b>A ficha nova da pessoa tem tudo da antiga?</b><span class="why">Notas, histórico e juntar contatos, antes de redirecionar a ficha antiga.</span></li>
-      <li><b>Prints reais.</b><span class="why">Cada lote começa com prints da tela de hoje, para fechar a nota visual.</span></li>
+      <li><b>Telas antigas duplicadas e atalhos.</b><span class="why">Ficha, lista e empresas antigas, editor de portais, automação antiga, Cmd+K e Alt+V.</span></li>
     </ul>
   </div>
 </section>
@@ -146,80 +146,79 @@ td small{color:var(--muted);display:block;font-size:12px}
 
 <script>
 const LOTES=[
- {id:1,nome:"Textos que enganam",tam:"P",livre:true,txt:"Só texto e um diálogo de confirmação. Resolve os 4 críticos menos o Site, e a maior parte dos altos.",itens:["Caixa de resposta: anotação × enviar ao cliente","Notificações: confirmar antes de apagar tudo","Apagar canal diz o que se perde","Título de cada tela igual ao do cartão","Pessoa = usuário; IA = agente (relatórios, canais, times)","Times, Respostas prontas, Robôs, Login, Histórico: textos","Relatórios: Satisfação, Dentro/Fora do prazo, Passou para uma pessoa"]},
- {id:2,nome:"Uma tela por assunto",tam:"M",livre:true,txt:"Aposentar as telas duplicadas e os becos sem saída.",itens:["Ficha, lista de contatos e empresas antigas redirecionam para Relacionamentos","Cmd+K e Alt+V deixam de abrir as telas antigas","Editor antigo de portais redireciona para a Central de Ajuda","Login da empresa e Importar dados deixam de ser becos sem saída","Apagar settings/sla (código morto) e tirar a Automação antiga do Cmd+K","Aposentar o caminho antigo da lista e do painel do contato, se as chaves estiverem ligadas"]},
- {id:3,nome:"Configurações › Pessoas e atendimento",tam:"G",livre:true,txt:"Telas novas no padrão de Automações (herói, cartão-frase, uma ação por tela).",itens:["Usuários","Times (uma tela no lugar do passo a passo de 3 etapas)","Respostas prontas","Etiquetas (bolinha de cor, sem código hexadecimal)","Regras para encerrar (com prévia da mensagem ao cliente)","Botões com 44 px e nome para leitor de tela"]},
- {id:4,nome:"Avisos, chamadas e busca",tam:"M",livre:true,txt:"O que o atendente usa em volta da conversa.",itens:["Notificações","Chamadas","Busca","Filtros salvos (um nome só)","Filtro avançado com filtros prontos","Ações em massa com texto nos botões"]},
- {id:5,nome:"Canais: criar e configurar",tam:"G",livre:false,txt:"A jornada de maior impacto para conta nova. O upgrade muda 36 arquivos aqui.",itens:["Escolher canal: os dois WhatsApps em destaque, o resto recolhido","WhatsApp Oficial sem Twilio e com texto da Meta","Configurações da caixa: o básico em cima, o resto em Mais opções","Abas renomeadas; dados técnicos por último, só para administrador","Pesquisa de satisfação e perguntas antes do chat"]},
- {id:6,nome:"Caixa de resposta e topo da conversa",tam:"M",livre:false,txt:"Acabamento da tela mais usada. O upgrade muda 13 arquivos aqui.",itens:["Botões de 44 px com nome","Topo enxuto no celular","Dica de modelos traduzida"]},
- {id:7,nome:"Relatórios",tam:"G",livre:false,txt:"Os textos já entram no lote 1. Aqui entra o visual: uma frase do que fazer com cada número. O upgrade muda 28 arquivos.",itens:["Visão geral, Conversas, Usuários, Canais, Times, Etiquetas","Satisfação, Prazos, Robôs","Título como h1; tabelas que cabem em 390 px"]},
- {id:8,nome:"Conexões, perfil e primeiro acesso",tam:"M",livre:false,txt:"Telas raras ou de administrador. Esperam o upgrade.",itens:["Integrações e Agentes externos","Perfil: avançado recolhido; chave de acesso só para administrador","Primeiro acesso: sem perguntas de marketing, sem a palavra Chatwoot","Dados da empresa sem ID técnico"]},
- {id:9,nome:"Atribuição, Ações e Campos",tam:"G",livre:true,txt:"Por último: uso baixo (as Ações têm uso zero) e os Campos já têm versão nova em Relacionamentos.",itens:["Atribuição: política e capacidade em frase do dia a dia","Ações em um clique: cartão-frase e botões subir/descer","Campos: a chave sai do nome; sem expressão regular"]}
+ {id:1,nome:"Notificações e Chamadas",tam:"M",livre:true,txt:"Duas telas que o atendente abre todo dia. Resolve o crítico do \"Excluir todas\".",itens:["Notificações: título certo, confirmação antes de apagar, vazio com frase e botão","Chamadas: erro em palavras simples, vazio diferente para atendente e administrador"]},
+ {id:2,nome:"Configurações › Pessoas e atendimento",tam:"G",livre:true,txt:"Cinco telas no padrão de Automações (herói, cartão-frase, uma ação por tela).",itens:["Usuários","Times (uma tela no lugar do passo a passo de 3 etapas)","Respostas prontas","Etiquetas (bolinha de cor, sem código hexadecimal)","Regras para encerrar (com prévia da mensagem ao cliente)"]},
+ {id:3,nome:"Busca, filtros e ações em massa",tam:"M",livre:true,txt:"O que fica em volta da lista de conversas.",itens:["Busca","Filtro avançado com filtros prontos","Filtros salvos (um nome só)","Cabeçalho original que aparece ao filtrar","Ações em massa com texto nos botões"]},
+ {id:4,nome:"Configurações restantes",tam:"G",livre:true,txt:"Telas de administrador, de uso mais raro.",itens:["Atribuição: políticas e capacidade","Ações em um clique","Campos extras","Agentes externos","Histórico de alterações","Login da empresa"]},
+ {id:5,nome:"Conversa: caixa de resposta e topo",tam:"M",livre:false,txt:"A tela mais usada. Resolve o crítico da anotação × enviar ao cliente. O upgrade muda 13 arquivos aqui.",itens:["Caixa de resposta: Anotação interna × Enviar ao cliente","Botões de 44 px com nome","Topo enxuto no celular"]},
+ {id:6,nome:"Canais: criar e configurar",tam:"G",livre:false,txt:"A jornada de maior impacto para conta nova. Resolve o crítico de apagar canal. O upgrade muda 36 arquivos aqui.",itens:["Lista de canais","Escolher canal: os dois WhatsApps em destaque, o resto recolhido","Criar cada tipo de canal","Configurações da caixa e todas as abas"]},
+ {id:7,nome:"Relatórios",tam:"G",livre:false,txt:"Nove relatórios com uma frase do que fazer com cada número. O upgrade muda 28 arquivos.",itens:["Visão geral, Conversas, Usuários, Canais, Times, Etiquetas","Satisfação, Prazos, Robôs"]},
+ {id:8,nome:"Conexões, perfil e primeiro acesso",tam:"M",livre:false,txt:"Telas raras ou de administrador. O crítico do Site obrigatório se resolve na tela; a parte do servidor está na #3129.",itens:["Integrações e Webhooks","Importar dados","Dados da empresa","Perfil","Primeiro acesso (dados e canais)","Conta suspensa"]}
 ];
 // s: original | parcial | nossa | morta ; up: upgrade muda muito (espera) ; be: precisa backend
 const T=[
  ["Atender"],
- ["Lista de conversas","conversation/ChatList","parcial",6,"Ao filtrar, aparece o cabeçalho original do Chatwoot","Redesenhar o cabeçalho original de filtro e pasta","M",4,1,""],
- ["Filtro avançado","components-next/filter","original",3,"Construtor de consulta com E/OU e \"Está presente\"","Filtros prontos; operadores em frase; esconder campos técnicos","M",4,0,""],
- ["Ações em massa","conversationBulkActions","original",4,"Cinco ícones sem nome; \"Limpar\" com 24 px","Ícone com texto; 44 px","P",4,0,""],
- ["Painel da conversa e caixa de resposta","widgets/conversation, WootWriter","parcial",5,"\"Mensagem Privada\" e \"Enviar\" nos dois modos","Anotação interna × Enviar ao cliente; botões com nome","M","1 e 6",1,""],
- ["Notificações","routes/dashboard/inbox","original",3,"Título \"Caixa de Entrada\"; \"Excluir todas\" sem confirmar","Confirmação; título Notificações; vazio com frase e botão","M","1 e 4",0,""],
- ["Chamadas","routes/dashboard/calls","original",4,"Erro cru do sistema; vazio sem saída para o atendente","Texto de erro; vazio por papel","P",4,0,""],
- ["Busca","modules/search","original",4,"\"3 ou mais caracteres\"; erro \"Messagem\"","\"Procure pelo nome, telefone ou e-mail\"","M",4,0,""],
- ["Filtros salvos","customviews","original",3,"Filtro, pasta e segmento: três nomes para a mesma coisa","Um nome só; confirmação que diz o que some","P",4,0,""],
- ["Paleta de comandos (Cmd+K)","commands","original",2,"Captain, Macro, CSAT, SLA; leva a telas antigas","Nomes iguais aos do menu; destinos novos","P",2,0,""],
- ["Perfil","settings/profile","parcial",4,"12 seções num rolar só; chave de acesso para todos","Avançado recolhido; chave só para administrador","M",8,1,""],
+ ["Lista de conversas", "conversation/ChatList", "parcial", 6, "Ao filtrar, aparece o cabeçalho original do Chatwoot", "Redesenhar o cabeçalho original de filtro e pasta", "M", 3, 1, ""],
+ ["Filtro avançado", "components-next/filter", "original", 3, "Construtor de consulta com E/OU e \"Está presente\"", "Filtros prontos; operadores em frase; esconder campos técnicos", "M", 3, 0, ""],
+ ["Ações em massa", "conversationBulkActions", "original", 4, "Cinco ícones sem nome; \"Limpar\" com 24 px", "Ícone com texto; 44 px", "P", 3, 0, ""],
+ ["Painel da conversa e caixa de resposta", "widgets/conversation, WootWriter", "parcial", 5, "\"Mensagem Privada\" e \"Enviar\" nos dois modos", "Anotação interna × Enviar ao cliente; botões com nome", "M", 5, 1, ""],
+ ["Notificações", "routes/dashboard/inbox", "original", 3, "Título \"Caixa de Entrada\"; \"Excluir todas\" sem confirmar", "Confirmação; título Notificações; vazio com frase e botão", "M", 1, 0, ""],
+ ["Chamadas", "routes/dashboard/calls", "original", 4, "Erro cru do sistema; vazio sem saída para o atendente", "Texto de erro; vazio por papel", "P", 1, 0, ""],
+ ["Busca", "modules/search", "original", 4, "\"3 ou mais caracteres\"; erro \"Messagem\"", "\"Procure pelo nome, telefone ou e-mail\"", "M", 3, 0, ""],
+ ["Filtros salvos", "customviews", "original", 3, "Filtro, pasta e segmento: três nomes para a mesma coisa", "Um nome só; confirmação que diz o que some", "P", 3, 0, ""],
+ ["Paleta de comandos (Cmd+K)", "commands", "original", 2, "Captain, Macro, CSAT, SLA; leva a telas antigas", "Nomes iguais aos do menu; destinos novos", "P", "depois (#3129)", 0, ""],
+ ["Perfil", "settings/profile", "parcial", 4, "12 seções num rolar só; chave de acesso para todos", "Avançado recolhido; chave só para administrador", "M", 8, 1, ""],
  ["Configurações › Canais e conexões"],
- ["Lista de canais","settings/inbox/Index","parcial",6,"Apagar canal não diz que as conversas somem","Texto de exclusão; botões com 44 px","P","1 e 5",1,""],
- ["Criar canal: escolher tipo","settings/inbox/ChannelList","parcial",3,"14 cartões iguais, dois WhatsApps sem diferença","Dois WhatsApps em destaque; resto recolhido","M",5,1,""],
- ["Criar: WhatsApp Oficial","channels/Whatsapp, CloudWhatsapp","original",2,"\"Provedor de API\", \"metade\" no lugar de Meta, Twilio","Texto da Meta; esconder Twilio","M",5,1,""],
- ["Criar: Instagram e Facebook","channels/Instagram, Facebook","parcial",5,"Avisos da Meta em linguagem técnica","Texto; uma ação por tela","M",5,1,""],
- ["Criar: e-mail, site, SMS, API, Telegram, Line, voz","channels/*","original",3,"Webhook, token do robô, Twilio","Recolher em Outros canais","M",5,1,""],
- ["Criar: quem atende e final","AddAgents, FinishSetup","original",3,"\"Agentes\" para pessoas; \"Então!\"","\"Quem atende\"; \"Pronto!\" e o próximo passo","P","1 e 5",1,""],
- ["Canal › Configurações","settings/inbox/Settings","parcial",3,"Formulário longo; \"Roteamento\"; botão \"Atualizar\"","Básico em cima; Mais opções; \"Salvar\"","G",5,1,""],
- ["Canal › barra de abas","settings/inbox/Settings","parcial",3,"Até 9 abas; \"Configurações\" ao lado de \"Configuração\"","Renomear; técnica por último","M","1 e 5",1,""],
- ["Canal › Quem atende","CollaboratorsPage","original",4,"Nome muda conforme a chave","Nome único","P",5,1,""],
- ["Canal › Horário","HorarioDoCanal / WeeklyAvailability","parcial",6,"Sem a chave, cai na tela antiga","Conferir chave; apagar a antiga","P",2,1,""],
- ["Canal › Satisfação e perguntas antes do chat","CustomerSatisfactionPage, PreChatForm","original",3,"Sigla CSAT; \"Formulário Chat Pré\"","Renomear; começar com modelo pronto","M",5,1,""],
- ["Canal › Dados técnicos","ConfigurationPage","parcial",2,"HMAC, token, webhook","Aba no fim, só para administrador","M",5,1,""],
- ["Canal › Robô / Agente de IA","BotConfiguration","parcial",5,"Sem a chave, mostra a lista de robôs do Chatwoot","Conferir chave; texto","P",2,1,""],
- ["Canal › Situação na Meta, chamadas, voz","AccountHealth, WhatsappCallingPage","original",3,"Termos da Meta","Texto","M",5,1,""],
- ["Integrações","settings/integrations","parcial",5,"\"Chatwoot se integra…\"; botão pequeno","Cartão inteiro clicável; esconder Linear, Slack, Dialogflow","M",8,1,"Descrições das integrações estão no config/locales do servidor"],
- ["Integrações › Webhooks, Painel de aplicativos","Webhooks, DashboardApps","original",2,"Tela de desenvolvedor","Só administrador; texto","M",8,1,""],
- ["Agentes externos (Robôs)","settings/agentBots","original",2,"Cartão diz Agentes externos, tela diz Robôs e pede URL","Título e descrição; tirar coluna de URL","P","1 e 8",0,""],
- ["Importar dados","settings/data","original",1,"Só Intercom e Freshdesk; aba Exportar \"Em breve\"","Tirar a aba vazia; dizer em uma frase o que dá para trazer","P",2,1,""],
- ["Dados da empresa","settings/account","parcial",6,"ID da conta e versão do sistema à vista","Esconder ID e versão; \"Salvar\"","P",8,1,""],
- ["Login da empresa","settings/security","original",1,"Só diz \"SSO via SAML desativado\" a quem administra","Dizer o que fazer: \"O login pela empresa não está ligado. Para ligar, fale com o suporte.\"","P",2,1,""],
- ["Histórico","settings/auditlogs","parcial",4,"\"Logs de Auditoria\"; registro mostra \"(#12)\" no lugar do nome","Texto; filtros em frase","M",1,0,"Mandar o nome do item no registro, não só o número"],
+ ["Lista de canais", "settings/inbox/Index", "parcial", 6, "Apagar canal não diz que as conversas somem", "Texto de exclusão; botões com 44 px", "P", 6, 1, ""],
+ ["Criar canal: escolher tipo", "settings/inbox/ChannelList", "parcial", 3, "14 cartões iguais, dois WhatsApps sem diferença", "Dois WhatsApps em destaque; resto recolhido", "M", 6, 1, ""],
+ ["Criar: WhatsApp Oficial", "channels/Whatsapp, CloudWhatsapp", "original", 2, "\"Provedor de API\", \"metade\" no lugar de Meta, Twilio", "Texto da Meta; esconder Twilio", "M", 6, 1, ""],
+ ["Criar: Instagram e Facebook", "channels/Instagram, Facebook", "parcial", 5, "Avisos da Meta em linguagem técnica", "Texto; uma ação por tela", "M", 6, 1, ""],
+ ["Criar: e-mail, site, SMS, API, Telegram, Line, voz", "channels/*", "original", 3, "Webhook, token do robô, Twilio", "Recolher em Outros canais", "M", 6, 1, ""],
+ ["Criar: quem atende e final", "AddAgents, FinishSetup", "original", 3, "\"Agentes\" para pessoas; \"Então!\"", "\"Quem atende\"; \"Pronto!\" e o próximo passo", "P", 6, 1, ""],
+ ["Canal › Configurações", "settings/inbox/Settings", "parcial", 3, "Formulário longo; \"Roteamento\"; botão \"Atualizar\"", "Básico em cima; Mais opções; \"Salvar\"", "G", 6, 1, ""],
+ ["Canal › barra de abas", "settings/inbox/Settings", "parcial", 3, "Até 9 abas; \"Configurações\" ao lado de \"Configuração\"", "Renomear; técnica por último", "M", 6, 1, ""],
+ ["Canal › Quem atende", "CollaboratorsPage", "original", 4, "Nome muda conforme a chave", "Nome único", "P", 6, 1, ""],
+ ["Canal › Horário", "HorarioDoCanal / WeeklyAvailability", "parcial", 6, "Sem a chave, cai na tela antiga", "Conferir chave; apagar a antiga", "P", "depois (#3129)", 1, ""],
+ ["Canal › Satisfação e perguntas antes do chat", "CustomerSatisfactionPage, PreChatForm", "original", 3, "Sigla CSAT; \"Formulário Chat Pré\"", "Renomear; começar com modelo pronto", "M", 6, 1, ""],
+ ["Canal › Dados técnicos", "ConfigurationPage", "parcial", 2, "HMAC, token, webhook", "Aba no fim, só para administrador", "M", 6, 1, ""],
+ ["Canal › Robô / Agente de IA", "BotConfiguration", "parcial", 5, "Sem a chave, mostra a lista de robôs do Chatwoot", "Conferir chave; texto", "P", "depois (#3129)", 1, ""],
+ ["Canal › Situação na Meta, chamadas, voz", "AccountHealth, WhatsappCallingPage", "original", 3, "Termos da Meta", "Texto", "M", 6, 1, ""],
+ ["Integrações", "settings/integrations", "parcial", 5, "\"Chatwoot se integra…\"; botão pequeno", "Cartão inteiro clicável; esconder Linear, Slack, Dialogflow", "M", 8, 1, "Descrições das integrações estão no config/locales do servidor"],
+ ["Integrações › Webhooks, Painel de aplicativos", "Webhooks, DashboardApps", "original", 2, "Tela de desenvolvedor", "Só administrador; texto", "M", 8, 1, ""],
+ ["Agentes externos (Robôs)", "settings/agentBots", "original", 2, "Cartão diz Agentes externos, tela diz Robôs e pede URL", "Título e descrição; tirar coluna de URL", "P", 4, 0, ""],
+ ["Importar dados", "settings/data", "original", 1, "Só Intercom e Freshdesk; aba Exportar \"Em breve\"", "Tirar a aba vazia; dizer em uma frase o que dá para trazer", "P", 8, 1, ""],
+ ["Dados da empresa", "settings/account", "parcial", 6, "ID da conta e versão do sistema à vista", "Esconder ID e versão; \"Salvar\"", "P", 8, 1, ""],
+ ["Login da empresa", "settings/security", "original", 1, "Só diz \"SSO via SAML desativado\" a quem administra", "Dizer o que fazer: \"O login pela empresa não está ligado. Para ligar, fale com o suporte.\"", "P", 4, 1, ""],
+ ["Histórico", "settings/auditlogs", "parcial", 4, "\"Logs de Auditoria\"; registro mostra \"(#12)\" no lugar do nome", "Texto; filtros em frase", "M", 4, 0, "Mandar o nome do item no registro, não só o número"],
  ["Configurações › Pessoas e atendimento"],
- ["Usuários","settings/agents","parcial",4,"Cartão diz Usuários, tela diz Agentes; função só ao passar o mouse","Nome igual; função no toque, não só ao passar o mouse","M",3,0,""],
- ["Times","settings/teams","original",4,"\"Agente excluído\" ao apagar um time","Textos; uma tela no lugar de 3 etapas","M",3,0,""],
- ["Atribuição › Políticas e capacidade","settings/assignmentPolicy","parcial",5,"\"Política de atribuição\", \"Rodízio\", selo Premium","Frase do dia a dia; padrão de Automações","G",9,0,""],
- ["Respostas prontas","settings/canned","original",4,"Botão de salvar diz \"Enviar\"","\"Salvar resposta\"; erro sem \"servidor Woot\"","P",3,0,""],
- ["Etiquetas","settings/labels","parcial",5,"Coluna Cor mostra o código hexadecimal","Só a bolinha da cor; botões com nome","P",3,0,""],
- ["Campos personalizados","settings/attributes","parcial",3,"Pede \"Chave\" e \"Expressão Regex\"","Chave sai do nome; sem expressão regular","M",9,0,""],
- ["Ações em um clique (macros)","settings/macros","original",3,"\"Macro\", \"Início do Fluxo\", reordenar só arrastando","Cartão-frase; botões subir/descer","G",9,0,""],
- ["Regras para encerrar","settings/conversationWorkflow","original",4,"\"Fluxos de Conversa\"; mensagem ao cliente sem prévia","Prévia da mensagem; \"Encerrar\"","M",3,0,""],
- ["Prazos (pasta antiga)","settings/sla","morta",null,"Pasta sem rota; a tela real é CRM › Prazos","Apagar a pasta","P",2,0,""],
- ["Automação antiga","settings/automation","original",3,"Fora do menu, mas abre pelo Modo manual e pelo Cmd+K","Tirar do Cmd+K; aposentar","G",2,1,"Regras antigas: confirmar uso zero antes de aposentar"],
+ ["Usuários", "settings/agents", "parcial", 4, "Cartão diz Usuários, tela diz Agentes; função só ao passar o mouse", "Nome igual; função no toque, não só ao passar o mouse", "M", 2, 0, ""],
+ ["Times", "settings/teams", "original", 4, "\"Agente excluído\" ao apagar um time", "Textos; uma tela no lugar de 3 etapas", "M", 2, 0, ""],
+ ["Atribuição › Políticas e capacidade", "settings/assignmentPolicy", "parcial", 5, "\"Política de atribuição\", \"Rodízio\", selo Premium", "Frase do dia a dia; padrão de Automações", "G", 4, 0, ""],
+ ["Respostas prontas", "settings/canned", "original", 4, "Botão de salvar diz \"Enviar\"", "\"Salvar resposta\"; erro sem \"servidor Woot\"", "P", 2, 0, ""],
+ ["Etiquetas", "settings/labels", "parcial", 5, "Coluna Cor mostra o código hexadecimal", "Só a bolinha da cor; botões com nome", "P", 2, 0, ""],
+ ["Campos personalizados", "settings/attributes", "parcial", 3, "Pede \"Chave\" e \"Expressão Regex\"", "Chave sai do nome; sem expressão regular", "M", 4, 0, ""],
+ ["Ações em um clique (macros)", "settings/macros", "original", 3, "\"Macro\", \"Início do Fluxo\", reordenar só arrastando", "Cartão-frase; botões subir/descer", "G", 4, 0, ""],
+ ["Regras para encerrar", "settings/conversationWorkflow", "original", 4, "\"Fluxos de Conversa\"; mensagem ao cliente sem prévia", "Prévia da mensagem; \"Encerrar\"", "M", 2, 0, ""],
+ ["Prazos (pasta antiga)", "settings/sla", "morta", null, "Pasta sem rota; a tela real é CRM › Prazos", "Apagar a pasta", "P", "depois (#3129)", 0, ""],
+ ["Automação antiga", "settings/automation", "original", 3, "Fora do menu, mas abre pelo Modo manual e pelo Cmd+K", "Tirar do Cmd+K; aposentar", "G", "depois (#3129)", 1, "Regras antigas: confirmar uso zero antes de aposentar"],
  ["Resultados e o resto"],
- ["Relatório › Visão geral","reports/LiveReports","original",4,"\"Tráfego de conversa\", coluna \"Abrir\"","Textos; título como h1","P","1 e 7",1,""],
- ["Relatório › Conversas","reports/Index","original",4,"\"Contagem de Resolução\", \"Agrupar por\"","Textos; frase de para que serve","P","1 e 7",1,""],
- ["Relatório › Usuários","AgentReports","original",3,"Menu diz Usuários, tela diz Agentes","\"Usuários\" no título, colunas e filtro","P","1 e 7",1,""],
- ["Relatório › Etiquetas","LabelReports","original",3,"A coluna se chama \"Nome do campo\"","\"Etiqueta\"","P","1 e 7",1,""],
- ["Relatório › Canais","InboxReports","original",3,"Título \"Visualizar Caixa de Entrada\"","\"Canais\"","P","1 e 7",1,""],
- ["Relatório › Times","TeamReports","original",4,"\"Resumo do Time\"","\"Times\"","P","1 e 7",1,""],
- ["Relatório › Satisfação","CsatResponses","original",3,"Sigla CSAT; fórmula \"* 100\" na dica","\"Satisfação dos clientes\"","P","1 e 7",1,""],
- ["Relatório › Prazos","SLAReports","parcial",3,"Mesmo nome de outro item do menu; \"Taxa de acerto\"","\"Prazos cumpridos\"; Dentro/Fora do prazo","P","1 e 7",1,""],
- ["Relatório › Robôs","BotReports","original",3,"\"Taxa de entrega\" para passagem a uma pessoa","\"Passou para uma pessoa\"","P","1 e 7",1,""],
- ["Editor antigo de portais","helpcenter","original",1,"Abre pelo Cmd+K; sem portal, manda criar e o servidor recusa","Redirecionar para a Central de Ajuda","P",2,0,""],
- ["Lista antiga de contatos","contacts/ContactsIndex","parcial",4,"Duas listas diferentes das mesmas pessoas","Redirecionar para Relacionamentos","M",2,0,""],
- ["Ficha antiga da pessoa","contacts/ContactManageView","parcial",5,"Outra ficha, diferente da que abre pela lista nova","Redirecionar para a ficha nova","M",2,0,"Só se faltar algum recurso na ficha nova"],
- ["Empresas antigas","companies","parcial",4,"Mesmo problema da ficha antiga","Redirecionar para a empresa nova","P",2,0,""],
- ["Primeiro acesso › dados","onboarding/Index","parcial",4,"Site obrigatório; perguntas de marketing","Site opcional; tirar as perguntas","P",8,0,"Não criar o chat do site quando não houver site"],
- ["Primeiro acesso › canais","onboarding/InboxSetup","parcial",4,"\"Widget\", \"espaço de trabalho\", \"Chatwoot\"","Textos","P",8,0,""],
- ["Conta suspensa","suspended","original",5,"\"Pode violar nossas políticas\"","\"Sua conta está pausada. Fale com o suporte.\"","P",1,0,""],
- ["Captain","captain","original",null,"Chave desligada: não chega à pessoa","Deixar fora","—","fora",1,""],
+ ["Relatório › Visão geral", "reports/LiveReports", "original", 4, "\"Tráfego de conversa\", coluna \"Abrir\"", "Textos; título como h1", "P", 7, 1, ""],
+ ["Relatório › Conversas", "reports/Index", "original", 4, "\"Contagem de Resolução\", \"Agrupar por\"", "Textos; frase de para que serve", "P", 7, 1, ""],
+ ["Relatório › Usuários", "AgentReports", "original", 3, "Menu diz Usuários, tela diz Agentes", "\"Usuários\" no título, colunas e filtro", "P", 7, 1, ""],
+ ["Relatório › Etiquetas", "LabelReports", "original", 3, "A coluna se chama \"Nome do campo\"", "\"Etiqueta\"", "P", 7, 1, ""],
+ ["Relatório › Canais", "InboxReports", "original", 3, "Título \"Visualizar Caixa de Entrada\"", "\"Canais\"", "P", 7, 1, ""],
+ ["Relatório › Times", "TeamReports", "original", 4, "\"Resumo do Time\"", "\"Times\"", "P", 7, 1, ""],
+ ["Relatório › Satisfação", "CsatResponses", "original", 3, "Sigla CSAT; fórmula \"* 100\" na dica", "\"Satisfação dos clientes\"", "P", 7, 1, ""],
+ ["Relatório › Prazos", "SLAReports", "parcial", 3, "Mesmo nome de outro item do menu; \"Taxa de acerto\"", "\"Prazos cumpridos\"; Dentro/Fora do prazo", "P", 7, 1, ""],
+ ["Relatório › Robôs", "BotReports", "original", 3, "\"Taxa de entrega\" para passagem a uma pessoa", "\"Passou para uma pessoa\"", "P", 7, 1, ""],
+ ["Editor antigo de portais", "helpcenter", "original", 1, "Abre pelo Cmd+K; sem portal, manda criar e o servidor recusa", "Redirecionar para a Central de Ajuda", "P", "depois (#3129)", 0, ""],
+ ["Lista antiga de contatos", "contacts/ContactsIndex", "parcial", 4, "Duas listas diferentes das mesmas pessoas", "Redirecionar para Relacionamentos", "M", "depois (#3129)", 0, ""],
+ ["Ficha antiga da pessoa", "contacts/ContactManageView", "parcial", 5, "Outra ficha, diferente da que abre pela lista nova", "Redirecionar para a ficha nova", "M", "depois (#3129)", 0, "Só se faltar algum recurso na ficha nova"],
+ ["Empresas antigas", "companies", "parcial", 4, "Mesmo problema da ficha antiga", "Redirecionar para a empresa nova", "P", "depois (#3129)", 0, ""],
+ ["Primeiro acesso › dados", "onboarding/Index", "parcial", 4, "Site obrigatório; perguntas de marketing", "Site opcional; tirar as perguntas", "P", 8, 0, "Não criar o chat do site quando não houver site"],
+ ["Primeiro acesso › canais", "onboarding/InboxSetup", "parcial", 4, "\"Widget\", \"espaço de trabalho\", \"Chatwoot\"", "Textos", "P", 8, 0, ""],
+ ["Conta suspensa", "suspended", "original", 5, "\"Pode violar nossas políticas\"", "\"Sua conta está pausada. Fale com o suporte.\"", "P", 8, 0, ""],
+ ["Captain", "captain", "original", null, "Chave desligada: não chega à pessoa", "Deixar fora", "—", "fora", 1, ""],
 ];
 const rows=T.filter(r=>r.length>1);
 const count=s=>rows.filter(r=>r[2]===s).length;
