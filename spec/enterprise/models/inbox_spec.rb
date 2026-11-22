@@ -384,17 +384,22 @@ RSpec.describe Inbox do
       calls_inbox.working_hours.each { |hours| hours.update!(closed_all_day: !open_now, open_all_day: open_now) }
     end
 
-    it 'is closed for calls only outside the hours of an inbox that applies them to calls, on both providers' do
-      [twilio_inbox, whatsapp_inbox].each do |calls_inbox|
-        configure(calls_inbox, business_hours_calls: true, working_hours: true, open_now: false)
-        expect(calls_inbox.reload.closed_for_calls?).to be true
+    it 'is closed for calls only outside the hours of a Twilio inbox that applies them to calls' do
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be true
 
-        configure(calls_inbox, business_hours_calls: true, working_hours: true, open_now: true)
-        expect(calls_inbox.reload.closed_for_calls?).to be false
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: true)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
 
-        configure(calls_inbox, business_hours_calls: false, working_hours: true, open_now: false)
-        expect(calls_inbox.reload.closed_for_calls?).to be false
-      end
+      configure(twilio_inbox, business_hours_calls: false, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
+    end
+
+    # Fork (upgrade 4.20.1, #3120): a WhatsApp call is never declined for the hours, as on the fork.
+    it 'never closes a WhatsApp inbox for calls, even outside the hours it applies to calls' do
+      configure(whatsapp_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+
+      expect(whatsapp_inbox.reload.closed_for_calls?).to be false
     end
 
     it 'rings as usual when the inbox has business hours turned off, even if calls follow them' do

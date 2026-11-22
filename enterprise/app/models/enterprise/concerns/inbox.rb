@@ -25,8 +25,9 @@ module Enterprise::Concerns::Inbox
     twilio?
   end
 
+  # Fork (upgrade 4.20.1, #3120): only Twilio calls decline out of hours, as on the fork (see rings_for_calls?).
   def closed_for_calls?
-    channel.respond_to?(:business_hours_calls_enabled?) && channel.business_hours_calls_enabled? && out_of_office?
+    twilio? && channel.business_hours_calls_enabled? && out_of_office?
   end
 
   def ensure_create_permitted

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { flushPromises, mount } from '@vue/test-utils';
+import { mount } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import { createStore } from 'vuex';
 import MoreActions from '../MoreActions.vue';
@@ -87,76 +87,21 @@ const openMenu = async wrapper => {
   await wrapper.find('[data-more]').trigger('click');
 };
 
+// Fork (upgrade 4.20.1, #3120): the per-conversation switch stays out of the menu (see MoreActions.vue).
 describe('MoreActions auto-translate switch', () => {
   beforeEach(() => {
     useAlert.mockClear();
   });
 
-  it('offers to turn it off and names the language replies are sent in', async () => {
+  it('stays out of the menu while auto-translate is on for the account', async () => {
     const wrapper = mountMoreActions({});
     await openMenu(wrapper);
 
-    const item = wrapper.find('[data-action="auto_translate"]');
-    expect(item.text()).toBe(
-      'CONVERSATION.HEADER.AUTO_TRANSLATE.TURN_OFF Turkish'
-    );
+    expect(wrapper.find('[data-action="auto_translate"]').exists()).toBe(false);
+    expect(wrapper.find('[data-action="send_transcript"]').exists()).toBe(true);
   });
 
-  it('turns it off for the conversation', async () => {
-    const setAutoTranslate = vi.fn();
-    const wrapper = mountMoreActions({ setAutoTranslate });
-    await openMenu(wrapper);
-
-    await wrapper.find('[data-action="auto_translate"]').trigger('click');
-    await flushPromises();
-
-    expect(setAutoTranslate).toHaveBeenCalledWith(expect.anything(), {
-      conversationId: 1,
-      disabled: true,
-    });
-    expect(useAlert).toHaveBeenCalledWith(
-      'CONVERSATION.HEADER.AUTO_TRANSLATE.TURNED_OFF'
-    );
-  });
-
-  it('turns it back on once it is off', async () => {
-    const setAutoTranslate = vi.fn();
-    const wrapper = mountMoreActions({
-      autoTranslate: { disabledInConversation: true },
-      setAutoTranslate,
-    });
-    await openMenu(wrapper);
-
-    const item = wrapper.find('[data-action="auto_translate"]');
-    expect(item.text()).toBe('CONVERSATION.HEADER.AUTO_TRANSLATE.TURN_ON');
-
-    await item.trigger('click');
-    await flushPromises();
-
-    expect(setAutoTranslate).toHaveBeenCalledWith(expect.anything(), {
-      conversationId: 1,
-      disabled: false,
-    });
-    expect(useAlert).toHaveBeenCalledWith(
-      'CONVERSATION.HEADER.AUTO_TRANSLATE.TURNED_ON'
-    );
-  });
-
-  it('tells the agent when the change could not be saved', async () => {
-    const wrapper = mountMoreActions({
-      setAutoTranslate: vi.fn().mockRejectedValue(new Error('Failed')),
-    });
-    await openMenu(wrapper);
-
-    await wrapper.find('[data-action="auto_translate"]').trigger('click');
-    await flushPromises();
-
-    expect(useAlert).toHaveBeenCalledWith(
-      'CONVERSATION.HEADER.AUTO_TRANSLATE.UPDATE_FAILED'
-    );
-  });
-
-  it('hides the switch while auto-translate is off for the account', async () => {
+  it('stays out of the menu while auto-translate is off for the account', async () => {
     const wrapper = mountMoreActions({ autoTranslate: { enabled: false } });
     await openMenu(wrapper);
 

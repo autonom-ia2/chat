@@ -137,5 +137,11 @@ RSpec.describe Voice::RingRecipients do
 
       expect(recipients.agents).to contain_exactly(alice, bob, cara)
     end
+
+    it 'rings an online agent who turned calls off, since accepts_calls filters only the upstream routing' do
+      AccountUser.find_by(user: cara, account: account).update!(accepts_calls: false)
+
+      expect(recipients.agents).to contain_exactly(alice, bob, cara)
+    end
   end
 end

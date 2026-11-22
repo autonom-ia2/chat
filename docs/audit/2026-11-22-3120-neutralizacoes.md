@@ -61,9 +61,10 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
 | #16420, #16722, #16623 | Limite de altura da imagem (colide com #1702), arrastar e soltar no e-mail novo, `openCopilot` | Telas iguais ao fork |
 | #15938, #16074 | Reading mode e recolher o editor | ReplyBox e MessagesView do fork |
 | #16548 | App secret obrigatório para criar caixa WhatsApp Cloud manual, migrar para manual ou apagar o segredo; aviso de conta e de modelo aceito sem assinatura quando a caixa da URL ainda não tem segredo | `channel/whatsapp.rb` sem a validação; campo opcional nas 3 telas; `access_loss` e `templates/webhook_entry.rb` mantêm a assinatura obrigatória nos avisos |
-| #16637, #16711 | Chamada de WhatsApp roteada como a da Twilio: toque em degraus, lista de quem toca, recusa fora do horário, espera da distribuição, card só para a lista do servidor | `Inbox#rings_for_calls?` volta a ser só Twilio; `IncomingCallService#broadcast_incoming` da main (responsável, senão online da caixa, senão membros e admins, com o funil #1148); a aba Chamadas do WhatsApp esconde quem toca, horário e tempo pós-chamada. Decidido com dado de produção: 5 caixas com chamada ligada na Hub2You |
+| #16637, #16711 | Chamada de WhatsApp roteada como a da Twilio: toque em degraus, lista de quem toca, recusa fora do horário, espera da distribuição, card só para a lista do servidor | `Inbox#rings_for_calls?` e `#closed_for_calls?` voltam a ser só Twilio; `IncomingCallService#broadcast_incoming` da main (responsável, senão online da caixa, senão membros e admins, com o funil #1148); a aba Chamadas do WhatsApp esconde quem toca, horário e tempo pós-chamada. Decidido com dado de produção: 5 caixas com chamada ligada na Hub2You |
 | #16620 | Checagem própria do callback da Bandwidth ligada por padrão em caixa nova | Migration `20261104104833` deixa o padrão `false`, como nas caixas existentes; o `CONFIG_KEYS` aceita as credenciais de callback do fork (#1027) |
-| #16549 | Webhook do 360dialog recusado (401) sem o `webhook_token` da caixa | `before_action :verify_webhook_token!` fora do `Webhooks::WhatsappController`; as caixas de hoje não têm o token, e todo aviso cairia |
+| #16549 | Webhook do 360dialog recusado (401) sem o `webhook_token` da caixa | `before_action :verify_webhook_token!` fora do `Webhooks::WhatsappController`. O 360dialog só manda o token depois de a caixa registrar a URL nova; uma caixa cujo registro falhasse perderia as mensagens sem erro. O token segue gerado e enviado, e sai do payload do job (ninguém o lê) |
+| Auto tradução | Desligar a tradução automática numa conversa só, pelo menu "Mais ações" | `MoreActions.vue` esconde o item (`CONVERSATION_AUTO_TRANSLATE` falso); a tradução segue ligada ou desligada por conta, como no fork. O parâmetro `auto_translate_disabled` existe na API, mas nada o envia |
 | #16541 | Importar contatos pelo serviço novo (`DataImports::CreationService`), que recusa a 2ª importação em andamento e roda em outro job | `contacts_controller#import` volta ao fluxo da main (`DataImportJob`), que aplica a herança da recusa (chat#713). A trava #2772 (`ImportacaoAntigaFechada`) continua na frente |
 | #16342 | "Aceitar chamadas" (`accepts_calls`) filtrando quem toca numa chamada de WhatsApp | `Voice::RingRecipients#openers` só filtra quando `inbox.rings_for_calls?` (Twilio); no WhatsApp tocam todos os online que podem abrir a conversa, como na main |
 
@@ -112,7 +113,9 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
   - o widget deixa de receber `conversation.updated` e recebe um payload menor nos eventos de mensagem (#16564). O widget
     não trata `conversation.updated` (nenhum handler em `app/javascript/widget` nem em `shared`), então nada muda na
     tela; os agentes seguem com o payload inteiro e os destinatários do fork (`Crm::Access::Recipients`);
-  - `conversation.updated` ganha a chave `auto_translate_disabled`. Quem lê pelo nome não percebe.
+  - `conversation.updated` ganha a chave `auto_translate_disabled`. Quem lê pelo nome não percebe;
+  - `ContactsController` com `wrap_parameters format: []` (#16541): o corpo JSON deixa de vir repetido em
+    `params[:contact]`. Nenhum código do controller nem dos módulos dele lê essa chave.
 - **Rotas**:
   - `call_business_hours` (só Twilio) virou `call_routing` e `whatsapp_call_hours`. Nenhuma tela do fork chama a rota
     antiga, e a voz da Twilio está sem uso;

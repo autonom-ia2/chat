@@ -31,6 +31,9 @@ const itensDoFork = ref(null);
 const botaoMais = ref(null);
 const focarMaisAcoes = () => botaoMais.value?.$el?.focus();
 const autoTranslate = computed(() => store.getters.getAutoTranslate);
+// Fork (upgrade 4.20.1, #3120): the per-conversation auto-translate switch (upstream) stays out of the menu. Auto-translate
+// keeps working per account, as on the fork; nothing turns it off for one conversation.
+const CONVERSATION_AUTO_TRANSLATE = false;
 
 const actionMenuItems = computed(() => {
   const items = [];
@@ -59,7 +62,7 @@ const actionMenuItems = computed(() => {
   });
 
   const { enabled, disabledInConversation, language } = autoTranslate.value;
-  if (enabled) {
+  if (CONVERSATION_AUTO_TRANSLATE && enabled) {
     items.push({
       icon: 'i-lucide-languages',
       label: disabledInConversation
