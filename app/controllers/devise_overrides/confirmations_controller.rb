@@ -1,6 +1,5 @@
 class DeviseOverrides::ConfirmationsController < Devise::ConfirmationsController
   include AuthHelper
-  include MfaAuthenticationHelper
   skip_before_action :require_no_authentication, raise: false
   skip_before_action :authenticate_user!, raise: false
 
@@ -13,9 +12,8 @@ class DeviseOverrides::ConfirmationsController < Devise::ConfirmationsController
 
   private
 
+  # Fork (upgrade 4.19.1, #3119): confirming the e-mail signs the user in, as before, even with MFA on; approve in #3135.
   def render_confirmation_success
-    return render_mfa_sign_in_required if mfa_sign_in_required?(@confirmable)
-
     send_auth_headers(@confirmable)
     render partial: 'devise/auth', formats: [:json], locals: { resource: @confirmable }
   end

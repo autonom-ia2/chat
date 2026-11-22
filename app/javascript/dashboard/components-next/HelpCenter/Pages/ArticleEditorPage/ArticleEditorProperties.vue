@@ -7,7 +7,6 @@ import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue'
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import ArticleSlugField from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleSlugField.vue';
 
 const props = defineProps({
   article: {
@@ -16,12 +15,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  'saveArticle',
-  'saveSlug',
-  'previewArticle',
-  'close',
-]);
+const emit = defineEmits(['saveArticle', 'close']);
 
 const saveArticle = debounce(value => emit('saveArticle', value), 400, false);
 
@@ -79,11 +73,6 @@ onMounted(() => {
     </div>
     <div class="flex flex-col gap-2">
       <div>
-        <ArticleSlugField
-          :article="article"
-          @save-slug="slug => emit('saveSlug', slug)"
-          @preview-article="emit('previewArticle')"
-        />
         <div class="flex justify-between w-full gap-4 py-2">
           <label
             class="text-sm font-medium whitespace-nowrap min-w-[6.25rem] text-n-slate-12"

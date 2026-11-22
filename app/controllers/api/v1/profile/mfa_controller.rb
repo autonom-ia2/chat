@@ -1,5 +1,5 @@
 class Api::V1::Profile::MfaController < Api::BaseController
-  before_action :ensure_interactive_session
+  # Fork (upgrade 4.19.1, #3119): no 403 for api_access_token here (`ensure_interactive_session`); approve in #3135.
   before_action :check_mfa_feature_available
   before_action :check_mfa_not_enforced, only: [:destroy]
   before_action :check_mfa_enabled, only: [:destroy, :backup_codes]
@@ -26,14 +26,6 @@ class Api::V1::Profile::MfaController < Api::BaseController
   end
 
   private
-
-  # MFA credentials must be managed from an interactive session, never with an
-  # api_access_token, so a stolen token cannot enrol itself as the second factor.
-  def ensure_interactive_session
-    return unless authenticate_by_access_token?
-
-    render json: { error: I18n.t('errors.mfa.interactive_session_required') }, status: :forbidden
-  end
 
   def mfa_service
     @mfa_service ||= Mfa::ManagementService.new(user: current_user)

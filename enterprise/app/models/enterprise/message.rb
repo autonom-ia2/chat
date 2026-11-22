@@ -33,7 +33,8 @@ module Enterprise::Message
 
   def validate_anonymous_caller_reply
     return if private? || voice_call? || (!outgoing? && !template?)
-    return unless conversation.contact_inbox.anonymous_caller?
+    # Fork (upgrade 4.19.1, #3119): inbox type first, so non-Twilio messages skip the contact inbox query.
+    return unless conversation.inbox.channel_type == 'Channel::TwilioSms' && conversation.contact_inbox.anonymous_caller?
 
     errors.add(:base, I18n.t('errors.conversations.anonymous_caller_reply'))
   end

@@ -72,13 +72,8 @@ export const InitializationHelpers = {
       const localeSwitcher = e.target.closest('.locale-switcher');
       if (!localeSwitcher) return;
 
-      const targetUrl = new URL(localeSwitcher.value, window.location.origin);
-      const isHelpCenterUrl = targetUrl.pathname.startsWith('/hc/');
-
-      if (targetUrl.origin !== window.location.origin || !isHelpCenterUrl)
-        return;
-
-      window.location.assign(targetUrl.href);
+      const { portalSlug } = localeSwitcher.dataset;
+      window.location.href = `/hc/${encodeURIComponent(portalSlug)}/${encodeURIComponent(localeSwitcher.value)}/`;
     });
   },
 

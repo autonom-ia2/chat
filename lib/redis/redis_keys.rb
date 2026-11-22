@@ -99,8 +99,10 @@ module Redis::RedisKeys
   META_PAGE_SUBSCRIPTION_MUTEX = 'META_PAGE_SUBSCRIPTION_LOCK::%<page_id>s'.freeze
 
   ## Auto Assignment Keys
-  # Sorted set of conversation ids assigned to an agent, scored by assignment time, for rate limiting
-  ASSIGNMENT_KEY = 'ASSIGNMENT::%<inbox_id>d::AGENT::%<agent_id>d'.freeze
+  # Track conversation assignments to agents for rate limiting
+  # Fork (upgrade 4.19.1, #3119): keys as before; the upstream sorted set would forget the assignments made before the deploy.
+  ASSIGNMENT_KEY = 'ASSIGNMENT::%<inbox_id>d::AGENT::%<agent_id>d::CONVERSATION::%<conversation_id>d'.freeze
+  ASSIGNMENT_KEY_PATTERN = 'ASSIGNMENT::%<inbox_id>d::AGENT::%<agent_id>d::*'.freeze
   # At-most-one AssignmentJob per inbox in-flight (queued or running); further enqueues are skipped
   AUTO_ASSIGNMENT_IN_FLIGHT_KEY = 'AUTO_ASSIGNMENT_IN_FLIGHT::%<inbox_id>d'.freeze
 

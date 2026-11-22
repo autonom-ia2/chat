@@ -107,7 +107,8 @@ class SearchService
   end
 
   def message_base_query
-    query = current_account.messages.where('created_at >= ?', search_window_start)
+    # Fork (upgrade 4.19.1, #3119): the SQL search keeps its calendar window of three months.
+    query = current_account.messages.where('created_at >= ?', 3.months.ago)
     query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
     query = query.where(conversation_id: funnel_scope.apply(current_account.conversations).select(:id)) if funnel_scope.restricted?
     query

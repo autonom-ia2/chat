@@ -2,7 +2,9 @@ module Enterprise::Conversation
   attr_accessor :captain_activity_reason, :captain_activity_reason_type
 
   def can_reply?
-    return false if contact_inbox.anonymous_caller?
+    # Fork (upgrade 4.19.1, #3119): only Twilio inboxes have anonymous callers; checking the inbox type first keeps the
+    # conversation list from loading every contact inbox.
+    return false if inbox.channel_type == 'Channel::TwilioSms' && contact_inbox.anonymous_caller?
 
     super
   end

@@ -81,7 +81,6 @@ json.contact_info_request do
   json.reason nil
   json.delivery_mode nil
 end
-json.anonymous_caller conversation.contact_inbox.anonymous_caller?
 json.contact_last_seen_at conversation.contact_last_seen_at.to_i
 json.custom_attributes conversation.custom_attributes
 json.inbox_id conversation.inbox_id
