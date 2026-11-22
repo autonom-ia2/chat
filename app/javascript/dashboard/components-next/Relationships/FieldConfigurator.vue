@@ -390,6 +390,13 @@ const submit = async () => {
     // Trazido de volta: a lista de novo, com o campo nela e fora de "Campos
     // apagados" (uma leitura nova). Os outros salvares fecham a janela.
     if (broughtBack) {
+      // O que estava na tela foi junto no salvar: a lista volta com a versão
+      // nova, sem conflito no próximo Salvar.
+      revision.value = state.value.configuration.revision;
+      initialSurfaces = JSON.parse(
+        JSON.stringify(state.value.configuration.surfaces)
+      );
+      layout.value = JSON.parse(JSON.stringify(initialSurfaces));
       directEntry.value = false;
       backToList();
       load();

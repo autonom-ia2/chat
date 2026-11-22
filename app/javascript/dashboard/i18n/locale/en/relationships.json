@@ -192,7 +192,7 @@
     "NO_DEFINITIONS": "There are no fields yet. Use New field to create the first one.",
     "SELECTION_SUMMARY": "{selected} of {total} show",
     "BREADCRUMB_LABEL": "Relationships navigation",
-    "GLOBAL_NOTE": "This applies to the whole team. What was written is never lost, neither when hiding nor when deleting a field.",
+    "GLOBAL_NOTE": "This applies to the whole team. What was written stays saved, whether you hide or delete a field.",
     "MORE_ACTIONS": "More actions",
     "VISIT_SITE": "Visit website",
     "OPEN_PANEL": "Open relationship panel",

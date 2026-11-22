@@ -691,9 +691,13 @@ it('brings a deleted field back with the same key, type and purpose', async () =
     attribute_display_type: 'text',
     attribute_description: 'Placa do carro',
   });
-  // Volta para a lista, onde a pessoa vê o campo de novo.
+  // Volta para a lista, onde a pessoa vê o campo de novo, e o próximo Salvar
+  // vai com a versão nova.
   expect(wrapper.find('dialog').element.open).toBe(true);
   expect(wrapper.find('input[type="search"]').exists()).toBe(true);
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.patch.mock.calls[1][1].configuration.revision).toBe(5);
   wrapper.unmount();
 });
 

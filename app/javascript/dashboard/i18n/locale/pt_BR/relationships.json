@@ -192,7 +192,7 @@
     "NO_DEFINITIONS": "Ainda não há campos. Use Novo campo para criar o primeiro.",
     "SELECTION_SUMMARY": "{selected} de {total} aparecem",
     "BREADCRUMB_LABEL": "Navegação de Relacionamentos",
-    "GLOBAL_NOTE": "Vale para toda a equipe. O que já foi escrito nunca se perde, nem ao esconder, nem ao apagar um campo.",
+    "GLOBAL_NOTE": "Vale para toda a equipe. O que já foi escrito fica guardado, ao esconder ou ao apagar um campo.",
     "MORE_ACTIONS": "Mais ações",
     "VISIT_SITE": "Ver site",
     "OPEN_PANEL": "Abrir acompanhamento",
