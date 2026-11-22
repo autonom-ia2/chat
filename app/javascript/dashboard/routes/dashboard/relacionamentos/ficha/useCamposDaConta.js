@@ -28,7 +28,7 @@ export const DA_EMPRESA = {
   area: 'company_details',
 };
 
-const daConfiguracao = area => {
+const daConfiguracao = (area, modelo) => {
   const { attributesEnabled, state } = useRelationships();
   const escolhidos = computed(() =>
     selectDefinitions(
@@ -40,12 +40,19 @@ const daConfiguracao = area => {
   const podeEscolher = computed(
     () => attributesEnabled.value && Boolean(state.value.can_manage)
   );
-  return { escolhidos, podeEscolher };
+  // #3082 — as chaves dos campos apagados deste modelo (guardados escondidos).
+  const guardadas = computed(() =>
+    (state.value.guardados || [])
+      .filter(item => item.attribute_model === modelo)
+      .map(item => item.attribute_key)
+  );
+  return { escolhidos, podeEscolher, guardadas };
 };
 
 const semConfiguracao = () => ({
   escolhidos: computed(() => []),
   podeEscolher: computed(() => false),
+  guardadas: computed(() => []),
 });
 
 export const useCamposDaConta = ({ de = DA_PESSOA } = {}) => {
@@ -60,8 +67,8 @@ export const useCamposDaConta = ({ de = DA_PESSOA } = {}) => {
   const comConfigurador =
     isCloudFeatureEnabled(FEATURE_FLAGS.RELATIONSHIPS_ATTRIBUTES) &&
     isCloudFeatureEnabled(FEATURE_FLAGS.CUSTOM_ATTRIBUTES);
-  const { escolhidos, podeEscolher } = comConfigurador
-    ? daConfiguracao(de.area)
+  const { escolhidos, podeEscolher, guardadas } = comConfigurador
+    ? daConfiguracao(de.area, de.modelo)
     : semConfiguracao();
-  return { definicoes, escolhidos, podeEscolher };
+  return { definicoes, escolhidos, podeEscolher, guardadas };
 };

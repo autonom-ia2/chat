@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref, watch, useId, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, useId, onBeforeUnmount, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
@@ -11,6 +12,9 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import MostrarNaTela from 'dashboard/components-next/CustomAttributes/MostrarNaTela.vue';
 import AttributeBadge from 'dashboard/components-next/CustomAttributes/AttributeBadge.vue';
+import ApagarCampo from './ApagarCampo.vue';
+import CamposApagados from './CamposApagados.vue';
+import OndeAparece from './OndeAparece.vue';
 import { selectDefinitions, attributeKey } from './presentation';
 
 const props = defineProps({
@@ -28,6 +32,7 @@ const {
   allDefinitions,
   load,
   save,
+  remove,
 } = useRelationships();
 const dialog = ref(null);
 const inputId = useId();
@@ -39,6 +44,8 @@ const revision = ref(0);
 const openedAccount = ref(null);
 const busy = ref(false);
 const error = ref('');
+// #3082 — a conferência de "Apagar este campo" no lugar do formulário.
+const deleting = ref(false);
 let generation = 0;
 const onClose = () => {
   generation += 1;
@@ -66,9 +73,22 @@ const definitions = computed(() =>
         .includes(query.value.toLowerCase())
   )
 );
+// #3082 — trazer de volta um campo apagado: o formulário de campo novo, já
+// preenchido e com a chave que ele tinha, para o que foi escrito voltar.
+const restoring = computed(() =>
+  Boolean(draft.value && !draft.value.id && draft.value.attribute_key)
+);
+const typeLocked = computed(() =>
+  Boolean(draft.value?.id || draft.value?.attribute_key)
+);
+const deleted = computed(() =>
+  (state.value.guardados || []).filter(
+    item => item.attribute_model === model.value
+  )
+);
 const types = computed(() => {
   const values = ['text', 'number', 'link', 'date', 'list', 'checkbox'];
-  if (draft.value?.id && !values.includes(draft.value.attribute_display_type))
+  if (typeLocked.value && !values.includes(draft.value.attribute_display_type))
     values.push(draft.value.attribute_display_type);
   return values.map(value => ({
     value,
@@ -88,6 +108,8 @@ let initialDisplayOn = [];
 let initialSurfaces = {};
 
 const edit = definition => {
+  deleting.value = false;
+  error.value = '';
   draft.value = definition
     ? { ...definition }
     : {
@@ -105,6 +127,63 @@ const edit = definition => {
       )
     : [props.surface].filter(Boolean);
   initialDisplayOn = [...displayOn.value];
+};
+const bringBack = item => {
+  edit(null);
+  draft.value = {
+    attribute_key: item.attribute_key,
+    attribute_display_name: item.attribute_display_name || '',
+    attribute_description: item.attribute_description || '',
+    attribute_display_type: item.attribute_display_type,
+  };
+  listOptions.value = (item.attribute_values || []).join('\n');
+  initialOptions = listOptions.value;
+};
+const withoutField = (surfacesById, id) =>
+  Object.fromEntries(
+    Object.entries(surfacesById).map(([name, selection]) => [
+      name,
+      selection?.ids
+        ? { ...selection, ids: selection.ids.filter(item => item !== id) }
+        : selection,
+    ])
+  );
+const openDeleting = async () => {
+  deleting.value = true;
+  await nextTick();
+  dialog.value?.$el?.querySelector?.('[data-voltar-da-conferencia]')?.focus();
+};
+const closeDeleting = async () => {
+  deleting.value = false;
+  await nextTick();
+  dialog.value?.$el?.querySelector?.('[data-abrir-apagar]')?.focus();
+};
+const backToList = () => {
+  deleting.value = false;
+  draft.value = null;
+};
+const deleteField = async () => {
+  if (busy.value || !draft.value?.id || !state.value.can_manage) return;
+  const current = generation;
+  busy.value = true;
+  error.value = '';
+  try {
+    const { id, attribute_display_name: name } = draft.value;
+    await remove(draft.value, openedAccount.value);
+    if (current !== generation || accountId.value !== openedAccount.value)
+      return;
+    // O campo apagado sai das áreas: salvar depois com o id dele daria erro.
+    layout.value = withoutField(layout.value, id);
+    initialSurfaces = withoutField(initialSurfaces, id);
+    // Volta para a lista, onde o campo aparece em "Campos apagados".
+    directEntry.value = false;
+    backToList();
+    useAlert(t('RELATIONSHIPS.DELETE.DONE', { name }));
+  } catch {
+    if (current === generation) error.value = t('RELATIONSHIPS.DELETE.ERROR');
+  } finally {
+    if (current === generation) busy.value = false;
+  }
 };
 const open = async (definition, create = false) => {
   generation += 1;
@@ -125,6 +204,7 @@ const open = async (definition, create = false) => {
   query.value = '';
   error.value = '';
   draft.value = null;
+  deleting.value = false;
   dialog.value.open();
   if (create) edit(null);
   else if (definition?.id)
@@ -177,6 +257,11 @@ const invalidDraft = computed(() =>
 const FICHAS = ['contact_details', 'company_details'];
 const fromRecord = computed(() => FICHAS.includes(props.surface));
 const dialogTitle = computed(() => {
+  if (deleting.value)
+    return t('RELATIONSHIPS.DELETE.TITLE', {
+      name: draft.value.attribute_display_name,
+    });
+  if (restoring.value) return t('RELATIONSHIPS.DELETED.BRING_BACK_TITLE');
   if (!draft.value)
     return t(
       fromRecord.value
@@ -206,6 +291,8 @@ const missingToSave = computed(() => {
   );
 });
 const dialogDescription = computed(() => {
+  if (deleting.value) return '';
+  if (restoring.value) return t('RELATIONSHIPS.DELETED.BRING_BACK_DESCRIPTION');
   if (!draft.value)
     return t(
       fromRecord.value
@@ -218,13 +305,15 @@ const dialogDescription = computed(() => {
       : 'RELATIONSHIPS.CREATE_DESCRIPTION'
   );
 });
-const confirmLabel = computed(() =>
-  t(
+const confirmLabel = computed(() => {
+  if (deleting.value) return t('RELATIONSHIPS.DELETE.CONFIRM');
+  if (restoring.value) return t('RELATIONSHIPS.DELETED.BRING_BACK');
+  return t(
     draft.value
       ? 'RELATIONSHIPS.SAVE_ATTRIBUTE'
       : 'RELATIONSHIPS.SAVE_CONFIGURATION'
-  )
-);
+  );
+});
 const displayToggle = (surfaceName, enabled) => {
   displayOn.value = displayOn.value.filter(value => value !== surfaceName);
   if (enabled) displayOn.value.push(surfaceName);
@@ -293,10 +382,25 @@ const submit = async () => {
     )
       payload.display_on = displayOn.value;
   }
+  const broughtBack = restoring.value;
   try {
     await save(payload, openedAccount.value);
-    if (current === generation && accountId.value === openedAccount.value)
-      dialog.value.close();
+    if (current !== generation || accountId.value !== openedAccount.value)
+      return;
+    // Trazido de volta: a lista de novo, com o campo nela e fora de "Campos
+    // apagados" (uma leitura nova). Os outros salvares fecham a janela.
+    if (broughtBack) {
+      // O que estava na tela foi junto no salvar: a lista volta com a versão
+      // nova, sem conflito no próximo Salvar.
+      revision.value = state.value.configuration.revision;
+      initialSurfaces = JSON.parse(
+        JSON.stringify(state.value.configuration.surfaces)
+      );
+      layout.value = JSON.parse(JSON.stringify(initialSurfaces));
+      directEntry.value = false;
+      backToList();
+      load();
+    } else dialog.value.close();
   } catch (e) {
     if (current !== generation) return;
     error.value =
@@ -319,6 +423,7 @@ watch(
     onClose();
     dialog.value?.close();
     draft.value = null;
+    deleting.value = false;
   }
 );
 onBeforeUnmount(onClose);
@@ -368,10 +473,10 @@ defineExpose({ open });
       :description="dialogDescription"
       :confirm-button-label="confirmLabel"
       :is-loading="busy"
-      :disable-confirm-button="invalidDraft"
+      :disable-confirm-button="!deleting && invalidDraft"
       overflow-y-auto
       width="xl"
-      @confirm="submit"
+      @confirm="deleting ? deleteField() : submit()"
       @close="onClose"
     >
       <fieldset
@@ -427,7 +532,8 @@ defineExpose({ open });
             {{ t(`RELATIONSHIPS.ENTITY_LABELS.${activeEntity}`) }}
           </span>
         </div>
-        <template v-if="draft">
+        <ApagarCampo v-if="deleting" />
+        <template v-else-if="draft">
           <Button
             v-if="!directEntry"
             type="button"
@@ -459,7 +565,7 @@ defineExpose({ open });
             <ChoiceSelect
               v-model="draft.attribute_display_type"
               :options="types"
-              :disabled="Boolean(draft.id) || busy"
+              :disabled="typeLocked || busy"
               :aria-label="t('RELATIONSHIPS.FIELD_TYPE')"
               class="w-full"
             />
@@ -524,39 +630,27 @@ defineExpose({ open });
             {{ t('ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.ESCONDIDO_DE_TODAS') }}
           </p>
           <!-- Aberto pela ficha, o campo novo já entra nela: sem "Onde aparece". -->
-          <section
+          <OndeAparece
             v-else-if="surfaces.length && !fromRecord"
-            class="flex flex-col gap-3 border-t border-n-weak pt-4"
-          >
-            <h4 class="text-sm font-medium text-n-slate-12">
-              {{ t('RELATIONSHIPS.DISPLAY_TITLE') }}
-            </h4>
-            <div
-              v-for="surfaceName in surfaces"
-              :key="surfaceName"
-              class="flex items-start gap-3 py-1"
-            >
-              <Switch
-                :model-value="displayOn.includes(surfaceName)"
-                :disabled="busy"
-                :aria-label="t(`RELATIONSHIPS.SURFACES.${surfaceName}`)"
-                :aria-describedby="`${inputId}-${surfaceName}-help`"
-                class="mt-1"
-                @update:model-value="value => displayToggle(surfaceName, value)"
-              />
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-n-slate-12">
-                  {{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}
-                </p>
-                <p
-                  :id="`${inputId}-${surfaceName}-help`"
-                  class="mt-1 text-xs leading-relaxed text-n-slate-11"
-                >
-                  {{ t(`RELATIONSHIPS.SURFACE_HELP.${surfaceName}`) }}
-                </p>
-              </div>
-            </div>
-          </section>
+            :surfaces="surfaces"
+            :display-on="displayOn"
+            :disabled="busy"
+            @toggle="displayToggle"
+          />
+          <div v-if="draft.id" class="border-t border-n-weak pt-4">
+            <!-- #3082 — alvo de toque de 44 px sem aumentar o desenho. -->
+            <Button
+              type="button"
+              sm
+              ghost
+              ruby
+              icon="i-lucide-trash-2"
+              class="relative before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']"
+              data-abrir-apagar
+              :label="t('RELATIONSHIPS.DELETE.OPEN')"
+              @click="openDeleting"
+            />
+          </div>
         </template>
         <template v-else>
           <div class="flex flex-col gap-2">
@@ -695,6 +789,11 @@ defineExpose({ open });
               )
             }}
           </p>
+          <CamposApagados
+            :campos="deleted"
+            :disabled="busy"
+            @trazer="bringBack"
+          />
         </template>
       </fieldset>
       <template #footer>
@@ -712,14 +811,18 @@ defineExpose({ open });
             type="button"
             faded
             slate
-            :label="t('DIALOG.BUTTONS.CANCEL')"
-            @click="dialog.close()"
+            :label="
+              t(deleting ? 'RELATIONSHIPS.BACK' : 'DIALOG.BUTTONS.CANCEL')
+            "
+            :data-voltar-da-conferencia="deleting || undefined"
+            @click="deleting ? closeDeleting() : dialog.close()"
           />
           <Button
             type="submit"
+            :color="deleting ? 'ruby' : undefined"
             :label="confirmLabel"
             :is-loading="busy"
-            :disabled="busy || invalidDraft"
+            :disabled="busy || (!deleting && invalidDraft)"
           />
         </div>
       </template>

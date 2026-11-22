@@ -146,6 +146,7 @@ const campos = computed(() =>
     ? camposDaEmpresa({
         definicoes: camposDaConta.definicoes.value,
         escolhidos: camposDaConta.escolhidos.value,
+        guardadas: camposDaConta.guardadas.value,
         valores: ficha.empresa.value.custom_attributes ?? {},
       })
     : []
@@ -487,6 +488,7 @@ watch(
       :salvando="ficha.ocupadoEm('salvar')"
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
+      :guardadas="camposDaConta.guardadas.value"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
     />
