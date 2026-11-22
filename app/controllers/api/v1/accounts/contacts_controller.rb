@@ -36,13 +36,15 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def import
     return render json: { error: I18n.t('errors.contacts.import.failed') }, status: :unprocessable_entity if params[:import_file].blank?
 
-    source_params = { source_provider: 'csv', import_file: params[:import_file] }
-    data_import = DataImports::CreationService.new(account: Current.account, initiated_by: Current.user, source_params: source_params).perform
-    return render json: { error: 'Another data import is already in progress.' }, status: :unprocessable_entity unless data_import
+    # Fork (upgrade 4.20.1, #3120): the import keeps the fork flow, the legacy contacts import that DataImportJob runs. That
+    # job applies the opt-out inheritance (chat#713); the upstream CSV import (#16541) goes through another job without it,
+    # and refuses a second import while one is running.
+    ActiveRecord::Base.transaction do
+      import = Current.account.data_imports.create!(data_type: 'contacts')
+      import.import_file.attach(params[:import_file])
+    end
 
     head :ok
-  rescue ArgumentError => e
-    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # Fork (upgrade 4.20.1, #3120): export keeps the fork job, which e-mails the CSV itself. Upstream (#16541, #16649) sends

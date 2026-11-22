@@ -204,18 +204,20 @@ RSpec.describe 'Webhooks::WhatsappController', type: :request do
         expect(Webhooks::WhatsappEventsJob).to have_received(:perform_later).with(hash_excluding('webhook_token'))
       end
 
-      it 'rejects webhooks without the webhook token' do
+      # Fork (upgrade 4.20.1, #3120): the token check of upstream #16549 stays off (see Webhooks::WhatsappController), so a
+      # 360dialog webhook without the token, or with another one, keeps going through as on the fork.
+      it 'accepts webhooks without the webhook token' do
         post_unsigned_whatsapp_webhook("/webhooks/whatsapp/#{dialog_channel.phone_number}", body)
 
-        expect(response).to have_http_status(:unauthorized)
-        expect(Webhooks::WhatsappEventsJob).not_to have_received(:perform_later)
+        expect(response).to have_http_status(:success)
+        expect(Webhooks::WhatsappEventsJob).to have_received(:perform_later)
       end
 
-      it 'rejects webhooks with an invalid webhook token' do
+      it 'accepts webhooks with another webhook token and drops it from the job' do
         post_unsigned_whatsapp_webhook("/webhooks/whatsapp/#{dialog_channel.phone_number}?webhook_token=invalid", body)
 
-        expect(response).to have_http_status(:unauthorized)
-        expect(Webhooks::WhatsappEventsJob).not_to have_received(:perform_later)
+        expect(response).to have_http_status(:success)
+        expect(Webhooks::WhatsappEventsJob).to have_received(:perform_later).with(hash_excluding('webhook_token'))
       end
 
       it 'accepts webhooks for channels that do not have a webhook token yet' do

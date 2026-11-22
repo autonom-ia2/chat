@@ -100,9 +100,12 @@ class Voice::RingRecipients
                         .transform_values { |calls| calls.max_by { |call| call.ended_at.to_i } }
   end
 
+  # Fork (upgrade 4.20.1, #3120): accepts_calls (#16342) filters only the upstream call routing; a WhatsApp call rings
+  # every online agent who may open the conversation, as on the fork. See Inbox#rings_for_calls?
   def openers(users)
-    online = AccountUser.where(account_id: inbox.account_id, user_id: users.map(&:id), availability: :online, accepts_calls: true)
-                        .index_by(&:user_id)
+    scope = AccountUser.where(account_id: inbox.account_id, user_id: users.map(&:id), availability: :online)
+    scope = scope.where(accepts_calls: true) if inbox.rings_for_calls?
+    online = scope.index_by(&:user_id)
     users.select { |user| online[user.id] && can_open_conversation?(user, online[user.id]) }
   end
 

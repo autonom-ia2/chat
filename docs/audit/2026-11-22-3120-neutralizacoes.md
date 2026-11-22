@@ -63,6 +63,9 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
 | #16548 | App secret obrigatório para criar caixa WhatsApp Cloud manual, migrar para manual ou apagar o segredo; aviso de conta e de modelo aceito sem assinatura quando a caixa da URL ainda não tem segredo | `channel/whatsapp.rb` sem a validação; campo opcional nas 3 telas; `access_loss` e `templates/webhook_entry.rb` mantêm a assinatura obrigatória nos avisos |
 | #16637, #16711 | Chamada de WhatsApp roteada como a da Twilio: toque em degraus, lista de quem toca, recusa fora do horário, espera da distribuição, card só para a lista do servidor | `Inbox#rings_for_calls?` volta a ser só Twilio; `IncomingCallService#broadcast_incoming` da main (responsável, senão online da caixa, senão membros e admins, com o funil #1148); a aba Chamadas do WhatsApp esconde quem toca, horário e tempo pós-chamada. Decidido com dado de produção: 5 caixas com chamada ligada na Hub2You |
 | #16620 | Checagem própria do callback da Bandwidth ligada por padrão em caixa nova | Migration `20261104104833` deixa o padrão `false`, como nas caixas existentes; o `CONFIG_KEYS` aceita as credenciais de callback do fork (#1027) |
+| #16549 | Webhook do 360dialog recusado (401) sem o `webhook_token` da caixa | `before_action :verify_webhook_token!` fora do `Webhooks::WhatsappController`; as caixas de hoje não têm o token, e todo aviso cairia |
+| #16541 | Importar contatos pelo serviço novo (`DataImports::CreationService`), que recusa a 2ª importação em andamento e roda em outro job | `contacts_controller#import` volta ao fluxo da main (`DataImportJob`), que aplica a herança da recusa (chat#713). A trava #2772 (`ImportacaoAntigaFechada`) continua na frente |
+| #16342 | "Aceitar chamadas" (`accepts_calls`) filtrando quem toca numa chamada de WhatsApp | `Voice::RingRecipients#openers` só filtra quando `inbox.rings_for_calls?` (Twilio); no WhatsApp tocam todos os online que podem abrir a conversa, como na main |
 
 ## Traduções
 
@@ -98,7 +101,23 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
   - log de mesclagem só com ids (#16518);
   - resposta do widget sem o contato inteiro (#16497);
   - `:install_url` filtrado do log;
-  - Alpine com `apk upgrade`.
+  - Alpine com `apk upgrade`;
+  - verify token do Messenger (`FB_VERIFY_TOKEN`) comparado de verdade. Antes, qualquer token passava, porque o método
+    devolvia o próprio valor da configuração;
+  - `Integrations::Facebook::WebhookServer` recusa o aviso do Messenger quando não há app secret. Antes, a assinatura
+    já falhava sem o segredo; agora fica um log;
+  - callback de SMS (#16620): o aviso endereçado a outra caixa pela URL é descartado (`routable?`), e o
+    `provider_config` passa a ter lista de chaves e chaves obrigatórias. Há 0 caixas SMS em produção.
+- **Payloads**:
+  - o widget deixa de receber `conversation.updated` e recebe um payload menor nos eventos de mensagem (#16564). O widget
+    não trata `conversation.updated` (nenhum handler em `app/javascript/widget` nem em `shared`), então nada muda na
+    tela; os agentes seguem com o payload inteiro e os destinatários do fork (`Crm::Access::Recipients`);
+  - `conversation.updated` ganha a chave `auto_translate_disabled`. Quem lê pelo nome não percebe.
+- **Rotas**:
+  - `call_business_hours` (só Twilio) virou `call_routing` e `whatsapp_call_hours`. Nenhuma tela do fork chama a rota
+    antiga, e a voz da Twilio está sem uso;
+  - `POST /profile/work_preferences` (#16342) existe na API, mas a tela esconde o botão. Só a própria pessoa muda a
+    própria preferência, e nada chama a rota hoje, então o rodízio segue igual.
 - **Desempenho**: gzip, cache da conta e os índices novos.
 - **Filtro**: "contém" recusado em atributo numérico (#16610).
 - **E-mail**: "Para" entra no Cc ao responder a todos (#16476, `@chatwoot/utils` 0.0.58). O `semQuemSaiuDaCopia`
@@ -173,6 +192,10 @@ Esta é a etapa 2 do épico #3118. A etapa 1 está em `2026-11-22-3119-neutraliz
    `20261111031108` troca por `gpt-6-luna`, como na etapa 1.
 2. **`FB_VERIFY_TOKEN`**: gravar nas duas stacks (decisão 7 do épico).
 3. **Índice `contact_inboxes(contact_id, inbox_id)`**: é `CONCURRENTLY`, mas a tabela é grande. Medir o tempo.
+4. **`FB_APP_SECRET`**: confirmar que existe nas duas stacks (ou o segredo da própria caixa). Sem ele, o aviso do
+   Messenger é recusado.
+5. **Captain**: conferir que nenhuma conta usa o Captain sem a flag `captain_integration` (#16391).
+6. **360dialog**: o `webhook_token` da caixa fica sem efeito (#16549 neutralizado). Nada a gravar.
 
 ## Para o Rodrigo decidir
 

@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 764 |
 | Sem corpo | 212 |
 | Com corpo | 552 |
-| Com corpo e formato completo | 464 (84,1%) |
-| Com corpo e formato incompleto | 88 |
+| Com corpo e formato completo | 465 (84,2%) |
+| Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 23 de 239 |
-| Leituras cruas tipadas | 234 de 328 |
+| Leituras cruas tipadas | 235 de 328 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 74 |
+| leitura crua sem tipo | 73 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -69,9 +69,8 @@ Uma ação pode ter mais de um motivo.
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
 - `POST captain/tasks/rewrite` — leitura crua sem tipo: content (repassada a Captain::RewriteService.new), operation (repassada a Captain::RewriteService.new)
-- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:53); leitura crua sem tipo: column_names
-- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:69); params inteiro repassado a ::Contacts::FilterService.new
-- `POST contacts/import` — leitura crua sem tipo: import_file
+- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:55); leitura crua sem tipo: column_names
+- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:71); params inteiro repassado a ::Contacts::FilterService.new
 - `POST conversa_canal/ditados` — leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
@@ -166,7 +165,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conference#create` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/conference#destroy` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
-- `api/v1/accounts/contacts#import` import_file — o código não converte nem compara o valor
 - `api/v1/accounts/conversa_canal/ditados#create` audio — repassada a ConversaCanal::Ditado.new
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#toggle_typing_status` typing_status — repassada a Conversations::ChannelTyping::DeliverJob.perform_later

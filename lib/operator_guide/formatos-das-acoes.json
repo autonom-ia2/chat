@@ -477,8 +477,8 @@
     "controller": "api/v1/accounts/contacts#avatar",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:121",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:223"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:123",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:225"
     ],
     "sem_corpo": true
   },
@@ -5131,15 +5131,15 @@
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:102",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:191",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:227",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:104",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:193",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:229",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:223",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:214",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:213"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:225",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:216",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:215"
     ],
     "sem_corpo": false
   },
@@ -14692,12 +14692,12 @@
     "controller": "api/v1/accounts/contacts#create",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:93",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:191",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:227",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:95",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:193",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:229",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:188",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:184",
       "app/controllers/api/v1/accounts/contacts_controller.rb:182",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:180",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25"
@@ -14822,9 +14822,9 @@
     "controller": "api/v1/accounts/contacts#destroy_custom_attributes",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:86",
       "app/controllers/api/v1/accounts/contacts_controller.rb:88",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:223"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:90",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:225"
     ],
     "sem_corpo": false
   },
@@ -14836,13 +14836,13 @@
     "controller": "api/v1/accounts/contacts#export",
     "modelo": "Contact",
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:53)",
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:55)",
       "leitura crua sem tipo: column_names"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:51",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:52",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:53"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:53",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:54",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:55"
     ],
     "sem_corpo": false
   },
@@ -14861,31 +14861,31 @@
     "controller": "api/v1/accounts/contacts#filter",
     "modelo": "Contact",
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:69)",
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:71)",
       "params inteiro repassado a ::Contacts::FilterService.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:68",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:145",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:214",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:213",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:69"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:70",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:147",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:216",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:215",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:71"
     ],
     "sem_corpo": false
   },
   "POST contacts/import": {
     "campos": {
-      "import_file": {}
+      "import_file": {
+        "tipo": "arquivo",
+        "tipo_pela_leitura": "uso"
+      }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/contacts#import",
     "modelo": "Contact",
-    "motivos": [
-      "leitura crua sem tipo: import_file"
-    ],
     "origem": [
       "app/controllers/concerns/contact_imports/importacao_antiga_fechada.rb:12",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:39",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:44",
       "app/controllers/api/v1/accounts/contacts_controller.rb:37"
     ],
     "sem_corpo": false
@@ -25785,15 +25785,15 @@
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:102",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:191",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:227",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:104",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:193",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:229",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:33",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:31",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:25",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:223",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:214",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:213"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:225",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:216",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:215"
     ],
     "sem_corpo": false
   },
