@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import StripeCustomer from '../StripeCustomer.vue';
 import StripeAPI from 'dashboard/api/integrations/stripe';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', () => ({
   default: {
@@ -12,6 +13,14 @@ vi.mock('dashboard/components-next/TeleportWithDirection.vue', () => ({
 vi.mock('dashboard/api/integrations/stripe', () => ({
   default: { customer: vi.fn() },
 }));
+
+// Upgrade 4.19.1 (#3119): customers are picked with ChoiceSelect, not a native <select>.
+const chooseCustomer = async (wrapper, id) => {
+  const choice = wrapper.findComponent(ChoiceSelect);
+  choice.vm.$emit('update:modelValue', id);
+  choice.vm.$emit('change', id);
+  await flushPromises();
+};
 
 describe('StripeCustomer', () => {
   const customer = {
@@ -165,7 +174,7 @@ describe('StripeCustomer', () => {
     wrapper = mount(StripeCustomer, { props: { conversationId: 1 } });
     await flushPromises();
     StripeAPI.customer.mockResolvedValueOnce({ data });
-    await wrapper.get('select').setValue('cus_alfred');
+    await chooseCustomer(wrapper, 'cus_alfred');
     await flushPromises();
     expect(StripeAPI.customer).toHaveBeenLastCalledWith(
       1,
@@ -216,7 +225,7 @@ describe('StripeCustomer', () => {
     });
     await flushPromises();
     StripeAPI.customer.mockResolvedValueOnce({ data });
-    await wrapper.get('select').setValue('cus_alfred');
+    await chooseCustomer(wrapper, 'cus_alfred');
     await flushPromises();
     StripeAPI.customer.mockResolvedValueOnce({
       data: { customers: [], missing_email: true },
