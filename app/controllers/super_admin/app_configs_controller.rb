@@ -2,7 +2,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   include SuperAdmin::MetaAdsAppConfig
 
   GENERAL_CONFIGS = %w[ENABLE_ACCOUNT_SIGNUP FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS WEBHOOK_TIMEOUT MAXIMUM_FILE_UPLOAD_SIZE
-                       WIDGET_TOKEN_EXPIRY].freeze
+                       WIDGET_TOKEN_EXPIRY MOBILE_APP_MIN_IOS_VERSION MOBILE_APP_MIN_ANDROID_VERSION].freeze
   FACEBOOK_CONFIGS = %w[FB_APP_ID FB_VERIFY_TOKEN FB_APP_SECRET IG_VERIFY_TOKEN FACEBOOK_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT
                         FB_PAGE_WEBHOOK_RELAY_URLS].freeze
   META_INCIDENT_CONFIGS = %w[DISABLE_META_INBOX_CREATION DISABLE_META_MESSAGE_SENDING].freeze
@@ -20,6 +20,26 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   # Jev switches shown as checkboxes on the TypeSafe page: e-mail import and the campaign journey (#1045).
   TYPESAFE_SWITCHES = %w[TYPESAFE_JEV_ENABLED CAMPAIGN_JOURNEY_JEV_ENABLED].freeze
   SWITCH_VALUES = %w[true false].freeze
+  CONFIGS_BY_PAGE = {
+    'facebook' => FACEBOOK_CONFIGS,
+    'shopify' => SHOPIFY_CONFIGS,
+    'microsoft' => %w[AZURE_APP_ID AZURE_APP_SECRET],
+    'email' => %w[MAILER_INBOUND_EMAIL_DOMAIN ACCOUNT_EMAILS_LIMIT ACCOUNT_EMAILS_PLAN_LIMITS],
+    'linear' => %w[LINEAR_CLIENT_ID LINEAR_CLIENT_SECRET],
+    'stripe' => %w[STRIPE_APP_AUTHORIZE_URL STRIPE_APP_SECRET_KEY STRIPE_APP_WEBHOOK_SECRET],
+    'slack' => %w[SLACK_CLIENT_ID SLACK_CLIENT_SECRET SLACK_SIGNING_SECRET],
+    # Fork (upgrade 4.20.1, #3120): fork Instagram login (#2406); the upstream unified login fields (#16645) stay out.
+    'instagram' => %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN INSTAGRAM_API_VERSION ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT
+                      INSTAGRAM_WEBHOOK_RELAY_URLS],
+    'tiktok' => %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION],
+    'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
+    'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
+    'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
+    'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT
+                    CAPTAIN_OPENROUTER_API_KEY CAPTAIN_OPENROUTER_DECISION_MODEL_ENDPOINT],
+    'typesafe' => TYPESAFE_CONFIGS,
+    'meta_ads' => META_ADS_CONFIGS
+  }.freeze
 
   before_action :set_config
   before_action :allowed_configs
@@ -44,7 +64,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       return render json: { error: I18n.t('super_admin.typesafe.invalid_configuration') }, status: :unprocessable_entity
     end
 
-    errors = shopify_partner_config_errors + typesafe_config_errors
+    errors = shopify_partner_config_errors + stripe_config_errors + typesafe_config_errors
     persist_typesafe_api_key(errors) if errors.empty?
     persist_meta_ads_token(errors) if errors.empty?
     persist_app_configs(errors) if errors.empty?
@@ -71,32 +91,21 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
 
   private
 
+  def stripe_config_errors
+    return [] unless @config == 'stripe'
+
+    values = InstallationConfig.where(name: @allowed_configs).to_h { |config| [config.name, config.value] }
+    values.merge!(params.fetch('app_config', {}).permit(*@allowed_configs).to_h)
+    Integrations::Stripe::Oauth.configuration_errors(url: values['STRIPE_APP_AUTHORIZE_URL'], key: values['STRIPE_APP_SECRET_KEY'])
+  end
+
   def set_config
     @config = params[:config] || 'general'
   end
 
   def allowed_configs
     general_configs = GENERAL_CONFIGS + (ChatwootApp.chatwoot_cloud? ? META_INCIDENT_CONFIGS : [])
-
-    mapping = {
-      'facebook' => FACEBOOK_CONFIGS,
-      'shopify' => SHOPIFY_CONFIGS,
-      'microsoft' => %w[AZURE_APP_ID AZURE_APP_SECRET],
-      'email' => %w[MAILER_INBOUND_EMAIL_DOMAIN ACCOUNT_EMAILS_LIMIT ACCOUNT_EMAILS_PLAN_LIMITS],
-      'linear' => %w[LINEAR_CLIENT_ID LINEAR_CLIENT_SECRET],
-      'slack' => %w[SLACK_CLIENT_ID SLACK_CLIENT_SECRET SLACK_SIGNING_SECRET],
-      'instagram' => %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN INSTAGRAM_API_VERSION ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT
-                        INSTAGRAM_WEBHOOK_RELAY_URLS],
-      'tiktok' => %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION],
-      'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
-      'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
-      'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT],
-      'typesafe' => TYPESAFE_CONFIGS,
-      'meta_ads' => META_ADS_CONFIGS
-    }
-
-    @allowed_configs = mapping.fetch(@config, general_configs)
+    @allowed_configs = CONFIGS_BY_PAGE.fetch(@config, general_configs)
   end
 
   def persist_app_configs(errors)

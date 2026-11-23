@@ -74,7 +74,9 @@
 #  idx_autonomia_prospecting_leads_account_score                   (account_id,score)
 #  idx_autonomia_prospecting_leads_account_search_rank             (account_id,search_rank)
 #  idx_autonomia_prospecting_leads_consent_refused                 (account_id) WHERE (consent_refused_at IS NOT NULL)
+# rubocop:disable Layout/LineLength
 #  idx_autonomia_prospecting_leads_provider_place                  (account_id,provider,provider_place_id) UNIQUE WHERE (provider_place_id IS NOT NULL)
+# rubocop:enable Layout/LineLength
 #  index_autonomia_prospecting_leads_on_account_id                 (account_id)
 #  index_autonomia_prospecting_leads_on_account_id_and_dedupe_key  (account_id,dedupe_key) UNIQUE
 #  index_autonomia_prospecting_leads_on_account_id_and_status      (account_id,status)
@@ -104,16 +106,16 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
                         inverse_of: :lead
   has_many :lists, through: :list_leads, source: :list
 
-  enum status: { new_lead: 0, qualified: 1, discarded: 2, no_consent: 3, ready_for_campaign: 4 }
+  enum :status, { new_lead: 0, qualified: 1, discarded: 2, no_consent: 3, ready_for_campaign: 4 }
   # queued: pedido aceito e job na fila (#678). O varredor devolve a failed o que fica preso em queued/running.
-  enum enrichment_status: {
+  enum :enrichment_status, {
     pending: 'pending',
     queued: 'queued',
     running: 'running',
     completed: 'completed',
     failed: 'failed',
     skipped: 'skipped'
-  }, _prefix: :enrichment
+  }, prefix: :enrichment
 
   # A recusa da pessoa (chat#713, 26/09) não depende do status: descartar ou requalificar não a apaga. Só o "Desfazer"
   # do painel (ContactOptOutSync#withdraw!) volta consent_refused_at a nulo. no_consent segue valendo como recusa, e

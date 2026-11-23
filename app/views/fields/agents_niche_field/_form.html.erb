@@ -17,11 +17,10 @@
      'saude_beneficios' => 'group-has-[#agents-niche-perfil-saude-beneficios:checked]/perfil:flex'
    } %>
 <% cartao = 'flex items-start gap-3 p-4 rounded-xl cursor-pointer min-h-11 ring-1 ring-inset ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2 has-[:checked]:ring-2 has-[:checked]:ring-n-iris-9 has-[:checked]:bg-n-iris-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-iris-9' %>
-<div class="field-unit__label self-start pt-4">
-  <%# Texto simples, sem for: nenhum campo tem o id do atributo, e o <legend> do grupo já anuncia o campo. %>
-  <span><%= t('autonomia_agents_niche.label') %></span>
-</div>
-<div class="field-unit__field group/nicho" data-agents-niche-form>
+<%# Fork (upgrade 4.19.1, #3119): inside the redesign field row. Wide, so its label points at no control: no field has the
+    attribute id, and the group <legend> already names it. %>
+<%= render "field", f: f, field: field, wide: true do %>
+<div class="group/nicho" data-agents-niche-form>
   <p class="mt-0 mb-3 text-sm text-n-slate-11"><%= t('autonomia_agents_niche.help') %></p>
   <fieldset class="grid gap-3 p-0 m-0 border-0 sm:grid-cols-2">
     <legend class="sr-only"><%= t('autonomia_agents_niche.label') %></legend>
@@ -84,3 +83,4 @@
     </p>
   <% end %>
 </div>
+<% end %>

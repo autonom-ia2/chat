@@ -155,6 +155,8 @@ export function useCopilotReply() {
    */
   async function execute(action, data) {
     if (action === 'ask_copilot') {
+      // Fork (upgrade 4.20.1, #3120): keeps the direct update instead of openCopilot (#16623), so the
+      // Autonom.ia copilot panel is always closed in the same write.
       updateUISettings({
         is_contact_sidebar_open: false,
         is_copilot_panel_open: true,

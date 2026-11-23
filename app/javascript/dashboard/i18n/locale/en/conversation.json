@@ -41,7 +41,12 @@
     "UNREAD_MESSAGE": "Unread Message",
     "CONTACT_HISTORY": {
       "OLDER": "Previous chat with this customer",
-      "NEWER": "Next chat with this customer"
+      "NEWER": "Next chat with this customer",
+      "OLDER_WITH": "Previous conversation with {name} · {time}",
+      "NEWER_WITH": "Next conversation with {name} · {time}",
+      "CUSTOMER": "this customer",
+      "REPLY_TO_OLDER": "Reply to this older conversation",
+      "GO_TO_LATEST": "Go to latest conversation"
     },
     "CLICK_HERE": "Click here",
     "LOADING_INBOXES": "Loading inboxes",
@@ -139,6 +144,8 @@
       "MISSED_CALL": "Missed call",
       "MISSED_CALL_INBOUND_SUBTEXT": "No agent picked up",
       "MISSED_CALL_DECLINED_BY": "Declined by {agentName}",
+      "MISSED_CALL_OUTSIDE_HOURS": "Outside business hours",
+      "MISSED_CALL_NOBODY_ONLINE": "Nobody was online",
       "CALL_ENDED": "Call ended",
       "HANDLED_BY": "Handled by {agentName}",
       "NOT_ANSWERED_YET": "Not answered yet",
@@ -149,7 +156,8 @@
       "JOIN_CALL": "Join call",
       "CALL_BACK": "Call back",
       "TRANSCRIPT_SHOW_MORE": "Show more",
-      "TRANSCRIPT_SHOW_LESS": "Show less"
+      "TRANSCRIPT_SHOW_LESS": "Show less",
+      "DISMISS_FAILED": "Couldn't dismiss the call. It may keep ringing in your other tabs."
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolve",
@@ -170,6 +178,13 @@
       "VOICE_CALL_FAILED": "Could not start the call.",
       "WHATSAPP_CALL_PERMISSION_REQUESTED": "Sent a call permission request to the contact. Try again once they accept.",
       "WHATSAPP_CALL_PERMISSION_PENDING": "Call permission request already sent recently. Try again once the contact accepts.",
+      "AUTO_TRANSLATE": {
+        "TURN_OFF": "Turn off auto-translate",
+        "TURN_ON": "Turn on auto-translate",
+        "TURNED_OFF": "Auto-translate is off for this conversation",
+        "TURNED_ON": "Auto-translate is on for this conversation",
+        "UPDATE_FAILED": "Could not change auto-translate for this conversation. Please try again."
+      },
       "SLA_STATUS": {
         "FRT": "FRT {status}",
         "NRT": "NRT {status}",
@@ -323,7 +338,6 @@
       "COPILOT_THINKING": "Copilot is thinking",
       "EMAIL_HEAD": {
         "TO": "TO",
-        "ADD_BCC": "Add bcc",
         "CC": {
           "LABEL": "CC",
           "PLACEHOLDER": "Emails separated by commas",
@@ -333,7 +347,12 @@
           "LABEL": "BCC",
           "PLACEHOLDER": "Emails separated by commas",
           "ERROR": "Please enter valid email addresses"
-        }
+        },
+        "SUBJECT": {
+          "LABEL": "Subject",
+          "PLACEHOLDER": "Enter a subject"
+        },
+        "ADD_BCC": "Add bcc"
       },
       "UNDEFINED_VARIABLES": {
         "TITLE": "Undefined variables",
@@ -344,6 +363,9 @@
         }
       },
       "QUOTED_REPLY": {
+        "SHOW_TOOLTIP": "Show trimmed content",
+        "HIDE_TOOLTIP": "Hide trimmed content",
+        "REMOVE": "Remove quoted text",
         "ENABLE_TOOLTIP": "Include quoted email thread",
         "DISABLE_TOOLTIP": "Don't include quoted email thread",
         "REMOVE_PREVIEW": "Remove quoted email thread",
@@ -407,7 +429,8 @@
           "outdated_information": "Outdated information",
           "other": "Other"
         }
-      }
+      },
+      "FORWARD_EMAIL": "Forward email"
     },
     "SIDEBAR": {
       "CONTACT": "Contact",
@@ -425,6 +448,14 @@
       "END_CALL": "End call",
       "MUTE": "Mute mic",
       "UNMUTE": "Unmute mic",
+      "SHOW_KEYPAD": "Show keypad",
+      "HIDE_KEYPAD": "Hide keypad",
+      "KEYPAD": "Call keypad",
+      "STAR": "Star",
+      "POUND": "Pound",
+      "KEYPAD_SEND_FAILED": "Could not send keypad tone",
+      "ON_HOLD": "On hold",
+      "HOLD_FAILED": "Couldn't update the hold. Please try again.",
       "VIEW_CHAT_HISTORY": "View chat history",
       "GO_TO_CONVERSATION": "Go to conversation thread"
     },
@@ -436,6 +467,26 @@
       "TIME": "Team",
       "ETIQUETAS": "Labels",
       "SEM_PARTICIPANTES": "No participants"
+    },
+    "TRANSLATING": "Translating…",
+    "TRANSLATING_TO": "Translating to {language}…",
+    "VIEW_ORIGINAL_IN": "View original ({language})",
+    "VIEW_TRANSLATED_IN": "View translated ({language})",
+    "TRANSLATION_FAILED": "Could not translate, sent as typed",
+    "CONTACT_TRANSLATION_FAILED": "Could not translate",
+    "ANONYMOUS_CALLER_CANNOT_REPLY": "Messages cannot be sent because this caller’s phone number is unavailable.",
+    "UNSUPPORTED_MESSAGE_WHATSAPP_TITLE": "Message content unavailable",
+    "UNSUPPORTED_MESSAGE_WHATSAPP_DETAILS": "For more details, refer to {documentation}.",
+    "UNSUPPORTED_MESSAGE_WHATSAPP_LEARN_MORE": "Meta’s documentation",
+    "SUGGESTIONS": {
+      "SUGGEST": "Suggest with Captain",
+      "EMPTY": "No new suggestions",
+      "ACCEPT": "Accept",
+      "APPLY_HINT": "Click to apply",
+      "REJECT": "Dismiss",
+      "ACCEPT_ALL": "Accept all",
+      "ERROR": "Could not load suggestions. Please try again.",
+      "APPLY_ERROR": "Could not apply the suggested labels. Please try again."
     }
   },
   "EMAIL_TRANSCRIPT": {
@@ -536,7 +587,8 @@
     "BCC": "Bcc",
     "CC": "Cc",
     "SUBJECT": "Subject",
-    "EXPAND": "Expand email"
+    "EXPAND": "Expand email",
+    "DATE": "Date"
   },
   "CONVERSATION_PARTICIPANTS": {
     "SIDEBAR_MENU_TITLE": "Participating",
@@ -574,5 +626,13 @@
   },
   "GALLERY_VIEW": {
     "ERROR_DOWNLOADING": "Unable to download attachment. Please try again"
+  },
+  "FORWARD_EMAIL": {
+    "HEADER_TITLE": "---------- Forwarded message ---------",
+    "TO_LABEL": "To:",
+    "TO_PLACEHOLDER": "Enter at least 2 characters to search by email",
+    "MESSAGE_PLACEHOLDER": "Add a message (optional)",
+    "FORWARDED_TO": "Forwarded to {emails}",
+    "CONTACT_CANNOT_SEE": "{name} cannot see this"
   }
 }

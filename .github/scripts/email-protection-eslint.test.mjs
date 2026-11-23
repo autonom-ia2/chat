@@ -60,5 +60,13 @@ test('checks each standalone app against its own catalog only', () => {
 test('finds the standalone apps that carry their own catalog', () => {
   const apps = standaloneApps();
   assert.ok(apps.includes('public_booking_v2'));
+  assert.ok(apps.includes('widget'));
   assert.ok(!apps.includes('dashboard'));
+});
+test('checks the widget against its catalog under i18n/locale', () => {
+  const [widget] = localeConfig(['widget']).overrides;
+  assert.equal(
+    widget.settings['vue-i18n'].localeDir,
+    './app/javascript/widget/i18n/locale/en.json'
+  );
 });

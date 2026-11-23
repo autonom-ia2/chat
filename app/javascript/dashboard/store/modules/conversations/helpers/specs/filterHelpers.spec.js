@@ -92,6 +92,24 @@ import { matchesFilters } from '../filterHelpers';
 // },
 
 describe('filterHelpers', () => {
+  it.each([0, false, 42])(
+    'preserves custom attribute value %s when filtering',
+    value => {
+      const conversation = { custom_attributes: { custom_value: value } };
+      const filter = {
+        attribute_key: 'custom_value',
+        filter_operator: 'equal_to',
+        values: [value],
+      };
+      expect(matchesFilters(conversation, [filter])).toBe(true);
+      expect(
+        matchesFilters(conversation, [
+          { ...filter, filter_operator: 'not_equal_to' },
+        ])
+      ).toBe(false);
+      expect(matchesFilters({ custom_attributes: {} }, [filter])).toBe(false);
+    }
+  );
   describe('#matchesFilters', () => {
     it('returns true by default when no filters are provided', () => {
       const conversation = {};
@@ -1881,6 +1899,79 @@ describe('filterHelpers', () => {
           filters
         )
       ).toBe(false);
+    });
+  });
+});
+
+// #3151: "Criada em" e "Última atividade" contam o dia no fuso da conta, como o
+// servidor (Filters::DateFilterHelper). 07/09 às 21h49 em São Paulo é 08/09
+// 00:49 em UTC.
+describe('date filters in the account timezone', () => {
+  const FUSO = 'America/Sao_Paulo';
+  const conversaDaNoite = { created_at: 1788828540 }; // 2026-09-08 00:49 UTC
+  const filtro = (operador, valor, attributeKey = 'created_at') => [
+    {
+      attribute_key: attributeKey,
+      filter_operator: operador,
+      values: [valor],
+      query_operator: 'and',
+    },
+  ];
+
+  it('counts the evening in Brazil on its local day', () => {
+    expect(
+      matchesFilters(
+        conversaDaNoite,
+        filtro('is_less_than', '2026-09-08'),
+        FUSO
+      )
+    ).toBe(true);
+    expect(
+      matchesFilters(
+        conversaDaNoite,
+        filtro('is_greater_than', '2026-09-07'),
+        FUSO
+      )
+    ).toBe(false);
+  });
+
+  it('keeps the UTC day when no timezone is given', () => {
+    expect(
+      matchesFilters(conversaDaNoite, filtro('is_less_than', '2026-09-08'))
+    ).toBe(false);
+  });
+
+  it('keeps date custom attributes on their own day', () => {
+    const conversa = {
+      custom_attributes: { renewal_date: '2026-08-08T00:00:00.000Z' },
+    };
+    expect(
+      matchesFilters(
+        conversa,
+        filtro('is_greater_than', '2026-08-07', 'renewal_date'),
+        FUSO
+      )
+    ).toBe(true);
+  });
+
+  describe('days_before', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      // Em São Paulo ainda é 07/09 (22h).
+      vi.setSystemTime(new Date('2026-09-08T01:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('takes today from the account timezone', () => {
+      const antiga = { last_activity_at: 1788609600 }; // 2026-09-05 12:00 UTC
+      const recente = { last_activity_at: 1788696000 }; // 2026-09-06 12:00 UTC
+      const umDia = filtro('days_before', '1', 'last_activity_at');
+
+      expect(matchesFilters(antiga, umDia, FUSO)).toBe(true);
+      expect(matchesFilters(recente, umDia, FUSO)).toBe(false);
     });
   });
 });

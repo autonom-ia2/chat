@@ -10,15 +10,42 @@ describe '/widget', type: :request do
 
   describe 'GET /widget' do
     it 'renders the page correctly when called with website_token' do
-      get widget_url(website_token: web_widget.website_token)
+      url = widget_url(website_token: web_widget.website_token)
+
+      expect { get url }.to change(Contact, :count).by(1).and change(ContactInbox, :count).by(1)
+
       expect(response).to be_successful
       expect(response.body).not_to include(token)
     end
 
     it 'renders the page correctly when called with website_token and cw_conversation' do
-      get widget_url(website_token: web_widget.website_token, cw_conversation: token)
+      url = widget_url(website_token: web_widget.website_token, cw_conversation: token)
+
+      expect { get url }.not_to(change { [Contact.count, ContactInbox.count] })
+
       expect(response).to be_successful
       expect(response.body).to include(token)
+    end
+
+    it 'creates a contact for a regular browser' do
+      url = widget_url(website_token: web_widget.website_token)
+      user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+      expect { get url, headers: { 'User-Agent' => user_agent } }.to change(Contact, :count).by(1).and change(ContactInbox, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('window.authToken')
+    end
+
+    it 'does not set the session cookie' do
+      previous = ActionController::Base.allow_forgery_protection
+      ActionController::Base.allow_forgery_protection = true
+
+      get widget_url(website_token: web_widget.website_token)
+
+      expect(response.headers['Set-Cookie'].to_s).not_to include('_chatwoot_session')
+    ensure
+      ActionController::Base.allow_forgery_protection = previous
     end
 
     it 'returns 404 when called with out website_token' do

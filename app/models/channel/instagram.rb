@@ -2,16 +2,19 @@
 #
 # Table name: channel_instagram
 #
-#  id           :bigint           not null, primary key
-#  access_token :string           not null
-#  expires_at   :datetime         not null
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
-#  account_id   :integer          not null
-#  instagram_id :string           not null
+#  id                 :bigint           not null, primary key
+#  access_token       :string           not null
+#  auth_type          :string           default("instagram_login"), not null
+#  expires_at         :datetime
+#  login              :string           default("instagram"), not null
+#  provider_name      :string
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :integer          not null
 #  app_scoped_user_id :string
-#  login        :string           default("instagram"), not null
-#  page_id      :string
+#  configuration_id   :string
+#  instagram_id       :string           not null
+#  page_id            :string
 #
 # Indexes
 #
@@ -32,13 +35,19 @@ class Channel::Instagram < ApplicationRecord
   INSTAGRAM_HOST = 'https://graph.instagram.com'.freeze
   FACEBOOK_HOST = 'https://graph.facebook.com'.freeze
 
+  # Fork (upgrade 4.20.1, #3120): upstream Unified Login (#16645-#16647) stays inert. The fork keeps its own login
+  # (`login`/`page_id`, #2406) and never writes `auth_type`/`configuration_id`, so every channel is `instagram_login`
+  # and the `unified_login?` branches below never run.
+  enum :auth_type, { instagram_login: 'instagram_login', unified_login: 'unified_login' }
+
   validates :access_token, presence: true
+  validates :access_token, length: { maximum: ->(channel) { channel.unified_login? ? MAX_TEXT_COLUMN_LENGTH : MAX_STRING_COLUMN_LENGTH } }
   validates :login, inclusion: { in: LOGINS }
   validates :page_id, presence: true, if: :facebook_login?
   # #2781: o mesmo Instagram pode estar em mais de uma conta, como a Página do Facebook; numa conta, uma vez só.
   validates :instagram_id, uniqueness: { scope: :account_id }, presence: true
 
-  after_create_commit :subscribe
+  after_create_commit :subscribe, unless: :unified_login?
   before_destroy :unsubscribe
 
   def name
@@ -78,21 +87,32 @@ class Channel::Instagram < ApplicationRecord
   def subscribe
     return Instagram::PageSubscribeJob.perform_later(id) if facebook_login?
 
+    subscribe!
+  rescue StandardError => e
+    raise if unified_login?
+
+    Rails.logger.debug { "Rescued: #{e.inspect}" }
+    true
+  end
+
+  def subscribe!
+    return Instagram::UnifiedLoginService.new(access_token: access_token).subscribe(instagram_id) if unified_login?
+
     # ref https://developers.facebook.com/docs/instagram-platform/webhooks#enable-subscriptions
     # #2113: a edição do cliente ainda não está aqui. O candidato documentado é `message_edit` (singular, na página de
     # exemplos de webhook do Instagram); `message_edits` é o nome do Messenger e não vale aqui. Um nome errado derruba a
     # inscrição de caixas novas: confirmar no painel do app da Meta (Webhooks > Instagram) antes, e entrar junto com a
     # reinscrição das caixas, com OK do Rodrigo.
-    HTTParty.post(
+    response = HTTParty.post(
       "#{graph_base_uri}/#{instagram_id}/subscribed_apps",
       query: {
         subscribed_fields: %w[messages message_reactions messaging_seen],
         access_token: access_token
       }
     )
-  rescue StandardError => e
-    Rails.logger.debug { "Rescued: #{e.inspect}" }
-    true
+    raise Instagram::ConnectionError, I18n.t('instagram.subscription_failed') unless response.success? && response.parsed_response['success'] == true
+
+    response
   end
 
   # A inscrição vale para o Instagram, não para a caixa: com o mesmo Instagram ligado noutra conta desta stack (#2781),
@@ -102,10 +122,11 @@ class Channel::Instagram < ApplicationRecord
     return true if facebook_login?
     return true if Channel::Instagram.where(instagram_id: instagram_id).where.not(id: id).exists?
 
+    token = unified_login? ? self[:access_token] : access_token
     HTTParty.delete(
       "#{graph_base_uri}/#{instagram_id}/subscribed_apps",
       query: {
-        access_token: access_token
+        access_token: token
       }
     )
     true
@@ -117,8 +138,10 @@ class Channel::Instagram < ApplicationRecord
   # O token da Página (login do Facebook) não se renova: é o gravado.
   def access_token
     return self[:access_token] if facebook_login?
+    return Instagram::RefreshOauthTokenService.new(channel: self).access_token unless unified_login?
 
-    Instagram::RefreshOauthTokenService.new(channel: self).access_token
+    prompt_reauthorization! if persisted? && expires_at.present? && expires_at <= Time.current && !reauthorization_required?
+    self[:access_token]
   end
 
   # Meta data deletion request: drop the stored token and expire it so nothing calls Instagram with it.
@@ -127,5 +150,19 @@ class Channel::Instagram < ApplicationRecord
   def revoke_access!
     update_columns(access_token: '', expires_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     prompt_reauthorization!
+  end
+
+  def authorization_error!
+    return if unified_login? && reauthorization_required?
+
+    super
+  end
+
+  # Fork (upgrade 4.20.1, #3120): for `instagram_login` this is the exact `source_id` lookup the fork already did.
+  def find_message_by_source_id(source_id)
+    return if source_id.blank?
+
+    source_ids = unified_login? ? Instagram::MessageId.aliases(source_id) : [source_id]
+    inbox.messages.find_by(source_id: source_ids)
   end
 end

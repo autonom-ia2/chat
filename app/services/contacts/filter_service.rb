@@ -8,13 +8,13 @@ class Contacts::FilterService < FilterService
     super(params, user)
   end
 
-  def perform
+  def perform(count: true)
     validate_query_operator
     @contacts = query_builder(@filters['contacts'])
 
     {
       contacts: @contacts,
-      count: @contacts.count
+      count: count ? @contacts.count : nil
     }
   end
 
@@ -40,6 +40,11 @@ class Contacts::FilterService < FilterService
       entity: 'Contact',
       table_name: 'contacts'
     }
+  end
+
+  # #3151: "Criada em" e "Última atividade" contam o dia no fuso da conta.
+  def fuso_dos_filtros_de_data
+    @fuso_dos_filtros_de_data ||= Filters::DateFilterHelper.fuso_da_conta(@account)
   end
 
   private

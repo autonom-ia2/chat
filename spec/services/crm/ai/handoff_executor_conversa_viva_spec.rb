@@ -11,7 +11,11 @@ RSpec.describe Crm::Ai::HandoffExecutor do
   let(:agent) { create(:user, account: account) }
   let(:atendente_antigo) { create(:user, account: account) }
   let(:contact) { create(:contact, account: account) }
-  let(:inbox) { create_crm_inbox(account: account, members: [agent, atendente_antigo]) }
+  # Rodízio nativo da caixa desligado: a conversa nasce sem ninguém, como o cenário pede. Até o upgrade 4.20.1 (#3120) o
+  # stub de presença com id inteiro desligava o rodízio por acaso; o upstream #16342 normalizou os ids e ele passou a atribuir.
+  let(:inbox) do
+    create_crm_inbox(account: account, members: [agent, atendente_antigo]).tap { |caixa| caixa.update!(enable_auto_assignment: false) }
+  end
   let(:conversa_antiga) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
   let(:conversa_viva) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
 

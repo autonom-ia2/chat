@@ -53,8 +53,10 @@ export default {
     },
   },
   watch: {
-    show(value) {
-      if (!value) this.selectedWaTemplate = null;
+    // #3146 (upstream #16207): o modelo escolhido continua ao fechar e ao trocar de conversa; só limpa quando muda a caixa
+    // (cada número tem os seus modelos). As variáveis voltam vazias, porque o woot-modal desmonta o conteúdo ao fechar.
+    inboxId() {
+      this.selectedWaTemplate = null;
     },
     requestContactInfoOnly() {
       this.selectedWaTemplate = null;

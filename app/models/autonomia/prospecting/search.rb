@@ -41,7 +41,7 @@ class Autonomia::Prospecting::Search < ApplicationRecord
   belongs_to :user, optional: true
   has_many :leads, class_name: 'Autonomia::Prospecting::Lead', foreign_key: :prospect_search_id, dependent: :nullify, inverse_of: :search
 
-  enum status: { pending: 0, completed: 1, failed: 2, cached: 3 }
+  enum :status, { pending: 0, completed: 1, failed: 2, cached: 3 }
 
   validates :query, presence: true
   validates :provider, presence: true

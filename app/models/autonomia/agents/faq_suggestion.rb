@@ -41,7 +41,7 @@ class Autonomia::Agents::FaqSuggestion < ApplicationRecord
   belongs_to :conversation, class_name: '::Conversation', optional: true
   belongs_to :reviewed_by, class_name: 'User', optional: true
 
-  enum status: { pending: 0, approved: 1, edited: 2, ignored: 3 }
+  enum :status, { pending: 0, approved: 1, edited: 2, ignored: 3 }
 
   validates :question, :answer, presence: true
   validates :question, length: { maximum: 500 }

@@ -94,6 +94,12 @@ export default {
     });
   },
 
+  updateWorkPreferences(accountId, preferences) {
+    return axios.post(endPoints('workPreferences').url, {
+      profile: { account_id: accountId, ...preferences },
+    });
+  },
+
   deleteAvatar() {
     return axios.delete(endPoints('deleteAvatar').url);
   },

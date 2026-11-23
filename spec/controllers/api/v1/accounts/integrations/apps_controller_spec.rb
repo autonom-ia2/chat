@@ -96,9 +96,7 @@ RSpec.describe 'Integration Apps API', type: :request do
 
       it 'omits Shopify when the installation switch is disabled' do
         account.enable_features('shopify_integration')
-        allow(GlobalConfigService).to receive(:load)
-          .with('ENABLE_SHOPIFY_INTEGRATION', 'false')
-          .and_return(false)
+        InstallationConfig.where(name: 'ENABLE_SHOPIFY_INTEGRATION').first_or_initialize.update!(value: false)
 
         get api_v1_account_integrations_apps_url(account),
             headers: admin.create_new_auth_token,
@@ -175,9 +173,7 @@ RSpec.describe 'Integration Apps API', type: :request do
 
       it 'returns not found for Shopify when the client ID is missing' do
         account.enable_features('shopify_integration')
-        allow(GlobalConfigService).to receive(:load)
-          .with('ENABLE_SHOPIFY_INTEGRATION', 'false')
-          .and_return(true)
+        InstallationConfig.where(name: 'ENABLE_SHOPIFY_INTEGRATION').first_or_initialize.update!(value: true)
         allow(GlobalConfigService).to receive(:load)
           .with('SHOPIFY_CLIENT_ID', nil)
           .and_return(nil)
@@ -214,6 +210,7 @@ RSpec.describe 'Integration Apps API', type: :request do
       end
 
       it 'hides credentials and keeps visible settings for google credential integrations' do
+        allow(Integrations::GoogleTranslate::CredentialsValidator).to receive(:valid?).and_return(true)
         hook = create(:integrations_hook, :google_translate, account: account,
                                                              settings: { project_id: 'project-1',
                                                                          credentials: { private_key: 'secret' } })
@@ -262,9 +259,7 @@ RSpec.describe 'Integration Apps API', type: :request do
 
       it 'returns not found for Shopify when either feature gate is disabled' do
         account.enable_features('shopify_integration')
-        allow(GlobalConfigService).to receive(:load)
-          .with('ENABLE_SHOPIFY_INTEGRATION', 'false')
-          .and_return(false)
+        InstallationConfig.where(name: 'ENABLE_SHOPIFY_INTEGRATION').first_or_initialize.update!(value: false)
 
         get api_v1_account_integrations_app_url(account_id: account.id, id: 'shopify'),
             headers: admin.create_new_auth_token,

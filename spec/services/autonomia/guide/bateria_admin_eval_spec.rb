@@ -8,8 +8,8 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01a, C01b, C02..C24, C26..C34, M01..M08, CT01..CT06, I01..I09, TL01..TL08; o C25 ainda
-# não foi escrito) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C24, C26..C34, M01..M08, CT01..CT06, I01..I09, TL01..TL08, P01..P02; o C25
+# ainda não foi escrito) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }
@@ -1387,6 +1387,38 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       Autonomia::Guide::TarefaJob.perform_now(tarefa.id)
       expect(Message.where(account: c.conta).outgoing.count).to eq(depois_do_lote)
       expect(tarefa.reload.feitos).to be <= Autonomia::Guide::Tarefas::Lote::TAMANHO
+    end
+  end
+
+  # #3117 (decisão do Rodrigo, 22/11): o Guia faz para quem não administra, com a permissão dela. A Ana é agente
+  # comum, sem função, e está na caixa WhatsApp Vendas.
+  describe 'quem atende pede ao Guia' do
+    let(:sem_permissao) do
+      { diz_que_nao_tem_permissao: 'Diz que o perfil da pessoa não tem permissão para isso.',
+        aponta_quem_administra: 'Diz que quem administra a conta pode fazer ou liberar o acesso.',
+        nao_finge_que_fez: 'Não diz nem dá a entender que a etiqueta foi criada.' }
+    end
+
+    # MOTIVO: antes da #3117 o Guia respondia "isso eu não faço por você" a quem não administra, mesmo quando o
+    # perfil dela etiqueta a conversa clicando. Agora ele faz, e a mudança fica no "Feito pelo Guia" dela.
+    it 'P01 agente etiqueta a conversa da caixa dela' do
+      c.conta.labels.create!(title: 'urgente')
+      respondeu!(perguntar('Etiqueta a conversa da Maria Souza como urgente.', quem: c.ana))
+
+      expect(c.conversa_maria.reload.label_list).to include('urgente')
+      expect(c.conversa_pedro.reload.label_list).not_to include('urgente')
+      expect(execucoes.where(user: c.ana)).to exist
+    end
+
+    # MOTIVO: o que o perfil não alcança, a plataforma nega. O Guia tenta, não grava nada e diz que o perfil não tem
+    # permissão, sem afirmar antes da recusa que "só administrador faz" e sem fingir que fez.
+    it 'P02 agente pede o que o perfil não alcança: nada muda e ele diz por quê' do
+      pedido = 'Cria uma etiqueta chamada vip.'
+      resultado = perguntar(pedido, quem: c.ana)
+      respondeu!(resultado)
+
+      expect(c.conta.labels.find_by(title: 'vip')).to be_nil
+      expect_juiz_aprova!(pedido, resultado.text, sem_permissao)
     end
   end
 end

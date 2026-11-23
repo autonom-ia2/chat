@@ -122,8 +122,9 @@ acoes:
     grupo: CONVERSA
     caminho: { id: conversa.id }
     campos: { priority: escolha }
-    # A política de SLA não é liberada como passo (automacao-recursos.yml, sla_policies).
-    escondidos: [sla_policy_id]
+    # A política de SLA não é liberada como passo (automacao-recursos.yml, sla_policies). A tradução automática
+    # (upgrade 4.20.1, #3120) entra no formato pelos params da conversa, mas não é um passo da Automação.
+    escondidos: [sla_policy_id, auto_translate_disabled]
   conversa_atributos:
     acao: POST conversations/:id/custom_attributes
     grupo: CONVERSA

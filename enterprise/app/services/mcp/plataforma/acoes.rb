@@ -12,4 +12,8 @@ class Mcp::Plataforma::Acoes < Autonomia::Guide::Acoes
   private
 
   def trilha = { 'app' => @app_name }
+
+  # #3117: o Guia passou a fazer para qualquer pessoa da conta; os apps conectados seguem só para quem administra (salvo as
+  # regras automáticas, com a chave delas) até o Rodrigo decidir o MCP.
+  def so_administrador? = true
 end

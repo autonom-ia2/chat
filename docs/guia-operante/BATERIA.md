@@ -2,7 +2,8 @@
 
 ## O que é
 
-Trinta e quatro pedidos (C01a, C01b, C02 a C24, C26 a C34) que um administrador de corretora faz de verdade,
+Trinta e quatro pedidos (C01a, C01b, C02 a C24, C26 a C34) que um administrador de corretora faz de verdade
+— mais os das frentes que vieram depois, como P01 e P02 (#3117: quem atende, sem ser administrador, pede ao Guia),
 mandados ao Guia de verdade — mesmo modelo, mesma instrução, mesmas ferramentas, escrevendo pela API da
 plataforma no banco de teste. Cada cenário confere o **estado final do banco** (o que foi criado, mudado ou deixado como estava), não o
 texto da resposta. O Guia age sem confirmação (#855), então o que importa é o que ficou gravado.

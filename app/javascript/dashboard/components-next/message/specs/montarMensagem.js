@@ -18,6 +18,17 @@ export const gettersDaMontagem = {
   getCurrentAccountId: () => 1,
   getCurrentUser: () => ({}),
   getUISettings: () => ({}),
+  // Upgrade 4.19.1: TranslationToggle lê a tradução automática; desligada, como nas contas hoje.
+  getAutoTranslate: () => ({
+    enabled: false,
+    language: '',
+    sameLanguage: false,
+  }),
+  getMessageTranslationState: () => () => ({
+    pending: false,
+    failed: false,
+    sameLanguage: false,
+  }),
 };
 
 const store = createStore({ getters: gettersDaMontagem });
