@@ -26,12 +26,12 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
 
     historico = historico_de(conversa)
     pedido = SecureRandom.uuid
-    # O turno nasce antes do encaminhamento: se a mensagem entrar no trabalho em curso, o Guia junta o turno dela
-    # assim que a ler (`Turno.juntar`).
+    # O turno nasce antes do encaminhamento: se a mensagem entrar no trabalho em curso, ele fica junto daquele pedido
+    # (`Turno.juntar`).
     ::Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: params[:message],
                                     tela: params[:route_context], anexos: params[:anexos])
-    junto_de = ::Autonomia::Guide::Encaminhamento.encaminhar(pedido, account: Current.account, user: Current.user,
-                                                                     junto_de: params[:junto_de].to_s, pergunta: pergunta(historico))
+    junto_de = ::Autonomia::Guide::Encaminhamento.encaminhar(pedido, conversa: conversa, junto_de: params[:junto_de].to_s,
+                                                                     pergunta: pergunta(historico))
     render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id,
                    junto_de: junto_de }.compact, status: :accepted
   end

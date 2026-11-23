@@ -126,27 +126,47 @@ RSpec.describe 'Guia da Plataforma — pergunta em segundo plano', type: :reques
 
   # Entrega 2 — a pessoa escreve enquanto o Guia ainda trabalha no pedido anterior.
   describe 'mensagem junto do pedido em curso' do
-    def junto(user, pedido, mensagem = 'pensei melhor, pare')
-      post rota, params: { message: mensagem, route_context: 'home', junto_de: pedido },
+    def junto(user, pedido, conversa_id, mensagem = 'pensei melhor, pare')
+      post rota, params: { message: mensagem, route_context: 'home', junto_de: pedido, conversa_id: conversa_id },
                  headers: user.create_new_auth_token, as: :json
     end
 
-    it 'entra no trabalho em curso, sem pôr um segundo Guia para trabalhar', :aggregate_failures do
-      pedido = perguntar(admin)
+    def primeira_pergunta
+      [perguntar(admin), response.parsed_body['conversa_id']]
+    end
 
-      expect { junto(admin, pedido) }.not_to have_enqueued_job(Autonomia::Guide::ChatJob)
+    it 'entra no trabalho em curso, sem pôr um segundo Guia para trabalhar', :aggregate_failures do
+      pedido, conversa_id = primeira_pergunta
+
+      expect { junto(admin, pedido, conversa_id) }.not_to have_enqueued_job(Autonomia::Guide::ChatJob)
       expect(response).to have_http_status(:accepted)
       expect(response.parsed_body['junto_de']).to eq(pedido)
-      expect(Autonomia::Guide::Pedido.retirar_juntas(pedido))
-        .to eq([{ 'id' => response.parsed_body['id'], 'texto' => 'pensei melhor, pare' }])
+      nova = response.parsed_body['id']
+      expect(Autonomia::Guide::Pedido.retirar_juntas(pedido)).to eq([{ 'id' => nova, 'texto' => 'pensei melhor, pare' }])
+      expect(Autonomia::Guide::Turno.find_by(pedido_id: nova)).to have_attributes(status: 'junto', junto_de: pedido)
     end
 
     it 'com o pedido anterior já terminado, vira pergunta comum', :aggregate_failures do
-      pedido = perguntar(admin)
+      pedido, conversa_id = primeira_pergunta
       Autonomia::Guide::Pedido.concluir(pedido, { text: 'pronto' })
 
-      expect { junto(admin, pedido) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
+      expect { junto(admin, pedido, conversa_id) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
       expect(response.parsed_body).not_to have_key('junto_de')
+    end
+
+    # Revisão do #3144: a mensagem de uma conversa não entra no trabalho de outra.
+    it 'pedido de outra conversa: vira pergunta comum na conversa dela' do
+      pedido, = primeira_pergunta
+
+      expect { junto(admin, pedido, nil) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
+    end
+
+    it 'trava ocupada: a mensagem segue como pergunta comum, sem erro' do
+      pedido, conversa_id = primeira_pergunta
+      allow(Autonomia::Guide::Pedido).to receive(:acrescentar).and_raise(Autonomia::Guide::Pedido::TravaOcupada)
+
+      expect { junto(admin, pedido, conversa_id) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
+      expect(response).to have_http_status(:accepted)
     end
   end
 end

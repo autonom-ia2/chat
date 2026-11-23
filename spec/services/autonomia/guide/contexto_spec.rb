@@ -119,16 +119,14 @@ RSpec.describe Autonomia::Guide::Contexto do
       expect(contexto.mensagens_novas).to eq([])
     end
 
-    it 'entrega o texto na ordem, e cada mensagem passa a ser respondida por este pedido', :aggregate_failures do
+    # Quem decide o destino da mensagem lida é o fim do turno (`ChatJob#encerrar`): aqui ela só passa para as lidas.
+    it 'entrega o texto na ordem e guarda as mensagens como lidas', :aggregate_failures do
       primeira = escrever('pensei melhor')
       segunda = escrever('pare')
 
       expect(com_pedido.mensagens_novas).to eq(['pensei melhor', 'pare'])
       expect(com_pedido.mensagens_novas).to eq([])
-      [primeira, segunda].each do |id|
-        expect(Autonomia::Guide::Pedido.ler(id, account: conta, user: admin)).to include('status' => 'done', 'junto_de' => pedido)
-        expect(Autonomia::Guide::Turno.find_by(pedido_id: id)).to have_attributes(status: 'junto', junto_de: pedido)
-      end
+      expect(Autonomia::Guide::Pedido.retirar_lidas(pedido).pluck('id')).to eq([primeira, segunda])
     end
 
     it 'anota a etapa no pedido a cada ferramenta chamada' do

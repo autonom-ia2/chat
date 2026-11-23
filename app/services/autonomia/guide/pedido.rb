@@ -52,6 +52,9 @@ class Autonomia::Guide::Pedido
     # `nova` é o pedido da mensagem nova, que a tela acompanha para saber o que aconteceu com ela; o turno dela já
     # existe antes daqui, para o Guia poder juntá-lo assim que ler. -> false quando este pedido já terminou (ou é de
     # outra pessoa): aí a mensagem é uma pergunta comum.
+    #
+    # O bloco roda dentro da trava, só quando a mensagem entrou: é onde o turno dela fica junto deste pedido, antes
+    # que o fim do turno possa mandá-la adiante.
     def acrescentar(id, account:, user:, nova:, mensagem:)
       com_trava(id) do
         pedido = carregar(id)
@@ -61,19 +64,28 @@ class Autonomia::Guide::Pedido
         abrir(account: account, user: user, id: nova)
         Redis::Alfred.lpush(chave_das_juntas(id), { 'id' => nova, 'texto' => mensagem.to_s }.to_json)
         Redis::Alfred.expire(chave_das_juntas(id), VALIDADE.to_i)
+        yield if block_given?
         true
       end
     end
 
-    # As mensagens que esperam o Guia ler, na ordem em que chegaram; saem da fila ao serem lidas.
-    # -> [{ 'id' => pedido da mensagem, 'texto' => o que ela escreveu }]
+    # O Guia lê as mensagens que esperam, na ordem em que chegaram. Elas passam para a fila das lidas, de onde o fim
+    # do turno decide: se o Guia respondeu, foram respondidas junto; se não (falha, resposta retida), seguem adiante
+    # como a pergunta seguinte, para não se perderem. -> [{ 'id' => pedido da mensagem, 'texto' => o que ela escreveu }]
+    def ler_juntas(id)
+      lidas = esvaziar { Redis::Alfred.rpoplpush(chave_das_juntas(id), chave_das_lidas(id)) }
+      Redis::Alfred.expire(chave_das_lidas(id), VALIDADE.to_i) if lidas.any?
+      lidas
+    end
+
+    # As que chegaram e o Guia não leu, na ordem em que chegaram; saem da fila.
     def retirar_juntas(id)
-      juntas = []
-      while (bruto = Redis::Alfred.rpop(chave_das_juntas(id)))
-        junta = ler_junta(bruto)
-        juntas << junta if junta
-      end
-      juntas
+      esvaziar { Redis::Alfred.rpop(chave_das_juntas(id)) }
+    end
+
+    # As que o Guia leu neste turno, na ordem em que chegaram; saem da fila.
+    def retirar_lidas(id)
+      esvaziar { Redis::Alfred.rpop(chave_das_lidas(id)) }
     end
 
     # O fim do turno e a mensagem que chega disputam a mesma fila: sem a trava, uma mensagem gravada entre a última
@@ -127,6 +139,18 @@ class Autonomia::Guide::Pedido
     end
 
     def chave_das_juntas(id) = "#{chave(id)}:juntas"
+
+    def chave_das_lidas(id) = "#{chave(id)}:lidas"
+
+    # Tira item a item até a fila acabar. -> as mensagens, na ordem em que saíram.
+    def esvaziar
+      juntas = []
+      while (bruto = yield)
+        junta = ler_junta(bruto)
+        juntas << junta if junta
+      end
+      juntas
+    end
 
     def chave_da_etapa(id) = "#{chave(id)}:etapa"
 

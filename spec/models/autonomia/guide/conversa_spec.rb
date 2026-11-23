@@ -102,6 +102,22 @@ RSpec.describe Autonomia::Guide::Conversa do
       )
     end
 
+    it 'a pergunta seguinte entra depois das mensagens que ela cobre, na ordem em que a pessoa escreveu' do
+      turno('cria três etiquetas', resposta: 'Criei.')
+      tardia = turno('e mais uma', status: 'junto', junto_de: 'p-seguinte')
+      seguinte = turno('chama de Vendas', resposta: 'Pronto.')
+      tardia.update!(diagnostico: { 'junto_de' => seguinte.pedido_id })
+
+      expect(conversa.historico.map { |m| m[:content] })
+        .to eq(['cria três etiquetas', 'Criei.', 'e mais uma', 'chama de Vendas', 'Pronto.'])
+    end
+
+    it 'a junta cujo turno ficou fora da janela entra sozinha' do
+      turno('pare', status: 'junto', junto_de: 'p-antigo')
+
+      expect(conversa.historico.map { |m| [m[:role], m[:content]] }).to eq([%w[user pare]])
+    end
+
     it 'deixa fora o pedido que vai ser respondido agora, com as mensagens juntas a ele' do
       turno('quantos funis?', resposta: 'São 3.')
       seguinte = turno('e mais uma', status: 'pending')

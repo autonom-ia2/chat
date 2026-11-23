@@ -355,8 +355,8 @@ describe('AutonomiaGuideContainer', () => {
   });
 
   // Antes do servidor aceitar a primeira, ainda não há trabalho para a segunda
-  // entrar: o texto fica no campo e a pessoa é avisada.
-  it('keeps the text and warns while the first question is not accepted yet', async () => {
+  // entrar: o campo fica travado, com o aviso de enviando.
+  it('keeps the field locked while the first question is not accepted yet', async () => {
     AutonomiaGuideAPI.chat.mockReturnValue(new Promise(() => {}));
     wrapper = mountGuide();
     const textarea = wrapper.find('textarea');
@@ -364,14 +364,10 @@ describe('AutonomiaGuideContainer', () => {
     await textarea.setValue('Primeira');
     await textarea.trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    await textarea.setValue('Segunda');
-    await textarea.trigger('keydown', { key: 'Enter' });
-    await flushPromises();
 
-    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
-    expect(textarea.element.value).toBe('Segunda');
-    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.SENDING');
-    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING');
+    expect(textarea.attributes('readonly')).toBeDefined();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.SENDING');
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING');
   });
 
   it('sends a single request when confirm is clicked twice', async () => {
@@ -2099,6 +2095,63 @@ describe('AutonomiaGuideContainer — nunca no escuro', () => {
 
     expect(useAutonomiaGuideStore().messages[1].repetir).toBe('quantos funis?');
     expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(true);
+  });
+
+  // Revisão do #3144: o "Tentar de novo" manda a pergunta que falhou, não a
+  // mensagem que a pessoa escreveu no meio do trabalho.
+  it('Tentar de novo manda a pergunta do pedido que falhou', async () => {
+    AutonomiaGuideAPI.chat
+      .mockResolvedValueOnce({ data: { id: 'pedido-1', status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', junto_de: 'pedido-1' },
+      });
+    AutonomiaGuideAPI.resposta
+      .mockResolvedValueOnce({ data: { status: 'pending' } })
+      .mockResolvedValueOnce({ data: { status: 'failed' } });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria três etiquetas');
+    await perguntar(wrapper, 'chama a primeira de Quente');
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    const falha = useAutonomiaGuideStore().messages.at(-1);
+    expect(falha.message.content).toBe('AUTONOMIA_GUIDE.ERROR');
+    expect(falha.repetir).toBe('cria três etiquetas');
+  });
+
+  it('a pergunta seguinte que falha repete o texto das mensagens que ela cobre', async () => {
+    AutonomiaGuideAPI.chat
+      .mockResolvedValueOnce({ data: { id: 'pedido-1', status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', junto_de: 'pedido-1' },
+      });
+    AutonomiaGuideAPI.resposta.mockImplementation(id =>
+      Promise.resolve({
+        data:
+          id === 'pedido-1'
+            ? {
+                status: 'done',
+                available: true,
+                text: 'Criei as três.',
+                seguinte: 'pedido-2',
+                tardias: ['pedido-2'],
+              }
+            : { status: 'failed' },
+      })
+    );
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria três etiquetas');
+    await perguntar(wrapper, 'e mais uma');
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages.at(-1).repetir).toBe('e mais uma');
   });
 
   // A resposta retida não perde o que o Guia já preparou.

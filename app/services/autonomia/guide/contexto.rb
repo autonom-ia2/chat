@@ -44,17 +44,12 @@ class Autonomia::Guide::Contexto
   end
 
   # O que a pessoa escreveu enquanto este turno trabalhava (`Pedido.acrescentar`). O `Answerer` pergunta a cada rodada
-  # de ferramentas e entrega ao modelo como fala dela; quem decide se para, muda o caminho ou segue é o modelo. Cada
-  # mensagem lida passa a ser deste pedido: a tela não espera resposta separada para ela, e o turno dela fica junto
-  # deste (`Turno.juntar`). -> [String], na ordem em que ela escreveu.
+  # de ferramentas e entrega ao modelo como fala dela; quem decide se para, muda o caminho ou segue é o modelo. O fim
+  # do turno (`ChatJob#encerrar`) decide o destino de cada mensagem lida. -> [String], na ordem em que ela escreveu.
   def mensagens_novas
     return [] if @pedido_id.blank?
 
-    ::Autonomia::Guide::Pedido.retirar_juntas(@pedido_id).map do |junta|
-      ::Autonomia::Guide::Pedido.concluir(junta['id'], { 'junto_de' => @pedido_id })
-      ::Autonomia::Guide::Turno.juntar(junta['id'], @pedido_id)
-      junta['texto'].to_s
-    end
+    ::Autonomia::Guide::Pedido.ler_juntas(@pedido_id).map { |junta| junta['texto'].to_s }
   end
 
   def administrador?

@@ -15,8 +15,8 @@ class Autonomia::Guide::Turno < ApplicationRecord
   PRONTO = 'done'.freeze
   FALHOU = 'failed'.freeze
   RETIDO = 'retido'.freeze
-  # A pessoa escreveu enquanto o Guia trabalhava em outro pedido, e ele leu a mensagem no meio do trabalho
-  # (`Contexto#mensagens_novas`). Este turno não tem resposta própria: quem responde é o turno de `junto_de`.
+  # A pessoa escreveu enquanto o Guia trabalhava em outro pedido (`Pedido.acrescentar`). Este turno não tem resposta
+  # própria: quem responde é o turno de `junto_de`.
   JUNTO = 'junto'.freeze
   STATUS = [PENDENTE, PRONTO, FALHOU, RETIDO, JUNTO].freeze
 
@@ -59,6 +59,13 @@ class Autonomia::Guide::Turno < ApplicationRecord
       turno&.update!(desfecho(resultado.to_h.with_indifferent_access).merge(diagnostico: diagnostico))
     rescue StandardError => e
       Rails.logger.warn("[autonomia][guide][turno] concluir pedido=#{pedido_id} #{e.class}")
+    end
+
+    # A mensagem junta que vai ser respondida por conta própria: virou a pergunta seguinte (`ChatJob#encerrar`).
+    def reabrir(pedido_id)
+      find_by(pedido_id: pedido_id)&.update!(status: PENDENTE, diagnostico: nil)
+    rescue StandardError => e
+      Rails.logger.warn("[autonomia][guide][turno] reabrir pedido=#{pedido_id} #{e.class}")
     end
 
     def juntar(pedido_id, junto_de)

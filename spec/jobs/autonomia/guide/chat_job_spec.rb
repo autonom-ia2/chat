@@ -104,6 +104,45 @@ RSpec.describe Autonomia::Guide::ChatJob do
         .to include('status' => 'failed', 'seguinte' => novas.call.last)
     end
 
+    # Revisão do #3144: a mensagem que o Guia leu só conta como respondida se ele respondeu.
+    def ler_durante(texto, resultado)
+      nova = SecureRandom.uuid
+      allow(Autonomia::Guide::Chat).to receive(:new) do
+        Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: texto)
+        Autonomia::Guide::Pedido.ler_juntas(pedido)
+        instance_double(Autonomia::Guide::Chat, perform: resultado)
+      end
+      nova
+    end
+
+    it 'lida e respondida fica junta deste pedido, sem pergunta seguinte', :aggregate_failures do
+      nova = ler_durante('pare', resposta_do_guia('Parei.'))
+
+      expect { rodar }.not_to have_enqueued_job(described_class)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).not_to have_key('seguinte')
+      expect(Autonomia::Guide::Pedido.ler(nova, account: conta, user: admin)).to include('status' => 'done', 'junto_de' => pedido)
+    end
+
+    it 'lida sem resposta (retida) segue adiante como a pergunta seguinte' do
+      retida = Autonomia::Guide::Chat::Result.new(text: nil, available: true, retido: true)
+      nova = ler_durante('pare', retida)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(nova, hash_including('mensagem' => 'pare', 'arquivos' => []))
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).to include('seguinte' => nova, 'tardias' => [nova])
+    end
+
+    it 'a resposta pronta não vira falha quando o fim do turno quebra', :aggregate_failures do
+      conversa = Autonomia::Guide::Conversa.create!(account: conta, user: admin, titulo: 'teste')
+      Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: 'oi', tela: 'home')
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Olá.')))
+      allow(Autonomia::Guide::Pedido).to receive(:concluir).and_raise(Redis::CannotConnectError)
+
+      rodar
+
+      expect(Autonomia::Guide::Turno.find_by(pedido_id: pedido)).to have_attributes(status: 'done', resposta: 'Olá.')
+    end
+
     it 'sem mensagem nova, o pedido termina sem pergunta seguinte' do
       allow(Autonomia::Guide::Chat).to receive(:new)
         .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))

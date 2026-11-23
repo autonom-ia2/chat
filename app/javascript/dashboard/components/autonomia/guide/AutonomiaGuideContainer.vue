@@ -129,6 +129,11 @@ const mostraRespostasRapidas = computed(() => {
 });
 // #895 — a mensagem de voz está virando texto; a resposta ainda não foi pedida.
 const transcrevendo = ref(false);
+// A mensagem do meio entra no pedido em curso: precisa que o servidor já o
+// tenha aceito. Antes disso o campo fica travado, como antes.
+const podeEscreverNoMeio = computed(
+  () => Boolean(store.pendente()?.id) && !transcrevendo.value
+);
 // Os anexos que esperam no campo de digitar o próximo envio.
 const pendentes = computed(() => arquivos.filter(arquivo => !arquivo.turno));
 // Quantos anexos ainda cabem: o que falhou ao subir não conta.
@@ -439,7 +444,9 @@ const fraseDaEtapa = useFraseDaEtapa(etapa);
 
 // As perguntas que viraram comuns enquanto outra esperava resposta (a pessoa
 // escreveu bem quando o Guia terminava): a tela as busca depois, na ordem.
+// -> [{ id, pergunta }]
 const filaDepois = [];
+const esquecerFila = () => filaDepois.splice(0, filaDepois.length);
 
 // Quem desmonta o painel não quer mais a resposta.
 let desmontado = false;
@@ -497,15 +504,16 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
 // poucos segundos: quem olhava para a tela depois via a pergunta sem resposta
 // nenhuma, e não tinha como saber que devia tentar de novo.
 //
-// Leva o "Tentar de novo" com a última pergunta da pessoa.
+// Leva o "Tentar de novo" com a pergunta do pedido que falhou. Sem ela (a
+// conversa reaberta no meio), vale a última pergunta da pessoa.
 const ultimaPergunta = () =>
   [...store.messages].reverse().find(m => m.message_type === 'user')?.message
     ?.content || null;
 
-const avisarFalha = (extra = {}) =>
+const avisarFalha = ({ repetir = null, ...extra } = {}) =>
   store.addAssistantMessage({
     content: t('AUTONOMIA_GUIDE.ERROR'),
-    repetir: ultimaPergunta(),
+    repetir: repetir || ultimaPergunta(),
     ...extra,
   });
 
@@ -516,12 +524,13 @@ const aindaInteressa = (conta, vez) =>
 
 // Uma resposta que já chegou: entra na conversa, e a tela que embute o Guia
 // fica sabendo o que ele fez (#859).
-const entregarResposta = (data, pedidoId) => {
+const entregarResposta = (data, pedidoId, pergunta = null) => {
   // A resposta fica antes das mensagens que a pessoa escreveu depois da última
   // rodada do Guia: elas viraram a pergunta seguinte.
   const antesDosPedidos = data.tardias || null;
+  const repetir = pergunta || ultimaPergunta();
   if (data.status !== PRONTO) {
-    avisarFalha({ antesDosPedidos });
+    avisarFalha({ antesDosPedidos, repetir });
   } else if (data.available && data.text) {
     store.addAssistantMessage({
       antesDosPedidos,
@@ -555,7 +564,7 @@ const entregarResposta = (data, pedidoId) => {
       execucao: data.execucao || null,
       tarefa: data.tarefa || null,
       pedidoId,
-      repetir: ultimaPergunta(),
+      repetir,
     });
     if (data.execucao) emit('execucao', data.execucao);
     if (execucaoMudouConta(data.execucao)) avisarContaMudou();
@@ -565,7 +574,7 @@ const entregarResposta = (data, pedidoId) => {
     store.addAssistantMessage({
       antesDosPedidos,
       content: t('AUTONOMIA_GUIDE.UNAVAILABLE'),
-      repetir: ultimaPergunta(),
+      repetir,
     });
   }
 };
@@ -574,6 +583,7 @@ const entregarResposta = (data, pedidoId) => {
 // sair da tela no meio, ela para — e a pergunta continua pendente na store,
 // solta, para o painel lateral adotar (#859).
 const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
+  const pergunta = store.perguntaPendente(chave);
   try {
     const data = await buscarResposta(id, requestAccount, requestId);
     if (!data || !aindaInteressa(requestAccount, requestId)) return;
@@ -581,17 +591,19 @@ const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
     store.fecharPendente(chave);
     // A mensagem que chegou no meio do trabalho já foi respondida junto.
     if (data.junto_de) return;
-    entregarResposta(data, id);
-    // A pessoa escreveu depois da última rodada: o Guia já começou a pergunta
-    // seguinte, e a tela continua esperando por ela.
-    const proxima = data.seguinte || filaDepois.shift();
+    entregarResposta(data, id, pergunta);
+    // A pessoa escreveu durante o turno e o Guia não respondeu por ela: o Guia
+    // já começou a pergunta seguinte, e a tela continua esperando por ela.
+    const proxima = data.seguinte
+      ? { id: data.seguinte, pergunta: store.textoDosPedidos(data.tardias) }
+      : filaDepois.shift();
     if (proxima) {
       const seguinte = store.abrirPendente(requestAccount, cracha);
-      store.registrarPedidoPendente(seguinte, proxima);
+      store.registrarPedidoPendente(seguinte, proxima.id, proxima.pergunta);
       requestSequence += 1;
       isSending.value = true;
       acompanharResposta({
-        id: proxima,
+        id: proxima.id,
         chave: seguinte,
         requestAccount,
         requestId: requestSequence,
@@ -601,7 +613,8 @@ const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
     etapa.value = null;
     if (!aindaInteressa(requestAccount, requestId)) return;
     store.fecharPendente(chave);
-    avisarFalha();
+    esquecerFila();
+    avisarFalha({ repetir: pergunta });
   } finally {
     if (requestId === requestSequence) isSending.value = false;
   }
@@ -666,7 +679,7 @@ const requestReply = async (requestAccount, message, requestId, registro) => {
   if (pedido.conversa_id && store.pendenteAtivo(chave)) {
     store.definirConversa(pedido.conversa_id);
   }
-  store.registrarPedidoPendente(chave, pedido.id);
+  store.registrarPedidoPendente(chave, pedido.id, message);
   if (!aindaInteressa(requestAccount, requestId)) return;
   await acompanharResposta({ id: pedido.id, chave, requestAccount, requestId });
 };
@@ -764,6 +777,7 @@ const resetConversation = () => {
   transcrevendo.value = false;
   falhouAoAbrir.value = false;
   contaCarregada = accountId.value;
+  esquecerFila();
   store.reset();
 };
 
@@ -850,9 +864,9 @@ const podeEnviar = () => {
 };
 
 // Busca a resposta de um pedido que ninguém está acompanhando agora.
-const acompanharSozinho = (id, conta) => {
+const acompanharSozinho = (id, conta, pergunta) => {
   const chave = store.abrirPendente(conta, cracha);
-  store.registrarPedidoPendente(chave, id);
+  store.registrarPedidoPendente(chave, id, pergunta);
   requestSequence += 1;
   isSending.value = true;
   acompanharResposta({
@@ -890,13 +904,14 @@ const juntarAoTrabalho = message => {
       if (data.junto_de) {
         store.marcarJunto(registro.id, data.id);
       } else if (store.temPendente()) {
-        filaDepois.push(data.id);
+        filaDepois.push({ id: data.id, pergunta: message });
       } else {
-        acompanharSozinho(data.id, conta);
+        acompanharSozinho(data.id, conta, message);
       }
     })
     .catch(() => {
-      if (!desmontado && accountId.value === conta) avisarFalha();
+      if (!desmontado && accountId.value === conta)
+        avisarFalha({ repetir: message });
     });
   return true;
 };
@@ -1067,6 +1082,7 @@ watch(
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
 watch(accountId, () => {
+  esquecerFila();
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
@@ -1573,7 +1589,7 @@ const classeDoPainel = computed(() =>
           :key="accountId"
           class="mb-1 w-full"
           :is-busy="ocupado"
-          :escreve-no-meio="!transcrevendo"
+          :escreve-no-meio="podeEscreverNoMeio"
           :arquivos="pendentes"
           :on-enviar-voz="enviarVoz"
           :vagas="vagas"

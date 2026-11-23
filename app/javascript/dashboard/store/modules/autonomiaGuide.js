@@ -191,6 +191,8 @@ const addAssistantMessage = ({
     // A pergunta que o "Tentar de novo" manda outra vez, quando a resposta não
     // veio (falha, Guia fora do ar ou resposta retida).
     repetir,
+    // Os pedidos das mensagens que vieram depois desta resposta (`seguinte`).
+    antesDosPedidos: antesDosPedidos || [],
   };
   nextId += 1;
   // A pessoa escreveu depois da última rodada do Guia: essas mensagens viram a
@@ -209,10 +211,29 @@ const addAssistantMessage = ({
 
 // A mensagem que a pessoa mandou enquanto o Guia trabalhava ganha o pedido
 // dela, para a resposta saber se fica antes ou depois.
+//
+// Se a resposta que devia ficar antes dela chegou primeiro, a mensagem desce
+// para depois da resposta.
 const marcarJunto = (id, pedidoId) => {
-  const registro = state.messages.find(m => m.id === id);
-  if (registro) registro.pedidoJunto = pedidoId;
+  const indice = state.messages.findIndex(m => m.id === id);
+  if (indice < 0) return;
+  const registro = state.messages[indice];
+  registro.pedidoJunto = pedidoId;
+  const resposta = state.messages.findIndex(m =>
+    m.antesDosPedidos?.includes(pedidoId)
+  );
+  if (resposta <= indice) return;
+  state.messages.splice(indice, 1);
+  state.messages.splice(resposta, 0, registro);
 };
+
+// O texto das mensagens que viraram a pergunta seguinte, como o servidor a
+// montou: é o que o "Tentar de novo" dela manda outra vez.
+const textoDosPedidos = pedidos =>
+  state.messages
+    .filter(m => (pedidos || []).includes(m.pedidoJunto))
+    .map(m => m.message.content)
+    .join('\n\n') || null;
 
 const revogar = url => {
   if (url) URL.revokeObjectURL(url);
@@ -239,7 +260,7 @@ const conversaAtual = () => state.conversaId;
 
 // #861 — a resposta de um turno guardado, no formato de `addAssistantMessage`.
 // Retida e falha mostram o mesmo aviso que a tela mostrou na hora.
-const respostaDoTurno = (turno, avisos) => {
+const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
   if (turno.status === 'done') {
     return {
       content: turno.resposta,
@@ -265,13 +286,13 @@ const respostaDoTurno = (turno, avisos) => {
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
       pedidoId: turno.pedido_id,
-      repetir: turno.pergunta,
+      repetir: pergunta,
     };
   }
   if (turno.status === 'failed') {
     return {
       content: turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
-      repetir: turno.pergunta,
+      repetir: pergunta,
     };
   }
   return null;
@@ -285,6 +306,8 @@ const mensagemDaPessoa = turno => {
     message_type: 'user',
     message: { content: turno.pergunta },
     texto: turno.pergunta,
+    // A mensagem do meio do trabalho: a resposta que veio antes dela a acha por aqui.
+    pedidoJunto: turno.junto_de ? turno.pedido_id : null,
     anexos: (turno.anexos || []).map((anexo, indice) => ({
       id: `${turno.pedido_id}-${indice}`,
       nome: anexo.nome,
@@ -314,22 +337,28 @@ const hidratar = (conversa, avisos = {}) => {
   state.pendente = null;
   let pendente = null;
   const turnos = conversa?.turnos || [];
-  // A mensagem que a pessoa mandou enquanto o Guia trabalhava aparece antes da
-  // resposta do turno que a leu, como aconteceu.
-  const juntas = turnos.filter(turno => turno.junto_de);
+  // A mensagem que a pessoa mandou enquanto o Guia trabalhava aparece no lugar
+  // do turno que a respondeu, na ordem em que ela escreveu, antes da resposta.
+  // A junta cujo turno não está na conversa aparece sozinha.
+  const pais = new Set(turnos.filter(t => !t.junto_de).map(t => t.pedido_id));
   turnos.forEach(turno => {
-    if (turno.junto_de) return;
+    if (turno.junto_de && pais.has(turno.junto_de)) return;
+    if (turno.junto_de) {
+      mensagemDaPessoa(turno);
+      return;
+    }
     // #935 — o aviso do Guia não tem pergunta: só a fala dele entra.
     if (turno.aviso_id) {
       const resposta = respostaDoTurno(turno, avisos);
       if (resposta) addAssistantMessage(resposta);
       return;
     }
-    mensagemDaPessoa(turno);
-    juntas
-      .filter(junta => junta.junto_de === turno.pedido_id)
-      .forEach(mensagemDaPessoa);
-    const resposta = respostaDoTurno(turno, avisos);
+    const grupo = turnos.filter(
+      t => t === turno || t.junto_de === turno.pedido_id
+    );
+    grupo.forEach(mensagemDaPessoa);
+    const pergunta = grupo.map(t => t.pergunta).join('\n\n');
+    const resposta = respostaDoTurno(turno, avisos, pergunta);
     if (resposta) addAssistantMessage(resposta);
     pendente = turno.status === 'pending' ? turno.pedido_id : null;
   });
@@ -348,9 +377,15 @@ const abrirPendente = (conta, dono) => {
 
 const pendenteAtivo = chave => state.pendente?.chave === chave;
 
-const registrarPedidoPendente = (chave, id) => {
-  if (pendenteAtivo(chave)) state.pendente.id = id;
+// `pergunta`: o que foi perguntado neste pedido, para o "Tentar de novo".
+const registrarPedidoPendente = (chave, id, pergunta = null) => {
+  if (!pendenteAtivo(chave)) return;
+  state.pendente.id = id;
+  if (pergunta) state.pendente.pergunta = pergunta;
 };
+
+const perguntaPendente = chave =>
+  pendenteAtivo(chave) ? state.pendente.pergunta || null : null;
 
 const soltarPendente = dono => {
   if (state.pendente?.dono === dono) state.pendente.dono = null;
@@ -450,6 +485,8 @@ export const useAutonomiaGuideStore = () => ({
   marcarVoz,
   addAssistantMessage,
   marcarJunto,
+  textoDosPedidos,
+  perguntaPendente,
   marcarAcao,
   esquecerLembranca,
   reset,

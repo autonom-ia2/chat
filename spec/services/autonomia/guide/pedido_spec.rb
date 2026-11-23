@@ -115,6 +115,30 @@ RSpec.describe Autonomia::Guide::Pedido do
     end
   end
 
+  describe '.ler_juntas' do
+    it 'o que o Guia lê passa para as lidas, e o fim do turno as retira na ordem', :aggregate_failures do
+      id = described_class.abrir(account: conta, user: admin)
+      %w[pensei pare].each do |texto|
+        described_class.acrescentar(id, account: conta, user: admin, nova: SecureRandom.uuid, mensagem: texto)
+      end
+
+      expect(described_class.ler_juntas(id).pluck('texto')).to eq(%w[pensei pare])
+      expect(described_class.retirar_juntas(id)).to eq([])
+      expect(described_class.retirar_lidas(id).pluck('texto')).to eq(%w[pensei pare])
+      expect(described_class.retirar_lidas(id)).to eq([])
+    end
+
+    it 'roda o bloco só quando a mensagem entrou' do
+      id = described_class.abrir(account: conta, user: admin)
+      described_class.concluir(id, { text: 'pronto' })
+      rodou = false
+
+      described_class.acrescentar(id, account: conta, user: admin, nova: SecureRandom.uuid, mensagem: 'oi') { rodou = true }
+
+      expect(rodou).to be(false)
+    end
+  end
+
   describe '.anotar_etapa' do
     it 'mostra o que o Guia está fazendo só enquanto ele trabalha', :aggregate_failures do
       id = described_class.abrir(account: conta, user: admin)

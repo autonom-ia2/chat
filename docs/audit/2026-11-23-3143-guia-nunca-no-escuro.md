@@ -18,15 +18,35 @@ Data: 23/11/2026. Entrega 2 da lista de valor do Guia.
   inventar texto do servidor.
 - **ActionCable fora** do escopo.
 
+## Revisão independente (cavecrew-reviewer, 23/11)
+
+3 bugs e 10 riscos; consertados no segundo commit:
+
+- Mensagem lida no meio do trabalho só conta como respondida se o Guia respondeu de fato (texto). Em falha ou
+  resposta retida, ela segue adiante como a pergunta seguinte (fila `:lidas`, decidida em `ChatJob#encerrar`).
+- "Tentar de novo" manda a pergunta do pedido que falhou (guardada no pendente), não a última bolha da pessoa.
+- Ao reabrir, a pergunta seguinte aparece depois das mensagens que ela cobre; o histórico do modelo segue a mesma
+  ordem, e a junta cujo turno saiu da janela entra sozinha.
+- O turno da mensagem do meio fica `junto` já na chegada, dentro da trava: recarregar a tela no meio não troca o
+  pedido que ela acompanha.
+- Trava ocupada ou Redis fora na chegada: a mensagem vira pergunta comum, sem erro 500. Só pedido da mesma conversa.
+- Erro no fim do turno não reescreve a resposta pronta como falha. A pergunta seguinte não relê os anexos da anterior.
+- A tela esvazia a fila de perguntas na falha, na conversa nova e na troca de conta; a mensagem marcada depois da
+  resposta que devia ficar antes desce para o lugar certo; o campo só abre depois de o servidor aceitar a pergunta.
+- Ficou de fora: `Redis::LockManager#unlock` apaga a trava sem conferir o dono. É lib compartilhada; o bloco do Guia
+  mexe só em chaves do Redis, muito abaixo dos 10 s da trava.
+
 ## Limites conhecidos
 
 - Anexo mandado no meio do trabalho espera o Guia terminar (os arquivos são lidos no começo do turno).
 - Se o processo do job morrer sem passar pelo `discard_on`, a mensagem do meio fica sem resposta. A tela do pedido
   original termina em falha, com "Tentar de novo".
+- Se a pergunta seguinte não puder ser enfileirada (Sidekiq/Redis fora), as mensagens que iam adiante ficam sem
+  resposta; o log diz quantas.
 
 ## Validação local
 
-- vitest dos componentes e da store do Guia: 172 arquivos, 1759 testes passando.
+- vitest dos componentes e da store do Guia: 172 arquivos, 1764 testes passando (depois da revisão).
 - eslint sem erro (os avisos `no-missing-keys` são do catálogo `crm.json`, que já existiam).
 - rubocop nos 16 arquivos Ruby tocados: sem ofensa (Ruby 3.4.4 local; o 3.4.13 do repo não está instalado no M4).
 - `guia:check`, `central:check`, `i18n:fork:check`: em dia.

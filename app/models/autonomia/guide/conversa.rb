@@ -33,16 +33,17 @@ class Autonomia::Guide::Conversa < ApplicationRecord
   # aconteceram. Só entra resposta de verdade — o aviso de "não consegui" que a
   # tela mostra não é fala do Guia.
   #
-  # A mensagem que a pessoa mandou enquanto o Guia trabalhava (`Turno::JUNTO`) entra antes da resposta do turno
-  # que a leu: foi assim que aconteceu, e é assim que o modelo entende que a resposta já cuidou dela.
+  # A mensagem que a pessoa mandou enquanto o Guia trabalhava (`Turno::JUNTO`) entra no lugar do turno que a
+  # respondeu, na ordem em que ela escreveu e antes da resposta: é assim que o modelo entende que a resposta já
+  # cuidou dela. Junta cujo turno ficou fora da janela entra sozinha, como fala da pessoa.
   #
   # `exceto`: o pedido que vai ser respondido agora fica fora, com as mensagens juntas a ele — elas são a pergunta.
   def historico(limite: ::Autonomia::Guide::Chat::MAX_HISTORY, exceto: nil)
     recentes = turnos.reorder(created_at: :desc, id: :desc).limit(limite)
-                     .select(:id, :pedido_id, :pergunta, :resposta, :diagnostico, :status).reverse
+                     .select(:id, :pedido_id, :pergunta, :resposta, :diagnostico, :status, :created_at).reverse
+    pais = recentes.reject(&:junto_de).map(&:pedido_id)
     juntas = recentes.select(&:junto_de).group_by(&:junto_de)
-    respondidos = recentes.reject { |turno| turno.junto_de || turno.pedido_id == exceto }
-    respondidos.flat_map { |turno| mensagens_com_juntas(turno, juntas[turno.pedido_id]) }.last(limite)
+    recentes.flat_map { |turno| mensagens_no_historico(turno, pais, juntas, exceto) }.last(limite)
   end
 
   def resumo
@@ -56,12 +57,19 @@ class Autonomia::Guide::Conversa < ApplicationRecord
 
   private
 
-  def mensagens_com_juntas(turno, juntas)
-    mensagens = turno.mensagens
-    return mensagens if juntas.blank?
+  def mensagens_no_historico(turno, pais, juntas, exceto)
+    pai = turno.junto_de
+    return [] if exceto.present? && [turno.pedido_id, pai].include?(exceto)
+    return [] if pai && pais.include?(pai)
+    return [{ role: 'user', content: turno.pergunta }] if pai
 
-    extras = juntas.map { |junta| { role: 'user', content: junta.pergunta } }
-    resposta = mensagens.last if mensagens.last&.dig(:role) == 'assistant'
-    resposta ? mensagens[0...-1] + extras + [resposta] : mensagens + extras
+    com_juntas(turno, juntas[turno.pedido_id])
+  end
+
+  def com_juntas(turno, juntas)
+    return turno.mensagens if juntas.blank? || turno.aviso_id
+
+    falas = (juntas + [turno]).sort_by { |t| [t.created_at, t.id] }.map { |t| { role: 'user', content: t.pergunta } }
+    falas + turno.mensagens.drop(1)
   end
 end
