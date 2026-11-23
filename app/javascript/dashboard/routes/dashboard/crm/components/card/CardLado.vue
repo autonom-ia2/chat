@@ -150,7 +150,7 @@ const colunaDaCriacao = computed(() => {
   <VisorDaConversa
     v-if="em('conversas') && conversa"
     :key="conversa.display_id"
-    class="h-[70dvh] lg:h-full"
+    class="h-[calc(100dvh-20rem)] min-h-80 lg:h-full"
     :conversa="conversa"
   />
   <div v-else class="flex flex-col gap-4 lg:sticky lg:top-7">

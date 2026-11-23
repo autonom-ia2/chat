@@ -6320,13 +6320,15 @@
       "VAZIO": "Nenhuma conversa ligada a este cliente.",
       "VISOR": {
         "ROTULO": "Conversa nº {numero}",
-        "SUBTITULO": "Conversa nº {numero} · {caixa}",
-        "SEM_NOME": "Cliente",
+        "SUBTITULO": "Conversa nº {numero} · {situacao}",
         "CARREGANDO": "Carregando a conversa",
         "ERRO": "Não deu para carregar esta conversa agora.",
         "TENTAR_DE_NOVO": "Tentar de novo",
         "VAZIA": "Esta conversa ainda não tem mensagens.",
-        "CARREGANDO_ANTIGAS": "Carregando mensagens antigas"
+        "CARREGANDO_ANTIGAS": "Carregando mensagens antigas",
+        "MENSAGENS": "Mensagens da conversa",
+        "ERRO_ANTIGAS": "Não deu para trazer as mensagens antigas.",
+        "SO_LEITURA": "Aqui é só para ler. Para responder, toque em Abrir a conversa."
       }
     },
     "RETORNOS": {

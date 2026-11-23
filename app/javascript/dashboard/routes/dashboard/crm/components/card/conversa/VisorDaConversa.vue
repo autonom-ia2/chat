@@ -6,6 +6,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { fornecerConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import ListaDoVisor from './ListaDoVisor.vue';
 import { useVisorDaConversa } from './useVisorDaConversa';
+import { situacaoDaConversa } from './situacaoDaConversa';
 
 // #3165 — a conversa escolhida na seção Conversas do card, inteira e só para ler, no
 // lugar de "Onde está no funil". Responder continua em "Abrir a conversa", na lista.
@@ -19,14 +20,15 @@ const V = 'CRM_CARD.CONVERSAS.VISOR';
 const visor = useVisorDaConversa(() => props.conversa.display_id);
 fornecerConversaDaTela({ conversa: visor.conversa, anexos: visor.anexos });
 
-const titulo = computed(
-  () =>
-    props.conversa.contact_name ||
-    visor.conversa.value?.meta?.sender?.name ||
-    ''
-);
+// O nome do cliente já está no topo do card: o visor diz o canal e a situação.
 const caixa = computed(
   () => props.conversa.inbox_name || t('CRM_KANBAN.DRAWER.NO_INBOX')
+);
+const subtitulo = computed(() =>
+  t(`${V}.SUBTITULO`, {
+    numero: props.conversa.display_id,
+    situacao: situacaoDaConversa(t, props.conversa.status),
+  })
 );
 </script>
 
@@ -41,11 +43,9 @@ const caixa = computed(
     >
       <div class="flex min-w-0 flex-1 flex-col">
         <p class="mb-0 truncate text-base font-semibold text-n-slate-12">
-          {{ titulo || t(`${V}.SEM_NOME`) }}
+          {{ caixa }}
         </p>
-        <p class="mb-0 truncate text-sm text-n-slate-11">
-          {{ t(`${V}.SUBTITULO`, { numero: conversa.display_id, caixa }) }}
-        </p>
+        <p class="mb-0 truncate text-sm text-n-slate-11">{{ subtitulo }}</p>
       </div>
     </header>
 
@@ -53,9 +53,9 @@ const caixa = computed(
       v-if="visor.carregando.value"
       class="flex flex-1 items-center justify-center"
       role="status"
-      :aria-label="t(`${V}.CARREGANDO`)"
     >
       <Spinner class="text-n-brand" />
+      <span class="sr-only">{{ t(`${V}.CARREGANDO`) }}</span>
     </div>
     <div
       v-else-if="visor.erro.value"
@@ -84,7 +84,13 @@ const caixa = computed(
       :caixa-id="conversa.inbox_id"
       :tem-antigas="visor.temAntigas.value"
       :carregando-antigas="visor.carregandoAntigas.value"
+      :erro-antigas="visor.erroAntigas.value"
       :carregar-antigas="visor.carregarAntigas"
     />
+    <p
+      class="mb-0 border-t border-n-weak bg-n-solid-1 px-4 py-2.5 text-sm text-n-slate-11"
+    >
+      {{ t(`${V}.SO_LEITURA`) }}
+    </p>
   </section>
 </template>

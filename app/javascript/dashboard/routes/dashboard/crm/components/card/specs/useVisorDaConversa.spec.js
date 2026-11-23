@@ -85,6 +85,19 @@ describe('useVisorDaConversa (#3165)', () => {
     expect(visor.conversa.value.id).toBe(2);
   });
 
+  it('falha nas antigas vira aviso e não apaga o que já veio', async () => {
+    ConversationAPI.show.mockResolvedValue({ data: { id: 94 } });
+    MessageApi.getPreviousMessages
+      .mockResolvedValueOnce({ data: { payload: mensagens(21, 40) } })
+      .mockRejectedValueOnce(new Error('500'));
+    const visor = useVisorDaConversa(ref(94));
+    await flushPromises();
+    await expect(visor.carregarAntigas()).resolves.toBe(false);
+    expect(visor.erroAntigas.value).toBe(true);
+    expect(visor.carregandoAntigas.value).toBe(false);
+    expect(visor.mensagens.value).toHaveLength(20);
+  });
+
   it('erro na busca vira aviso, sem conversa', async () => {
     ConversationAPI.show.mockRejectedValue(new Error('403'));
     MessageApi.getPreviousMessages.mockResolvedValue({ data: { payload: [] } });

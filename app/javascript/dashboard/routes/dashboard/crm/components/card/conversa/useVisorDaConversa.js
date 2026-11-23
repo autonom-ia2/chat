@@ -29,6 +29,7 @@ export const useVisorDaConversa = numero => {
   const carregando = ref(false);
   const carregandoAntigas = ref(false);
   const erro = ref(false);
+  const erroAntigas = ref(false);
   const temAntigas = ref(false);
   // Trocar de conversa no meio da busca descarta a resposta da anterior.
   let vez = 0;
@@ -40,6 +41,8 @@ export const useVisorDaConversa = numero => {
     conversa.value = null;
     mensagens.value = [];
     erro.value = false;
+    erroAntigas.value = false;
+    carregandoAntigas.value = false;
     temAntigas.value = false;
     if (!id) return;
     carregando.value = true;
@@ -68,6 +71,7 @@ export const useVisorDaConversa = numero => {
     }
     const minha = vez;
     carregandoAntigas.value = true;
+    erroAntigas.value = false;
     try {
       const { data } = await MessageApi.getPreviousMessages({
         conversationId: id,
@@ -79,6 +83,7 @@ export const useVisorDaConversa = numero => {
       temAntigas.value = recebidas.length >= PAGINA;
       return recebidas.length > 0;
     } catch {
+      if (minha === vez) erroAntigas.value = true;
       return false;
     } finally {
       if (minha === vez) carregandoAntigas.value = false;
@@ -96,6 +101,7 @@ export const useVisorDaConversa = numero => {
     carregando,
     carregandoAntigas,
     erro,
+    erroAntigas,
     temAntigas,
     carregarAntigas,
     recarregar: carregar,

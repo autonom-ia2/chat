@@ -781,7 +781,7 @@ defineExpose({
           class="grid min-h-full grid-cols-[minmax(0,1fr)]"
           :class="
             lendoConversa
-              ? 'lg:h-full lg:grid-cols-[minmax(0,1fr)_40rem]'
+              ? 'lg:h-full lg:grid-cols-[minmax(0,1fr)_36rem] 2xl:grid-cols-[minmax(0,1fr)_40rem]'
               : 'lg:grid-cols-[minmax(0,1fr)_32rem]'
           "
         >

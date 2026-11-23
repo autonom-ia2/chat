@@ -1,6 +1,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { situacaoDaConversa } from '../conversa/situacaoDaConversa';
 
 // #1423 — as conversas do card (CV-01): "Em resumo" no topo (IA-02) e, para
 // cada uma, número, caixa, situação, última conversa e quem atende, com
@@ -20,16 +21,7 @@ defineEmits(['abrir', 'atualizar', 'ver']);
 
 const { t } = useI18n();
 const C = 'CRM_CARD.CONVERSAS';
-const SITUACAO = {
-  open: 'OPEN',
-  pending: 'PENDING',
-  resolved: 'RESOLVED',
-  snoozed: 'SNOOZED',
-};
-const situacao = status =>
-  t(
-    `CRM_KANBAN.DRAWER.CONVERSATION_STATUS_${SITUACAO[String(status || '').toLowerCase()] || 'UNKNOWN'}`
-  );
+const situacao = status => situacaoDaConversa(t, status);
 </script>
 
 <template>

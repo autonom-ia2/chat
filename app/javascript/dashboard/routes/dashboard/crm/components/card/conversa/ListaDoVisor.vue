@@ -5,6 +5,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import MessageList from 'dashboard/components-next/message/MessageList.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import AvisoDasAntigas from './AvisoDasAntigas.vue';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 import { useConversaDeEmail } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { useConversaDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
@@ -18,6 +19,7 @@ const props = defineProps({
   caixaId: { type: Number, default: null },
   temAntigas: { type: Boolean, default: false },
   carregandoAntigas: { type: Boolean, default: false },
+  erroAntigas: { type: Boolean, default: false },
   carregarAntigas: { type: Function, required: true },
 });
 
@@ -59,7 +61,15 @@ const puxarAntigas = async () => {
 
 const aoRolar = () => {
   const el = painel();
-  if (!el || !props.temAntigas || props.carregandoAntigas) return;
+  // Depois de uma falha, só tenta de novo pelo botão (rolar não repete o pedido).
+  if (
+    !el ||
+    !props.temAntigas ||
+    props.carregandoAntigas ||
+    props.erroAntigas
+  ) {
+    return;
+  }
   const naBorda = emailNovo.value
     ? el.scrollHeight - el.scrollTop - el.clientHeight < BORDA
     : el.scrollTop < BORDA;
@@ -80,8 +90,10 @@ watch(
   <MessageList
     ref="lista"
     data-visor-lista
-    class="conversation-panel m-0 flex h-full min-h-0 flex-col overflow-y-auto pb-4"
+    class="conversation-panel m-0 flex h-full min-h-0 flex-col overflow-y-auto pb-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-n-brand"
     :class="[classesDaLista, classesDoEmail, classesDoInstagram]"
+    tabindex="0"
+    :aria-label="t('CRM_CARD.CONVERSAS.VISOR.MENSAGENS')"
     :current-user-id="usuarioId"
     :is-an-email-channel="ehEmail"
     :messages="mensagens"
@@ -92,10 +104,17 @@ watch(
         v-if="carregandoAntigas && !emailNovo"
         class="flex min-h-16 list-none items-center justify-center first:mt-auto"
         role="status"
-        :aria-label="t('CRM_CARD.CONVERSAS.VISOR.CARREGANDO_ANTIGAS')"
       >
         <Spinner class="text-n-brand" />
+        <span class="sr-only">
+          {{ t('CRM_CARD.CONVERSAS.VISOR.CARREGANDO_ANTIGAS') }}
+        </span>
       </li>
+      <AvisoDasAntigas
+        v-else-if="erroAntigas && !emailNovo"
+        class="first:mt-auto"
+        @tentar="puxarAntigas"
+      />
       <li
         v-else-if="!emailNovo"
         class="list-none first:mt-auto"
@@ -107,10 +126,16 @@ watch(
         v-if="carregandoAntigas && emailNovo"
         class="flex min-h-16 list-none items-center justify-center"
         role="status"
-        :aria-label="t('CRM_CARD.CONVERSAS.VISOR.CARREGANDO_ANTIGAS')"
       >
         <Spinner class="text-n-brand" />
+        <span class="sr-only">
+          {{ t('CRM_CARD.CONVERSAS.VISOR.CARREGANDO_ANTIGAS') }}
+        </span>
       </li>
+      <AvisoDasAntigas
+        v-else-if="erroAntigas && emailNovo"
+        @tentar="puxarAntigas"
+      />
     </template>
   </MessageList>
 </template>
