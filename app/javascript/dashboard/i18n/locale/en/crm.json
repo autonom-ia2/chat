@@ -4893,6 +4893,8 @@
       "UNDO": "Undo",
       "UNDOING": "Undoing…",
       "UNDONE": "Undone. Everything went back to how it was.",
+      "UNDONE_PARTIAL": "I undid only part of it.",
+      "UNDONE_NONE": "I could not undo it.",
       "UNTIL": "You can undo until {quando}",
       "CONFLICTS": "{count} change was kept because someone edited it afterwards. | {count} changes were kept because someone edited them afterwards.",
       "PARTIAL": "Part of this was deleted without a copy and cannot come back.",
