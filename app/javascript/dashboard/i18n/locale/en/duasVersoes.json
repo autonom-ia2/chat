@@ -81,10 +81,12 @@
       "CARREGANDO": "Loading the result of the two versions",
       "TESTANDO": "Testing. At {hora}, we pick the better one and send it to the other {resto} people.",
       "TESTANDO_EU_ESCOLHO": "Testing. At {hora}, the test ends and you choose which one goes to the other {resto} people.",
+      "TESTANDO_SEM_ENVIO": "No one in the test has received the message yet. If no one receives it by {data}, version 1 goes to the other {resto} people.",
       "ESPERANDO_VOCE": "The test is over. Choose which version goes to the other {resto} people.",
       "ESCOLHIDA_SISTEMA": "Version {n} went to the other {resto} people.",
       "ESCOLHIDA_VOCE": "You chose version {n}. It went to the other {resto} people.",
       "ESCOLHIDA_EMPATE": "Version 1 went to the other {resto} people, because both turned out about the same.",
+      "ESCOLHIDA_SEM_ENVIO": "No one in the test received the message, so version 1 went to the other {resto} people.",
       "TODOS": "Each person in the audience got one of the two versions.",
       "ATE_AGORA": "So far, {frase}",
       "NA_FRENTE": "Ahead",
@@ -158,12 +160,18 @@
       "OUTRAS_INFORMACOES": "The version 2 template asks for different information than version 1. Choose another template in the Message step.",
       "MODELO": "The version 2 template is no longer approved by WhatsApp. Choose another one in the Message step.",
       "SEGUNDA": "Version 2 of the message couldn't be used. Check it in the Message step.",
-      "INDISPONIVEL": "This channel cannot test two versions of the message. Turn off “Test two versions” in the Message step."
+      "INDISPONIVEL": "This channel cannot test two versions of the message. Turn off “Test two versions” in the Message step.",
+      "SEM_COMPRAS": "Choosing by purchases needs the CRM turned on in the account. In “Which version is better?”, pick another option."
     },
     "AVISO_LISTA": {
       "TITULO": "Campaigns waiting for you to choose the version",
+      "TITULO_ATENCAO": "Campaigns with two versions that need you",
       "TEXTO": "{nome}: the test is over. Choose which version goes to the other {resto} people.",
       "SOZINHA": "If no one chooses by {data}, version 1 goes on its own.",
+      "TEXTO_SEM_ENVIO": "{nome}: no one in the test has received the message yet. Check the result to see what happened.",
+      "SOZINHA_SEM_ENVIO": "If no one receives it by {data}, version 1 goes to the other {resto} people.",
+      "VER": "See the result",
+      "VER_ARIA": "See the result of {nome}",
       "ESCOLHER": "Choose the version",
       "ESCOLHER_ARIA": "Choose the version of {nome}"
     }

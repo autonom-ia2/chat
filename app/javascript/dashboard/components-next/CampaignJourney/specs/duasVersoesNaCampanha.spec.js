@@ -108,6 +108,9 @@ describe('duasVersoesErrorKey', () => {
       'INDISPONIVEL'
     );
     expect(duasVersoesErrorKey(erro('segunda_versao_vazia'))).toBe('SEGUNDA');
+    expect(duasVersoesErrorKey(erro('criterio_sem_compras'))).toBe(
+      'SEM_COMPRAS'
+    );
   });
 
   it('outro erro fica com a mensagem de sempre', () => {

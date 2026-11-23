@@ -89,6 +89,14 @@ RSpec.describe Autonomia::Automacao::DuasVersoes, :automacao_motor do
       expect { salvar(automacao, [com_versoes(['Oi, tudo bem?'])]) }.to recusa(:versoes_iguais)
     end
 
+    # `modelo: null` no passo e a chave ausente na versão 2 são a mesma coisa: as duas versões continuam iguais.
+    it 'recusa a versão 2 igual à 1 também com o modelo nulo no passo' do
+      passo = com_versoes(['Oi, tudo bem?']).merge('modelo' => nil)
+
+      expect(described_class.problemas_ao_salvar(passo)).to include(I18n.t('autonomia.automacao.receita.versoes_iguais', passo: 'p1'))
+      expect(described_class.problemas_ao_salvar(com_versoes.merge('modelo' => nil))).to be_empty
+    end
+
     it 'recusa a versão 2 vazia (o esquema pede texto)' do
       expect { salvar(automacao, [com_versoes([])]) }.to raise_error(ActiveRecord::RecordInvalid)
     end
@@ -141,6 +149,19 @@ RSpec.describe Autonomia::Automacao::DuasVersoes, :automacao_motor do
 
       expect(conversa.messages.outgoing.last.content).to eq('Olá! Tudo certo por aí?')
       expect(Autonomia::Automacao::VersaoEnvio.sole.versao).to eq(2)
+    end
+
+    # A mensagem já saiu: marcar erro no passo diria que ela não saiu, e o executor não repete o envio.
+    it 'se gravar o envio do teste falhar, a mensagem segue como enviada e o erro vai ao log', :aggregate_failures do
+      definicao = automacao_ligada(account, admin, [com_versoes])
+      allow(Autonomia::Automacao::VersaoEnvio).to receive(:create!).and_raise(ActiveRecord::StatementInvalid, 'falhou')
+      allow(Rails.logger).to receive(:error)
+      execucao = comecar_e_rodar(definicao)
+
+      expect(conversa.messages.outgoing.count).to eq(1)
+      expect(registro(execucao).resultado).to eq('ok')
+      expect(registro(execucao).dados).to include('versao' => described_class.sorteio(definicao.id, com_versoes, conversa))
+      expect(Rails.logger).to have_received(:error).with(a_string_including('envio não registrado'))
     end
 
     it 'o envio que pulou não conta para o teste', :aggregate_failures do

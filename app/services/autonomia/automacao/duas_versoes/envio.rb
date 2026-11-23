@@ -4,7 +4,9 @@
 # robô do outro lado.
 #
 # Só o envio que saiu conta para o teste: grava a linha em autonomia_automacao_versoes_envios e põe `versao` no registro
-# do passo (o histórico mostra qual versão a pessoa recebeu). O que pulou ou parou não conta.
+# do passo (o histórico mostra qual versão a pessoa recebeu). O que pulou ou parou não conta. A mensagem já saiu quando
+# a linha é gravada: se gravar falhar, o erro vai ao log e o passo segue como enviado (o executor não repete o envio, e
+# marcar erro no passo diria que a mensagem não saiu). O teste perde esse envio na contagem.
 class Autonomia::Automacao::DuasVersoes::Envio
   DuasVersoes = ::Autonomia::Automacao::DuasVersoes
 
@@ -30,11 +32,17 @@ class Autonomia::Automacao::DuasVersoes::Envio
     DuasVersoes.teste_de(@execucao.automacao, @passo['id']).vencedora || DuasVersoes.sorteio(@execucao.automacao_id, @passo, @alvo)
   end
 
+  # Num ponto de salvamento: a falha não estraga uma transação de fora, se houver.
   def registrar!(versao)
-    ::Autonomia::Automacao::VersaoEnvio.create!(
-      account_id: @execucao.account_id, automacao_id: @execucao.automacao_id, passo: @passo['id'], execucao_id: @execucao.id,
-      alvo_type: @alvo.class.polymorphic_name, alvo_id: @alvo.id, contact_id: contato&.id, versao: versao
-    )
+    ::Autonomia::Automacao::VersaoEnvio.transaction(requires_new: true) do
+      ::Autonomia::Automacao::VersaoEnvio.create!(
+        account_id: @execucao.account_id, automacao_id: @execucao.automacao_id, passo: @passo['id'], execucao_id: @execucao.id,
+        alvo_type: @alvo.class.polymorphic_name, alvo_id: @alvo.id, contact_id: contato&.id, versao: versao
+      )
+    end
+  rescue StandardError => e
+    Rails.logger.error("[Autonomia::Automacao::DuasVersoes::Envio] execucao=#{@execucao.id} passo=#{@passo['id']} versao=#{versao} " \
+                       "envio não registrado: #{e.class}: #{e.message.truncate(200)}")
   end
 
   def contato = ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao).contato

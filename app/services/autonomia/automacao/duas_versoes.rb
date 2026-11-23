@@ -104,8 +104,13 @@ module Autonomia::Automacao::DuasVersoes
     segunda = passo['versoes']
     [(:versoes_sem_modelo if passo['modelo'] && segunda['modelo'].blank?),
      (:versoes_modelo_sobrando if segunda['modelo'].present? && passo['modelo'].blank?),
-     (:versoes_iguais if passo_da_versao(passo, 1).slice(*CONTEUDO) == passo_da_versao(passo, 2).slice(*CONTEUDO)),
+     (:versoes_iguais if iguais?(passo)),
      (:versoes_sem_compras if segunda['criterio'] == 'compras' && !Crm::Config.enabled?)]
       .compact.map { |chave| I18n.t("autonomia.automacao.receita.#{chave}", passo: id) }
+  end
+
+  # O texto e o modelo das duas versões. `modelo: null` (passo sem modelo) e a chave ausente contam igual, dos dois lados.
+  def iguais?(passo)
+    VERSOES.map { |versao| passo_da_versao(passo, versao).slice(*CONTEUDO).compact }.uniq.size == 1
   end
 end

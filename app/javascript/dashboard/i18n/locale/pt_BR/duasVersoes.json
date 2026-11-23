@@ -81,10 +81,12 @@
       "CARREGANDO": "Carregando o resultado das duas versões",
       "TESTANDO": "Testando. Às {hora}, escolhemos a melhor e mandamos para as outras {resto} pessoas.",
       "TESTANDO_EU_ESCOLHO": "Testando. Às {hora}, o teste termina e você escolhe qual vai para as outras {resto} pessoas.",
+      "TESTANDO_SEM_ENVIO": "Ninguém do teste recebeu a mensagem ainda. Se ninguém receber até {data}, a versão 1 vai para as outras {resto} pessoas.",
       "ESPERANDO_VOCE": "O teste terminou. Escolha qual versão vai para as outras {resto} pessoas.",
       "ESCOLHIDA_SISTEMA": "A versão {n} foi para as outras {resto} pessoas.",
       "ESCOLHIDA_VOCE": "Você escolheu a versão {n}. Ela foi para as outras {resto} pessoas.",
       "ESCOLHIDA_EMPATE": "A versão 1 foi para as outras {resto} pessoas, porque as duas ficaram parecidas.",
+      "ESCOLHIDA_SEM_ENVIO": "Ninguém do teste recebeu a mensagem, então a versão 1 foi para as outras {resto} pessoas.",
       "TODOS": "Cada pessoa do público recebeu uma das duas versões.",
       "ATE_AGORA": "Até agora, {frase}",
       "NA_FRENTE": "Na frente",
@@ -158,12 +160,18 @@
       "OUTRAS_INFORMACOES": "O modelo da versão 2 pede informações diferentes da versão 1. Escolha outro modelo no passo Mensagem.",
       "MODELO": "O modelo da versão 2 não está mais aprovado pelo WhatsApp. Escolha outro no passo Mensagem.",
       "SEGUNDA": "Não deu para usar a versão 2 da mensagem. Confira no passo Mensagem.",
-      "INDISPONIVEL": "Este canal não consegue testar duas versões da mensagem. Desligue “Testar duas versões” no passo Mensagem."
+      "INDISPONIVEL": "Este canal não consegue testar duas versões da mensagem. Desligue “Testar duas versões” no passo Mensagem.",
+      "SEM_COMPRAS": "Escolher pelas compras precisa do CRM ligado na conta. Em “Qual versão é a melhor?”, escolha outra opção."
     },
     "AVISO_LISTA": {
       "TITULO": "Campanhas esperando você escolher a versão",
+      "TITULO_ATENCAO": "Campanhas com duas versões que precisam de você",
       "TEXTO": "{nome}: o teste terminou. Escolha qual versão vai para as outras {resto} pessoas.",
       "SOZINHA": "Se ninguém escolher até {data}, a versão 1 vai sozinha.",
+      "TEXTO_SEM_ENVIO": "{nome}: ninguém do teste recebeu a mensagem ainda. Veja no resultado o que aconteceu.",
+      "SOZINHA_SEM_ENVIO": "Se ninguém receber até {data}, a versão 1 vai para as outras {resto} pessoas.",
+      "VER": "Ver o resultado",
+      "VER_ARIA": "Ver o resultado de {nome}",
       "ESCOLHER": "Escolher a versão",
       "ESCOLHER_ARIA": "Escolher a versão de {nome}"
     }

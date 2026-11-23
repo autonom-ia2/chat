@@ -100,6 +100,27 @@ RSpec.describe CampaignJourney::DuasVersoes, :aggregate_failures do
       expect(CampaignRecipient.where(campaign: campaign).sent.count).to eq(10)
     end
 
+    # O envio pergunta a versão pessoa por pessoa: uma consulta por pessoa pesava no caminho do envio.
+    it 'lê as versões do teste uma vez só e, escolhida a versão com o objeto em uso, dá a escolhida ao resto' do
+      campaign = criar({ criterio: 'respostas', segunda: segunda })
+      link = CampaignAudienceLink.for_campaign(campaign)
+      teste = link.campaign_version_contacts.pluck(:contact_id, :versao).to_h
+      resto = account.contacts.where.not(id: teste.keys).pluck(:id)
+      duas_versoes = described_class.new(link)
+      consultas = 0
+      contar = ->(*, payload) { consultas += 1 if payload[:sql].include?('campaign_version_contacts') }
+
+      ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+        expect(teste.keys.map { |id| duas_versoes.versao_de(id) }).to eq(teste.values)
+      end
+      expect(consultas).to eq(1)
+      expect(resto.map { |id| duas_versoes.versao_de(id) }).to all(eq(1))
+
+      described_class.new(CampaignAudienceLink.find(link.id)).mandar_resto!(2, por: :voce, user: user)
+      expect(resto.map { |id| duas_versoes.versao_de(id) }).to all(eq(2))
+      expect(teste.keys.map { |id| duas_versoes.versao_de(id) }).to eq(teste.values)
+    end
+
     it 'no público pequeno, todo mundo recebe uma das duas e não há resto para escolher' do
       stub_const('CampaignJourney::DuasVersoes::MINIMO_POR_VERSAO', 100)
       sent = stub_twilio_sms

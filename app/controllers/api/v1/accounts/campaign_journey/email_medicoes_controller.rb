@@ -55,6 +55,7 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
   def segunda(campaign)
     return if duas_versoes.nil?
 
+    ::CampaignJourney::DuasVersoes.conferir!(duas_versoes)
     ::CampaignJourney::DuasVersoes::Segunda.email(duas_versoes[:segunda].to_h, primeiro: campaign.subject)
   end
 

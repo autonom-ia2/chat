@@ -63,6 +63,18 @@ RSpec.describe 'Campaign journey duas versões (#3099)', :aggregate_failures, ty
       expect(response.parsed_body['code']).to eq('invalid_campaign')
       expect(account.campaigns.count).to eq(0)
     end
+
+    # Sem o CRM, as compras dariam zero nas duas e o empate mandaria a versão 1 sem ninguém saber por quê.
+    it 'recusa "mais compras" sem o CRM ligado e aceita com ele' do
+      with_modified_env(CRM_KANBAN_ENABLED: 'false') { criar(duas_versoes: duas_versoes.merge(criterio: 'compras')) }
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('criterio_sem_compras')
+      expect(account.campaigns.count).to eq(0)
+
+      campaign = with_modified_env(CRM_KANBAN_ENABLED: 'true') { criar(duas_versoes: duas_versoes.merge(criterio: 'compras')) }
+      expect(response).to have_http_status(:ok)
+      expect(CampaignAudienceLink.for_campaign(campaign).teste_criterio).to eq('compras')
+    end
   end
 
   describe 'POST recipient_previews' do

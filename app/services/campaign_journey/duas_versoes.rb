@@ -39,9 +39,12 @@ class CampaignJourney::DuasVersoes
   MINIMO_NO_RESTO = 100
   ESTADOS = %w[testando esperando_voce escolhida todos].freeze
   ESPERANDO_O_RESTO = %w[testando esperando_voce].freeze
-  ESCOLHIDA_POR = %w[sistema voce empate].freeze
+  # 'sem_envio': ninguém do teste recebeu até PRAZO_SEM_ENVIO (CampaignJourney::DuasVersoes::SemEnvio).
+  ESCOLHIDA_POR = %w[sistema voce empate sem_envio].freeze
   # D5: no "eu escolho", sem ninguém escolher, a versão 1 vai sozinha para o resto depois deste prazo.
   PRAZO_DO_EU_ESCOLHO = 3.days
+  # Ninguém do teste recebeu (todos pulados, canal desligado, falta de variável): o resto não espera para sempre.
+  PRAZO_SEM_ENVIO = 3.days
 
   # `params`: { criterio, divisao, espera_horas } da tela. nil (ou vazio) = sem duas versões. Valor fora das opções vai
   # para a validação do link (RecordInvalid).
@@ -52,6 +55,16 @@ class CampaignJourney::DuasVersoes
     criterio = dados[:criterio].presence&.to_s || 'respostas'
     espera = dados[:espera_horas].presence || ESPERA_POR_CRITERIO.fetch(criterio, 4)
     { teste_criterio: criterio, teste_divisao: (dados[:divisao].presence || 50).to_i, teste_espera_horas: espera.to_i }
+  end
+
+  # A regra conferida: "mais compras" só conta com o CRM ligado (a mesma recusa da automação,
+  # Autonomia::Automacao::DuasVersoes#problemas_ao_salvar). Sem o CRM, as compras dariam zero nas duas e o empate
+  # mandaria a versão 1 sem ninguém saber por quê.
+  def self.conferir!(params)
+    regra = regra(params)
+    raise Invalida, 'criterio_sem_compras' if regra && regra[:teste_criterio] == 'compras' && !Crm::Config.enabled?
+
+    regra
   end
 
   # O plano do teste para `publico` pessoas (já sem o grupo de controle), igual a planoDoTeste da tela.
@@ -80,7 +93,6 @@ class CampaignJourney::DuasVersoes
 
   def initialize(link)
     @link = link
-    @versoes = {}
   end
 
   def ativo?
@@ -97,7 +109,7 @@ class CampaignJourney::DuasVersoes
 
   # Grava a regra e a versão 2 (ou desliga as duas versões). Antes do envio: o sorteio antigo sai e o novo vale.
   def configurar!(params, segunda_versao)
-    regra = self.class.regra(params)
+    regra = self.class.conferir!(params)
     apagar!
     return desligar! if regra.nil?
 
@@ -115,6 +127,7 @@ class CampaignJourney::DuasVersoes
     teste = ordem.first(plano[:teste])
     gravar(teste.first(plano[:versao1]), 1, 'teste')
     gravar(teste.drop(plano[:versao1]), 2, 'teste')
+    @versoes_do_teste = nil
     @link.update!(teste_estado: plano[:modo] == 'todos' ? 'todos' : 'testando', teste_resto: plano[:resto])
   end
 
@@ -125,11 +138,13 @@ class CampaignJourney::DuasVersoes
     relacao.where(coluna => linhas.select(:contact_id))
   end
 
-  # 1 ou 2. Sem linha (entrou no público depois do sorteio): a escolhida, se houver; senão a versão 1.
+  # 1 ou 2. Quem está no teste tem a sua; o resto (e quem entrou no público depois do sorteio) recebe a escolhida, ou a
+  # versão 1 enquanto não há escolhida. As linhas do resto têm sempre a escolhida (#gravar_resto), por isso basta o mapa
+  # do teste, lido uma vez: o envio pergunta por pessoa, e uma consulta por pessoa pesava no caminho do envio.
   def versao_de(contact_id)
     return 1 unless ativo?
 
-    @versoes[contact_id] ||= linhas.where(contact_id: contact_id).pick(:versao) || @link.teste_vencedora || 1
+    versoes_do_teste[contact_id] || vencedora || 1
   end
 
   def versao_2?(contact_id)
@@ -171,7 +186,17 @@ class CampaignJourney::DuasVersoes
 
   def apagar!
     linhas.delete_all
-    @versoes = {}
+    @versoes_do_teste = nil
+  end
+
+  # { contact_id => versão } de quem está no teste: do tamanho do teste (20% do público, ou o público pequeno inteiro).
+  def versoes_do_teste
+    @versoes_do_teste ||= linhas.where(fase: 'teste').pluck(:contact_id, :versao).to_h
+  end
+
+  # A escolhida, relida do banco enquanto não houver: a escolha pode chegar com este objeto em uso por um envio longo.
+  def vencedora
+    @vencedora ||= @link.teste_vencedora || CampaignAudienceLink.where(id: @link.id).pick(:teste_vencedora)
   end
 
   def desligar!

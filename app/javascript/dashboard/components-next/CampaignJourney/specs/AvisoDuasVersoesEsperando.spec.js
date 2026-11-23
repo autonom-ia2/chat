@@ -61,10 +61,44 @@ describe('AvisoDuasVersoesEsperando', () => {
       A.TEXTO.replace('{nome}', 'Renovação').replace('{resto}', '1,080')
     );
     expect(linha.text()).toContain('version 1 goes on its own');
+    expect(wrapper.find('h2').text()).toBe(A.TITULO);
+    expect(linha.find('a').text()).toBe(A.ESCOLHER);
     expect(JSON.parse(linha.find('a').attributes('data-to'))).toEqual({
       name: 'campaigns_journey_result',
       params: { channel: 'sms', campaignId: 12 },
     });
+  });
+
+  it('avisa a campanha em que ninguém do teste recebeu e leva ao resultado', async () => {
+    api.getOverview.mockResolvedValue({
+      data: {
+        payload: {
+          duas_versoes_esperando: [
+            {
+              motivo: 'sem_envio',
+              channel: 'whatsapp_api',
+              id: 7,
+              name: 'Boleto',
+              resto: 900,
+              vai_sozinha_em: 1795000000,
+            },
+          ],
+        },
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('h2').text()).toBe(A.TITULO_ATENCAO);
+    const linha = wrapper.find('[data-esperando="whatsapp_api:7"]');
+    expect(linha.text()).toContain(
+      A.TEXTO_SEM_ENVIO.replace('{nome}', 'Boleto')
+    );
+    expect(linha.text()).toContain('version 1 goes to the other 900 people');
+    expect(linha.find('a').text()).toBe(A.VER);
+    expect(linha.find('a').attributes('aria-label')).toBe(
+      A.VER_ARIA.replace('{nome}', 'Boleto')
+    );
   });
 
   it('sem campanha esperando, não aparece', async () => {

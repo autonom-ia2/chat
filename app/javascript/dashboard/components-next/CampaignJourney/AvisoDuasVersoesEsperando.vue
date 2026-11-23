@@ -2,10 +2,12 @@
 // #3099 (D5) — na lista de Campanhas: as campanhas cujo teste das duas versões terminou no "eu escolho" e esperam
 // alguém escolher a versão que vai para o resto. Cada uma diz quantas pessoas esperam, até quando dá para escolher
 // (depois disso a versão 1 vai sozinha) e leva ao Resultado, onde fica o "Mandar esta para os outros".
+// Também as campanhas em que, passada a espera, ninguém do teste recebeu (`motivo: 'sem_envio'`): o aviso leva ao
+// Resultado para a pessoa ver o que aconteceu, e diz até quando a versão 1 vai para o resto.
 //
 // A lista vem do overview (`duas_versoes_esperando`, CampaignJourney::DuasVersoes::Esperando). Sem nenhuma, ou sem
 // conseguir ler, o aviso não aparece: a lista de Campanhas continua igual.
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampaignResultsAPI from 'dashboard/api/campaignResults';
 import { resultRoute } from 'dashboard/components-next/CampaignResult/resultMetrics';
@@ -27,18 +29,35 @@ const quando = epoch =>
     minute: '2-digit',
   }).format(new Date(epoch * 1000));
 
-const linha = campanha => ({
-  chave: `${campanha.channel}:${campanha.id}`,
-  texto: t(`${NS}.TEXTO`, {
-    nome: campanha.name,
-    resto: formatNumber(campanha.resto ?? 0, locale.value),
-  }),
-  sozinha: campanha.vai_sozinha_em
-    ? t(`${NS}.SOZINHA`, { data: quando(campanha.vai_sozinha_em) })
-    : '',
-  aria: t(`${NS}.ESCOLHER_ARIA`, { nome: campanha.name }),
-  rota: resultRoute(campanha.channel, campanha.id),
-});
+const linha = campanha => {
+  const semEnvio = campanha.motivo === 'sem_envio';
+  const resto = formatNumber(campanha.resto ?? 0, locale.value);
+  return {
+    chave: `${campanha.channel}:${campanha.id}`,
+    semEnvio,
+    texto: t(semEnvio ? `${NS}.TEXTO_SEM_ENVIO` : `${NS}.TEXTO`, {
+      nome: campanha.name,
+      resto,
+    }),
+    sozinha: campanha.vai_sozinha_em
+      ? t(semEnvio ? `${NS}.SOZINHA_SEM_ENVIO` : `${NS}.SOZINHA`, {
+          data: quando(campanha.vai_sozinha_em),
+          resto,
+        })
+      : '',
+    botao: t(semEnvio ? `${NS}.VER` : `${NS}.ESCOLHER`),
+    aria: t(semEnvio ? `${NS}.VER_ARIA` : `${NS}.ESCOLHER_ARIA`, {
+      nome: campanha.name,
+    }),
+    rota: resultRoute(campanha.channel, campanha.id),
+  };
+};
+
+const titulo = computed(() =>
+  campanhas.value.some(campanha => campanha.semEnvio)
+    ? t(`${NS}.TITULO_ATENCAO`)
+    : t(`${NS}.TITULO`)
+);
 
 const carregar = async () => {
   try {
@@ -64,7 +83,7 @@ useOnEnter(carregar);
         class="m-0 flex items-center gap-2 text-sm font-semibold text-n-amber-12"
       >
         <span class="i-lucide-hand size-4 shrink-0" aria-hidden="true" />
-        {{ t(`${NS}.TITULO`) }}
+        {{ titulo }}
       </h2>
       <ul class="m-0 flex list-none flex-col gap-3 p-0">
         <li
@@ -84,7 +103,7 @@ useOnEnter(carregar);
             :aria-label="campanha.aria"
             class="inline-flex min-h-11 shrink-0 items-center rounded-xl bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 ring-1 ring-inset ring-n-amber-7 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
           >
-            {{ t(`${NS}.ESCOLHER`) }}
+            {{ campanha.botao }}
           </router-link>
         </li>
       </ul>

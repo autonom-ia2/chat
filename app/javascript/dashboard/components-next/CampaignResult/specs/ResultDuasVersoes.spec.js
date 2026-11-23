@@ -138,6 +138,37 @@ describe('ResultDuasVersoes', () => {
     expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
   });
 
+  it('testando sem ninguém do teste receber: avisa até quando, sem comparar', () => {
+    const zerado = versoes.map(versao => ({
+      ...versao,
+      receberam: 0,
+      responderam: 0,
+      compraram: 0,
+    }));
+    const wrapper = montar({
+      estado: 'testando',
+      escolhe_em: null,
+      sem_envio_ate: Math.floor(Date.now() / 1000) + 3600,
+      versoes: zerado,
+    });
+    const situacao = wrapper.find('[data-situacao="testando"]').text();
+    expect(situacao).toContain('No one in the test has received');
+    expect(situacao).toContain('1,080');
+    expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
+  });
+
+  it('sem envio no teste, a versão 1 foi para o resto', () => {
+    const wrapper = montar({
+      estado: 'escolhida',
+      vencedora: 1,
+      escolhida_por: 'sem_envio',
+    });
+    expect(wrapper.find('[data-situacao]').text()).toBe(
+      R.ESCOLHIDA_SEM_ENVIO.replace('{resto}', '1,080')
+    );
+    expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
+  });
+
   it('pelas compras mostra a linha de compras e o valor', () => {
     const comValor = versoes.map((versao, indice) => ({
       ...versao,

@@ -68,12 +68,13 @@ export const createErrorKey = error => {
   return CREATE_ERRORS[response?.data?.code] || 'GENERIC';
 };
 
-// #3099: a versão 2 da mensagem recusada pelo servidor (CampaignJourney::DuasVersoes::Segunda) → sufixo sob
+// #3099: a versão 2 da mensagem (ou a régua) recusada pelo servidor (CampaignJourney::DuasVersoes) → sufixo sob
 // DUAS_VERSOES.ERROS; outro erro → null (vale o createErrorKey). Os códigos da versão 2 começam com segunda_versao_.
 const DUAS_VERSOES_ERRORS = {
   segunda_versao_outras_informacoes: 'OUTRAS_INFORMACOES',
   segunda_versao_modelo_nao_aprovado: 'MODELO',
   duas_versoes_indisponivel: 'INDISPONIVEL',
+  criterio_sem_compras: 'SEM_COMPRAS',
 };
 const SEGUNDA_VERSAO_PREFIX = 'segunda_versao_';
 

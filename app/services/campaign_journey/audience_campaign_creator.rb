@@ -75,6 +75,7 @@ class CampaignJourney::AudienceCampaignCreator
   def validate_duas_versoes!
     return if duas_versoes_params.nil?
 
+    CampaignJourney::DuasVersoes.conferir!(duas_versoes_params)
     @segunda = segunda_versao!(duas_versoes_params[:segunda].to_h.with_indifferent_access)
   rescue CampaignJourney::DuasVersoes::Invalida => e
     raise Error.new(e.code, 'The second version of the message cannot be used', e.details)

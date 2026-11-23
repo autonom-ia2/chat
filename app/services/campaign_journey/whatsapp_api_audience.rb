@@ -33,16 +33,16 @@ module CampaignJourney::WhatsappApiAudience
     columns.to_h { |key| [CampaignJourney::AudienceColumns.token(key), row[key]] }
   end
 
-  # #3099: [texto, textos padrão] da versão desta pessoa.
-  def self.mensagem_da_versao(campaign, link, contact)
-    duas_versoes = CampaignJourney::DuasVersoes.new(link)
+  # #3099: [texto, textos padrão] da versão desta pessoa. `duas_versoes`: quem passa por muitas pessoas guarda um só
+  # (ele lê as versões do teste uma vez).
+  def self.mensagem_da_versao(campaign, link, contact, duas_versoes: CampaignJourney::DuasVersoes.new(link))
     return [campaign.message_body, link&.variable_defaults] unless duas_versoes.versao_2?(contact.id)
 
     [duas_versoes.segunda['message_body'], duas_versoes.segunda['variable_defaults']]
   end
 
-  def self.resolve_na_versao(campaign, link, contact)
-    body, defaults = mensagem_da_versao(campaign, link, contact)
+  def self.resolve_na_versao(campaign, link, contact, duas_versoes: CampaignJourney::DuasVersoes.new(link))
+    body, defaults = mensagem_da_versao(campaign, link, contact, duas_versoes: duas_versoes)
     resolve(campaign, link, contact, body: body, defaults: defaults)
   end
 
@@ -83,8 +83,13 @@ module CampaignJourney::WhatsappApiAudience
     def skip_reason(contact)
       return CampaignJourney::AudienceContacts::CHANNEL_DISABLED_REASON if audience_link && !audience_whatsapp_on?
 
-      _values, missing = CampaignJourney::WhatsappApiAudience.resolve_na_versao(@campaign, audience_link, contact)
+      _values, missing = CampaignJourney::WhatsappApiAudience.resolve_na_versao(@campaign, audience_link, contact,
+                                                                                duas_versoes: duas_versoes_do_publico)
       missing.any? ? CampaignJourney::WhatsappApiAudience.missing_reason(missing) : nil
+    end
+
+    def duas_versoes_do_publico
+      @duas_versoes_do_publico ||= CampaignJourney::DuasVersoes.new(audience_link)
     end
 
     def audience_link

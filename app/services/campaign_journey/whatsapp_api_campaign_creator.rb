@@ -156,6 +156,7 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
   def segunda_versao(campaign, link)
     return if duas_versoes_params.nil?
 
+    CampaignJourney::DuasVersoes.conferir!(duas_versoes_params)
     CampaignJourney::DuasVersoes::Segunda.whatsapp_api(
       duas_versoes_params[:segunda].to_h, defaults: link.variable_defaults, primeiro: campaign.message_body,
                                           conferir: ->(texto) { conferir_campos!(texto) }

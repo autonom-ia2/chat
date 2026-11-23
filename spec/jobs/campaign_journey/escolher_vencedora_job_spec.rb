@@ -19,11 +19,11 @@ RSpec.describe CampaignJourney::EscolherVencedoraJob, :aggregate_failures do
     stub_const('CampaignJourney::DuasVersoes::MINIMO_NO_RESTO', 2)
   end
 
-  def campanha(criterio, enviar: true)
+  def campanha(criterio, enviar: true, **outros)
     campaign = CampaignJourney::SmsCampaignCreator.new(
       account: account, campaign_import: audience, channel: 'sms',
       attributes: { title: 'Parcela', inbox_id: inbox.id, message: 'Oi, versão 1',
-                    duas_versoes: { criterio: criterio, segunda: { message_body: 'Oi, versão 2' } } }
+                    duas_versoes: { criterio: criterio, segunda: { message_body: 'Oi, versão 2' } }, **outros }
     ).perform
     Twilio::OneoffSmsCampaignService.new(campaign: campaign).perform if enviar
     CampaignAudienceLink.for_campaign(campaign)
@@ -86,6 +86,45 @@ RSpec.describe CampaignJourney::EscolherVencedoraJob, :aggregate_failures do
       described_class.perform_now
     end
     expect(link.reload).to have_attributes(teste_estado: 'escolhida', teste_vencedora: 1, teste_escolhida_por: 'sistema')
+  end
+
+  # Ninguém do teste recebeu (todos pulados, canal desligado): sem primeiro envio não há hora de escolher, e o resto
+  # não pode esperar para sempre.
+  it 'sem ninguém do teste receber, passado o prazo, a versão 1 vai para o resto' do
+    link = campanha('respostas', enviar: false)
+
+    travel 2.days do
+      described_class.perform_now
+    end
+    expect(link.reload).to have_attributes(teste_estado: 'testando', teste_vencedora: nil)
+
+    travel 4.days do
+      described_class.perform_now
+    end
+    expect(link.reload).to have_attributes(teste_estado: 'escolhida', teste_vencedora: 1, teste_escolhida_por: 'sem_envio')
+  end
+
+  it 'no "eu escolho" sem ninguém do teste receber, também não espera para sempre' do
+    link = campanha('eu_escolho', enviar: false)
+
+    travel 4.days do
+      described_class.perform_now
+    end
+    expect(link.reload).to have_attributes(teste_estado: 'escolhida', teste_vencedora: 1, teste_escolhida_por: 'sem_envio')
+  end
+
+  it 'agendada, o prazo sem envio conta do agendamento' do
+    link = campanha('respostas', enviar: false, scheduled_at: 2.days.from_now.iso8601)
+
+    travel 4.days do
+      described_class.perform_now
+    end
+    expect(link.reload.teste_estado).to eq('testando')
+
+    travel 6.days do
+      described_class.perform_now
+    end
+    expect(link.reload.teste_escolhida_por).to eq('sem_envio')
   end
 
   it 'uma campanha com problema não segura as outras' do

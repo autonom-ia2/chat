@@ -8,7 +8,8 @@
 // escolhe à mão; a confirmação fica no próprio cartão.
 //
 // `teste`: { estado: 'testando' | 'esperando_voce' | 'escolhida' | 'todos', criterio, escolhe_em (epoch),
-//   vencedora (1 | 2 | null), escolhida_por ('sistema' | 'voce' | 'empate'), escolhida_em (epoch), resto,
+//   vencedora (1 | 2 | null), escolhida_por ('sistema' | 'voce' | 'empate' | 'sem_envio'), escolhida_em (epoch), resto,
+//   sem_envio_ate (epoch: ninguém do teste recebeu; a hora em que a versão 1 vai para o resto),
 //   faltam e espera em horas (automação), versoes: [{ numero, texto, receberam, responderam, compraram, valor: [{ currency, cents }] | null }] }
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -62,9 +63,14 @@ const fraseDaComparacao = computed(() => {
   const meio = frase.charAt(0).toLocaleLowerCase(idioma.value) + frase.slice(1);
   return t(`${NS}.ATE_AGORA`, { frase: meio });
 });
-// No empate já escolhido, a faixa já diz que as duas ficaram parecidas: a frase grande repetiria.
+// No empate já escolhido, a faixa já diz que as duas ficaram parecidas: a frase grande repetiria. Sem envio no
+// teste, não há o que comparar.
 const mostraComparacao = computed(
-  () => !(escolhida.value && props.teste?.escolhida_por === 'empate')
+  () =>
+    !(
+      escolhida.value &&
+      ['empate', 'sem_envio'].includes(props.teste?.escolhida_por)
+    ) && !(estado.value === 'testando' && props.teste?.sem_envio_ate)
 );
 
 const quando = epoch => {
@@ -87,6 +93,11 @@ const dia = epoch =>
 
 const situacaoDaCampanha = () => {
   const euEscolho = criterio.value === 'eu_escolho';
+  if (estado.value === 'testando' && props.teste.sem_envio_ate)
+    return t(`${NS}.TESTANDO_SEM_ENVIO`, {
+      data: quando(props.teste.sem_envio_ate),
+      resto: resto.value,
+    });
   if (estado.value === 'testando')
     return t(euEscolho ? `${NS}.TESTANDO_EU_ESCOLHO` : `${NS}.TESTANDO`, {
       hora: quando(props.teste.escolhe_em),
@@ -95,7 +106,9 @@ const situacaoDaCampanha = () => {
   if (estado.value === 'esperando_voce')
     return t(`${NS}.ESPERANDO_VOCE`, { resto: resto.value });
   if (escolhida.value) {
-    const por = { voce: 'VOCE', empate: 'EMPATE' }[props.teste.escolhida_por];
+    const por = { voce: 'VOCE', empate: 'EMPATE', sem_envio: 'SEM_ENVIO' }[
+      props.teste.escolhida_por
+    ];
     return t(`${NS}.ESCOLHIDA_${por || 'SISTEMA'}`, {
       n: vencedora.value,
       resto: resto.value,

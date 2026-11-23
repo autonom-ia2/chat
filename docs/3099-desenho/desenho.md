@@ -451,3 +451,29 @@ As tabelas já vinham da migration `20261123210000`. Esta etapa liga o passo **M
 
 Fica de fora: o Ensaiar mostra só a versão 1; uma execução que entrou numa versão antiga da automação e manda depois de o
 texto mudar conta no teste novo (com o texto antigo).
+
+---
+
+## 13. Achados da revisão independente (consertos)
+
+- **Teste sem nenhum envio** (todos pulados, canal desligado, falta de dado, campanha parada): sem primeiro envio não há
+  hora de escolher, e o resto ficava esperando para sempre. `CampaignJourney::DuasVersoes::SemEnvio`: o começo do teste é
+  o sorteio ou o agendamento (o que for depois); passada a espera da regra, o Resultado (`sem_envio_ate`) e a lista de
+  Campanhas (`duas_versoes_esperando` com `motivo: 'sem_envio'`) avisam; depois de `PRAZO_SEM_ENVIO` (3 dias) a versão 1
+  vai para o resto (`teste_escolhida_por = 'sem_envio'`). Vale também para o "eu escolho".
+- **"Mais compras" sem o CRM:** o servidor da campanha recusa (`criterio_sem_compras`, `DuasVersoes.conferir!`), como a
+  automação já recusava. Antes só a tela barrava.
+- **Versões iguais na automação com `modelo: null`:** a comparação tira os nulos dos dois lados.
+- **Resto da WhatsApp API com a campanha ainda `running`:** na trava da campanha, o envio do resto vê se a corrente de
+  envio está viva (alguém saindo ou pendente para agora). Viva, ela pega o resto sozinha; parada (só adiados esperando),
+  recomeça. Nunca um segundo `DeliveryJob` para a corrente viva (dobraria o ritmo da caixa).
+- **Resto do WhatsApp Oficial e SMS junto com a retomada dos adiados:** os dois passam pela mesma trava por campanha
+  (`CampaignJourney::EnvioSozinho`, antes só da `RetomarAdiadosJob`); com a trava tomada, o resto tenta de novo em 1 minuto.
+- **Envio da automação que saiu e não foi registrado:** a falha ao gravar a linha do teste vai ao log e o passo segue
+  como enviado (a mensagem já saiu; o teste perde esse envio na contagem).
+- **Consulta por pessoa no envio:** `DuasVersoes#versao_de` lê as versões do teste uma vez (as linhas do resto têm sempre
+  a escolhida); a escolhida é relida do banco enquanto não houver.
+
+Ficaram para decisão do Rodrigo: "responderam" na automação conta qualquer mensagem da pessoa na conta em 72 h (a
+campanha conta a marca da campanha na conversa), e o D5 dos 3 dias não vale para a automação (§12: lá nada fica parado,
+cada pessoa segue recebendo uma das duas até alguém escolher).
