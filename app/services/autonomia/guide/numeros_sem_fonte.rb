@@ -12,17 +12,16 @@ class Autonomia::Guide::NumerosSemFonte
   # Segundos num minuto, numa hora e num dia; horas num dia; dias na semana; e cem, para percentual.
   UNIDADES = [60, 3600, 86_400, 24, 7, 100].freeze
   CONVERSOES = [60, 3600, 86_400].freeze
-  # Os pares crescem com o quadrado dos conhecidos: somas e razões usam no máximo estes.
-  MAX_PAREADOS = 200
+  # Os pares crescem com o quadrado dos conhecidos, e a conferência roda no fim do turno, antes da resposta sair:
+  # somas e razões usam no máximo estes (as unidades primeiro). 60 dá 1.770 pares; o Copilot usava 200 (19.900).
+  MAX_PAREADOS = 60
   SEPARADORES = ".,'’ \u00A0\u2009\u202F".freeze
-  # O registro guarda no máximo estes números por turno.
-  MAX_REGISTRADOS = 20
 
   # Registra no diagnóstico e no log (só a quantidade: o número pode ser de cliente). Nunca levanta: a conferência
   # não pode segurar a resposta. -> [{ numero:, frase: }].
   def self.registrar(texto:, conhecidos:, registro:, account_id:)
     sem_fonte = new(conhecidos).sem_fonte(texto)
-    registro&.numeros_sem_fonte(sem_fonte.pluck(:numero).first(MAX_REGISTRADOS))
+    registro&.numeros_sem_fonte(sem_fonte.size)
     Rails.logger.info("[autonomia][guide][numeros] account=#{account_id} sem_fonte=#{sem_fonte.size}") if sem_fonte.any?
     sem_fonte
   rescue StandardError => e
@@ -55,12 +54,24 @@ class Autonomia::Guide::NumerosSemFonte
 
   def montar_candidatos
     numeros = @textos.flat_map { |texto| Leitor.da_ferramenta(texto) }
-    medidas = (numeros.select(&:medida).map { |numero| numero.texto.to_f } + UNIDADES).uniq
+    medidas = (UNIDADES + numeros.select(&:medida).map { |numero| numero.texto.to_f }).uniq
     @pareados = medidas.first(MAX_PAREADOS)
+    @indices = {}
     @candidatos = Set.new(numeros.map { |numero| numero.texto.to_f })
     medidas.each { |valor| um(valor) }
     @pareados.combination(2).each { |primeiro, segundo| par(primeiro, segundo) }
     @candidatos
+  end
+
+  # Os candidatos arredondados numa precisão, como inteiros (52,27 com uma casa = 523): a conferência de um número
+  # é uma busca no conjunto, e não uma volta por todos os candidatos. Montado na primeira vez que a precisão aparece.
+  def indice(precisao)
+    candidatos
+    @indices[precisao] ||= Set.new(@candidatos.map { |candidato| arredondado(candidato, precisao) })
+  end
+
+  def arredondado(valor, precisao)
+    (valor.round(precisao) * (10**precisao)).round
   end
 
   # O número da resposta com o último separador como vírgula decimal e, quando os separadores podem agrupar
@@ -77,7 +88,13 @@ class Autonomia::Guide::NumerosSemFonte
 
   def sustentado?(mostrado)
     precisao = mostrado.include?('.') ? mostrado.split('.').last.size : 0
-    candidatos.any? { |candidato| (candidato.round(precisao) - mostrado.to_f).abs < 1e-9 }
+    indice(precisao).include?(arredondado(mostrado.to_f, precisao))
+  end
+
+  # Todo candidato novo entra também nos índices já montados.
+  def adicionar(valor)
+    @candidatos << valor
+    @indices.each { |precisao, conjunto| conjunto << arredondado(valor, precisao) }
   end
 
   def aprender(valor)
@@ -87,16 +104,17 @@ class Autonomia::Guide::NumerosSemFonte
   end
 
   def um(valor)
-    @candidatos << valor
-    CONVERSOES.each { |unidade| @candidatos << (valor / unidade) }
+    adicionar(valor)
+    CONVERSOES.each { |unidade| adicionar(valor / unidade) }
   end
 
   def par(primeiro, segundo)
-    @candidatos << (primeiro + segundo) << (primeiro - segundo).abs
+    adicionar(primeiro + segundo)
+    adicionar((primeiro - segundo).abs)
     [[primeiro, segundo], [segundo, primeiro]].each do |parte, todo|
       next if todo.zero?
 
-      @candidatos << (parte / todo) << (parte / todo * 100) << ((parte - todo).abs / todo * 100)
+      [parte / todo, parte / todo * 100, (parte - todo).abs / todo * 100].each { |valor| adicionar(valor) }
     end
   end
 end

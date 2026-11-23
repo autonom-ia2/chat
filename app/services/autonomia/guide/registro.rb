@@ -74,10 +74,10 @@ class Autonomia::Guide::Registro
     }
   end
 
-  # #3158 — os números da resposta que nenhuma ferramenta do turno sustenta (`NumerosSemFonte`). Só os números:
-  # a frase está na resposta do turno.
-  def numeros_sem_fonte(numeros)
-    @numeros_sem_fonte = Array(numeros).map(&:to_s).presence
+  # #3158 — QUANTOS números da resposta nenhuma ferramenta do turno sustenta (`NumerosSemFonte`). Só a contagem,
+  # como no log: o número pode ser de cliente (CPF, telefone).
+  def numeros_sem_fonte(quantos)
+    @numeros_sem_fonte = quantos.to_i.positive? ? quantos.to_i : nil
   end
 
   # #934 — o que a pessoa estava vendo: rota, recurso, ids que ela enxerga e total. Sem resumo nem filtro.

@@ -80,7 +80,7 @@ RSpec.describe Autonomia::Guide::Chat do
       resultado = responder('A Ana resolveu 128 e o Bruno 97, juntos 225. A equipe resolveu 412.', saida: saida, registro: registro)
 
       expect(resultado.text).to eq('A Ana resolveu 128 e o Bruno 97, juntos 225. A equipe resolveu 412.')
-      expect(registro.diagnostico['numeros_sem_fonte']).to eq(['412'])
+      expect(registro.diagnostico['numeros_sem_fonte']).to eq(1)
       expect(Rails.logger).to have_received(:info).with(include('[autonomia][guide][numeros]', 'sem_fonte=1'))
     end
 
