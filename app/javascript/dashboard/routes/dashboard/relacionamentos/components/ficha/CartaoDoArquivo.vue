@@ -94,6 +94,7 @@ const quando = computed(() =>
   quandoRelativo(props.arquivo.quando, props.agora, idioma.value)
 );
 
+// O vídeo é <button>, e botão não estica sozinho: sem w-full, um nome longo sem espaço alarga o cartão por cima dos outros.
 const elemento = computed(() => {
   if (!props.arquivo.url || tocando.value) return 'div';
   return ehVideo.value ? 'button' : 'a';
@@ -145,7 +146,7 @@ const tocar = async () => {
     ref="raiz"
     v-bind="atributos"
     data-relacionamentos="arquivo"
-    class="flex flex-col min-w-0 gap-2 p-1 -m-1 text-left no-underline group rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+    class="flex flex-col w-full min-w-0 gap-2 p-1 -m-1 text-left no-underline group rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
     @click="tocar"
   >
     <span
@@ -204,7 +205,7 @@ const tocar = async () => {
     </span>
     <span class="flex flex-col min-w-0 gap-0.5 px-0.5">
       <span
-        class="text-sm font-medium break-words line-clamp-3 text-n-slate-12 group-hover:underline"
+        class="text-sm font-medium [overflow-wrap:anywhere] line-clamp-3 text-n-slate-12 group-hover:underline"
         :title="arquivo.nome"
       >
         {{ nomeVisivel }}
