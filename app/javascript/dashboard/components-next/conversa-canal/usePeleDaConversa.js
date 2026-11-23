@@ -2,6 +2,7 @@
 // resposta (#1702). Chave desligada na conta = sem pele = conversa de sempre.
 import { computed, toValue } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
@@ -27,7 +28,7 @@ const usePeleDaCaixa = idDaCaixa => {
 
 // A pele da conversa aberta, sem fornecer (o topo da conversa só lê).
 export const usePeleDaConversaAberta = () => {
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   return usePeleDaCaixa(() => conversa.value?.inbox_id);
 };
 

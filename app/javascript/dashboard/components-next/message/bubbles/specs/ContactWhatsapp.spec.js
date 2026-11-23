@@ -7,6 +7,7 @@ import { createI18n } from 'vue-i18n';
 import Contact from '../Contact.vue';
 import { provideMessageContext } from '../../provider.js';
 import { PELES, fornecerPele } from '../../../conversa-canal/pele';
+import { fornecerConversaDaTela } from '../../../conversa-canal/conversaDaTela';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 // #3130 — o cadastro abre na ficha nova (conta 1 com o menu novo).
@@ -24,7 +25,7 @@ vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
 
 // #1702: "Conversar" e "Salvar contato" acham o contato pelo telefone, criam quando
 // não existe e completam o nome quando o cadastro não tem um de verdade.
-const montar = (achado, { comPele = true } = {}) => {
+const montar = (achado, { comPele = true, soLeitura = false } = {}) => {
   const despachos = [];
   const store = createStore({
     getters: {
@@ -45,6 +46,12 @@ const montar = (achado, { comPele = true } = {}) => {
   const Conversa = defineComponent({
     setup() {
       fornecerPele(computed(() => (comPele ? PELES.WHATSAPP : null)));
+      if (soLeitura) {
+        fornecerConversaDaTela({
+          conversa: computed(() => ({ id: 94, messages: [] })),
+          anexos: computed(() => []),
+        });
+      }
       provideMessageContext({
         attachments: ref([
           {
@@ -92,6 +99,14 @@ describe('Contato recebido com a pele do WhatsApp', () => {
     expect(wrapper.find('[data-conversar-com-contato]').exists()).toBe(false);
     expect(wrapper.findAll('button')).toHaveLength(0);
     podeVerContatos.value = true;
+  });
+
+  // #3165: no card do CRM a conversa é só para ler — nada de gravar contato.
+  it('só leitura mostra o cartão sem Conversar nem Salvar', () => {
+    const { wrapper } = montar(null, { soLeitura: true });
+    expect(wrapper.text()).toContain('Juliana Prado');
+    expect(wrapper.find('[data-conversar-com-contato]').exists()).toBe(false);
+    expect(wrapper.findAll('button')).toHaveLength(0);
   });
 
   it('cria o contato quando o telefone não existe', async () => {
