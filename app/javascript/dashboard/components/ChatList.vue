@@ -24,7 +24,9 @@ import {
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 import { cancelarReleituraDoFiltroDoLink } from 'dashboard/store/modules/conversations/actions';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+// #3147: "Ver todas" do detalhamento do relatório abre a lista com o filtro avançado no endereço (upstream #15832).
+import { parseRouteFilters } from 'dashboard/helper/validations';
 import {
   useMapGetter,
   useFunctionGetter,
@@ -109,6 +111,7 @@ const props = defineProps({
 const emit = defineEmits(['conversationLoad']);
 const { uiSettings } = useUISettings();
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { buildConversationListPath } = useConversationRoutePath();
@@ -641,6 +644,21 @@ function onApplyFilter(payload) {
     .finally(emitConversationLoaded);
 }
 
+// #3147: o `?filters=` vem do "Ver todas" do relatório. Aplica como filtro avançado (o mesmo do botão Filtrar, que a
+// pessoa vê e pode limpar) e tira do endereço. Não mexe nos filtros do link do Números (#1883), que usam outros nomes.
+function applyRouteFilters() {
+  const { filters: serializedFilters, ...query } = route.query;
+  if (!serializedFilters) return false;
+
+  router.replace({ query });
+  const filters = parseRouteFilters(serializedFilters);
+  if (!filters) return false;
+
+  store.dispatch('setConversationFilters', filters);
+  onApplyFilter(filters);
+  return true;
+}
+
 function closeAdvanceFiltersModal() {
   showAdvancedFilters.value = false;
   appliedFilter.value = [];
@@ -1064,7 +1082,7 @@ onMounted(() => {
   );
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
-  resetAndFetchData();
+  if (!applyRouteFilters()) resetAndFetchData();
   if (hasActiveFolders.value) {
     store.dispatch('campaigns/get');
   }
