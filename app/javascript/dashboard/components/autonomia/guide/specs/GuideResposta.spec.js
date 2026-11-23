@@ -79,6 +79,7 @@ describe('GuideResposta', () => {
       props: { senderName: 'Guia', ...props },
       global: {
         plugins: [VueDOMPurifyHTML],
+        mocks: { $t: key => key },
         stubs: {
           CopilotAssistantMessage: {
             props: ['message'],
@@ -123,5 +124,17 @@ describe('GuideResposta', () => {
     expect(
       wrapper.findAll('[data-trecho], [data-grafico]').map(item => item.text())
     ).toEqual(['Não consegui responder agora.', 'Resolvidas']);
+  });
+
+  it('sem texto, mostra o mesmo aviso da mensagem de sempre acima do gráfico', () => {
+    const wrapper = montar({
+      message: { content: '' },
+      graficos: [grafico('1', 'Resolvidas')],
+    });
+
+    expect(wrapper.find('[data-sem-texto]').text()).toBe(
+      'CAPTAIN.COPILOT.EMPTY_MESSAGE'
+    );
+    expect(wrapper.find('[data-grafico]').text()).toBe('Resolvidas');
   });
 });

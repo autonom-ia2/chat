@@ -42,7 +42,8 @@ class Autonomia::Guide::Contexto
   # Também anota no pedido o que ele acabou de fazer, para a tela mostrar enquanto espera.
   def registrar_chamada(call, output, milissegundos)
     @registro&.registrar_chamada(call, output, milissegundos)
-    saidas << output.to_s
+    # O mesmo corte que o modelo recebe (Answerer): número que só existe depois do corte não tem fonte.
+    saidas << output.to_s.truncate(::Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS)
     ::Autonomia::Guide::Pedido.anotar_etapa(@pedido_id, call.to_h['name'])
   end
 

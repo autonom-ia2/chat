@@ -45,10 +45,14 @@ const formatar = texto => new MessageFormatter(texto).formattedMessage;
   />
   <div
     v-else
-    class="flex flex-col gap-2 text-n-slate-12"
+    class="flex flex-col gap-1 text-n-slate-12"
     data-resposta-com-graficos
   >
-    <div class="font-medium">{{ senderName }}</div>
+    <!-- Mesma cara do CopilotAssistantMessage: nome e, na resposta retida (sem texto), o mesmo aviso acima do gráfico. -->
+    <div class="font-medium">{{ senderName || $t('CAPTAIN.NAME') }}</div>
+    <span v-if="!message?.content" class="text-n-ruby-11" data-sem-texto>
+      {{ $t('CAPTAIN.COPILOT.EMPTY_MESSAGE') }}
+    </span>
     <template v-for="(pedaco, indice) in pedacos" :key="indice">
       <GuideGrafico
         v-if="pedaco.tipo === 'grafico'"
