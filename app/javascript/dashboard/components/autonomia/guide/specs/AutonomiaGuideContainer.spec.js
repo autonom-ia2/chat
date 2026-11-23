@@ -2176,4 +2176,142 @@ describe('AutonomiaGuideContainer — nunca no escuro', () => {
     expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeTruthy();
     expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(true);
   });
+
+  // Conserto pós-deploy do #3144: o Guia que já mexeu na conta não ganha
+  // "Tentar de novo" — repetir faria tudo outra vez (contato em dobro).
+  describe('o Guia já fez alguma coisa', () => {
+    const FEITO = {
+      id: 9,
+      passos: [{ acao: 'criar_contato', frase: 'Criar Ana', ok: true }],
+      pendencias: [],
+      desfazivel: false,
+    };
+
+    const responderCom = async data => {
+      pedidoAberto();
+      AutonomiaGuideAPI.resposta.mockResolvedValue({ data });
+      wrapper = mountGuide();
+      await perguntar(wrapper, 'cria o contato Ana');
+      await esperarUmaBusca();
+      await flushPromises();
+      return useAutonomiaGuideStore().messages.at(-1);
+    };
+
+    it('resposta retida com o que ele fez: mostra o cartão, sem Tentar de novo', async () => {
+      const resposta = await responderCom({
+        status: 'done',
+        available: true,
+        retido: true,
+        text: '',
+        execucao: FEITO,
+      });
+
+      expect(resposta).toMatchObject({
+        message: { content: 'AUTONOMIA_GUIDE.DONE_NO_REPLY' },
+        execucao: FEITO,
+        repetir: null,
+      });
+      expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(false);
+      expect(wrapper.emitted('execucao')).toEqual([[FEITO]]);
+    });
+
+    it('caiu depois de fazer: o fora do ar mostra o cartão, sem Tentar de novo', async () => {
+      const resposta = await responderCom({
+        status: 'done',
+        available: false,
+        execucao: FEITO,
+      });
+
+      expect(resposta).toMatchObject({
+        message: { content: 'AUTONOMIA_GUIDE.DONE_NO_REPLY' },
+        execucao: FEITO,
+        repetir: null,
+      });
+      expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(false);
+    });
+
+    // O passo que não deu certo não mexeu na conta: repetir é seguro.
+    it('passo que não deu certo mantém o Tentar de novo', async () => {
+      const naoDeu = {
+        ...FEITO,
+        passos: [{ acao: 'criar_contato', frase: 'Criar Ana', ok: false }],
+      };
+      const resposta = await responderCom({
+        status: 'done',
+        available: false,
+        execucao: naoDeu,
+      });
+
+      expect(resposta).toMatchObject({
+        message: { content: 'AUTONOMIA_GUIDE.UNAVAILABLE' },
+        repetir: 'cria o contato Ana',
+      });
+      expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(true);
+    });
+  });
+
+  // A resposta se perdeu no caminho (rede): o Guia pode continuar trabalhando.
+  // O botão volta a buscar a do mesmo pedido, sem mandar a pergunta outra vez.
+  it('resposta perdida no caminho: Tentar de novo busca a do mesmo pedido', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta
+      .mockRejectedValueOnce(new Error('rede'))
+      .mockResolvedValue({
+        data: { status: 'done', available: true, text: 'Criei a Ana.' },
+      });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria o contato Ana');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages.at(-1)).toMatchObject({
+      repetir: null,
+      retomar: { id: 'pedido-1', pergunta: 'cria o contato Ana' },
+    });
+
+    await wrapper.find('[data-tentar-de-novo]').trigger('click');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledTimes(1);
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenLastCalledWith('pedido-1');
+    expect(conteudos().at(-1)).toEqual(['assistant', 'Criei a Ana.']);
+  });
+
+  it('pedido que já venceu não oferece buscar de novo', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockRejectedValue({ response: { status: 404 } });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'oi');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages.at(-1)).toMatchObject({
+      repetir: null,
+      retomar: null,
+    });
+    expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(false);
+  });
+
+  // O "pare" que não chegou: a pessoa precisa saber que o pedido anterior segue.
+  it('mensagem do meio que não chega diz que o pedido anterior continua', async () => {
+    AutonomiaGuideAPI.chat
+      .mockResolvedValueOnce({ data: { id: 'pedido-1', status: 'pending' } })
+      .mockRejectedValueOnce({ response: { status: 503 } });
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria três etiquetas');
+    await perguntar(wrapper, 'pensei melhor, pare');
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages.at(-1)).toMatchObject({
+      message: { content: 'AUTONOMIA_GUIDE.MID_WORK_NOT_SENT' },
+      repetir: 'pensei melhor, pare',
+    });
+  });
 });

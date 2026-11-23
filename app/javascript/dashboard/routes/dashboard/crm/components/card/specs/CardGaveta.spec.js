@@ -200,6 +200,12 @@ const montar = (props = {}) =>
         },
         CrmMeetingDayActions: true,
         TeleportWithDirection: { template: '<div><slot /></div>' },
+        VisorDaConversa: {
+          name: 'VisorDaConversa',
+          props: ['conversa'],
+          template:
+            '<div data-visor-stub :data-numero="conversa.display_id" />',
+        },
       },
     },
   });
@@ -504,6 +510,49 @@ describe('CardGaveta (#1423)', () => {
       name: 'inbox_conversation',
       params: { accountId: '1', conversation_id: 42 },
     });
+  });
+
+  // #3165: na seção Conversas, a direita mostra a conversa inteira no lugar do funil.
+  it('Conversas mostra a mais recente ao lado e troca ao tocar na lista', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const wrapper = montar({
+      initialTab: 'conversations',
+      card: {
+        ...cardBase,
+        linked_conversations: [
+          { id: 9, display_id: 42, inbox_id: 1, status: 'open' },
+          { id: 8, display_id: 41, inbox_id: 2, status: 'resolved' },
+        ],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-card-gaveta]').attributes('data-tela')).toBe(
+      'conversas'
+    );
+    expect(wrapper.find('[data-funil-previa]').exists()).toBe(false);
+    expect(wrapper.find('[data-visor-stub]').attributes('data-numero')).toBe(
+      '42'
+    );
+
+    const itens = wrapper.findAll('[data-conversa]');
+    expect(itens[0].find('button[aria-current="true"]').exists()).toBe(true);
+    await itens[1].find('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-visor-stub]').attributes('data-numero')).toBe(
+      '41'
+    );
+    expect(wrapper.findAll('[data-conversa]')[1].attributes('data-vista')).toBe(
+      'true'
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('Conversas sem conversa continua com Onde está no funil', async () => {
+    const wrapper = montar({ initialTab: 'conversations' });
+    await flushPromises();
+    expect(wrapper.find('[data-visor-stub]').exists()).toBe(false);
+    expect(wrapper.find('[data-funil-previa]').exists()).toBe(true);
   });
 
   it('sem o funil do card, não mostra os botões da sugestão (PM-08)', async () => {

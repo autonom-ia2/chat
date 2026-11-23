@@ -351,12 +351,28 @@ RSpec.describe 'Ficha da pessoa de Relacionamentos', type: :request do
 
       ler("pessoas/#{ana.id}/arquivos")
 
-      expect(response.parsed_body).to eq(
+      expect(response.parsed_body.map { |item| item.except('url', 'miniatura') }).to eq(
         [{ 'id' => foto.id, 'nome' => 'foto-da-fachada.jpg', 'tipo' => 'imagem', 'quando' => (agora - 1.day).to_i },
          { 'id' => audio.id, 'nome' => 'audio-do-pedido.ogg', 'tipo' => 'audio', 'quando' => (agora - 2.days).to_i },
          { 'id' => video.id, 'nome' => 'video-do-local.mp4', 'tipo' => 'video', 'quando' => (agora - 3.days).to_i },
          { 'id' => pdf.id, 'nome' => 'comprovante.pdf', 'tipo' => 'documento', 'quando' => (agora - 4.days).to_i }]
       )
+    end
+
+    it '#3113: cada arquivo leva o endereço para abrir; a foto leva a miniatura reduzida, o áudio não' do
+      conversa = conversa_de(ana)
+      foto = arquivo(conversa, 'foto-da-fachada.jpg', :image, 'image/jpeg', quando: agora - 1.day)
+      audio = arquivo(conversa, 'audio-do-pedido.ogg', :audio, 'audio/ogg', quando: agora - 2.days)
+
+      ler("pessoas/#{ana.id}/arquivos")
+
+      da_foto, do_audio = response.parsed_body
+      expect(da_foto['url']).to eq(foto.file_url)
+      expect(da_foto['url']).to include('foto-da-fachada.jpg')
+      expect(da_foto['miniatura']).to include('/rails/active_storage/representations/')
+      expect(da_foto['miniatura']).not_to eq(da_foto['url'])
+      expect(do_audio['url']).to eq(audio.file_url)
+      expect(do_audio['miniatura']).to be_nil
     end
 
     it 'arquivo de nota interna da equipe não entra: só o que foi trocado com a pessoa' do
@@ -391,7 +407,8 @@ RSpec.describe 'Ficha da pessoa de Relacionamentos', type: :request do
       expect(response.parsed_body.pluck('id')).to eq([recente.id])
     end
 
-    it 'não faz uma consulta a mais por arquivo' do
+    it 'não faz uma consulta a mais por arquivo, também com a prévia de PDF da conversa ligada (#3113)' do
+      account.enable_features!(ConversaCanal::Pele::FLAG)
       conversa = conversa_de(ana)
       criar = -> { arquivo(conversa, 'comprovante.pdf', :file, 'application/pdf') }
       criar.call

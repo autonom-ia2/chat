@@ -5,6 +5,7 @@
 // pele") e do e-mail. Sem a chave, nada muda.
 import { computed, inject, provide } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
@@ -25,7 +26,7 @@ const SEM_INSTAGRAM = {
 };
 
 const useLigado = () => {
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   const caixaPorId = useMapGetter('inboxes/getInbox');
   const { isCloudFeatureEnabled } = useAccount();
   return computed(() =>
@@ -37,7 +38,7 @@ const useLigado = () => {
 };
 
 export const useConversaDoInstagram = () => {
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   const { currentAccount } = useAccount();
   const ligado = useLigado();
 
