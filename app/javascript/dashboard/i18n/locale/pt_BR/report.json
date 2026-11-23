@@ -304,6 +304,7 @@
       "VIEW_ALL": "Visualizar tudo",
       "OPEN_IN_LIST": "Abrir na lista",
       "OPEN_IN_LIST_ARIA": "Abrir estas conversas na lista de conversas, em outra aba",
+      "OPEN_IN_LIST_ARIA_SAME_TAB": "Abrir estas conversas na lista de conversas",
       "UNKNOWN_CONTACT": "Contato desconhecido",
       "UNKNOWN_INBOX": "Caixa de entrada desconhecida",
       "UNASSIGNED_AGENT": "Não atribuídas",

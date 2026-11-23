@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { useEventListener } from '@vueuse/core';
+import { useEventListener, useWindowSize } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { formatTime } from '@chatwoot/utils';
@@ -9,6 +9,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import wootConstants from 'dashboard/constants/globals';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { useReportDrilldown } from '../composables/useReportDrilldown';
 // #3147: "Ver todas" abre as conversas do detalhamento na caixa de conversas (upstream #15832).
@@ -43,6 +44,10 @@ const emit = defineEmits(['close', 'navigate']);
 const panelRef = ref(null);
 const { t } = useI18n();
 const router = useRouter();
+const { width } = useWindowSize();
+const noCelular = computed(
+  () => width.value < wootConstants.SMALL_SCREEN_BREAKPOINT
+);
 const getLabelById = useMapGetter('labels/getLabelById');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const getAccount = useMapGetter('accounts/getAccount');
@@ -93,12 +98,13 @@ const viewAllConversations = () => {
     // #3151: o mesmo fuso que o filtro da caixa usa.
     timezone: fusoDaConta(getAccount.value(currentAccountId.value)),
   });
-  const { href } = router.resolve({
-    name: 'home',
-    query: { filters: JSON.stringify(filters) },
-  });
-
-  window.open(href, '_blank', 'noopener');
+  const destino = { name: 'home', query: { filters: JSON.stringify(filters) } };
+  // #3147: no celular a aba nova não tem como voltar ao relatório.
+  if (noCelular.value) {
+    router.push(destino);
+    return;
+  }
+  window.open(router.resolve(destino).href, '_blank', 'noopener');
 };
 
 const bucketValue = computed(() => {
@@ -241,7 +247,13 @@ watch(
           icon="i-lucide-external-link"
           class="mt-3 min-h-11"
           :label="$t('REPORT.DRILLDOWN.OPEN_IN_LIST')"
-          :aria-label="$t('REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA')"
+          :aria-label="
+            $t(
+              noCelular
+                ? 'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA_SAME_TAB'
+                : 'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA'
+            )
+          "
           @click="viewAllConversations"
         />
       </div>

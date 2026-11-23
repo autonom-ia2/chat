@@ -10,15 +10,16 @@ vi.mock('dashboard/api/reports', () => ({
   },
 }));
 
-const { mockGetters, mockResolve } = vi.hoisted(() => ({
+const { mockGetters, mockResolve, mockPush } = vi.hoisted(() => ({
   mockGetters: {},
+  mockPush: vi.fn(),
   mockResolve: vi.fn(location => ({
     href: `/app/accounts/1/dashboard?filters=${location.query.filters}`,
   })),
 }));
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn(), resolve: mockResolve }),
+  useRouter: () => ({ push: mockPush, resolve: mockResolve }),
 }));
 
 vi.mock('dashboard/composables/store', () => ({
@@ -463,6 +464,26 @@ describe('ReportDrilldownDrawer.vue', () => {
         '_blank',
         'noopener'
       );
+    });
+
+    it('opens the list in the same tab on a phone', async () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const larguraOriginal = window.innerWidth;
+      window.innerWidth = 390;
+      try {
+        const wrapper = await mountDrawer({ props: viewAllRequest });
+        await flushPromises();
+
+        await findViewAll(wrapper).trigger('click');
+
+        expect(mockPush).toHaveBeenCalledWith(
+          expect.objectContaining({ name: 'home' })
+        );
+        expect(open).not.toHaveBeenCalled();
+      } finally {
+        window.innerWidth = larguraOriginal;
+        open.mockRestore();
+      }
     });
 
     it('hides the link for hourly buckets', async () => {
