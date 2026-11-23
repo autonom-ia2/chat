@@ -1,8 +1,8 @@
 # O que o modelo pediu à `relatorio_de_atendimento`, conferido e traduzido para os builders v2 (#3158).
 #
 # As datas são dias de calendário no fuso de relatório da conta, como a tela Relatórios escolhe: `de` é o
-# primeiro dia e `ate` o último, incluído. Cada dia começa à meia-noite daquele fuso, com o deslocamento da
-# própria data (horário de verão), igual ao Copilot.
+# primeiro dia e `ate` o último, incluído. `inicio` e `fim` são a meia-noite daquele fuso, cada uma com o
+# deslocamento da própria data (horário de verão), igual ao Copilot.
 class Autonomia::Guide::Relatorio::Pedido
   TIPOS = %w[resumo serie ranking].freeze
   # O nome que o Guia usa -> o `type` dos builders.
@@ -59,8 +59,10 @@ class Autonomia::Guide::Relatorio::Pedido
               end
   end
 
-  # Os parâmetros que a tela Relatórios manda aos builders. O nome do fuso agrupa os períodos; o deslocamento é
-  # para os builders que só aceitam deslocamento.
+  # Os parâmetros que a tela Relatórios manda aos builders. A série (`ReportBuilder`) agrupa os períodos pelo
+  # NOME do fuso (`timezone:`), que acompanha o horário de verão. Os builders de resumo por agente, caixa,
+  # etiqueta e time não aceitam o nome, só `timezone_offset:`; e esse deslocamento é o de HOJE (`now.utc_offset`),
+  # não o das datas pedidas: num período que cruza o horário de verão, o ranking usa um só deslocamento.
   def params_do_builder
     deslocamento = ActiveSupport::TimeZone[fuso].now.utc_offset / 3600.0
     { since: inicio, until: fim, business_hours: false, timezone: fuso, timezone_offset: deslocamento }
@@ -84,7 +86,9 @@ class Autonomia::Guide::Relatorio::Pedido
     raise Autonomia::Guide::Relatorio::Recusado, 'de e ate precisam ser datas no formato AAAA-MM-DD.'
   end
 
-  # Até 31 dias por dia; acima disso por semana; acima de 31 semanas por mês.
+  # Até 31 dias por dia; acima disso por semana; acima de 31 semanas por mês. As semanas contam como o banco
+  # agrupa (`date_trunc`, semana começando na segunda): um período que começa numa quinta abre uma semana a mais.
+  # Não há agrupamento acima de mês: uma série mensal de mais de 31 meses passa de 31 pontos.
   def agrupamento(pedido)
     grupo = escolha(pedido, AGRUPAR.keys, 'agrupar')
     return grupo unless tipo == 'serie'
@@ -92,9 +96,14 @@ class Autonomia::Guide::Relatorio::Pedido
     dias = (@ate - @de).to_i + 1
     novo = grupo
     novo = 'semana' if novo == 'dia' && dias > MAX_PONTOS
-    novo = 'mes' if novo == 'semana' && (dias / 7.0).ceil > MAX_PONTOS
+    novo = 'mes' if novo == 'semana' && semanas(dias) > MAX_PONTOS
     @reagrupado = novo != grupo
     novo
+  end
+
+  # Quantas semanas de segunda a domingo o período toca. `wday` vai de domingo (0) a sábado (6).
+  def semanas(dias)
+    ((dias + ((@de.wday - 1) % 7)) / 7.0).ceil
   end
 
   def conferir!
