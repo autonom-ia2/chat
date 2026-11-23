@@ -29,6 +29,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Com o Guia trabalhando, a pessoa ainda pode escrever: o texto entra no
+  // trabalho em curso e ele decide o que fazer com ele. Anexo e voz esperam.
+  escreveNoMeio: {
+    type: Boolean,
+    default: false,
+  },
   // Recebe o texto e devolve `true` quando a pergunta entrou na conversa —
   // só aí o campo é limpo.
   onSend: {
@@ -113,8 +119,14 @@ const adjustHeight = () => {
   textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`;
 };
 
+// Ocupado, só o texto sai (e sem anexo esperando): `escreveNoMeio`.
+const textoTravado = computed(() => props.isBusy && !props.escreveNoMeio);
+const envioTravado = computed(
+  () => textoTravado.value || (props.isBusy && anexoEsperando.value)
+);
+
 const sendMessage = () => {
-  if (props.isBusy || algumSubindo.value) return;
+  if (envioTravado.value || algumSubindo.value) return;
   if (!temTexto.value && !anexoEsperando.value) return;
   if (!props.onSend(message.value)) return;
   message.value = '';
@@ -421,7 +433,7 @@ onMounted(() => {
       <textarea
         ref="textareaRef"
         v-model="message"
-        :readonly="isBusy"
+        :readonly="textoTravado"
         :aria-busy="isBusy ? 'true' : 'false'"
         :placeholder="$t('CAPTAIN.COPILOT.SEND_MESSAGE')"
         class="w-full reset-base bg-n-alpha-3 ltr:pl-12 ltr:pr-14 rtl:pl-14 rtl:pr-12 py-3 text-sm border border-n-weak rounded-lg focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
@@ -443,7 +455,7 @@ onMounted(() => {
       </button>
       <button
         v-else
-        :disabled="isBusy || algumSubindo"
+        :disabled="envioTravado || algumSubindo"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.SEND')"
         class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
         type="submit"
@@ -483,7 +495,11 @@ onMounted(() => {
     <!-- Aviso, não só o campo travado: quem digita rápido não repara na
          opacidade e ficava sem nenhum sinal de que a pergunta não saiu. -->
     <p v-if="isBusy" class="mt-1 mb-0 text-sm text-n-slate-11">
-      {{ $t('AUTONOMIA_GUIDE.SENDING') }}
+      {{
+        escreveNoMeio
+          ? $t('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING')
+          : $t('AUTONOMIA_GUIDE.SENDING')
+      }}
     </p>
   </div>
 </template>

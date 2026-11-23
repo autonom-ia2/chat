@@ -4868,6 +4868,22 @@
     "WITHHELD": "Não consegui montar a resposta agora. Pergunte de novo, com outras palavras.",
     "ERROR": "Não foi possível falar com o guia. Tente novamente.",
     "SENDING": "Ainda estou respondendo a pergunta anterior.",
+    "RETRY": "Tentar de novo",
+    "WRITE_WHILE_WORKING": "Pode escrever: eu leio enquanto trabalho.",
+    "STEP": {
+      "READ_ACCOUNT": "Lendo os dados da conta…",
+      "READ_HELP": "Lendo a Central de Ajuda…",
+      "READ_ATTACHMENT": "Lendo o anexo…",
+      "READ_PAGE": "Lendo a página…",
+      "CLASSIFY": "Separando os itens…",
+      "CHECK_FORMAT": "Conferindo como fazer…",
+      "PICK_SCREEN": "Procurando a tela certa…",
+      "CHANGE": "Fazendo a mudança…",
+      "PROPOSE": "Preparando a ação…",
+      "PLAN_TASK": "Planejando a tarefa…",
+      "REMEMBER": "Anotando…",
+      "FORGET": "Apagando a anotação…"
+    },
     "SUGGESTIONS": {
       "KANBAN": "Crie um funil chamado Comercial",
       "WHATSAPP": "Onde configuro um canal de WhatsApp?",

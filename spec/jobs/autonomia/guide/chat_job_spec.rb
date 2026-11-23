@@ -65,4 +65,51 @@ RSpec.describe Autonomia::Guide::ChatJob do
 
     expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)['status']).to eq('failed')
   end
+
+  # Entrega 2 — a pessoa escreveu depois da última rodada do Guia: a mensagem não pode se perder.
+  describe 'mensagem que chega depois da última rodada' do
+    def escrever_durante(*textos, falha: false)
+      novas = []
+      allow(Autonomia::Guide::Chat).to receive(:new) do
+        novas = textos.map do |texto|
+          nova = SecureRandom.uuid
+          Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: texto)
+          nova
+        end
+        raise StandardError, 'caiu' if falha
+
+        instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Criei as três.'))
+      end
+      -> { novas }
+    end
+
+    it 'vira a pergunta seguinte, que roda logo depois e a tela acompanha', :aggregate_failures do
+      novas = escrever_durante('e mais uma', 'chama de Vendas')
+
+      expect { rodar }.to have_enqueued_job(described_class)
+        .with(novas.call.last, hash_including('mensagem' => "e mais uma\n\nchama de Vendas", 'user_id' => admin.id))
+
+      lido = Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)
+      expect(lido).to include('status' => 'done', 'text' => 'Criei as três.', 'seguinte' => novas.call.last,
+                              'tardias' => novas.call)
+      expect(Autonomia::Guide::Pedido.ler(novas.call.first, account: conta, user: admin))
+        .to include('status' => 'done', 'junto_de' => novas.call.last)
+    end
+
+    it 'segue adiante mesmo quando o turno falha' do
+      novas = escrever_durante('tenta de novo', falha: true)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(novas.call.last, anything)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin))
+        .to include('status' => 'failed', 'seguinte' => novas.call.last)
+    end
+
+    it 'sem mensagem nova, o pedido termina sem pergunta seguinte' do
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))
+
+      expect { rodar }.not_to have_enqueued_job(described_class)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).not_to have_key('seguinte')
+    end
+  end
 end

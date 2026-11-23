@@ -82,4 +82,41 @@ RSpec.describe Autonomia::Guide::Conversa do
       expect(turno.para_tela['execucao']).to eq('passos' => [{ 'frase' => 'Criei a etiqueta.', 'ok' => true }], 'vencida' => true)
     end
   end
+
+  # Entrega 2 — a mensagem mandada no meio do trabalho entra antes da resposta do turno que a leu.
+  describe 'mensagem do meio do trabalho' do
+    let(:conversa) { described_class.create!(account: conta, user: pessoa, titulo: 'teste') }
+
+    def turno(pergunta, resposta: nil, status: 'done', junto_de: nil)
+      Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: SecureRandom.uuid, pergunta: pergunta, tela: 'home').tap do |t|
+        t.update!(resposta: resposta, status: status, diagnostico: junto_de ? { 'junto_de' => junto_de } : nil)
+      end
+    end
+
+    it 'monta o histórico com a mensagem junta antes da resposta' do
+      principal = turno('cria três etiquetas', resposta: 'Parei.')
+      turno('pensei melhor, pare', status: 'junto', junto_de: principal.pedido_id)
+
+      expect(conversa.historico.map { |m| [m[:role], m[:content]] }).to eq(
+        [['user', 'cria três etiquetas'], ['user', 'pensei melhor, pare'], %w[assistant Parei.]]
+      )
+    end
+
+    it 'deixa fora o pedido que vai ser respondido agora, com as mensagens juntas a ele' do
+      turno('quantos funis?', resposta: 'São 3.')
+      seguinte = turno('e mais uma', status: 'pending')
+      turno('chama de Vendas', status: 'junto', junto_de: seguinte.pedido_id)
+
+      expect(conversa.historico(exceto: seguinte.pedido_id).map { |m| m[:content] }).to eq(['quantos funis?', 'São 3.'])
+    end
+
+    it 'diz à tela de quem a mensagem é junta e quando o Guia estava fora do ar', :aggregate_failures do
+      principal = turno('oi', status: 'failed')
+      principal.update!(diagnostico: { 'erro' => 'indisponivel' })
+      junta = turno('alô?', status: 'junto', junto_de: principal.pedido_id)
+
+      expect(principal.reload.para_tela).to include('fora_do_ar' => true, 'junto_de' => nil)
+      expect(junta.para_tela).to include('junto_de' => principal.pedido_id, 'fora_do_ar' => false)
+    end
+  end
 end

@@ -25,12 +25,15 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
     return head :not_found if conversa.nil?
 
     historico = historico_de(conversa)
-    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
+    pedido = SecureRandom.uuid
+    # O turno nasce antes do encaminhamento: se a mensagem entrar no trabalho em curso, o Guia junta o turno dela
+    # assim que a ler (`Turno.juntar`).
     ::Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: params[:message],
                                     tela: params[:route_context], anexos: params[:anexos])
-    ::Autonomia::Guide::ChatJob.perform_later(pedido, pergunta(historico))
-
-    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id }, status: :accepted
+    junto_de = ::Autonomia::Guide::Encaminhamento.encaminhar(pedido, account: Current.account, user: Current.user,
+                                                                     junto_de: params[:junto_de].to_s, pergunta: pergunta(historico))
+    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id,
+                   junto_de: junto_de }.compact, status: :accepted
   end
 
   # O estado do pedido e, quando pronto, a resposta — com os mesmos campos que a

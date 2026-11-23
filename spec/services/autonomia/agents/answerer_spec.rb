@@ -468,4 +468,33 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(log).not_to include(prompt_secreto)
     end
   end
+
+  # Entrega 2 — a mensagem que a pessoa manda enquanto o Guia trabalha entra na próxima ida ao modelo, depois das
+  # saídas da rodada. Quem decide parar, mudar ou seguir é o modelo; aqui só se prova que ela chega, e só ao Guia.
+  describe 'mensagem nova no meio do trabalho' do
+    let(:agent) { create_agent('with_knowledge' => false) }
+
+    def saidas_da_rodada(operador)
+      described_class.new(agent: agent, query: 'cria três etiquetas', operador: operador).send(:execute_tool_calls, [])
+    end
+
+    it 'entra com o aviso e como fala da pessoa, na ordem', :aggregate_failures do
+      operador = instance_double(Autonomia::Guide::Contexto, mensagens_novas: ['pensei melhor', 'pare'])
+
+      saidas = saidas_da_rodada(operador)
+
+      expect(saidas.pluck(:role)).to eq(%w[developer user user])
+      expect(saidas.map { |m| m[:content].first[:text] })
+        .to eq([described_class::AVISO_DE_MENSAGEM_NOVA, 'pensei melhor', 'pare'])
+    end
+
+    it 'sem mensagem nova, a rodada segue igual' do
+      expect(saidas_da_rodada(instance_double(Autonomia::Guide::Contexto, mensagens_novas: []))).to eq([])
+    end
+
+    # O atendimento não tem `operador`: o núcleo dividido com os agentes de cliente não muda para eles.
+    it 'no atendimento (sem operador) nada entra' do
+      expect(saidas_da_rodada(nil)).to eq([])
+    end
+  end
 end

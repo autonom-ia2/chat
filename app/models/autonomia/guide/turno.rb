@@ -15,7 +15,10 @@ class Autonomia::Guide::Turno < ApplicationRecord
   PRONTO = 'done'.freeze
   FALHOU = 'failed'.freeze
   RETIDO = 'retido'.freeze
-  STATUS = [PENDENTE, PRONTO, FALHOU, RETIDO].freeze
+  # A pessoa escreveu enquanto o Guia trabalhava em outro pedido, e ele leu a mensagem no meio do trabalho
+  # (`Contexto#mensagens_novas`). Este turno não tem resposta própria: quem responde é o turno de `junto_de`.
+  JUNTO = 'junto'.freeze
+  STATUS = [PENDENTE, PRONTO, FALHOU, RETIDO, JUNTO].freeze
 
   # Os estados de uma ação sem desfazer, os mesmos da tela.
   ACAO_FEITA = 'feita'.freeze
@@ -48,13 +51,20 @@ class Autonomia::Guide::Turno < ApplicationRecord
               pergunta: pergunta.to_s, tela: tela.to_s.presence, anexos: limpar_anexos(anexos))
     end
 
-    # O desfecho do pedido, com o diagnóstico. Best-effort: a resposta já foi
-    # entregue pelo `Pedido`, e uma falha aqui não pode apagá-la.
+    # O desfecho do pedido, com o diagnóstico. Best-effort: a resposta sai pelo
+    # `Pedido`, e uma falha aqui não pode segurá-la. Roda antes do `Pedido`
+    # terminar: a pergunta seguinte (`ChatJob#encerrar`) já lê esta resposta no histórico.
     def concluir(pedido_id, resultado, diagnostico)
       turno = find_by(pedido_id: pedido_id)
       turno&.update!(desfecho(resultado.to_h.with_indifferent_access).merge(diagnostico: diagnostico))
     rescue StandardError => e
       Rails.logger.warn("[autonomia][guide][turno] concluir pedido=#{pedido_id} #{e.class}")
+    end
+
+    def juntar(pedido_id, junto_de)
+      find_by(pedido_id: pedido_id)&.update!(status: JUNTO, diagnostico: { 'junto_de' => junto_de.to_s })
+    rescue StandardError => e
+      Rails.logger.warn("[autonomia][guide][turno] juntar pedido=#{pedido_id} #{e.class}")
     end
 
     def falhar(pedido_id, diagnostico)
@@ -100,6 +110,17 @@ class Autonomia::Guide::Turno < ApplicationRecord
     [{ role: 'user', content: pergunta }, ({ role: 'assistant', content: resposta } if resposta.present?)].compact
   end
 
+  # O pedido que leu esta mensagem e respondeu por ela (status `junto`).
+  def junto_de
+    diagnostico.is_a?(Hash) ? diagnostico['junto_de'] : nil
+  end
+
+  # O Guia fora do ar (`Chat#unavailable`) termina como falha; o registro diz qual foi. A tela reabre a conversa com
+  # a mesma frase que mostrou na hora.
+  def fora_do_ar?
+    status == FALHOU && diagnostico.is_a?(Hash) && diagnostico['erro'] == 'indisponivel'
+  end
+
   def aviso_id
     diagnostico.is_a?(Hash) ? diagnostico['aviso_id'] : nil
   end
@@ -108,7 +129,8 @@ class Autonomia::Guide::Turno < ApplicationRecord
     { 'pedido_id' => pedido_id, 'pergunta' => pergunta, 'anexos' => anexos, 'status' => status,
       'resposta' => resposta, 'navegacoes' => navegacoes, 'artigos' => artigos, 'acao' => acao,
       'acao_estado' => acao_estado, 'acao_resultado' => acao_resultado, 'execucao' => execucao_para_tela,
-      'aviso_id' => aviso_id, 'tarefa' => tarefa_para_tela, 'criado_em' => created_at.iso8601 }
+      'aviso_id' => aviso_id, 'tarefa' => tarefa_para_tela, 'junto_de' => junto_de, 'fora_do_ar' => fora_do_ar?,
+      'criado_em' => created_at.iso8601 }
   end
 
   # #936 — a tarefa longa planejada neste turno: o cartão volta ao reabrir a conversa e busca o

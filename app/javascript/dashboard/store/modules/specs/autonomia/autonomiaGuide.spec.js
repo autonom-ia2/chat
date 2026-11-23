@@ -119,6 +119,11 @@ describe('autonomiaGuide store — anexos e voz', () => {
 // #861 — a conversa guardada no servidor volta para a tela.
 describe('autonomiaGuide store — conversa guardada', () => {
   const store = useAutonomiaGuideStore();
+  const ACAO_RETIDA = {
+    nome: 'criar_funil',
+    dados: { nome: 'Vendas' },
+    descricao: { frase: 'Vou criar o funil Vendas.' },
+  };
   const avisos = { retido: 'RETIDO', falhou: 'FALHOU' };
 
   const turno = (extra = {}) => ({
@@ -190,6 +195,84 @@ describe('autonomiaGuide store — conversa guardada', () => {
       'quantos funis?',
     ]);
     expect(pendente).toBe('p3');
+  });
+
+  // Entrega 2 — a mensagem do meio do trabalho volta onde estava: depois da
+  // pergunta que o Guia estava fazendo e antes da resposta que a leu.
+  it('a mensagem mandada no meio do trabalho volta antes da resposta que a leu', () => {
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ pergunta: 'cria três etiquetas', resposta: 'Parei.' }),
+          turno({
+            pedido_id: 'p2',
+            pergunta: 'pensei melhor, pare',
+            status: 'junto',
+            resposta: null,
+            junto_de: 'p1',
+          }),
+        ],
+      },
+      avisos
+    );
+
+    expect(
+      store.messages.map(m => [m.message_type, m.message.content])
+    ).toEqual([
+      ['user', 'cria três etiquetas'],
+      ['user', 'pensei melhor, pare'],
+      ['assistant', 'Parei.'],
+    ]);
+  });
+
+  it('fora do ar volta escrito, e falha e retida guardam a pergunta para repetir', () => {
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ status: 'failed', resposta: null, fora_do_ar: true }),
+          turno({
+            pedido_id: 'p2',
+            status: 'retido',
+            resposta: null,
+            acao: ACAO_RETIDA,
+          }),
+        ],
+      },
+      { ...avisos, indisponivel: 'FORA' }
+    );
+
+    expect(store.messages[1]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ content: 'FORA' }),
+        repetir: 'quantos funis?',
+      })
+    );
+    expect(store.messages[3]).toEqual(
+      expect.objectContaining({
+        acao: ACAO_RETIDA,
+        acaoEstado: 'aguardando',
+        repetir: 'quantos funis?',
+      })
+    );
+  });
+
+  it('a resposta que chegou depois de mensagens novas fica antes delas', () => {
+    store.addUserMessage('cria três etiquetas');
+    const tardia = store.addUserMessage('e mais uma');
+    store.marcarJunto(tardia.id, 'p2');
+
+    store.addAssistantMessage({
+      content: 'Criei as três.',
+      antesDosPedidos: ['p2'],
+    });
+
+    expect(store.messages.map(m => m.message.content)).toEqual([
+      'cria três etiquetas',
+      'Criei as três.',
+      'e mais uma',
+    ]);
   });
 
   it('a ação sem desfazer volta aguardando, ou com o desfecho que teve', () => {

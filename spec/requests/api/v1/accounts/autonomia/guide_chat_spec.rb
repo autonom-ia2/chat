@@ -123,4 +123,30 @@ RSpec.describe 'Guia da Plataforma — pergunta em segundo plano', type: :reques
 
     expect(recebido).to eq('id' => 42)
   end
+
+  # Entrega 2 — a pessoa escreve enquanto o Guia ainda trabalha no pedido anterior.
+  describe 'mensagem junto do pedido em curso' do
+    def junto(user, pedido, mensagem = 'pensei melhor, pare')
+      post rota, params: { message: mensagem, route_context: 'home', junto_de: pedido },
+                 headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'entra no trabalho em curso, sem pôr um segundo Guia para trabalhar', :aggregate_failures do
+      pedido = perguntar(admin)
+
+      expect { junto(admin, pedido) }.not_to have_enqueued_job(Autonomia::Guide::ChatJob)
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body['junto_de']).to eq(pedido)
+      expect(Autonomia::Guide::Pedido.retirar_juntas(pedido))
+        .to eq([{ 'id' => response.parsed_body['id'], 'texto' => 'pensei melhor, pare' }])
+    end
+
+    it 'com o pedido anterior já terminado, vira pergunta comum', :aggregate_failures do
+      pedido = perguntar(admin)
+      Autonomia::Guide::Pedido.concluir(pedido, { text: 'pronto' })
+
+      expect { junto(admin, pedido) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
+      expect(response.parsed_body).not_to have_key('junto_de')
+    end
+  end
 end

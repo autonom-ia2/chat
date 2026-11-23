@@ -41,8 +41,10 @@ module Autonomia
       # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
       # `tela` (#934): o que a pessoa tem aberto, selecionado e filtrado (`Autonomia::Guide::Tela`).
       # `turno_id` (#933): o turno da conversa, para a anotação dizer de onde veio.
+      # `pedido_id`: o pedido no Redis, para a tela ver o que o Guia está fazendo e para o Guia ler o que a pessoa
+      # escreveu enquanto ele trabalhava (`Contexto#mensagens_novas`).
       def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, tela: {}, arquivos: [],
-                     registro: nil, turno_id: nil)
+                     registro: nil, turno_id: nil, pedido_id: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
@@ -54,6 +56,7 @@ module Autonomia
         @arquivos = Array(arquivos)
         @registro = registro
         @turno_id = turno_id
+        @pedido_id = pedido_id
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -117,9 +120,9 @@ module Autonomia
         # foi retido: a mudança já aconteceu, e a pessoa precisa ver e poder desfazer.
         execucao = contexto.execucao&.resumo
         registrar_decisoes(result, diagnostics, text)
-        return retido(execucao) if text.blank?
-
         navs = navegacoes(result)
+        return retido(execucao, acao: acao, navs: navs) if text.blank?
+
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
                    artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
                    tarefa: contexto.tarefa,
@@ -227,7 +230,7 @@ module Autonomia
 
       def contexto
         @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user, account_user: @account_user,
-                                                       registro: @registro, turno_id: @turno_id)
+                                                       registro: @registro, turno_id: @turno_id, pedido_id: @pedido_id)
       end
 
       # O que o Guia decidiu, para o registro do pedido (#861). Quando o portão reteve, guarda o texto
@@ -315,9 +318,11 @@ module Autonomia
       # O Guia está no ar, mas o modelo não devolveu resposta (o portão não retém mais
       # resposta do Guia, #914). A tela pede para perguntar de novo — sem oferecer
       # suporte e sem dizer que o produto caiu.
-      def retido(execucao = nil)
-        Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: true, escalate: false, retido: true, execucao: execucao)
+      # A ação proposta e as telas escolhidas vêm junto: o cartão da ação traz a própria frase do que vai acontecer,
+      # e o botão de tela leva aonde o Guia escolheu. Sem eles a pessoa perguntava de novo, e o Guia relia tudo.
+      def retido(execucao = nil, acao: nil, navs: [])
+        Result.new(text: nil, navigation: navs.first, navigations: navs, grounded: false, confidence: nil,
+                   available: true, escalate: false, retido: true, execucao: execucao, acao: acao)
       end
 
       def preparing

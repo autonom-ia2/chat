@@ -71,4 +71,72 @@ RSpec.describe Autonomia::Guide::Pedido do
 
     expect(Redis::Alfred.ttl("#{described_class::PREFIXO}#{id}")).to be_between(1, described_class::VALIDADE.to_i)
   end
+
+  # Entrega 2 — a pessoa escreve enquanto o Guia ainda trabalha.
+  describe '.acrescentar' do
+    def acrescentar(id, mensagem, user: admin)
+      nova = SecureRandom.uuid
+      [described_class.acrescentar(id, account: conta, user: user, nova: nova, mensagem: mensagem), nova]
+    end
+
+    it 'põe a mensagem na fila do pedido em curso, na ordem em que chegou, e abre o pedido dela', :aggregate_failures do
+      id = described_class.abrir(account: conta, user: admin)
+
+      aceita, primeira = acrescentar(id, 'pensei melhor')
+      _, segunda = acrescentar(id, 'pare')
+
+      expect(aceita).to be(true)
+      expect(described_class.ler(primeira, account: conta, user: admin)).to eq('status' => 'pending')
+      expect(described_class.retirar_juntas(id)).to eq([{ 'id' => primeira, 'texto' => 'pensei melhor' },
+                                                        { 'id' => segunda, 'texto' => 'pare' }])
+      expect(described_class.retirar_juntas(id)).to eq([])
+    end
+
+    it 'recusa quando o pedido já terminou: a mensagem vira pergunta comum', :aggregate_failures do
+      id = described_class.abrir(account: conta, user: admin)
+      described_class.concluir(id, { text: 'pronto' })
+
+      aceita, nova = acrescentar(id, 'e mais isso')
+
+      expect(aceita).to be(false)
+      expect(described_class.ler(nova, account: conta, user: admin)).to be_nil
+      expect(described_class.retirar_juntas(id)).to eq([])
+    end
+
+    # Outra pessoa não consegue enfiar mensagem no trabalho que roda com a permissão do dono.
+    it 'recusa a mensagem de outra pessoa da mesma conta', :aggregate_failures do
+      id = described_class.abrir(account: conta, user: admin)
+      outro, = create_crm_agent(account: conta)
+
+      aceita, = acrescentar(id, 'apaga tudo', user: outro)
+
+      expect(aceita).to be(false)
+      expect(described_class.retirar_juntas(id)).to eq([])
+    end
+  end
+
+  describe '.anotar_etapa' do
+    it 'mostra o que o Guia está fazendo só enquanto ele trabalha', :aggregate_failures do
+      id = described_class.abrir(account: conta, user: admin)
+
+      described_class.anotar_etapa(id, 'ler_da_conta')
+      expect(described_class.ler(id, account: conta, user: admin)['etapa']).to eq('ler_da_conta')
+
+      described_class.concluir(id, { text: 'pronto' })
+      expect(described_class.ler(id, account: conta, user: admin)).not_to have_key('etapa')
+    end
+
+    it 'não anota sem pedido (bateria e specs)' do
+      expect { described_class.anotar_etapa(nil, 'ler_da_conta') }.not_to raise_error
+    end
+  end
+
+  it 'a falha leva a pergunta seguinte, quando a pessoa escreveu de novo' do
+    id = described_class.abrir(account: conta, user: admin)
+
+    described_class.falhar(id, { 'seguinte' => 'p2', 'tardias' => ['p2'] })
+
+    expect(described_class.ler(id, account: conta, user: admin))
+      .to eq('status' => 'failed', 'seguinte' => 'p2', 'tardias' => ['p2'])
+  end
 end

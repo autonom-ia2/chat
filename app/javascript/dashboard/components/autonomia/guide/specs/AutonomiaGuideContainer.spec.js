@@ -354,7 +354,9 @@ describe('AutonomiaGuideContainer', () => {
     );
   });
 
-  it('keeps the text and warns when a reply is still loading', async () => {
+  // Antes do servidor aceitar a primeira, ainda não há trabalho para a segunda
+  // entrar: o texto fica no campo e a pessoa é avisada.
+  it('keeps the text and warns while the first question is not accepted yet', async () => {
     AutonomiaGuideAPI.chat.mockReturnValue(new Promise(() => {}));
     wrapper = mountGuide();
     const textarea = wrapper.find('textarea');
@@ -368,7 +370,8 @@ describe('AutonomiaGuideContainer', () => {
 
     expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
     expect(textarea.element.value).toBe('Segunda');
-    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.SENDING');
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.SENDING');
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING');
   });
 
   it('sends a single request when confirm is clicked twice', async () => {
@@ -1625,7 +1628,7 @@ describe('AutonomiaGuideContainer — embutido', () => {
     painel.unmount();
   });
 
-  it('enquanto outra parte da tela espera a resposta, nenhuma pergunta nova sai', async () => {
+  it('enquanto outra parte da tela espera a resposta, a pergunta nova entra no trabalho dela', async () => {
     rotaAtual.meta = { guiaEmbutido: true };
     pedidoAberto();
     AutonomiaGuideAPI.resposta.mockResolvedValue({
@@ -1640,7 +1643,10 @@ describe('AutonomiaGuideContainer — embutido', () => {
 
     await perguntar(wrapper, 'segunda');
 
-    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'segunda', juntoDe: 'pedido-1' })
+    );
     expect(
       wrapper.findComponent({ name: 'GuideComposer' }).props('isBusy')
     ).toBe(true);
@@ -1924,5 +1930,197 @@ describe('AutonomiaGuideContainer — pergunta pronta de outra tela (#977)', () 
     expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
     mockContaAtual.value = 1;
     await flushPromises();
+  });
+});
+
+// Entrega 2 da lista de valor: nunca deixar a pessoa no escuro.
+describe('AutonomiaGuideContainer — nunca no escuro', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = null;
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  const conteudos = () =>
+    useAutonomiaGuideStore().messages.map(m => [
+      m.message_type,
+      m.message.content,
+    ]);
+
+  it('deixa escrever enquanto o Guia trabalha', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    wrapper = mountGuide();
+
+    const textarea = await perguntar(wrapper, 'cria três etiquetas');
+
+    expect(textarea.attributes('readonly')).toBeUndefined();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING');
+  });
+
+  // "Pensei melhor, pare": a mensagem entra no trabalho em curso, e a resposta
+  // que vem é uma só — a do pedido que estava rodando.
+  it('a mensagem do meio entra no trabalho em curso e recebe uma resposta só', async () => {
+    AutonomiaGuideAPI.chat
+      .mockResolvedValueOnce({ data: { id: 'pedido-1', status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', junto_de: 'pedido-1' },
+      });
+    AutonomiaGuideAPI.resposta
+      .mockResolvedValueOnce({ data: { status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { status: 'done', available: true, text: 'Parei.' },
+      });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria três etiquetas');
+    await perguntar(wrapper, 'pensei melhor, pare');
+    await esperarUmaBusca();
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: 'pensei melhor, pare',
+        juntoDe: 'pedido-1',
+      })
+    );
+    expect(AutonomiaGuideAPI.resposta).not.toHaveBeenCalledWith('pedido-2');
+    expect(conteudos()).toEqual([
+      ['user', 'cria três etiquetas'],
+      ['user', 'pensei melhor, pare'],
+      ['assistant', 'Parei.'],
+    ]);
+  });
+
+  // A mensagem chegou depois da última rodada: a resposta do pedido fica antes
+  // dela, e a tela segue esperando a pergunta seguinte.
+  it('mensagem que chegou depois da última rodada vira a pergunta seguinte', async () => {
+    AutonomiaGuideAPI.chat
+      .mockResolvedValueOnce({ data: { id: 'pedido-1', status: 'pending' } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', junto_de: 'pedido-1' },
+      });
+    AutonomiaGuideAPI.resposta.mockImplementation(id =>
+      Promise.resolve({
+        data:
+          id === 'pedido-1'
+            ? {
+                status: 'done',
+                available: true,
+                text: 'Criei as três.',
+                seguinte: 'pedido-2',
+                tardias: ['pedido-2'],
+              }
+            : { status: 'done', available: true, text: 'Agora a quarta.' },
+      })
+    );
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria três etiquetas');
+    await perguntar(wrapper, 'e mais uma');
+    await esperarUmaBusca();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-2');
+    expect(conteudos()).toEqual([
+      ['user', 'cria três etiquetas'],
+      ['assistant', 'Criei as três.'],
+      ['user', 'e mais uma'],
+      ['assistant', 'Agora a quarta.'],
+    ]);
+  });
+
+  it('mostra o que o Guia está fazendo agora', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending', etapa: 'ler_da_conta' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'quantos contatos tenho?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.STEP.READ_ACCOUNT');
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.THINKING');
+  });
+
+  it('Guia fora do ar fica escrito na conversa, com o Tentar de novo', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: false },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'oi');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(conteudos()[1]).toEqual([
+      'assistant',
+      'AUTONOMIA_GUIDE.UNAVAILABLE',
+    ]);
+    expect(useAlert).not.toHaveBeenCalled();
+
+    await wrapper.find('[data-tentar-de-novo]').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'oi' })
+    );
+  });
+
+  it('falha leva o Tentar de novo com a última pergunta', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'failed' },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'quantos funis?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages[1].repetir).toBe('quantos funis?');
+    expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(true);
+  });
+
+  // A resposta retida não perde o que o Guia já preparou.
+  it('resposta retida mantém a ação proposta e o Tentar de novo', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        retido: true,
+        text: '',
+        acao: ACAO,
+      },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'cria o funil Vendas');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(conteudos()[1]).toEqual(['assistant', 'AUTONOMIA_GUIDE.WITHHELD']);
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeTruthy();
+    expect(wrapper.find('[data-tentar-de-novo]').exists()).toBe(true);
   });
 });

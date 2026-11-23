@@ -26,10 +26,7 @@ class Autonomia::Guide::ChatJob < ApplicationJob
       "[autonomia][guide][chat_job] pedido=#{job.arguments.first} #{error.class}: #{error.message}\n" \
       "#{Array(error.backtrace).first(5).join("\n")}"
     )
-    ::Autonomia::Guide::Pedido.falhar(job.arguments.first)
-    # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
-    diagnostico = (job.registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name)
-    ::Autonomia::Guide::Turno.falhar(job.arguments.first, diagnostico)
+    job.send(:falhou, error)
   end
 
   # `pergunta` traz quem perguntou, o quê, o histórico da conversa, a tela em
@@ -45,17 +42,56 @@ class Autonomia::Guide::ChatJob < ApplicationJob
     resultado = @registro.ativo do
       I18n.with_locale(pergunta['locale']) { responder(account, user, pedido_id, pergunta) }
     end
-    ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h)
     ::Autonomia::Guide::Turno.concluir(pedido_id, resultado.to_h, diagnostico_de(resultado))
+    encerrar(pedido_id, pergunta) { |seguinte| ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h.merge(seguinte)) }
   end
 
   private
+
+  def falhou(error)
+    pedido_id, pergunta = arguments
+    # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
+    ::Autonomia::Guide::Turno.falhar(pedido_id, (registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name))
+    encerrar(pedido_id, pergunta) { |seguinte| ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte) }
+  rescue StandardError => e
+    # Sem a trava, ao menos a tela para de esperar.
+    Rails.logger.error("[autonomia][guide][chat_job] encerrar pedido=#{pedido_id} #{e.class}")
+    ::Autonomia::Guide::Pedido.falhar(pedido_id)
+  end
+
+  # O "pronto" do pedido sai com a fila de mensagens travada (`Pedido.com_trava`): o que a pessoa escreveu depois da
+  # última rodada do Guia não se perde. Essas mensagens viram a pergunta seguinte, que roda logo depois desta e já lê
+  # esta resposta no histórico; a tela sabe dela por `seguinte`.
+  def encerrar(pedido_id, pergunta)
+    ::Autonomia::Guide::Pedido.com_trava(pedido_id) { yield encaminhar_tardias(pedido_id, pergunta) }
+  end
+
+  # -> { 'seguinte' => pedido que vai responder, 'tardias' => pedidos das mensagens que ele cobre } ou {}.
+  def encaminhar_tardias(pedido_id, pergunta)
+    tardias = ::Autonomia::Guide::Pedido.retirar_juntas(pedido_id)
+    return {} if tardias.empty?
+
+    seguinte = tardias.last['id']
+    tardias[0...-1].each do |junta|
+      ::Autonomia::Guide::Pedido.concluir(junta['id'], { 'junto_de' => seguinte })
+      ::Autonomia::Guide::Turno.juntar(junta['id'], seguinte)
+    end
+    self.class.perform_later(seguinte, pergunta_seguinte(seguinte, tardias, pergunta))
+    { 'seguinte' => seguinte, 'tardias' => tardias.pluck('id') }
+  end
+
+  # A mesma pessoa, tela e idioma; o texto é o que ela escreveu, e o histórico já traz a resposta que acabou de sair.
+  def pergunta_seguinte(seguinte, tardias, pergunta)
+    conversa = ::Autonomia::Guide::Turno.find_by(pedido_id: seguinte)&.conversa
+    pergunta.merge('mensagem' => tardias.pluck('texto').join("\n\n"),
+                   'historico' => conversa ? conversa.historico(exceto: seguinte) : pergunta['historico'])
+  end
 
   def responder(account, user, pedido_id, pergunta)
     ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
                                  history: pergunta['historico'], route_context: pergunta['tela'],
                                  route_params: pergunta['parametros'], tela: pergunta['contexto_tela'],
-                                 arquivos: pergunta['arquivos'], registro: @registro,
+                                 arquivos: pergunta['arquivos'], registro: @registro, pedido_id: pedido_id,
                                  turno_id: ::Autonomia::Guide::Turno.where(pedido_id: pedido_id).pick(:id)).perform
   end
 

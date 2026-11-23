@@ -32,9 +32,17 @@ class Autonomia::Guide::Conversa < ApplicationRecord
   # O que o Guia lê como conversa: as idas e voltas até aqui, na ordem em que
   # aconteceram. Só entra resposta de verdade — o aviso de "não consegui" que a
   # tela mostra não é fala do Guia.
-  def historico(limite: ::Autonomia::Guide::Chat::MAX_HISTORY)
-    recentes = turnos.reorder(created_at: :desc, id: :desc).limit(limite).select(:id, :pergunta, :resposta, :diagnostico)
-    recentes.reverse.flat_map(&:mensagens).last(limite)
+  #
+  # A mensagem que a pessoa mandou enquanto o Guia trabalhava (`Turno::JUNTO`) entra antes da resposta do turno
+  # que a leu: foi assim que aconteceu, e é assim que o modelo entende que a resposta já cuidou dela.
+  #
+  # `exceto`: o pedido que vai ser respondido agora fica fora, com as mensagens juntas a ele — elas são a pergunta.
+  def historico(limite: ::Autonomia::Guide::Chat::MAX_HISTORY, exceto: nil)
+    recentes = turnos.reorder(created_at: :desc, id: :desc).limit(limite)
+                     .select(:id, :pedido_id, :pergunta, :resposta, :diagnostico, :status).reverse
+    juntas = recentes.select(&:junto_de).group_by(&:junto_de)
+    respondidos = recentes.reject { |turno| turno.junto_de || turno.pedido_id == exceto }
+    respondidos.flat_map { |turno| mensagens_com_juntas(turno, juntas[turno.pedido_id]) }.last(limite)
   end
 
   def resumo
@@ -44,5 +52,16 @@ class Autonomia::Guide::Conversa < ApplicationRecord
   def para_tela
     { 'id' => id, 'titulo' => titulo, 'atualizada_em' => updated_at.iso8601,
       'turnos' => turnos.includes(:execucao).map(&:para_tela) }
+  end
+
+  private
+
+  def mensagens_com_juntas(turno, juntas)
+    mensagens = turno.mensagens
+    return mensagens if juntas.blank?
+
+    extras = juntas.map { |junta| { role: 'user', content: junta.pergunta } }
+    resposta = mensagens.last if mensagens.last&.dig(:role) == 'assistant'
+    resposta ? mensagens[0...-1] + extras + [resposta] : mensagens + extras
   end
 end

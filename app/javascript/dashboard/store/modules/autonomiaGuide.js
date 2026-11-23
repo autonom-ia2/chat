@@ -161,6 +161,8 @@ const addAssistantMessage = ({
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
+  repetir = null,
+  antesDosPedidos = null,
 } = {}) => {
   const record = {
     id: nextId,
@@ -186,10 +188,30 @@ const addAssistantMessage = ({
     aviso,
     // #936 — a tarefa longa planejada neste turno: o cartão busca o resto pelo id.
     tarefa,
+    // A pergunta que o "Tentar de novo" manda outra vez, quando a resposta não
+    // veio (falha, Guia fora do ar ou resposta retida).
+    repetir,
   };
   nextId += 1;
+  // A pessoa escreveu depois da última rodada do Guia: essas mensagens viram a
+  // pergunta seguinte (`seguinte`), e esta resposta fica antes delas, no lugar
+  // em que aconteceu.
+  const antes = (antesDosPedidos || []).length
+    ? state.messages.findIndex(m => antesDosPedidos.includes(m.pedidoJunto))
+    : -1;
+  if (antes >= 0) {
+    state.messages.splice(antes, 0, record);
+    return state.messages[antes];
+  }
   state.messages.push(record);
   return record;
+};
+
+// A mensagem que a pessoa mandou enquanto o Guia trabalhava ganha o pedido
+// dela, para a resposta saber se fica antes ou depois.
+const marcarJunto = (id, pedidoId) => {
+  const registro = state.messages.find(m => m.id === id);
+  if (registro) registro.pedidoJunto = pedidoId;
 };
 
 const revogar = url => {
@@ -235,12 +257,42 @@ const respostaDoTurno = (turno, avisos) => {
   if (turno.status === 'retido') {
     return {
       content: avisos.retido,
+      navigations: turno.navegacoes,
+      artigos: turno.artigos,
+      acao: turno.acao,
+      acaoEstado: turno.acao_estado,
+      acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
+      pedidoId: turno.pedido_id,
+      repetir: turno.pergunta,
     };
   }
-  if (turno.status === 'failed') return { content: avisos.falhou };
+  if (turno.status === 'failed') {
+    return {
+      content: turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
+      repetir: turno.pergunta,
+    };
+  }
   return null;
+};
+
+const mensagemDaPessoa = turno => {
+  const id = nextId;
+  nextId += 1;
+  state.messages.push({
+    id,
+    message_type: 'user',
+    message: { content: turno.pergunta },
+    texto: turno.pergunta,
+    anexos: (turno.anexos || []).map((anexo, indice) => ({
+      id: `${turno.pedido_id}-${indice}`,
+      nome: anexo.nome,
+      tipo: anexo.tipo,
+      previa: null,
+    })),
+    voz: null,
+  });
 };
 
 // #861 — reabre uma conversa guardada: os turnos viram as mesmas mensagens
@@ -261,28 +313,22 @@ const hidratar = (conversa, avisos = {}) => {
   // A pergunta que esperava resposta era da conversa que saiu (#859).
   state.pendente = null;
   let pendente = null;
-  (conversa?.turnos || []).forEach(turno => {
+  const turnos = conversa?.turnos || [];
+  // A mensagem que a pessoa mandou enquanto o Guia trabalhava aparece antes da
+  // resposta do turno que a leu, como aconteceu.
+  const juntas = turnos.filter(turno => turno.junto_de);
+  turnos.forEach(turno => {
+    if (turno.junto_de) return;
     // #935 — o aviso do Guia não tem pergunta: só a fala dele entra.
     if (turno.aviso_id) {
       const resposta = respostaDoTurno(turno, avisos);
       if (resposta) addAssistantMessage(resposta);
       return;
     }
-    const id = nextId;
-    nextId += 1;
-    state.messages.push({
-      id,
-      message_type: 'user',
-      message: { content: turno.pergunta },
-      texto: turno.pergunta,
-      anexos: (turno.anexos || []).map((anexo, indice) => ({
-        id: `${turno.pedido_id}-${indice}`,
-        nome: anexo.nome,
-        tipo: anexo.tipo,
-        previa: null,
-      })),
-      voz: null,
-    });
+    mensagemDaPessoa(turno);
+    juntas
+      .filter(junta => junta.junto_de === turno.pedido_id)
+      .forEach(mensagemDaPessoa);
     const resposta = respostaDoTurno(turno, avisos);
     if (resposta) addAssistantMessage(resposta);
     pendente = turno.status === 'pending' ? turno.pedido_id : null;
@@ -403,6 +449,7 @@ export const useAutonomiaGuideStore = () => ({
   addUserMessage,
   marcarVoz,
   addAssistantMessage,
+  marcarJunto,
   marcarAcao,
   esquecerLembranca,
   reset,
