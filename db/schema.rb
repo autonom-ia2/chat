@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_210000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -701,6 +701,38 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
     t.index ["account_id"], name: "index_autonomia_automacao_versoes_on_account_id"
     t.index ["automacao_id", "numero"], name: "idx_autonomia_automacao_versoes_numero", unique: true
     t.index ["autor_id"], name: "index_autonomia_automacao_versoes_on_autor_id"
+  end
+
+  create_table "autonomia_automacao_versoes_envios", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "passo", null: false
+    t.bigint "execucao_id"
+    t.string "alvo_type", null: false
+    t.bigint "alvo_id", null: false
+    t.bigint "contact_id"
+    t.integer "versao", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_versoes_envios_on_account_id"
+    t.index ["automacao_id", "passo", "versao"], name: "idx_autonomia_automacao_versoes_envios_passo"
+    t.index ["contact_id"], name: "index_autonomia_automacao_versoes_envios_on_contact_id"
+    t.index ["execucao_id"], name: "index_autonomia_automacao_versoes_envios_on_execucao_id"
+  end
+
+  create_table "autonomia_automacao_versoes_vencedoras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "passo", null: false
+    t.integer "vencedora"
+    t.string "escolhida_por"
+    t.bigint "escolhida_por_user_id"
+    t.datetime "escolhida_em"
+    t.datetime "teste_desde", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_versoes_vencedoras_on_account_id"
+    t.index ["automacao_id", "passo"], name: "idx_autonomia_automacao_vencedoras_passo", unique: true
+    t.index ["escolhida_por_user_id"], name: "idx_autonomia_automacao_vencedoras_user"
   end
 
   create_table "autonomia_automacoes", force: :cascade do |t|
@@ -1535,6 +1567,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
     t.datetime "updated_at", null: false
     t.integer "janela_de_compra_dias", default: 7, null: false
     t.integer "grupo_de_controle_pct", default: 0, null: false
+    t.string "teste_criterio"
+    t.integer "teste_divisao", default: 50, null: false
+    t.integer "teste_espera_horas", default: 4, null: false
+    t.string "teste_estado"
+    t.integer "teste_resto", default: 0, null: false
+    t.datetime "teste_escolhe_em"
+    t.integer "teste_vencedora"
+    t.string "teste_escolhida_por"
+    t.bigint "teste_escolhida_por_user_id"
+    t.datetime "teste_escolhida_em"
+    t.jsonb "segunda_versao", default: {}, null: false
     t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
     t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
@@ -1754,6 +1797,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
     t.index ["account_id"], name: "index_campaign_reply_codes_on_account_id"
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_reply_codes_on_campaign_type_and_campaign_id", unique: true
     t.index ["code"], name: "index_campaign_reply_codes_on_code", unique: true
+  end
+
+  create_table "campaign_version_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_audience_link_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "versao", null: false
+    t.string "fase", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_campaign_version_contacts_on_account_id"
+    t.index ["campaign_audience_link_id", "contact_id"], name: "idx_campaign_version_contacts_link_contact", unique: true
+    t.index ["campaign_audience_link_id", "versao", "fase"], name: "idx_campaign_version_contacts_link_versao"
+    t.index ["contact_id"], name: "index_campaign_version_contacts_on_contact_id"
   end
 
   create_table "campaigns", force: :cascade do |t|
@@ -5486,6 +5542,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
   add_foreign_key "autonomia_automacao_versoes", "accounts"
   add_foreign_key "autonomia_automacao_versoes", "autonomia_automacoes", column: "automacao_id"
   add_foreign_key "autonomia_automacao_versoes", "users", column: "autor_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_versoes_envios", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_envios", "autonomia_automacao_execucoes", column: "execucao_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_versoes_envios", "autonomia_automacoes", column: "automacao_id", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_envios", "contacts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "autonomia_automacoes", column: "automacao_id", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "users", column: "escolhida_por_user_id", on_delete: :nullify
   add_foreign_key "autonomia_automacoes", "accounts"
   add_foreign_key "autonomia_automacoes", "autonomia_automacao_versoes", column: "versao_ativa_id", on_delete: :nullify
   add_foreign_key "autonomia_automacoes", "users", column: "ligada_por_id", on_delete: :nullify
@@ -5579,6 +5642,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "campaign_audience_links", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "contacts", on_delete: :cascade
   add_foreign_key "carteira_apolice_eventos", "campaign_imports", on_delete: :nullify
   add_foreign_key "carteira_apolice_eventos", "carteira_apolices", column: "apolice_id", on_delete: :cascade
   add_foreign_key "carteira_apolice_eventos", "users", on_delete: :nullify

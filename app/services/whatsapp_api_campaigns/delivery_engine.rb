@@ -92,7 +92,7 @@ module WhatsappApiCampaigns
 
       return if refused_or_postponed?(recipient)
 
-      rendered_body = TemplateRenderer.new(template: @campaign.message_body, contact: recipient.contact,
+      rendered_body = TemplateRenderer.new(template: recipient_message_body(recipient), contact: recipient.contact,
                                            variables: recipient_variables(recipient)).render
       message = ConversationRecorder.new(recipient: recipient, rendered_body: rendered_body).perform
       mark_recipient_sent!(recipient, message)
@@ -127,6 +127,12 @@ module WhatsappApiCampaigns
     # gives the audience's default company text, #999).
     def recipient_variables(_recipient)
       {}
+    end
+
+    # Extension point: the text this recipient gets (CampaignJourney::WhatsappApiAudience gives version 2 of the
+    # message to who fell in it, #3099).
+    def recipient_message_body(_recipient)
+      @campaign.message_body
     end
 
     def handle_recipient_failure(recipient, error)

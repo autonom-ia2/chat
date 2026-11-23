@@ -27,12 +27,29 @@
 #
 # Without Enterprise (no CampaignRecipient) a linked campaign still sends to the audience, without
 # per-recipient tracking.
+#
+# #3099 (duas versões): who fell in version 2 gets its text (CampaignJourney::DuasVersoes#segunda); #enviar_resto sends
+# the rest of the audience after the choice.
 module CampaignJourney::SmsOneoffRecipients
   include CampaignJourney::RecipientTracking
 
   NO_PHONE_REASON = 'Contact has no phone number'.freeze
   CHANNEL_DISABLED_REASON = 'Canal SMS desligado no público'.freeze
   ORIGEM_DO_RITMO = 'campanha_sms'.freeze
+
+  # #3099: the campaign already ran (the test); the rest, now with the chosen version, gets a queued recipient
+  # (idempotent per campaign + contact) and is sent like the first run. The campaign stays completed.
+  def enviar_resto
+    return if sms_audience_link.blank? || !defined?(CampaignRecipient)
+
+    contacts = CampaignJourney::AudienceContacts.contacts_for(sms_audience_link, channel: :sms)
+    return skip_all_recipients(contacts, CHANNEL_DISABLED_REASON) unless audience_sms_enabled?
+
+    insert_recipients(contacts, status: :queued)
+    campaign.campaign_recipients.queued.where(adiado_ate: nil).includes(:contact)
+            .find_each(batch_size: INSERT_BATCH_SIZE) { |recipient| process_sms_recipient(recipient) }
+    fail_unprocessed_recipients
+  end
 
   private
 
@@ -70,13 +87,24 @@ module CampaignJourney::SmsOneoffRecipients
     )
   end
 
+  # #3099: the text of this person's version (version 2 keeps its own default texts).
+  def sms_message_for(contact)
+    duas_versoes = @sms_duas_versoes ||= CampaignJourney::DuasVersoes.new(sms_audience_link)
+    return sms_message unless duas_versoes.versao_2?(contact.id)
+
+    @sms_message_segunda ||= CampaignJourney::SmsMessage.new(
+      duas_versoes.segunda['message_body'], campaign_import: sms_audience_link.campaign_import,
+                                            defaults: duas_versoes.segunda['variable_defaults']
+    )
+  end
+
   def process_sms_recipient(recipient)
     contact = recipient.contact
     refusal = Contact.campaign_refusal_now(contact.id)
     return recipient.mark_skipped!(refusal) if refusal
     return recipient.mark_skipped!(NO_PHONE_REASON) if contact.phone_number.blank?
 
-    content, missing = sms_message.render_for(contact)
+    content, missing = sms_message_for(contact).render_for(contact)
     return recipient.mark_skipped!(CampaignJourney::SmsMessage.missing_reason(missing)) if missing.any?
 
     # #3063: limit per customer and sending hours, right before the send.
@@ -118,7 +146,7 @@ module CampaignJourney::SmsOneoffRecipients
     CampaignJourney::AudienceContacts.contacts_for(sms_audience_link, channel: :sms).find_each do |contact|
       next if Contact.campaign_refusal_now(contact.id) || contact.phone_number.blank?
 
-      content, missing = sms_message.render_for(contact)
+      content, missing = sms_message_for(contact).render_for(contact)
       CampaignJourney::SmsSender.new(channel).deliver(to: contact.phone_number, body: content) if missing.empty?
     rescue StandardError => e
       Rails.logger.error "[CampaignJourney] sms campaign=#{campaign.id} contact=#{contact.id} #{e.class}"

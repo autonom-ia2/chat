@@ -338,6 +338,7 @@ Rails.application.routes.draw do
               get :recipients, as: :result_recipients
               get :export, as: :result_export
               get :period, as: :result_period
+              post :vencedora, controller: :vencedoras, action: :create, as: :result_vencedora # #3099
             end
           end
           # Importar contatos (#1006): the journey's contact import (fork controller).
