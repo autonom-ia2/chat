@@ -33,7 +33,7 @@ class Autonomia::Prospecting::List < ApplicationRecord
                         inverse_of: :list
   has_many :leads, through: :list_leads, source: :lead
 
-  enum status: { active: 0, archived: 1 }
+  enum :status, { active: 0, archived: 1 }
 
   validates :name, presence: true
 

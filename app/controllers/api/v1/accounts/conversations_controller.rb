@@ -5,6 +5,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include ConversationCustomAttributesConcern
 
   before_action :conversation, except: [:index, :meta, :search, :create, :filter]
+  # Fork (upgrade 4.19.1, #3119): the upstream answers 422 for an assignee/team outside the account
+  # (ConversationAssignmentTargetsConcern). Neutralized: it changes the API contract for integrations; see the Issue in the PR.
   before_action :inbox, :contact, :contact_inbox, only: [:create]
 
   ATTACHMENT_RESULTS_PER_PAGE = 100

@@ -95,6 +95,33 @@ RSpec.describe Account do
     end
   end
 
+  describe '#enforce_mfa?' do
+    let(:account) { create(:account) }
+
+    before do
+      skip('Skipping since MFA is not configured in this environment') unless Chatwoot.encryption_configured?
+    end
+
+    it 'returns false by default' do
+      expect(account.enforce_mfa?).to be false
+    end
+
+    it 'returns true when setting enabled' do
+      account.update!(enforce_mfa: true)
+      expect(account.reload.enforce_mfa?).to be true
+    end
+
+    it 'rejects non-boolean values via settings schema' do
+      expect { account.update!(enforce_mfa: 'true') }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+
+    it 'returns false when MFA feature is unavailable' do
+      account.update!(enforce_mfa: true)
+      allow(Chatwoot).to receive(:mfa_enabled?).and_return(false)
+      expect(account.enforce_mfa?).to be false
+    end
+  end
+
   describe 'captain defaults for new accounts' do
     it 'does not store Captain model overrides or enable premium Captain features' do
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
@@ -105,7 +132,6 @@ RSpec.describe Account do
       account = create(:account)
 
       expect(account).not_to be_feature_enabled('captain_integration')
-      expect(account).not_to be_feature_enabled('captain_integration_v2')
       expect(account.captain_models).to be_nil
     end
   end
@@ -278,7 +304,7 @@ RSpec.describe Account do
     end
 
     it 'configures the account feature flag extension column' do
-      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1', 'feature_flags_ext_2')
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1', 'feature_flags_ext_2', 'feature_flags_ext_3')
       expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(mapa_ext_1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
@@ -352,7 +378,15 @@ RSpec.describe Account do
         # #2897: carteira_seguros depois dela, 49 pela ordem do features.yml (1 << 48 = 281474976710656).
         feature_carteira_seguros: 281_474_976_710_656,
         # #2881: agente_modelos_seguro depois dela, 50 (1 << 49 = 562949953421312), Orquestração (12/11). Flag nova entra no fim.
-        feature_agente_modelos_seguro: 562_949_953_421_312
+        feature_agente_modelos_seguro: 562_949_953_421_312,
+        # Upgrade 4.19.1 (#3119): as 8 flags novas do upstream, desligadas, nas posições 51–58 (no upstream elas vêm na
+        # ext_1, nas posições que o fork já usa).
+        feature_captain_classifier: 1_125_899_906_842_624, feature_conversation_monitors: 2_251_799_813_685_248,
+        feature_campaign_analytics: 4_503_599_627_370_496, feature_company_enrichment: 9_007_199_254_740_992,
+        feature_stripe_integration: 18_014_398_509_481_984, feature_mobile_voice_push: 36_028_797_018_963_968,
+        feature_auto_translate: 72_057_594_037_927_936, feature_copilot_workflows: 144_115_188_075_855_872,
+        # Upgrade 4.20.1 (#3120): the next 2 upstream flags, off, at positions 59–60.
+        feature_shopify_custom_apps: 288_230_376_151_711_744, feature_captain_mcp_servers: 576_460_752_303_423_488
       )
     end
 
@@ -658,7 +692,7 @@ RSpec.describe Account do
       end
 
       it 'returns GPT-5.2 for assistant when Captain V2 is enabled' do
-        account.enable_features!('captain_integration_v2')
+        account.enable_features!('captain_integration')
 
         expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
         expect(account.reload.captain_models).to be_nil
@@ -667,11 +701,11 @@ RSpec.describe Account do
 
     describe 'with saved model preferences' do
       it 'returns saved preferences merged with defaults' do
-        account.update!(captain_models: { 'editor' => 'gpt-4.1-mini', 'assistant' => 'gpt-5.2' })
+        account.update!(captain_models: { 'editor' => 'gpt-5.1', 'assistant' => 'gpt-5.2' })
 
         prefs = account.captain_preferences
 
-        expect(prefs[:models]['editor']).to eq('gpt-4.1-mini')
+        expect(prefs[:models]['editor']).to eq('gpt-5.1')
         expect(prefs[:models]['assistant']).to eq('gpt-5.2')
         expect(prefs[:models]['copilot']).to eq(Llm::Models.default_model_for('copilot'))
       end
@@ -691,20 +725,20 @@ RSpec.describe Account do
 
     describe 'validation' do
       it 'rejects invalid model for a feature' do
-        account.captain_models = { 'label_suggestion' => 'gpt-5.1' }
+        account.captain_models = { 'help_center_query_translation' => 'gpt-5.1' }
 
         expect(account).not_to be_valid
-        expect(account.errors[:captain_models].first).to include('not a valid model for label_suggestion')
+        expect(account.errors[:captain_models].first).to include('not a valid model for help_center_query_translation')
       end
 
       it 'accepts valid model for a feature' do
-        account.captain_models = { 'editor' => 'gpt-4.1-mini', 'label_suggestion' => 'gpt-4.1-nano' }
+        account.captain_models = { 'editor' => 'gpt-5.1', 'help_center_query_translation' => 'gpt-6-luna' }
 
         expect(account).to be_valid
       end
 
       it 'rejects unknown feature keys' do
-        account.captain_models = { 'unknown_feature' => 'gpt-4.1' }
+        account.captain_models = { 'unknown_feature' => 'gpt-5.1' }
 
         expect(account).not_to be_valid
         expect(account.errors[:captain_models]).to include("'unknown_feature' is not a known feature")

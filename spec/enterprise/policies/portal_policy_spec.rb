@@ -19,7 +19,7 @@ RSpec.describe 'Enterprise::PortalPolicy', type: :policy do
   end
 
   # A Central de Ajuda é só leitura: a função knowledge_base_manage não escreve mais (#501).
-  permissions :update?, :edit?, :logo?, :create?, :destroy?, :archive?, :send_instructions? do
+  permissions :update?, :edit?, :logo?, :create?, :destroy?, :archive?, :send_instructions?, :remove_locale? do
     context 'when agent with knowledge_base_manage permission' do
       it { expect(portal_policy).not_to permit(agent_with_role_context, portal) }
     end

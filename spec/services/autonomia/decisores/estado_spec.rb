@@ -61,6 +61,19 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(atributos).to eq('origem' => 'indicação', 'nascimento' => '1980-05-17')
   end
 
+  # MOTIVO (#3082): a IA recebia só a chave crua do campo; e o campo apagado (guardado escondido) não pode voltar à IA.
+  it 'o contato leva o nome e o "Para que serve" de cada campo, e o campo apagado fica de fora' do
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'origem',
+                                         attribute_display_name: 'Como chegou', attribute_description: 'Por onde a pessoa nos conheceu.')
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'placa').destroy!
+    contact.update!(custom_attributes: { 'origem' => 'indicação', 'placa' => 'ABC1D23', 'melhor_horario' => 'manhã' })
+
+    lido = estado(%w[contato]).para_o_jev(decisor)[:contact]
+
+    expect(lido[:attributes]).to eq('origem' => 'indicação', 'melhor_horario' => 'manhã')
+    expect(lido[:attribute_meanings]).to eq('origem' => { name: 'Como chegou', purpose: 'Por onde a pessoa nos conheceu.' })
+  end
+
   # MOTIVO: o Decisor de etapa lê o card; sem conversa, ainda tem o que ler.
   it 'lê o card, a empresa e a conversa quando declarados, e nada além disso' do
     admin = create(:user, account: account)

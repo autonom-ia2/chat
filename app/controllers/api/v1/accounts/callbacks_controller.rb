@@ -1,4 +1,6 @@
 class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
+  # Fork (upgrade 4.20.1, #3120): upstream #16525 makes connecting Facebook admin-only (check_admin_authorization?).
+  # Neutralized (Issue #3126): the gates below already ask admin or the custom-role key, as before.
   # Registering a page creates a Facebook inbox (inbox_manage); reauthorizing swaps the page token of a live inbox
   # (integration_manage); listing the pages serves both. Admin always (#2027).
   before_action -> { check_permission_granted!('inbox_manage') }, only: [:register_facebook_page]

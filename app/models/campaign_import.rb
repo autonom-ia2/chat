@@ -84,7 +84,7 @@ class CampaignImport < ApplicationRecord
   has_one_attached :report_csv
   include Relacionamentos::Trazer::ArquivoDeProblemas
 
-  enum status: {
+  enum :status, {
     uploaded: 0,
     validating: 1,
     validation_failed: 2,
@@ -104,12 +104,12 @@ class CampaignImport < ApplicationRecord
     needs_column_choice: 15
   }
 
-  enum undo_status: {
+  enum :undo_status, {
     pending: 0,
     processing: 1,
     completed: 2,
     failed: 3
-  }, _prefix: true
+  }, prefix: true
 
   scope :contact_imports, -> { where("options->>'flow' = ?", CONTACTS_FLOW) }
   scope :campaign_flows, -> { where("COALESCE(options->>'flow', '') <> ?", CONTACTS_FLOW) }

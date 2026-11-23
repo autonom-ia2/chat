@@ -12,7 +12,7 @@ class Crm::MeetingNotice < ApplicationRecord
   belongs_to :meeting, class_name: 'Crm::Meeting'
   belongs_to :account
 
-  enum status: { pending: 0, sending: 1, sent: 2, skipped: 3, failed: 4 }
+  enum :status, { pending: 0, sending: 1, sent: 2, skipped: 3, failed: 4 }
 
   validates :kind, inclusion: { in: KINDS }
   validates :due_at, presence: true

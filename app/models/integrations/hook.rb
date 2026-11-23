@@ -27,6 +27,7 @@ class Integrations::Hook < ApplicationRecord
   encrypts :access_token, deterministic: true if Chatwoot.encryption_configured?
 
   validates :account_id, presence: true
+  validate :inbox_must_belong_to_account
   validates :app_id, presence: true
   validates :inbox_id, presence: true, if: -> { hook_type == 'inbox' }
   validates :reference_id, presence: true, format: { with: Shopify::ShopDomain::FORMAT }, if: :shopify?
@@ -37,17 +38,31 @@ class Integrations::Hook < ApplicationRecord
   validate :ensure_feature_enabled
   validate :validate_openai_api_key, if: :validate_openai_api_key?
   validate :validate_cloudflare_realtimekit_credentials, if: :validate_cloudflare_realtimekit_credentials?
+  # Fork (upgrade 4.20.1, #3120): no Google Translate credential check, as in 4.19.1 (#3119, item #36/#37).
   validates :app_id, uniqueness: { scope: [:account_id], unless: -> { app.present? && app.params[:allow_multiple_hooks].present? } }
 
   # TODO: This seems to be only used for slack at the moment
   # We can add a validator when storing the integration settings and toggle this in future
-  enum status: { disabled: 0, enabled: 1 }
+  enum :status, { disabled: 0, enabled: 1 }
 
   belongs_to :account
   belongs_to :inbox, optional: true
   has_secure_token :access_token
 
-  enum hook_type: { account: 0, inbox: 1 }
+  enum :hook_type, { account: 0, inbox: 1 }
+
+  def inbox_belongs_to_account?
+    inbox.present? && inbox.account_id == account_id
+  end
+
+  def shopify_custom_app
+    account.shopify_custom_app if app_id == 'shopify' && settings['custom_app_id'].present?
+  end
+
+  scope :with_shopify_custom_app_id, lambda { |custom_app_id|
+    custom_app_id_field = Arel::Nodes::InfixOperation.new('->>', arel_table[:settings], Arel::Nodes.build_quoted('custom_app_id'))
+    where(custom_app_id_field.eq(custom_app_id&.to_s))
+  }
 
   scope :account_hooks, -> { where(hook_type: 'account') }
   scope :inbox_hooks, -> { where(hook_type: 'inbox') }
@@ -110,6 +125,17 @@ class Integrations::Hook < ApplicationRecord
   end
 
   private
+
+  # Fork (upgrade 4.20.1, #3120): #16614 (inbox of the hook must belong to its account) enters; the
+  # one-bot-provider-per-inbox check (ensure_exclusive_bot_provider) stays out, as in 4.19.1 (#3119, item #36/#37).
+  def inbox_must_belong_to_account
+    # Existing invalid links must remain disableable; their inbox and account are readonly.
+    return if persisted? && disabled?
+    return if inbox_id.blank? && inbox.blank?
+    return if inbox_belongs_to_account?
+
+    errors.add(:inbox_id, 'must belong to the same account as the hook')
+  end
 
   def ensure_feature_enabled
     return if shopify? && disabled?
@@ -214,3 +240,4 @@ class Integrations::Hook < ApplicationRecord
     %w[leadsquared].include?(app_id)
   end
 end
+Integrations::Hook.include_mod_with('Concerns::IntegrationsHook')

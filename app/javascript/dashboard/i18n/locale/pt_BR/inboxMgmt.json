@@ -56,6 +56,9 @@
       },
       "INSTAGRAM": {
         "CONTINUE_WITH_INSTAGRAM": "Continuar com o Instagram",
+        "SELECT_ACCOUNT": "Escolha uma conta do Instagram",
+        "CONNECT_ACCOUNT": "Conectar conta",
+        "START_AGAIN": "Começar de novo",
         "CONNECT_YOUR_INSTAGRAM_PROFILE": "Conecte seu perfil do Instagram",
         "HELP": "Para adicionar seu perfil do Instagram como um canal, você precisa autenticar seu perfil do Instagram clicando em 'Continuar com o Instagram' ",
         "ERROR_MESSAGE": "Houve um erro ao conectar ao Instagram, por favor, tente novamente",
@@ -293,6 +296,40 @@
           "API_CALLBACK": {
             "TITLE": "URL de Callback",
             "SUBTITLE": "Você precisa configurar a URL de callback de mensagem no Bandwidth com a URL mencionada aqui."
+          },
+          "CALLBACK_AUTH": {
+            "TITLE": "Credenciais de retorno",
+            "DESCRIPTION": "Cadastre estas credenciais de retorno, de entrada e de saída, no seu aplicativo da Bandwidth. Se várias caixas usam o mesmo aplicativo da Bandwidth, use o endereço de retorno e as credenciais de uma delas.",
+            "RESET_SUCCESS": "Senha de retorno trocada. Atualize no seu aplicativo da Bandwidth.",
+            "RESET_ERROR": "Não foi possível trocar a senha de retorno. Tente de novo.",
+            "USERNAME": "Usuário",
+            "PASSWORD": "Senha",
+            "ENFORCE": "Exigir credenciais de retorno",
+            "ENFORCE_DESCRIPTION": "Recusa retornos que não usam estas credenciais. Ligue depois de cadastrar as credenciais no seu aplicativo da Bandwidth."
+          },
+          "CLIENT_ID": {
+            "LABEL": "Client ID",
+            "PLACEHOLDER": "Digite o Client ID da Bandwidth",
+            "ERROR": "Este campo é obrigatório"
+          },
+          "CLIENT_SECRET": {
+            "LABEL": "Client Secret",
+            "PLACEHOLDER": "Digite o Client Secret da Bandwidth",
+            "ERROR": "Este campo é obrigatório"
+          },
+          "OAUTH": {
+            "TITLE": "Credenciais da API",
+            "MIGRATE": "Atualizar credenciais",
+            "READ_ONLY": "Somente leitura",
+            "SHOW_SECRET": "Mostrar o Client Secret",
+            "HIDE_SECRET": "Esconder o Client Secret",
+            "LEGACY_DESCRIPTION": "Atualize as credenciais da Bandwidth até 2 de dezembro de 2026 para esta caixa continuar conectada.",
+            "DESCRIPTION": "Esta caixa usa OAuth. Digite um novo Client ID e um novo Client Secret para trocar as credenciais.",
+            "SAVE": "Conferir e salvar credenciais",
+            "SUCCESS": "Credenciais OAuth da Bandwidth salvas.",
+            "LOAD_ERROR": "Não foi possível carregar as credenciais da Bandwidth. Recarregue a página para tentar de novo.",
+            "ERROR": "Não foi possível salvar as credenciais da Bandwidth. Tente de novo.",
+            "CALLBACK_DESCRIPTION": "Use este endereço para mensagens recebidas e avisos de entrega no seu aplicativo da Bandwidth."
           }
         }
       },
@@ -398,7 +435,10 @@
             "PHONE_ID_LABEL": "ID do Número de Telefone",
             "PHONE_ID_PLACEHOLDER": "Informe o ID do número de telefone",
             "TOKEN_LABEL": "Token de acesso permanente",
-            "TOKEN_PLACEHOLDER": "Colar token de acesso"
+            "TOKEN_PLACEHOLDER": "Colar token de acesso",
+            "APP_SECRET_LABEL": "Chave secreta do app",
+            "APP_SECRET_PLACEHOLDER": "Cole a chave secreta do app",
+            "APP_SECRET_HELP": "Fica no seu app da Meta, em Configurações do app > Básico. Serve para conferir as mensagens que chegam."
           },
           "REVIEW": {
             "TITLE": "Crie sua caixa de entrada do WhatsApp",
@@ -497,6 +537,11 @@
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp",
           "MANUAL_RESTRICTION_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. A configuração manual funciona apenas para números que já estão conectados à WhatsApp Cloud API. Números que utilizam a coexistência com o aplicativo WhatsApp Business ainda não são compatíveis com esse fluxo. Estamos trabalhando em conjunto com a Meta para resolver o problema o mais rápido possível. Agradecemos pela sua paciência.",
           "STATUS_LINK": "Ver atualizações de status"
+        },
+        "APP_SECRET": {
+          "LABEL": "Chave secreta do app",
+          "PLACEHOLDER": "Chave secreta do seu app da Meta",
+          "ERROR": "Digite um valor válido."
         }
       },
       "VOICE": {
@@ -1366,6 +1411,20 @@
         "MODES": {
           "SANDBOX": "Sandbox",
           "LIVE": "Em tempo real"
+        },
+        "QUALITY": {
+          "GREEN": "Verde",
+          "YELLOW": "Amarelo",
+          "RED": "Vermelho"
+        },
+        "TIER_NAMES": {
+          "TIER_250": "Nível 250",
+          "TIER_1000": "Nível 1K",
+          "TIER_1K": "Nível 1K",
+          "TIER_2K": "Nível 2K",
+          "TIER_10K": "Nível 10K",
+          "TIER_100K": "Nível 100K",
+          "TIER_UNLIMITED": "Ilimitado"
         }
       },
       "BUSINESS_PROFILE": {
@@ -1470,6 +1529,10 @@
       "WHATSAPP_SECTION_UPDATE_TITLE": "Atualizar Chave de API",
       "WHATSAPP_SECTION_UPDATE_PLACEHOLDER": "Digite a nova chave de API aqui",
       "WHATSAPP_SECTION_UPDATE_BUTTON": "Atualizar",
+      "WHATSAPP_APP_SECRET_TITLE": "Chave secreta do app",
+      "WHATSAPP_APP_SECRET_SUBHEADER": "Digite a chave secreta do seu app da Meta (Configurações do app > Básico). Ela confere que as mensagens recebidas vêm da Meta.",
+      "WHATSAPP_APP_SECRET_MISSING": "As mensagens que chegam nesta caixa ainda não são conferidas. Adicione a chave secreta do seu app da Meta para terminar a configuração.",
+      "WHATSAPP_APP_SECRET_PLACEHOLDER": "Digite a chave secreta aqui",
       "WHATSAPP_BUSINESS_MANAGEMENT_TOKEN_ADD_TITLE": "Adicionar Token de Gerenciamento de Negócios",
       "WHATSAPP_BUSINESS_MANAGEMENT_TOKEN_REPLACE_TITLE": "Substituir Token de Gerenciamento de Negócios",
       "WHATSAPP_BUSINESS_MANAGEMENT_TOKEN_CONFIGURED": "Token de gerenciamento de negócios configurado",
@@ -1539,6 +1602,8 @@
           "DISPLAY_PHONE_NUMBER_HELP": "O número do WhatsApp exibido aos clientes. Ele não pode ser alterado durante a migração.",
           "ACCESS_TOKEN": "Token de acesso permanente ou token do usuário do sistema",
           "ACCESS_TOKEN_PLACEHOLDER": "Colar token de acesso",
+          "APP_SECRET": "Chave secreta do app",
+          "APP_SECRET_PLACEHOLDER": "Chave secreta em Configurações do app > Básico, no seu app da Meta",
           "TOKEN_HELP_PREFIX": "O token deve incluir",
           "TOKEN_HELP_MIDDLE": "Adicionar",
           "TOKEN_HELP_SUFFIX": "para gerenciamento de modelos de sincronização e templates.",

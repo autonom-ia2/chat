@@ -78,6 +78,19 @@ RSpec.describe Instagram::RefreshOauthTokenService do
             .with(query: { 'access_token' => fixed_token, 'grant_type' => 'ig_refresh_token' }).once
         end
       end
+
+      it 'preserves Instagram Login credentials replaced while the refresh was in flight' do
+        expiry = 60.days.from_now.change(usec: 0)
+        stub_request(:get, 'https://graph.instagram.com/refresh_access_token')
+          .with(query: hash_including(access_token: fixed_token))
+          .to_return do
+            instagram_channel.class.find(instagram_channel.id).update!(access_token: 'reauthorized_token', expires_at: expiry)
+            { status: 200, body: refresh_response.to_json }
+          end
+
+        expect(service.access_token).to eq('reauthorized_token')
+        expect(instagram_channel.reload.expires_at).to eq(expiry)
+      end
     end
   end
 

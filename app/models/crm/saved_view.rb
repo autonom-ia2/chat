@@ -38,7 +38,7 @@ class Crm::SavedView < ApplicationRecord
   # private_view: visible only to its owner; team: shared with the owner's team;
   # account: shared with the whole account. (`private` is a Ruby keyword, hence
   # the `private_view` member name — the serialized value stays `private_view`.)
-  enum visibility: { private_view: 0, team: 1, account: 2 }
+  enum :visibility, { private_view: 0, team: 1, account: 2 }
 
   validates :name, presence: true
   validates :config, presence: true

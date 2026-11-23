@@ -6,7 +6,7 @@ class EmailCampaignImport < ApplicationRecord
   # Capture the transition before a later reload/save clears Rails' dirty history.
   after_update :enqueue_preflight_after_commit, if: -> { saved_change_to_status? && completed? }
 
-  enum status: { queued: 0, processing: 1, completed: 2, failed: 3 }
+  enum :status, { queued: 0, processing: 1, completed: 2, failed: 3 }
   scope :active, -> { where(status: [:queued, :processing]) }
 
   RETENTION = 1.day

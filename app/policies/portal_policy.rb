@@ -20,6 +20,8 @@ class PortalPolicy < ApplicationPolicy
   def archive? = false
   def logo? = false
   def send_instructions? = false
+  # Removing a locale deletes its articles and categories (#16409): read-only like the rest.
+  def remove_locale? = false
 end
 
 PortalPolicy.prepend_mod_with('PortalPolicy')

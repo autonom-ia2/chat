@@ -10,9 +10,11 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   include Api::V1::Accounts::Concerns::InboxSecretManagement
   include Api::V1::Accounts::Concerns::InboxCredentialGuard
   before_action :check_credential_change, only: [:update]
+  include Api::V1::Accounts::Concerns::BandwidthConfiguration
+  before_action :prepare_bandwidth_configuration, only: [:create, :update]
 
   def index
-    @inboxes = inboxes_scope
+    @inboxes = inbox_scope
                .includes(:channel, :portal, :working_hours, { avatar_attachment: :blob })
                .order_by_name
   end
@@ -58,8 +60,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
       inbox_params = permitted_params.except(:channel, :csat_config)
       inbox_params[:csat_config] = format_csat_config(permitted_params[:csat_config]) if permitted_params[:csat_config].present?
       @inbox.update!(inbox_params)
-      update_inbox_working_hours
       update_channel if channel_update_required?
+      update_inbox_working_hours
     end
 
     return unless continue_update
@@ -107,8 +109,9 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   private
 
   # inbox_view (#452) lists every account inbox for the settings pages. The Inbox policy scope stays
-  # membership-based: it also decides which mailboxes feed the CRM calendar.
-  def inboxes_scope
+  # membership-based: it also decides which mailboxes feed the CRM calendar. Upgrade 4.19.1: keeps the upstream name
+  # (inbox_scope), which the Enterprise controller extends with super.
+  def inbox_scope
     return Current.account.inboxes if Current.account_user&.permission_granted?('inbox_view')
 
     policy_scope(Current.account.inboxes)

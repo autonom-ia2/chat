@@ -73,6 +73,13 @@ RSpec.describe LlmFormatter::ContactLlmFormatter do
 
         expect(formatter.format).to eq(expected_output)
       end
+
+      # #3082: o "Para que serve" do campo vai junto do nome, quando a conta o escreveu.
+      it 'adds what the field is for next to its name' do
+        custom_attribute.update!(attribute_description: 'Where the person works')
+
+        expect(formatter.format).to include('Company (Where the person works): Acme Inc')
+      end
     end
   end
 end

@@ -35,7 +35,7 @@ class IdempotencyKey < ApplicationRecord
 
   # processing: claimed, action in flight or failed (no stored response yet).
   # done: a 2xx response is stored and may be replayed.
-  enum state: { processing: 0, done: 1 }
+  enum :state, { processing: 0, done: 1 }
 
   validates :key, presence: true, uniqueness: { scope: :account_id }
   validates :request_fingerprint, presence: true

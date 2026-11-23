@@ -54,6 +54,16 @@ RSpec.describe MigrationsSeguras::SchemaRb do
       .to include('chave_primaria' => [], 'chaves_estrangeiras' => { 'contacts.contact_id' => { 'para' => 'contacts' } })
   end
 
+  it 'lê a extensão do schema do sistema pelo nome, como o Rails 7.2 e o Rails 8 a escrevem, e a blue aguenta a troca' do
+    rails72 = schema(%(  enable_extension "plpgsql"\n#{contatos}#{notas}))
+    rails8 = schema(%(  enable_extension "pg_catalog.plpgsql"\n#{contatos}#{notas}))
+
+    expect(described_class.ler(rails8)['extensoes']).to eq(%w[pg_trgm plpgsql])
+    verificacao = MigrationsSeguras::Compatibilidade.new(antes: described_class.ler(rails72), depois: described_class.ler(rails8))
+    expect(verificacao).to be_compativel
+    expect(verificacao.avisos).to be_empty
+  end
+
   it 'dá à chave estrangeira sem column: a coluna padrão do Rails, no singular do destino' do
     texto = schema(<<~SCHEMA)
       create_table "notas", force: :cascade do |t|

@@ -18,12 +18,22 @@ export function violations(results) {
 
 const DASHBOARD_CATALOG = './app/javascript/dashboard/i18n/locale/en/*.json';
 
-// Standalone apps (e.g. public_booking_v2) keep their own catalog in `<app>/i18n/en.json`, never in the dashboard's.
+// Standalone apps keep their own English catalog, never in the dashboard's: `<app>/i18n/en.json` (public_booking_v2)
+// or `<app>/i18n/locale/en.json` (widget, survey).
+const STANDALONE_CATALOGS = ['i18n/en.json', 'i18n/locale/en.json'];
+
+export function catalogOf(app, root = 'app/javascript') {
+  const found = STANDALONE_CATALOGS.find(file =>
+    existsSync(`${root}/${app}/${file}`)
+  );
+  return found && `./${root}/${app}/${found}`;
+}
+
 export function standaloneApps(root = 'app/javascript') {
   return readdirSync(root, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
-    .filter(app => existsSync(`${root}/${app}/i18n/en.json`))
+    .filter(app => catalogOf(app, root))
     .sort();
 }
 
@@ -35,7 +45,7 @@ export function localeConfig(apps) {
     overrides: apps.map(app => ({
       files: [`app/javascript/${app}/**`],
       settings: {
-        'vue-i18n': { localeDir: `./app/javascript/${app}/i18n/en.json` },
+        'vue-i18n': { localeDir: catalogOf(app) },
       },
     })),
   };

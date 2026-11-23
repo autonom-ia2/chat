@@ -35,6 +35,22 @@ RSpec.describe Autonomia::Decisores::Extrator do
     end
   end
 
+  # #3082: o destino que é campo da pessoa leva o nome e o "Para que serve" que a conta escreveu.
+  it 'conta ao modelo o nome e o "Para que serve" do campo da pessoa que é destino' do
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'placa',
+                                         attribute_display_name: 'Placa do carro', attribute_description: 'A placa do carro segurado.')
+    com_placa = create(:autonomia_decisor, account: account,
+                                           campos: [{ chave: 'placa', descricao: 'Placa', destino: 'contato.atributo:placa' }])
+    allow(cliente).to receive(:create).and_return(text: { placa: 'ABC1D23' }.to_json)
+
+    described_class.new(decisor: com_placa).extrair(estado)
+
+    expect(cliente).to have_received(:create) do |**args|
+      expect(args[:schema][:schema][:properties]['placa'][:description])
+        .to eq('Placa. Account field "Placa do carro": A placa do carro segurado.')
+    end
+  end
+
   it 'não chama o modelo quando o Decisor não tem campos' do
     sem_campos = create(:autonomia_decisor, account: account)
 

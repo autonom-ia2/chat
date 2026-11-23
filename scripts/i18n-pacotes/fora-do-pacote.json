@@ -57,7 +57,13 @@
     "FUNCOES_EQUIPE.DIFF.GANHAR_E_PERDER": "O que as pessoas ganham e perdem de acesso ao ficar sem função (#2308); não é resultado de venda.",
     "FUNCOES_EQUIPE.DIFF.SO_PERDER": "O acesso que as pessoas perdem ao ficar sem função (#2308); não é resultado de venda.",
     "FUNCOES_EQUIPE.GUIADA.TROCAR.TEXTO": "Trocar a função pronta perde os ajustes feitos na conversa guiada (#2308); não é resultado de venda.",
-    "FUNCOES_EQUIPE.PERDA.TITULO_VARIAS": "Pessoas que perdem acesso ao salvar a função (#2308); não é resultado de venda."
+    "FUNCOES_EQUIPE.PERDA.TITULO_VARIAS": "Pessoas que perdem acesso ao salvar a função (#2308); não é resultado de venda.",
+    "INBOX.TYPES.VOICE_CALL_MISSED": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "INBOX.TYPES_NEXT.VOICE_CALL_MISSED": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "PROFILE_SETTINGS.FORM.EMAIL_NOTIFICATIONS_SECTION.VOICE_CALL_MISSED": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.VOICE_CALL_MISSED": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "PROFILE_SETTINGS.FORM.PUSH_NOTIFICATIONS_SECTION.VOICE_CALL_MISSED": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "CAPTAIN.CUSTOM_TOOLS.ASSISTANT_TOOLS_BANNER.MODAL_DESCRIPTION": "Nada se perdeu ao separar as ferramentas do Captain por assistente (upgrade 4.19.1, #3119; Captain sem uso); não é resultado de venda."
   },
   "servidor": {
     "autonomia.guide.avisos.whatsapp_proxy.sessao_instavel_trocada": "\"O número ganhou outro\" IP: aviso técnico do proxy do WhatsApp; não é resultado de venda.",
@@ -72,6 +78,11 @@
     "autonomia.desempenho2.c.planilha.recomendacao.ganho_periodo": "Período do ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
     "autonomia.desempenho2.c.planilha.perdas_titulo": "Perda do painel de desempenho (#2226): venda que parou por causa corrigível, um conceito do painel que vale para qualquer negócio, não o desfecho de um segmento.",
     "autonomia.desempenho2.c.planilha.abas.perdas": "Perda do painel de desempenho (#2226): venda que parou por causa corrigível, um conceito do painel que vale para qualquer negócio, não o desfecho de um segmento.",
-    "autonomia.desempenho2.c.leituras.decisao_com_ganho": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil."
+    "autonomia.desempenho2.c.leituras.decisao_com_ganho": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "notifications.notification_title.voice_call_missed": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "super_admin.user_diagnostics.push_types.voice_call_missed": "Chamada de voz perdida (upgrade 4.19.1, #3119; voz desligada); não é resultado de venda.",
+    "super_admin.user_diagnostics.push_types.sla_missed_first_response": "SLA perdido numa conversa (upgrade 4.19.1, #3119; diagnóstico do Super Admin); não é resultado de venda.",
+    "super_admin.user_diagnostics.push_types.sla_missed_next_response": "SLA perdido numa conversa (upgrade 4.19.1, #3119; diagnóstico do Super Admin); não é resultado de venda.",
+    "super_admin.user_diagnostics.push_types.sla_missed_resolution": "SLA perdido numa conversa (upgrade 4.19.1, #3119; diagnóstico do Super Admin); não é resultado de venda."
   }
 }

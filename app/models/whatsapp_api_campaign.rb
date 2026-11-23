@@ -58,7 +58,7 @@ class WhatsappApiCampaign < ApplicationRecord
   has_many :whatsapp_api_campaign_recipients, dependent: :destroy
   has_one_attached :media_file
 
-  enum status: {
+  enum :status, {
     scheduled: 0,
     running: 1,
     paused: 2,

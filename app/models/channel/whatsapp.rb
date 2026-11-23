@@ -33,10 +33,15 @@ class Channel::Whatsapp < ApplicationRecord
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud].freeze
   before_validation :ensure_webhook_verify_token
+  before_validation :ensure_webhook_token
 
   validates :provider, inclusion: { in: PROVIDERS }
   validates :phone_number, presence: true, uniqueness: true
   validate :validate_provider_config
+  # Fork (upgrade 4.20.1, #3120): upstream #16548 made the Meta app secret mandatory to create a manual WhatsApp Cloud
+  # channel, to move one from 360dialog or embedded signup to manual setup, and to clear it once saved. The fork keeps
+  # those saves working without it (UI, manual setup and API clients); the field and the "pending" banner stay, and the
+  # webhook verifies the signature as soon as a secret is saved (see app_secret_pending?).
 
   after_create :sync_templates
   after_update_commit :log_credentials_transfer, if: :saved_change_to_provider_config?
@@ -131,6 +136,10 @@ class Channel::Whatsapp < ApplicationRecord
     before&.dig('source') == 'embedded_signup' && after['source'] != 'embedded_signup'
   end
 
+  def app_secret_pending?
+    manual_cloud_setup? && provider_config['app_secret'].blank?
+  end
+
   def mark_message_templates_updated
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:message_templates_last_updated, Time.zone.now)
@@ -162,8 +171,25 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if provider == 'whatsapp_cloud'
   end
 
+  def ensure_webhook_token
+    return unless provider == 'default'
+
+    # Derived for existing channels so concurrent saves register the same token with 360dialog.
+    provider_config['webhook_token'] ||= if new_record?
+                                           SecureRandom.hex(16)
+                                         else
+                                           OpenSSL::HMAC.hexdigest('SHA256', Rails.application.secret_key_base, "whatsapp_webhook_token:#{id}")
+                                         end
+  end
+
   def validate_provider_config
+    return if errors.any?
+
     errors.add(:provider_config, 'Invalid Credentials') unless provider_service.validate_provider_config?
+  end
+
+  def manual_cloud_setup?
+    provider == 'whatsapp_cloud' && provider_config['source'] != 'embedded_signup'
   end
 
   # Logs only the embedded signup → manual migration (the save drops the

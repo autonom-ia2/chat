@@ -115,6 +115,18 @@ RSpec.describe 'Inbox Member API', type: :request do
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).to include('User must exist')
       end
+
+      it 'adds users who belong to this account and another account' do
+        create(:account_user, account: create(:account), user: agent_to_add)
+
+        post "/api/v1/accounts/#{account.id}/inbox_members",
+             headers: administrator.create_new_auth_token,
+             params: { inbox_id: inbox.id, user_ids: [agent_to_add.id] },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.inbox_members.pluck(:user_id)).to contain_exactly(old_agent.id, agent_to_add.id)
+      end
     end
   end
 
@@ -189,6 +201,18 @@ RSpec.describe 'Inbox Member API', type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).to include('User must exist')
+      end
+
+      it 'adds users who belong to this account and another account' do
+        create(:account_user, account: create(:account), user: agent_to_add)
+
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: { inbox_id: inbox.id, user_ids: [agent_to_add.id] },
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.inbox_members.pluck(:user_id)).to eq([agent_to_add.id])
       end
     end
   end

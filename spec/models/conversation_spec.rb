@@ -262,6 +262,15 @@ RSpec.describe Conversation do
                                                                     changed_attributes: changed_attributes, performed_by: nil)
     end
 
+    it 'will run conversation_updated event when auto translate is switched off for the conversation' do
+      conversation.update!(additional_attributes: { 'auto_translate_disabled' => true })
+      changed_attributes = conversation.previous_changes
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
+                                                                    changed_attributes: changed_attributes, performed_by: nil)
+    end
+
     it 'invalidates filtered counts without sending conversation_updated for filtered-only additional_attributes' do
       account.enable_features!(:unread_count_for_filters)
 
@@ -761,6 +770,7 @@ RSpec.describe Conversation do
         status: conversation.status,
         contact_inbox: conversation.contact_inbox,
         timestamp: conversation.last_activity_at.to_i,
+        anonymous_caller: false,
         can_reply: true,
         whatsapp_api_reply: false,
         whatsapp_api_rich_native: [],
@@ -859,7 +869,7 @@ RSpec.describe Conversation do
 
   describe '#botintegration: when conversation created in inbox with dialogflow integration' do
     let(:inbox) { create(:inbox) }
-    let(:hook) { create(:integrations_hook, :dialogflow, inbox: inbox) }
+    let(:hook) { create(:integrations_hook, :dialogflow, inbox: inbox, account: inbox.account) }
     let(:conversation) { create(:conversation, inbox: hook.inbox) }
 
     it 'returns conversation status as pending' do

@@ -39,7 +39,7 @@ class Crm::AiStageSuggestion < ApplicationRecord
   belongs_to :from_stage, class_name: 'Crm::PipelineStage'
   belongs_to :to_stage, class_name: 'Crm::PipelineStage'
 
-  enum status: { pending: 0, accepted: 1, dismissed: 2, auto_applied: 3, expired: 4 }
+  enum :status, { pending: 0, accepted: 1, dismissed: 2, auto_applied: 3, expired: 4 }
 
   validates :confidence, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
   validates :reasoning, length: { maximum: 500 }, allow_nil: true

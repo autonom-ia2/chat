@@ -24,6 +24,10 @@ Rails.application.routes.draw do
     get '/accept-invitation', to: 'dashboard#index'
     get '/login', to: redirect('/auth/autonomia?prompt=login')
     get '/app', to: 'dashboard#index'
+    # Shareable install link for the Captain tools catalog; the dashboard picks the account and assistant
+    get '/captain/toolsets/install', to: redirect(status: 302) { |_params, request|
+      "/app/captain/toolsets/install?#{request.params.slice(:source).to_query}"
+    }
     get '/app/*params', to: 'dashboard#index'
     get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
@@ -95,6 +99,20 @@ Rails.application.routes.draw do
         end
 
         scope module: :accounts do
+          if ChatwootApp.enterprise?
+            resources :monitors, only: [:index, :show, :create, :update, :destroy] do
+              collection do
+                post :preview
+                get 'preview/:token', action: :preview_status
+              end
+              member do
+                get :timeseries
+                get :conversations
+                post :retry_evaluations
+                post :resume
+              end
+            end
+          end
           namespace :actions do
             resource :contact_merge, only: [:create]
           end
@@ -123,6 +141,7 @@ Rails.application.routes.draw do
             resource :preferences, only: [:show, :update]
             resources :assistants do
               member do
+                delete :avatar
                 post :playground
                 get :metrics
                 get :faq_stats
@@ -130,6 +149,7 @@ Rails.application.routes.draw do
                 get :drilldown
               end
               resource :stats, only: [], controller: :assistant_stats do
+                get :drilldown
                 get :overview
                 get :overview_summary
                 get :resolution_flow
@@ -152,10 +172,29 @@ Rails.application.routes.draw do
             resources :message_reports, only: [:create]
             resources :bulk_actions, only: [:create]
             resources :copilot_threads, only: [:index, :create] do
+              post :stop, on: :member
               resources :copilot_messages, only: [:index, :create]
+            end
+            resources :copilot_runs, only: [] do
+              post :approve, on: :member
+              post :reject, on: :member
             end
             resources :custom_tools do
               post :test, on: :collection
+            end
+            resources :mcp_servers, only: [:index, :show, :create, :update, :destroy] do
+              post :discover, on: :collection
+              member do
+                get :live_tools
+                get :authorization_url
+                post :approve_tool
+              end
+            end
+            resource :tools_manifest, only: [] do
+              get :installed
+              post :preview
+              post :install
+              delete :uninstall
             end
             resources :documents, only: [:index, :show, :create, :destroy] do
               post :sync, on: :member
@@ -169,7 +208,9 @@ Rails.application.routes.draw do
               post :follow_up
             end
           end
-          resource :saml_settings, only: [:show, :create, :update, :destroy]
+          resource :saml_settings, only: [:show, :create, :update, :destroy] do
+            post :refresh
+          end
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
             delete :avatar, on: :member
             post :reset_access_token, on: :member
@@ -974,7 +1015,9 @@ Rails.application.routes.draw do
               post :filter
             end
             scope module: :conversations do
+              resources :campaign_history, only: [:index] if ChatwootApp.enterprise?
               resources :messages, only: [:index, :create, :destroy, :update] do
+                post :auto_translate, on: :collection if ChatwootApp.enterprise?
                 member do
                   post :translate
                   post :retry
@@ -982,7 +1025,7 @@ Rails.application.routes.draw do
                   patch :content, to: 'message_edits#update' # fork chat#1709: editar pela caixa WAHA
                 end
               end
-              resource :contact_info_request, only: [:create]
+              resource :contact_info_request, only: [:show, :create]
               resources :assignments, only: [:create]
               resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
@@ -994,6 +1037,10 @@ Rails.application.routes.draw do
               resource :comentario, only: [:show, :destroy], controller: 'comentario' do
                 post :responder
                 post :esconder
+              end
+              resource :suggestions, only: [] do
+                get :labels
+                get :priority
               end
             end
             member do
@@ -1043,8 +1090,13 @@ Rails.application.routes.draw do
                 collection { get :contacts }
                 member { get :preview }
               end
-              resources :conversations, only: [:index]
+              resources :conversations, only: [:index] do
+                collection do
+                  post :filter
+                end
+              end
               resources :notes, only: [:index]
+              resource :enrichment, only: [:create] if ChatwootApp.enterprise?
             end
           end
           resources :contacts, only: [:index, :show, :update, :create, :destroy] do
@@ -1078,6 +1130,12 @@ Rails.application.routes.draw do
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
+          resources :data_exports, only: [:index, :show, :create] do
+            member do
+              get :download
+              post :rerun
+            end
+          end
           resources :data_imports, only: [:index, :show, :create] do
             collection do
               post :validate_source
@@ -1088,6 +1146,7 @@ Rails.application.routes.draw do
               post :abandon
               get :error_logs
               get :skip_logs
+              get :rejected_rows
             end
           end
           resources :csat_survey_responses, only: [:index] do
@@ -1113,6 +1172,7 @@ Rails.application.routes.draw do
               member do
                 post :accept
                 post :reject
+                post :dismiss
                 post :terminate
                 post :upload_recording
               end
@@ -1282,11 +1342,16 @@ Rails.application.routes.draw do
             if ChatwootApp.enterprise?
               resource :conference, only: %i[create destroy], controller: 'conference' do
                 get :token, on: :member
+                post :dismiss, on: :member
+                patch :hold, on: :member
               end
               post :enable_whatsapp_calling, on: :member
               post :disable_whatsapp_calling, on: :member
               post :set_inbound_calls, on: :member
               post :set_call_recording, on: :member
+              resources :call_announcements, only: [:update], param: :kind, controller: 'inboxes/call_announcements'
+              resource :call_routing, only: [:update], controller: 'inboxes/call_routings'
+              resource :whatsapp_call_hours, only: [:show, :update], controller: 'inboxes/whatsapp_call_hours'
             end
 
             resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates' do
@@ -1400,6 +1465,7 @@ Rails.application.routes.draw do
             post 'testers/status', to: 'testers#status'
             post 'testers/invite', to: 'testers#invite'
             get 'testers/operations/:id', to: 'testers#operation'
+            # Fork (upgrade 4.20.1, #3120): upstream Unified Login connections (#16645) stay unrouted; the fork login (#2406) is live.
           end
 
           namespace :tiktok do
@@ -1421,6 +1487,10 @@ Rails.application.routes.draw do
 
           resources :webhooks, only: [:index, :create, :update, :destroy]
           namespace :integrations do
+            resource :stripe, controller: 'stripe', only: [:show, :destroy] do
+              post :auth
+              get :customer
+            end
             resources :apps, only: [:index, :show]
             resources :hooks, only: [:show, :create, :update, :destroy] do
               member do
@@ -1438,9 +1508,11 @@ Rails.application.routes.draw do
                 post :add_participant_to_meeting
               end
             end
+            resource :shopify_custom_app, controller: 'shopify_custom_apps', only: [:show, :create, :update, :destroy]
             resource :shopify, controller: 'shopify', only: [:destroy] do
               collection do
                 post :auth
+                post :complete_install
                 get :orders
               end
             end
@@ -1466,6 +1538,7 @@ Rails.application.routes.draw do
             member do
               patch :archive
               delete :logo
+              delete :remove_locale
               post :send_instructions
               get :ssl_status
             end
@@ -1482,6 +1555,7 @@ Rails.application.routes.draw do
             end
             resources :articles do
               post :reorder, on: :collection
+              get :preview_token, on: :member
             end
           end
 
@@ -1504,6 +1578,7 @@ Rails.application.routes.draw do
           post :availability
           post :ausencia
           post :auto_offline
+          post :work_preferences
           put :set_active_account
           post :resend_confirmation
           post :reset_access_token
@@ -1516,6 +1591,7 @@ Rails.application.routes.draw do
             post :backup_codes
           end
           resources :sessions, only: [:index, :destroy]
+          resource :trusted_devices, only: [:destroy]
         end
       end
 
@@ -1603,6 +1679,7 @@ Rails.application.routes.draw do
         namespace :v1 do
           resources :accounts do
             member do
+              post :reconnect_shopify, to: 'shopify#reconnect_shopify'
               get :billing_summary
               post :checkout
               post :subscription
@@ -1714,8 +1791,8 @@ Rails.application.routes.draw do
 
   # ----------------------------------------------------------------------
   # Used in mailer templates
-  resource :app, only: [:index] do
-    resources :accounts do
+  scope path: 'app', as: 'app' do
+    resources :accounts, only: [:show] do
       resources :conversations, only: [:show]
     end
   end
@@ -1723,8 +1800,10 @@ Rails.application.routes.draw do
   # ----------------------------------------------------------------------
   # Routes for channel integrations
   # #2200: o POST do webhook de Página passa pelo nosso controller (leadgen, feed, repasse); o GET de verificação fica na gem.
+  # Upgrade 4.20.1 (#3120): o mount passa ao servidor do upstream (#16576), que recusa sem FB_APP_SECRET; o POST continua
+  # no nosso controller, por isso esta rota vem antes do mount.
   post 'bot', to: 'webhooks/facebook_page#events'
-  mount Facebook::Messenger::Server, at: 'bot'
+  mount Integrations::Facebook::WebhookServer, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
   post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'
   # CRM 2-way calendar sync (S7-B) push receivers.
@@ -1739,6 +1818,8 @@ Rails.application.routes.draw do
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
   post 'webhooks/tiktok', to: 'webhooks/tiktok#events'
+  post 'webhooks/shopify/accounts/:account_id', to: 'webhooks/shopify#events'
+  post 'webhooks/stripe_app', to: 'webhooks/stripe_app#events'
   post 'webhooks/shopify', to: 'webhooks/shopify#events'
 
   # ----------------------------------------------------------------------
@@ -1754,11 +1835,15 @@ Rails.application.routes.draw do
     resource :callback, only: [:show]
   end
 
+  namespace :stripe do
+    resource :callback, only: [:show]
+  end
   namespace :linear do
     resource :callback, only: [:show]
   end
 
   namespace :shopify do
+    get 'accounts/:account_id/callback', to: 'custom_callbacks#show'
     resource :callback, only: [:show]
   end
 
@@ -1768,6 +1853,8 @@ Rails.application.routes.draw do
 
     if ChatwootApp.enterprise?
       post 'voice/call/:phone', to: 'voice#call_twiml', as: :voice_call
+      get 'voice/wait/:phone', to: 'voice#wait_twiml', as: :voice_wait
+      get 'voice/resume/:phone', to: 'voice#resume_twiml', as: :voice_resume
       post 'voice/status/:phone', to: 'voice#status', as: :voice_status
       post 'voice/conference_status/:phone', to: 'voice#conference_status', as: :voice_conference_status
       post 'voice/recording_status/:phone', to: 'voice#recording_status', as: :voice_recording_status
@@ -1782,6 +1869,7 @@ Rails.application.routes.draw do
   get 'instagram/data_deletion_status', to: 'instagram/data_deletions#status'
   get 'tiktok/callback', to: 'tiktok/callbacks#show'
   get 'notion/callback', to: 'notion/callbacks#show'
+  get 'captain/mcp/callback', to: 'captain/mcp_callbacks#show' if ChatwootApp.enterprise?
   # ----------------------------------------------------------------------
   # Routes for external service verifications
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
@@ -1825,7 +1913,8 @@ Rails.application.routes.draw do
   require 'sidekiq/web'
   require 'sidekiq/cron/web'
 
-  devise_for :super_admins, path: 'super_admin', controllers: { sessions: 'super_admin/devise/sessions' }
+  devise_for :super_admins, path: 'super_admin', controllers: { sessions: 'super_admin/devise/sessions' },
+                            skip: [:passwords, :registrations, :confirmations]
   devise_scope :super_admin do
     get 'super_admin/logout', to: 'super_admin/devise/sessions#destroy'
     namespace :super_admin do
@@ -1838,14 +1927,14 @@ Rails.application.routes.draw do
       end
       resource :app_config, only: [:show, :create]
       post 'app_config/test_typesafe', to: 'app_configs#test_typesafe', as: :test_typesafe_app_config
-      resource :push_diagnostics, only: [:show, :create] do
-        post :destroy_subscriptions, on: :collection
-      end
       # Medir para cobrar e para mostrar retorno (entrega 7): cotações e SEGURADORAS ACIONADAS por
       # corretora e por período. Leitura — nada aqui limita volume.
       resource :insurance_measurement, only: [:show]
       # E9 (#2902): o uso da carteira de seguros por conta e por mês, só contagens. Leitura.
       resource :carteira_medida, only: [:show]
+      resource :user_diagnostics, only: [:show, :create] do
+        post :destroy_subscriptions, on: :collection
+      end
 
       # order of resources affect the order of sidebar navigation in super admin
       resources :accounts, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
@@ -1863,6 +1952,11 @@ Rails.application.routes.draw do
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         delete :avatar, on: :member, action: :destroy_avatar
         post :resend_confirmation, on: :member
+        post :impersonate, on: :member
+        post :impersonation_link, on: :member
+        post :check_email_suppression, on: :member
+        post :clear_email_suppression, on: :member
+        post :send_test_email, on: :member
       end
 
       resources :access_tokens, only: [:index, :show]
@@ -1873,6 +1967,13 @@ Rails.application.routes.draw do
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update, :destroy]
       resources :platform_banners
       resource :instance_status, only: [:show]
+
+      resources :search, only: [] do
+        collection do
+          get :accounts
+          get :users
+        end
+      end
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

@@ -18,6 +18,7 @@ const route = useRoute();
 
 // State
 const mfaEnabled = ref(false);
+const mfaEnforced = ref(false);
 const backupCodesGenerated = ref(false);
 const showSetup = ref(false);
 const provisioningUri = ref('');
@@ -46,6 +47,7 @@ onMounted(async () => {
   try {
     const response = await mfaAPI.get();
     mfaEnabled.value = response.data.enabled;
+    mfaEnforced.value = response.data.enforced;
     backupCodesGenerated.value = response.data.backup_codes_generated;
   } catch (error) {
     // Handle error silently
@@ -75,6 +77,15 @@ const startMfaSetup = async () => {
   }
 };
 
+// Complete MFA setup
+const completeMfaSetup = () => {
+  mfaEnabled.value = true;
+  backupCodesGenerated.value = true;
+  showSetup.value = false;
+  emitter.emit(BUS_EVENTS.MFA_STATE_CHANGED);
+  useAlert(t('MFA_SETTINGS.SETUP.SUCCESS'));
+};
+
 // Verify OTP code
 const verifyCode = async verificationCode => {
   try {
@@ -90,15 +101,6 @@ const verifyCode = async verificationCode => {
     );
     throw error;
   }
-};
-
-// Complete MFA setup
-const completeMfaSetup = () => {
-  mfaEnabled.value = true;
-  backupCodesGenerated.value = true;
-  showSetup.value = false;
-  emitter.emit(BUS_EVENTS.MFA_STATE_CHANGED);
-  useAlert(t('MFA_SETTINGS.SETUP.SUCCESS'));
 };
 
 // Cancel setup
@@ -169,6 +171,7 @@ const regenerateBackupCodes = async ({ otpCode }) => {
       <MfaManagementActions
         ref="managementActionsRef"
         :mfa-enabled="mfaEnabled"
+        :mfa-enforced="mfaEnforced"
         :backup-codes="backupCodes"
         @disable-mfa="disableMfa"
         @regenerate-backup-codes="regenerateBackupCodes"

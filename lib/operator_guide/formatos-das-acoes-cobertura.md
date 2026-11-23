@@ -6,17 +6,17 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Ações |
 |---|---|
 | No catálogo | 764 |
-| Sem corpo | 214 |
-| Com corpo | 550 |
-| Com corpo e formato completo | 463 (84,2%) |
+| Sem corpo | 212 |
+| Com corpo | 552 |
+| Com corpo e formato completo | 465 (84,2%) |
 | Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 20 de 230 |
-| Leituras cruas tipadas | 229 de 322 |
+| Campos aninhados com vocabulário | 23 de 239 |
+| Leituras cruas tipadas | 235 de 328 |
 
 ## Incompletas por motivo
 
@@ -69,15 +69,15 @@ Uma ação pode ter mais de um motivo.
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
 - `POST captain/tasks/rewrite` — leitura crua sem tipo: content (repassada a Captain::RewriteService.new), operation (repassada a Captain::RewriteService.new)
-- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:47); leitura crua sem tipo: column_names
-- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:63); params inteiro repassado a ::Contacts::FilterService.new
+- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:55); leitura crua sem tipo: column_names
+- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:71); params inteiro repassado a ::Contacts::FilterService.new
 - `POST conversa_canal/ditados` — leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
 - `POST conversations/:conversation_id/messages` — params inteiro repassado a Messages::MessageBuilder.new
 - `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new; leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
-- `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
+- `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:54); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action

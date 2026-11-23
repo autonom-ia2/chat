@@ -1,4 +1,6 @@
 <script>
+import { escapeHtml } from 'shared/helpers/HTMLSanitizer';
+
 export default {
   props: {
     primaryContactName: {
@@ -8,6 +10,19 @@ export default {
     parentContactName: {
       type: String,
       default: '',
+    },
+  },
+  computed: {
+    deleteWarning() {
+      return this.$t('MERGE_CONTACTS.SUMMARY.DELETE_WARNING', {
+        primaryContactName: escapeHtml(this.primaryContactName || ''),
+      });
+    },
+    attributeWarning() {
+      return this.$t('MERGE_CONTACTS.SUMMARY.ATTRIBUTE_WARNING', {
+        primaryContactName: escapeHtml(this.primaryContactName || ''),
+        parentContactName: escapeHtml(this.parentContactName),
+      });
     },
   },
 };
@@ -24,25 +39,14 @@ export default {
     </h5>
     <ul class="ml-0 list-none">
       <li>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="inline-block mr-1">❌</span>
-        <span
-          v-dompurify-html="
-            $t('MERGE_CONTACTS.SUMMARY.DELETE_WARNING', {
-              primaryContactName,
-            })
-          "
-        />
+        <span v-dompurify-html="deleteWarning" />
       </li>
       <li>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="inline-block mr-1">✅</span>
-        <span
-          v-dompurify-html="
-            $t('MERGE_CONTACTS.SUMMARY.ATTRIBUTE_WARNING', {
-              primaryContactName,
-              parentContactName,
-            })
-          "
-        />
+        <span v-dompurify-html="attributeWarning" />
       </li>
     </ul>
   </div>

@@ -46,20 +46,6 @@
       "DELETE": "Excluir",
       "CANCEL": "Cancelar"
     },
-    "SUGGESTIONS": {
-      "TOOLTIP": {
-        "SINGLE_SUGGESTION": "Adicionar etiqueta à conversa",
-        "MULTIPLE_SUGGESTION": "Selecione esta etiqueta",
-        "DESELECT": "Desmarcar etiqueta",
-        "DISMISS": "Descartar sugestão"
-      },
-      "POWERED_BY": "Chatwoot AI",
-      "DISMISS": "Recusar",
-      "ADD_SELECTED_LABELS": "Adicionar etiquetas selecionadas",
-      "ADD_SELECTED_LABEL": "Adicionar etiqueta selecionada",
-      "ADD_ALL_LABELS": "Adicionar todas as etiquetas",
-      "SUGGESTED_LABELS": "Etiquetas sugeridos"
-    },
     "ADD": {
       "TITLE": "Adicionar etiqueta",
       "DESC": "Etiquetas permitem agrupar as conversas.",
@@ -94,6 +80,20 @@
       "TECHNICAL_EMPTY": "Use pelo menos 2 letras ou números no nome.",
       "TOO_LONG": "Use até {max} caracteres no nome.",
       "SAVE_ERROR": "A etiqueta foi salva, mas o nome não. Edite a etiqueta para tentar de novo."
+    },
+    "SUGGESTIONS": {
+      "TOOLTIP": {
+        "SINGLE_SUGGESTION": "Adicionar etiqueta à conversa",
+        "MULTIPLE_SUGGESTION": "Selecione esta etiqueta",
+        "DESELECT": "Desmarcar etiqueta",
+        "DISMISS": "Descartar sugestão"
+      },
+      "POWERED_BY": "Chatwoot AI",
+      "DISMISS": "Recusar",
+      "ADD_SELECTED_LABELS": "Adicionar etiquetas selecionadas",
+      "ADD_SELECTED_LABEL": "Adicionar etiqueta selecionada",
+      "ADD_ALL_LABELS": "Adicionar todas as etiquetas",
+      "SUGGESTED_LABELS": "Etiquetas sugeridos"
     }
   }
 }

@@ -218,11 +218,11 @@ describe('ItensDoTopo — "Etiquetas desta conversa"', () => {
 
 describe('MoreActions (⋯ do topo) com os itens do fork', () => {
   const montarMenu = estado => {
-    const apoio = criarStore({
-      eu: EU,
-      conversaSelecionada: CONVERSA,
-      ...estado,
-    });
+    // Upgrade 4.20.1 (#3120): o ⋯ passou a ler a tradução automática (desligada).
+    const apoio = criarStore(
+      { eu: EU, conversaSelecionada: CONVERSA, ...estado },
+      { getAutoTranslate: () => ({ enabled: false }) }
+    );
     const wrapper = mount(MoreActions, {
       attachTo: document.body,
       global: {

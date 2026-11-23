@@ -24,7 +24,7 @@
 class EmailEvent < ApplicationRecord
   belongs_to :recipient, class_name: 'EmailCampaignRecipient'
 
-  enum event_type: {
+  enum :event_type, {
     delivered: 0, open: 1, click: 2, bounce: 3, complaint: 4, unsubscribe: 5
   }
 

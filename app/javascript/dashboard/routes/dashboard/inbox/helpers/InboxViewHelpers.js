@@ -19,4 +19,5 @@ export const NOTIFICATION_TYPES_MAPPING = {
   CONVERSATION_AUDIENCE_READY: ['i-lucide-users-round', 'text-n-blue-11'],
   // #2898 — seguros entraram em renovação (carteira de seguros).
   CARTEIRA_RENOVACAO: ['i-lucide-shield-check', 'text-n-blue-11'],
+  VOICE_CALL_MISSED: ['i-lucide-phone-missed', 'text-n-ruby-11'],
 };

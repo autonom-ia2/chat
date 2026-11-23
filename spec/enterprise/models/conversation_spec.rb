@@ -5,6 +5,39 @@ RSpec.describe Conversation, type: :model do
     it { is_expected.to belong_to(:sla_policy).optional }
   end
 
+  describe 'Captain assignment' do
+    let(:account) { create(:account, limits: { 'captain_responses' => 10 }) }
+    let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
+    let(:assistant) { create(:captain_assistant, account: account) }
+
+    before do
+      create(:captain_inbox, inbox: inbox, captain_assistant: assistant)
+    end
+
+    it 'does not assign Captain when the feature is disabled' do
+      conversation = create(:conversation, account: account, inbox: inbox)
+
+      expect(conversation).to have_attributes(status: 'open', ai_assignee: nil)
+    end
+
+    context 'with a Captain assignee' do
+      let(:conversation) { create(:conversation, account: account, inbox: inbox, status: :pending, ai_assignee: assistant) }
+
+      before { account.enable_features!('captain_integration') }
+
+      # Fork (upgrade 4.20.1, #3120): upstream #16391 cleared Captain whenever the conversation turned open (on open,
+      # on snooze expiry, before legacy auto-assignment), and #16584 widened it to every AI assignee. The fork refuses
+      # both: only a human assignee clears the bot (#1377). Those examples were dropped; the fork behavior is locked in
+      # spec/models/conversation_robo_ao_reabrir_spec.rb.
+
+      it 'keeps Captain on unrelated updates while pending' do
+        conversation.update!(priority: :high)
+
+        expect(conversation.reload).to have_attributes(status: 'pending', ai_assignee: assistant)
+      end
+    end
+  end
+
   describe 'SLA policy updates' do
     let(:conversation) { create(:conversation) }
     let!(:sla_policy) { create(:sla_policy, account: conversation.account) }
@@ -180,6 +213,99 @@ RSpec.describe Conversation, type: :model do
         expect(conversation.reload.assignee).to be_present
         expect([agent1, agent2]).to include(conversation.reload.assignee)
       end
+    end
+  end
+
+  describe 'activity messages for auto-translate changes' do
+    let(:account) { create(:account) }
+    let(:agent) { create(:user, account: account, role: :agent) }
+    let(:conversation) { create(:conversation, account: account) }
+
+    before do
+      conversation
+      Current.user = agent
+    end
+
+    after { Current.reset }
+
+    it 'names the agent who turned auto-translate off' do
+      expect { conversation.update!(auto_translate_disabled: true) }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation, hash_including(content: "#{agent.name} turned off auto-translate for this conversation"))
+    end
+
+    it 'names the agent who turned auto-translate back on' do
+      conversation.update!(auto_translate_disabled: true)
+
+      expect { conversation.update!(auto_translate_disabled: false) }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation, hash_including(content: "#{agent.name} turned on auto-translate for this conversation"))
+    end
+
+    it 'does not post when the value goes from unset to on' do
+      expect { conversation.update!(auto_translate_disabled: false) }
+        .not_to have_enqueued_job(Conversations::ActivityMessageJob)
+    end
+
+    it 'does not post when another additional attribute changes' do
+      conversation.update!(auto_translate_disabled: true)
+
+      expect { conversation.update!(additional_attributes: conversation.additional_attributes.merge('conversation_language' => 'tr')) }
+        .not_to have_enqueued_job(Conversations::ActivityMessageJob)
+    end
+
+    it 'does not post when no agent made the change' do
+      Current.user = nil
+
+      expect { conversation.update!(auto_translate_disabled: true) }
+        .not_to have_enqueued_job(Conversations::ActivityMessageJob)
+    end
+  end
+
+  describe 'activity messages for changes made through Copilot' do
+    let(:account) { create(:account) }
+    let(:agent) { create(:user, account: account, role: :administrator) }
+    let(:conversation) { create(:conversation, account: account) }
+    let(:label) { create(:label, account: account) }
+    let(:thread) { create(:captain_copilot_thread, account: account, user: agent) }
+    let(:message) { create(:captain_copilot_message, account: account, copilot_thread: thread) }
+    let(:turn) { CopilotRun::Turn.create!(account: account, user: agent, copilot_thread: thread, copilot_message: message) }
+    let(:tool_call) { turn.tool_calls.create!(call_id: 'act-1', name: 'act') }
+    let(:card) { thread.copilot_messages.create!(message_type: :assistant_approval, message: { approval: { status: 'approved', count: 1 } }) }
+    let(:run) do
+      CopilotRun::Action.create!(account: account, user: agent, copilot_thread: thread, copilot_tool_call: tool_call, status: :queued,
+                                 context: { action: 'add_labels', arguments: { labels: [label.title] }, target_ids: [conversation.id],
+                                            approval_message_id: card.id })
+    end
+
+    before { account.enable_features!('copilot_workflows') }
+
+    after { Current.reset }
+
+    it 'names the agent and says the label came through Copilot' do
+      run
+
+      expect { Captain::Copilot::ActionJob.perform_now(run.id) }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation, hash_including(content: "#{agent.name} added #{label.title} via Copilot"))
+      expect(conversation.reload.label_list).to contain_exactly(label.title)
+    end
+
+    it 'keeps the usual wording when the agent adds the label by hand' do
+      Current.user = agent
+
+      expect { conversation.add_labels([label.title]) }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation, hash_including(content: "#{agent.name} added #{label.title}"))
+    end
+
+    it 'still writes a status change made through Copilot' do
+      Current.user = agent
+      Current.executed_by = run
+
+      expect { conversation.resolved! }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation, hash_including(content: "Conversation was marked resolved by #{agent.name} via Copilot"))
     end
   end
 end

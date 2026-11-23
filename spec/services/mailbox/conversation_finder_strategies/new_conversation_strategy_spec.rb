@@ -81,6 +81,26 @@ RSpec.describe Mailbox::ConversationFinderStrategies::NewConversationStrategy do
         end
       end
 
+      context 'when a conversation already replied to the same message' do
+        let(:sender) { create(:contact, email: 'sender@example.com', account: account) }
+        let!(:existing_conversation) do
+          create(:conversation, account: account, inbox: email_channel.inbox, contact: sender,
+                                additional_attributes: { in_reply_to: '<previous-message@example.com>' })
+        end
+
+        before do
+          create(:contact_inbox, contact: sender, inbox: email_channel.inbox)
+          mail['In-Reply-To'] = '<previous-message@example.com>'
+        end
+
+        it 'reuses the conversation when it belongs to the sender' do
+          expect(described_class.new(mail).find).to eq(existing_conversation)
+        end
+
+        # Fork (upgrade 4.19.1, #3119): the `in_reply_to` lookup stays account-wide (inventory #17/#18),
+        # so the upstream example that splits replies by sender was removed.
+      end
+
       context 'when mail is auto reply' do
         before do
           mail['X-Autoreply'] = 'yes'

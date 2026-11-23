@@ -40,7 +40,7 @@ class Crm::Pipeline < ApplicationRecord
   has_many :inboxes, through: :pipeline_inboxes
   has_many :cards, class_name: 'Crm::Card', dependent: :restrict_with_error
 
-  enum status: { active: 0, archived: 1 }
+  enum :status, { active: 0, archived: 1 }
 
   before_validation :initialize_followup_days, on: :create
   before_save :turn_off_conversion_sync, unless: :counts_as_sale?
