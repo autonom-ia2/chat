@@ -829,6 +829,9 @@ Rails.application.routes.draw do
                 # G13 (#2670): o segredo da assinatura do passo "webhook", só para o administrador.
                 get :segredo_do_webhook, to: 'automacoes_webhook#segredo'
                 post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
+                # #3099: as duas versões da mensagem (o resultado de cada passo e a versão que fica).
+                get :duas_versoes, to: 'automacoes_duas_versoes#duas_versoes'
+                post 'duas_versoes/vencedora', to: 'automacoes_duas_versoes#escolher_versao', as: :escolher_versao
               end
             end
             # #2931 — os pedidos do passo "Pedir aprovação", do lado de quem aprova.

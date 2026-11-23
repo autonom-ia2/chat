@@ -21,6 +21,8 @@ const props = defineProps({
   modelValue: { type: Object, default: null },
   catalogo: { type: Object, required: true },
   atributosDo: { type: Function, required: true },
+  // #3099 — a versão 2 do teste de duas versões: sem a dica da janela e o aviso de custo, que já aparecem na versão 1.
+  semAjuda: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -88,7 +90,9 @@ const mudarVariavel = (indice, partes) => {
       <label :for="idModelo" class="text-sm font-medium text-n-slate-12">
         {{ rotulo }}
       </label>
-      <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${M}.DICA`) }}</p>
+      <p v-if="!semAjuda" class="mb-0 text-sm text-n-slate-11">
+        {{ $t(`${M}.DICA`) }}
+      </p>
       <ChoiceSelect
         data-escolher-modelo
         :model-value="escolhido ? chaveDoModelo(escolhido) : NENHUM"
@@ -117,7 +121,7 @@ const mudarVariavel = (indice, partes) => {
 
     <template v-if="escolhido">
       <p
-        v-if="ehPropaganda(escolhido)"
+        v-if="ehPropaganda(escolhido) && !semAjuda"
         data-modelo-custo
         class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-alpha-1 text-n-slate-11"
       >
@@ -152,6 +156,7 @@ const mudarVariavel = (indice, partes) => {
         :model-value="modelValue.variaveis?.[indice] || []"
         :catalogo="catalogo"
         :atributos-do="atributosDo"
+        :sem-ajuda="semAjuda"
         @update:model-value="partes => mudarVariavel(indice, partes)"
       />
     </template>

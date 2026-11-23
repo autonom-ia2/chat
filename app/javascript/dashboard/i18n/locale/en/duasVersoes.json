@@ -133,7 +133,11 @@
         "CONFIRMAR_SIM": "Yes, keep it",
         "SEM_PERMISSAO": "People who can change automations choose the version.",
         "ESCOLHER_ARIA": "Keep version {n}",
-        "SEM_PERMISSAO_TESTANDO": "People who can change automations can choose before the set time."
+        "SEM_PERMISSAO_TESTANDO": "People who can change automations can choose before the set time.",
+        "RECEBEU": "Got version {n} of the message",
+        "PASSO": "In the step: {frase}",
+        "JA_ESCOLHIDA": "A version was already chosen for this step. See which one below.",
+        "ERRO_ESCOLHER": "Couldn't keep the version right now. Try again."
       },
       "RECEBERAM_NO_TESTE": "Received in the test",
       "ESCOLHER_ARIA": "Send version {n} to the other {resto} people",

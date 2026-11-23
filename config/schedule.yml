@@ -346,6 +346,12 @@ autonomia_automacao_tempo_job:
   class: 'Autonomia::Automacao::TempoJob'
   queue: scheduled_jobs
 
+# executed every 15 minutes; escolhe a versão que fica nos passos com duas versões da mensagem da Automação livre (#3099).
+autonomia_automacao_escolher_vencedora_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Automacao::EscolherVencedoraJob'
+  queue: scheduled_jobs
+
 # executed every hour; a renovação da carteira de seguros (#2898, E5): um job por conta que já escolheu onde ficam as
 # renovações cria o card de cada seguro que entra em renovação hoje. De hora em hora porque o dia vira no fuso de cada
 # conta; quem já tem card não entra de novo.

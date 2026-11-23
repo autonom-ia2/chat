@@ -133,7 +133,11 @@
         "CONFIRMAR_SIM": "Sim, ficar com ela",
         "SEM_PERMISSAO": "Quem pode mudar automações escolhe a versão.",
         "ESCOLHER_ARIA": "Ficar com a versão {n}",
-        "SEM_PERMISSAO_TESTANDO": "Quem pode mudar automações pode escolher antes da hora."
+        "SEM_PERMISSAO_TESTANDO": "Quem pode mudar automações pode escolher antes da hora.",
+        "RECEBEU": "Recebeu a versão {n} da mensagem",
+        "PASSO": "No passo: {frase}",
+        "JA_ESCOLHIDA": "Uma versão já foi escolhida para este passo. Veja qual logo abaixo.",
+        "ERRO_ESCOLHER": "Não deu para ficar com a versão agora. Tente de novo."
       },
       "RECEBERAM_NO_TESTE": "Receberam no teste",
       "ESCOLHER_ARIA": "Mandar a versão {n} para as outras {resto} pessoas",

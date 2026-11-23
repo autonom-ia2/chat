@@ -666,6 +666,8 @@ onMounted(() => {
                 :automacao-id="automacao.id"
                 :catalogo="catalogoComTextos"
                 :account-id="Number(route.params.accountId)"
+                :receita-ativa="automacao.versao?.receita || null"
+                :pode-mudar="podeMudar"
               />
             </div>
             <aside class="flex flex-col gap-3 lg:sticky lg:top-6">

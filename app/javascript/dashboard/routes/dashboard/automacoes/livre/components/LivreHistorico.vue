@@ -11,6 +11,7 @@ import { RAMOS_QUE_SALVAM, chaveDoNome } from '../passosNovos/passosNovos';
 import { abaixoDoMinimo, dolares } from '../custoDaIa';
 import { detalheDoHistorico } from '../passosNovos/frasesDosNovos';
 import ComprasDaAutomacao from './ComprasDaAutomacao.vue';
+import LivreDuasVersoesResultado from './LivreDuasVersoesResultado.vue';
 
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
@@ -21,6 +22,10 @@ const props = defineProps({
   automacaoId: { type: Number, required: true },
   catalogo: { type: Object, required: true },
   accountId: { type: Number, required: true },
+  // #3099: a receita da versão ativa, para o resultado das duas versões da
+  // mensagem, e a chave de mudar automações, para escolher a versão que fica.
+  receitaAtiva: { type: Object, default: null },
+  podeMudar: { type: Boolean, default: false },
 });
 
 const { t, locale } = useI18n();
@@ -265,6 +270,14 @@ onMounted(() => carregar());
       :resumo="compras"
     />
 
+    <LivreDuasVersoesResultado
+      v-if="receitaAtiva"
+      :automacao-id="automacaoId"
+      :receita="receitaAtiva"
+      :catalogo="catalogo"
+      :pode-escolher="podeMudar"
+    />
+
     <div
       v-if="estado === 'carregando'"
       data-carregando
@@ -386,6 +399,17 @@ onMounted(() => carregar());
                     class="text-sm text-n-slate-11"
                   >
                     {{ linha }}
+                  </span>
+                  <span
+                    v-if="passo.dados.versao"
+                    data-versao
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('DUAS_VERSOES.RESULTADO.AUTOMACAO.RECEBEU', {
+                        n: passo.dados.versao,
+                      })
+                    }}
                   </span>
                   <span
                     v-if="passo.dados.sem_prazo"

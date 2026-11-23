@@ -28,6 +28,8 @@ const props = defineProps({
   rotuloDoDado: { type: String, default: '' },
   // #2414 G16 — o campo de uma linha de uma ação (nome, descrição).
   curto: { type: Boolean, default: false },
+  // #3099 — a versão 2 do teste de duas versões: a ajuda já aparece na versão 1, logo acima.
+  semAjuda: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -112,7 +114,7 @@ const porDado = caminho => {
       show-character-count
       @blur="lembrarCursor"
     />
-    <p class="-mt-1 mb-0 text-sm text-n-slate-11">
+    <p v-if="!semAjuda" class="-mt-1 mb-0 text-sm text-n-slate-11">
       {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TEXTO_DICA') }}
     </p>
     <p

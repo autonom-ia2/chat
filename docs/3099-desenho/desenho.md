@@ -411,3 +411,43 @@ As telas da onda 1 passaram a falar com o servidor da Etapa 1. Toque mínimo no 
   o menor) e leva ao resultado de cada campanha; mostra até quando dá para escolher antes de a versão 1 ir sozinha.
 - **Guia:** blocos `testar_duas_versoes_na_campanha` e `escolher_a_versao_que_vai_para_o_resto`; os blocos da lista de
   Campanhas e de "Quem comprou depois" ganharam a ligação.
+
+---
+
+## 12. A Automação livre (Etapa 3)
+
+As tabelas já vinham da migration `20261123210000`. Esta etapa liga o passo **Mandar mensagem** às duas versões:
+
+- **Receita:** o passo `mensagem` aceita `versoes: { texto, modelo, criterio, divisao, espera }` (definição `duas_versoes` em
+  `lib/operator_guide/automacao-receita.schema.json`). `modelo` é `null` quando o passo não usa modelo. O catálogo do editor
+  ganhou o campo `versoes` com a peça `duas_versoes` (`Catalogo::PECAS_DO_ESQUEMA`, `automacao-passos.json`), que o
+  `LivreAlterar` mostra com o `LivreDuasVersoes`.
+- **Ao salvar** (`Receita::Mensagens`): o texto e as variáveis do modelo da versão 2 passam pela régua de sempre; o modelo
+  da versão 2 precisa estar pronto na conta. Regras próprias (`DuasVersoes.problemas_ao_salvar`): com modelo na versão 1, a
+  versão 2 precisa do dela; modelo só na versão 2 é recusado; versão 2 igual à 1 é recusada; "mais compras" pede o CRM. A
+  tela segura o Salvar antes (`versoesDoPasso.js`: versão 2 pronta e diferente; tirado o modelo da 1, o da 2 sai junto) e o
+  Ligar diz o que falta (`COMPLETAR.VERSAO_2`).
+- **Executor:** `Executor#passo_nativo` troca a classe do passo com duas versões por `DuasVersoes::Envio`. Ele escolhe a
+  versão (a vencedora, se houver; senão o sorteio fixo pelo hash `automacao:passo:alvo`, com a divisão da regra) e manda pelo
+  `PassoDeMensagem` de sempre. Só o envio que saiu grava a linha em `autonomia_automacao_versoes_envios` e põe `versao` no
+  registro do passo (o Histórico diz "Recebeu a versão 2 da mensagem").
+- **Zerar o teste:** `Definicao#salvar_versao!` chama `DuasVersoes.versao_salva!`. Passo que ganhou as duas versões, ou cujo
+  texto ou modelo mudou em uma delas, grava `teste_desde = agora` e perde a vencedora. Mudar só a regra não zera.
+- **Números** (`DuasVersoes::Numeros`, desde `teste_desde`): receberam = envios; responderam = o contato escreveu em até
+  72 h depois do envio (qualquer conversa da conta); compraram = a régua do histórico (7 dias, `ComprasNaJanela`), só com o
+  CRM. O teste fecha quando a versão mais atrasada chega a 100 envios; a hora de escolher é o fechamento + a espera.
+- **Escolha:** `Autonomia::Automacao::EscolherVencedoraJob` (cron a cada 15 min) usa a régua da campanha
+  (`CampaignJourney::DuasVersoes::Vencedora`): empate ou poucas respostas, a versão 1 (`empate`). No "eu escolho" o cron não
+  escolhe: o cartão fica em `esperando_voce` e, até alguém escolher, cada pessoa continua recebendo uma das duas (nada fica
+  parado, então o D5 dos 3 dias, que é da campanha, não se aplica aqui).
+- **Endpoints** (`AutomacoesDuasVersoesController`): `GET automacoes/:id/duas_versoes` (`automation_view`) devolve o bloco
+  de cada passo com duas versões da versão ativa; `POST automacoes/:id/duas_versoes/vencedora` `{ passo, versao }`
+  (`automation_manage`) grava a versão que fica, uma vez só (a mesma de novo = 200; outra = 422). O id do passo vai no
+  corpo porque o da receita é texto livre.
+- **Histórico:** `LivreDuasVersoesResultado` (abaixo de Compras depois da automação) junta os números do servidor com o
+  texto de cada versão, lido da receita ativa, e mostra o `ResultDuasVersoes` no jeito da automação. "Ficar com esta" pede a
+  chave de mudar automações.
+- **Guia:** bloco `testar_duas_versoes_na_automacao` (rota `automacoes_livre_editar`).
+
+Fica de fora: o Ensaiar mostra só a versão 1; uma execução que entrou numa versão antiga da automação e manda depois de o
+texto mudar conta no teste novo (com o texto antigo).

@@ -8,6 +8,7 @@ import {
   temMotor,
   passoNovoPronto,
 } from './passosNovos/passosNovos';
+import { segundaVersaoPronta } from './versoesDoPasso';
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
@@ -179,6 +180,9 @@ export const motivoIncompleto = passo => {
   if (passo.tipo === 'se')
     return !passo.condicao || !passo.entao?.length ? 'SE' : null;
   if (passo.tipo === 'esperar_ate') return passo.condicao ? null : 'ESPERAR';
+  // #3099: com duas versões, a versão 2 pronta e diferente da 1.
+  if (passo.tipo === 'mensagem')
+    return segundaVersaoPronta(passo) ? null : 'VERSAO_2';
   return null;
 };
 
