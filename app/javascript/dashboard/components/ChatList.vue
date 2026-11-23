@@ -23,6 +23,7 @@ import {
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 import { cancelarReleituraDoFiltroDoLink } from 'dashboard/store/modules/conversations/actions';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
 // #3147: "Ver todas" do detalhamento do relatório abre a lista com o filtro avançado no endereço (upstream #15832).
@@ -155,6 +156,11 @@ const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const currentAccountId = useMapGetter('getCurrentAccountId');
+const getAccount = useMapGetter('accounts/getAccount');
+// #3151: filtro de data da pasta no fuso da conta, como no servidor.
+const fusoDosFiltros = computed(() =>
+  fusoDaConta(getAccount.value(currentAccountId.value))
+);
 
 // Filtro "Funil" (multifunil #1150): id do funil, "none" (Sem assunto) ou vazio (todos os meus). Lembrado por conta e
 // pessoa; vale para todas as listas de conversa.
@@ -554,7 +560,7 @@ const conversationList = computed(() => {
   if (activeFolder.value) {
     const { payload } = activeFolder.value.query;
     localConversationList = localConversationList.filter(conversation => {
-      return matchesFilters(conversation, payload);
+      return matchesFilters(conversation, payload, fusoDosFiltros.value);
     });
   }
 
