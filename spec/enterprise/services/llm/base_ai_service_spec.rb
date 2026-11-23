@@ -5,6 +5,22 @@ RSpec.describe Llm::BaseAiService do
 
   let(:account) { create(:account) }
 
+  # Llm::Config.initialize! vale para o processo inteiro: se outro spec do mesmo lote configurou o RubyLLM antes, sem
+  # chave, o initialize! daqui não roda e o chat sobe sem chave (o resultado dependia da ordem dos arquivos no lote).
+  # Cada exemplo configura do zero e devolve a configuração como estava.
+  around do |example|
+    original_key = RubyLLM.config.openai_api_key
+    original_base = RubyLLM.config.openai_api_base
+    Llm::Config.reset!
+    example.run
+  ensure
+    RubyLLM.configure do |config|
+      config.openai_api_key = original_key
+      config.openai_api_base = original_base
+    end
+    Llm::Config.reset!
+  end
+
   before do
     InstallationConfig.where(name: %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL]).destroy_all
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')

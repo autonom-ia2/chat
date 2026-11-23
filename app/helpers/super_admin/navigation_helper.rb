@@ -110,7 +110,7 @@ module SuperAdmin::NavigationHelper
 
   def nav_resources
     Administrate::Namespace.new(namespace).resources_with_index_route.reject do |resource|
-      HIDDEN_RESOURCES.include?(resource) || (resource == 'platform_banners' && !ChatwootApp.chatwoot_cloud?)
+      HIDDEN_RESOURCES.include?(resource)
     end
   end
 
