@@ -129,9 +129,10 @@ class DashboardController < ActionController::Base
     PlatformBanner.active.not_feature_announcement.order(created_at: :desc).as_json(only: %i[id banner_message banner_type updated_at])
   end
 
+  # Fork (#3148): os anúncios de novidade valem também no nosso self-hosted. O super admin cadastra no Super Admin
+  # (Platform Banners, tipo feature_announcement) e todos os usuários das contas da instalação veem no painel. Os avisos
+  # comuns (active_platform_banners) seguem só na nuvem do Chatwoot.
   def active_feature_announcements
-    return [] unless ChatwootApp.chatwoot_cloud?
-
     PlatformBanner.active.feature_announcement.order(created_at: :desc).as_json(only: %i[id title banner_message video_url updated_at])
   end
 

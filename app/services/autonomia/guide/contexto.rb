@@ -13,7 +13,8 @@
 # cada passo anotado para desfazer, e — só para o que não tem volta — a
 # PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro, :turno_id, :tarefa
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro, :turno_id, :tarefa,
+              :pedido_id
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
@@ -22,10 +23,12 @@ class Autonomia::Guide::Contexto
 
   # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
   # `turno_id` (#933): o turno onde uma anotação nasce, para o painel dizer de que conversa ela veio.
-  def initialize(account:, user:, account_user: nil, registro: nil, turno_id: nil)
+  # `pedido_id`: o pedido no Redis. Nulo na bateria e nas specs: aí nenhuma mensagem nova chega e nenhuma etapa é anotada.
+  def initialize(account:, user:, account_user: nil, registro: nil, turno_id: nil, pedido_id: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
     @registro = registro
     @turno_id = turno_id
+    @pedido_id = pedido_id
     @user = user
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
     @telas = []
@@ -34,8 +37,19 @@ class Autonomia::Guide::Contexto
   end
 
   # O `Answerer` avisa cada ferramenta chamada no turno; vai para o registro do pedido (#861).
+  # Também anota no pedido o que ele acabou de fazer, para a tela mostrar enquanto espera.
   def registrar_chamada(call, output, milissegundos)
     @registro&.registrar_chamada(call, output, milissegundos)
+    ::Autonomia::Guide::Pedido.anotar_etapa(@pedido_id, call.to_h['name'])
+  end
+
+  # O que a pessoa escreveu enquanto este turno trabalhava (`Pedido.acrescentar`). O `Answerer` pergunta a cada rodada
+  # de ferramentas e entrega ao modelo como fala dela; quem decide se para, muda o caminho ou segue é o modelo. O fim
+  # do turno (`ChatJob#encerrar`) decide o destino de cada mensagem lida. -> [String], na ordem em que ela escreveu.
+  def mensagens_novas
+    return [] if @pedido_id.blank?
+
+    ::Autonomia::Guide::Pedido.ler_juntas(@pedido_id).map { |junta| junta['texto'].to_s }
   end
 
   def administrador?
