@@ -219,7 +219,11 @@
     },
     "ARQUIVOS": {
       "TITULO": "Files",
-      "VAZIO": "Nothing has been shared in the conversations yet.",
+      "VAZIO": "No files in the conversations yet.",
+      "ABRIR": "Open {nome} ({tipo}, {quando}) in a new tab",
+      "TOCAR": "Play {nome} ({tipo}, {quando}) here",
+      "VER_MAIS": "See {n} more file | See {n} more files",
+      "MOSTRAR_MENOS": "Show fewer",
       "TIPO": {
         "imagem": "Image",
         "documento": "Document",

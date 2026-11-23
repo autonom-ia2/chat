@@ -9,7 +9,10 @@ class ConversaCanal::PreviaDoPdfDaPele < ActiveStorage::Previewer::PopplerPDFPre
     super && ConversaCanal::Pele.ligada?(conta_do(blob))
   end
 
+  # Lista que já carregou os anexos do blob (a ficha da pessoa, #3113) acha em memória, sem uma consulta por PDF.
   def self.conta_do(blob)
-    blob.attachments.find_by(record_type: 'Attachment')&.record&.account
+    anexos = blob.attachments
+    dono = anexos.loaded? ? anexos.find { |anexo| anexo.record_type == 'Attachment' } : anexos.find_by(record_type: 'Attachment')
+    dono&.record&.account
   end
 end
