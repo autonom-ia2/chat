@@ -219,7 +219,11 @@
     },
     "ARQUIVOS": {
       "TITULO": "Arquivos",
-      "VAZIO": "Nada foi trocado nas conversas ainda.",
+      "VAZIO": "Nenhum arquivo nas conversas ainda.",
+      "ABRIR": "Abrir {nome} ({tipo}, {quando}) numa aba nova",
+      "TOCAR": "Tocar {nome} ({tipo}, {quando}) aqui",
+      "VER_MAIS": "Ver mais {n} arquivo | Ver mais {n} arquivos",
+      "MOSTRAR_MENOS": "Mostrar menos",
       "TIPO": {
         "imagem": "Imagem",
         "documento": "Documento",
