@@ -124,6 +124,8 @@ module Autonomia
         navs = navegacoes(result)
         return retido(execucao, acao: acao, navs: navs) if text.blank?
 
+        # #3158 — a conferência de números só registra; a resposta não muda.
+        contexto.conferir_numeros(text, sanitized_history.pluck(:content) + [@message])
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
                    artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
                    tarefa: contexto.tarefa, graficos: contexto.graficos.presence,

@@ -42,7 +42,21 @@ class Autonomia::Guide::Contexto
   # Também anota no pedido o que ele acabou de fazer, para a tela mostrar enquanto espera.
   def registrar_chamada(call, output, milissegundos)
     @registro&.registrar_chamada(call, output, milissegundos)
+    saidas << output.to_s
     ::Autonomia::Guide::Pedido.anotar_etapa(@pedido_id, call.to_h['name'])
+  end
+
+  # #3158 — o que as ferramentas devolveram neste turno: é contra isso que a conferência de números
+  # (`NumerosSemFonte`) olha a resposta.
+  def saidas
+    @saidas ||= []
+  end
+
+  # #3158 — os números da resposta que nenhuma ferramenta sustenta vão para o diagnóstico; a resposta não muda.
+  # `conversa` (o histórico e a pergunta) também vale como conhecida: a resposta pode repetir um número de antes.
+  def conferir_numeros(texto, conversa)
+    ::Autonomia::Guide::NumerosSemFonte.registrar(texto: texto, conhecidos: saidas + Array(conversa), registro: @registro,
+                                                  account_id: @account&.id)
   end
 
   # #3158 — os gráficos deste turno, na ordem em que a ferramenta os montou. Cada um ganha o id do marcador

@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Os gráficos da `relatorio_de_atendimento` (#3158, B8a) chegam à tela pelo `Chat::Result` e voltam ao reabrir
-# a conversa pelo `Turno`.
+# a conversa pelo `Turno`. E a conferência de números registra no diagnóstico o número que nenhuma ferramenta
+# sustenta, sem mudar a resposta.
 RSpec.describe Autonomia::Guide::Chat do
   let(:conta_e_admin) { create_account_and_user }
   let(:conta) { conta_e_admin.first }
@@ -66,6 +67,27 @@ RSpec.describe Autonomia::Guide::Chat do
       Autonomia::Guide::Turno.concluir(turno.pedido_id, { text: 'Oi.', available: true }, {})
 
       expect(turno.reload.para_tela['graficos']).to be_nil
+    end
+  end
+
+  describe 'conferência de números' do
+    let(:registro) { Autonomia::Guide::Registro.new }
+    let(:saida) { { relatorio: 'ranking', linhas: [{ nome: 'Ana Souza', id: 3, valor: 128 }, { nome: 'Bruno', id: 4, valor: 97 }] }.to_json }
+
+    it 'registra no diagnóstico o número que nenhuma ferramenta sustenta, e no log a quantidade', :aggregate_failures do
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      resultado = responder('A Ana resolveu 128 e o Bruno 97, juntos 225. A equipe resolveu 412.', saida: saida, registro: registro)
+
+      expect(resultado.text).to eq('A Ana resolveu 128 e o Bruno 97, juntos 225. A equipe resolveu 412.')
+      expect(registro.diagnostico['numeros_sem_fonte']).to eq(['412'])
+      expect(Rails.logger).to have_received(:info).with(include('[autonomia][guide][numeros]', 'sem_fonte=1'))
+    end
+
+    it 'não registra nada quando todo número sai das ferramentas' do
+      responder('A Ana resolveu 128 de 225, 56,9% delas.', saida: saida, registro: registro)
+
+      expect(registro.diagnostico).not_to have_key('numeros_sem_fonte')
     end
   end
 end

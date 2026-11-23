@@ -74,6 +74,12 @@ class Autonomia::Guide::Registro
     }
   end
 
+  # #3158 — os números da resposta que nenhuma ferramenta do turno sustenta (`NumerosSemFonte`). Só os números:
+  # a frase está na resposta do turno.
+  def numeros_sem_fonte(numeros)
+    @numeros_sem_fonte = Array(numeros).map(&:to_s).presence
+  end
+
   # #934 — o que a pessoa estava vendo: rota, recurso, ids que ela enxerga e total. Sem resumo nem filtro.
   def ver_tela(tela)
     @tela = tela.presence
@@ -85,7 +91,8 @@ class Autonomia::Guide::Registro
     ultimo = @custos.last || {}
     { 'modelo' => ultimo[:model], 'effort' => ultimo[:effort], 'rodadas' => @custos.size, 'ms' => @ms,
       'custo_usd' => @custos.sum { |item| item[:cost].to_f }.round(6), 'tokens' => tokens,
-      'chamadas' => @chamadas, **@decisoes, **({ 'tela' => @tela } if @tela).to_h, 'erro' => erro }
+      'chamadas' => @chamadas, **@decisoes, **({ 'tela' => @tela } if @tela).to_h,
+      **({ 'numeros_sem_fonte' => @numeros_sem_fonte } if @numeros_sem_fonte).to_h, 'erro' => erro }
   end
 
   private
