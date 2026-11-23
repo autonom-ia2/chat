@@ -347,7 +347,7 @@ precisa sair junto para comparar.
 Todas as recomendações da §8 foram aceitas: **D1 (a)**, **D2 (a)**, **D3 (a)**, **D4 (a)** e **D5**: no "eu escolho"
 sem escolha, aviso na lista de Campanhas e, depois de 3 dias, a versão 1 vai sozinha para o resto.
 
-O que o servidor da campanha faz (migration `20261123210000`, uma para a fase inteira, já com as duas tabelas da
+O que o servidor da campanha faz (migration `20261123210137`, uma para a fase inteira, já com as duas tabelas da
 automação):
 
 - **Regra e estado** em `campaign_audience_links` (`teste_*`, `segunda_versao`). Além da §5.1, `teste_resto` guarda
@@ -416,7 +416,7 @@ As telas da onda 1 passaram a falar com o servidor da Etapa 1. Toque mínimo no 
 
 ## 12. A Automação livre (Etapa 3)
 
-As tabelas já vinham da migration `20261123210000`. Esta etapa liga o passo **Mandar mensagem** às duas versões:
+As tabelas já vinham da migration `20261123210137`. Esta etapa liga o passo **Mandar mensagem** às duas versões:
 
 - **Receita:** o passo `mensagem` aceita `versoes: { texto, modelo, criterio, divisao, espera }` (definição `duas_versoes` em
   `lib/operator_guide/automacao-receita.schema.json`). `modelo` é `null` quando o passo não usa modelo. O catálogo do editor
