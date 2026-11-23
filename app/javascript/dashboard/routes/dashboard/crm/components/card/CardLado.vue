@@ -6,6 +6,7 @@ import FunilQuadro from '../funil/FunilQuadro.vue';
 import CardFicha from './previas/CardFicha.vue';
 import PreviaNegocio from './previas/PreviaNegocio.vue';
 import PreviaRetorno from './previas/PreviaRetorno.vue';
+import VisorDaConversa from './conversa/VisorDaConversa.vue';
 
 // #1423 — a coluna da direita. Nas telas que mudam algo, a prévia do que vai
 // mudar ("Prévia"), tirada do mesmo estado do formulário. Nas outras, só
@@ -13,6 +14,7 @@ import PreviaRetorno from './previas/PreviaRetorno.vue';
 // está no funil" é o mesmo quadro das telas de funil (FunilQuadro, #1414):
 // colunas sempre, rolagem para o lado com setas e "mais N etapas", e a coluna
 // do cliente acesa, com o cartão dele dentro, rolada até o meio.
+// #3165 — na seção Conversas, a conversa escolhida inteira, no visual do canal.
 const props = defineProps({
   tela: { type: String, required: true },
   card: { type: Object, default: null },
@@ -27,6 +29,8 @@ const props = defineProps({
   // Quem cuida escolhido na tela "Quem cuida" (prévia da troca).
   dono: { type: String, default: '' },
   reuniao: { type: Object, default: null },
+  // #3165: a conversa lida ao lado (só na seção Conversas, com conversa).
+  conversa: { type: Object, default: null },
   // Tocar numa coluna do quadro move o cliente (com confirmação na gaveta).
   podeMover: { type: Boolean, default: false },
   // Criação: o funil (funilId), as etapas e a etapa (etapaId) escolhidos no
@@ -143,7 +147,13 @@ const colunaDaCriacao = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 lg:sticky lg:top-7">
+  <VisorDaConversa
+    v-if="em('conversas') && conversa"
+    :key="conversa.display_id"
+    class="h-[70dvh] lg:h-full"
+    :conversa="conversa"
+  />
+  <div v-else class="flex flex-col gap-4 lg:sticky lg:top-7">
     <CardMolduraLado
       v-if="em('negocio')"
       selo="previa"

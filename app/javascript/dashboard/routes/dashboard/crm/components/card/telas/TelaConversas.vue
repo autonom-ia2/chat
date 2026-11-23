@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // #1423 — as conversas do card (CV-01): "Em resumo" no topo (IA-02) e, para
 // cada uma, número, caixa, situação, última conversa e quem atende, com
 // "Abrir conversa". O servidor manda até 10, só as que a pessoa pode ver.
+// #3165: tocar na conversa a mostra inteira ao lado; a que está aberta fica acesa.
 defineProps({
   conversas: { type: Array, required: true },
   formato: { type: Object, required: true },
@@ -12,8 +13,10 @@ defineProps({
   resumo: { type: Object, required: true },
   ia: { type: Boolean, default: false },
   podeIa: { type: Boolean, default: false },
+  // #3165: a conversa que está aberta ao lado (display_id).
+  vista: { type: Number, default: null },
 });
-defineEmits(['abrir', 'atualizar']);
+defineEmits(['abrir', 'atualizar', 'ver']);
 
 const { t } = useI18n();
 const C = 'CRM_CARD.CONVERSAS';
@@ -91,7 +94,13 @@ const situacao = status =>
         v-for="conversa in conversas"
         :key="conversa.id || conversa.display_id"
         data-conversa
-        class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4 shadow-sm sm:flex-row sm:items-center sm:p-5"
+        :data-vista="conversa.display_id === vista || null"
+        class="relative flex flex-col gap-3 rounded-2xl border bg-n-solid-1 p-4 shadow-sm transition-colors sm:flex-row sm:items-center sm:p-5"
+        :class="
+          conversa.display_id === vista
+            ? 'border-n-brand ring-1 ring-n-brand'
+            : 'border-n-weak hover:border-n-strong'
+        "
       >
         <span
           class="grid size-10 shrink-0 place-items-center rounded-2xl bg-n-blue-3 text-n-blue-11"
@@ -99,8 +108,13 @@ const situacao = status =>
         >
           <span class="i-lucide-message-circle size-5" />
         </span>
-        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p class="mb-0 text-base font-semibold text-n-slate-12">
+        <button
+          type="button"
+          class="flex min-h-11 min-w-0 flex-1 flex-col gap-0.5 rounded-lg text-start outline-none after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-n-brand"
+          :aria-current="conversa.display_id === vista ? 'true' : undefined"
+          @click="$emit('ver', conversa.display_id)"
+        >
+          <span class="block text-base font-semibold text-n-slate-12">
             {{
               t(`${C}.ITEM`, {
                 numero: conversa.display_id,
@@ -110,8 +124,8 @@ const situacao = status =>
                   t('CRM_KANBAN.DRAWER.NO_INBOX'),
               })
             }}
-          </p>
-          <p class="mb-0 text-sm text-n-slate-11">
+          </span>
+          <span class="block text-sm text-n-slate-11">
             {{
               [
                 situacao(conversa.status),
@@ -127,14 +141,14 @@ const situacao = status =>
                 .filter(Boolean)
                 .join(' · ')
             }}
-          </p>
-        </div>
+          </span>
+        </button>
         <Button
           :label="t('CRM_CARD.ABRIR_CONVERSA')"
           icon="i-lucide-external-link"
           slate
           outline
-          class="!min-h-11 shrink-0 !outline-n-weak"
+          class="relative z-10 !min-h-11 shrink-0 !outline-n-weak"
           @click="$emit('abrir', conversa.display_id)"
         />
       </li>

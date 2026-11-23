@@ -4,7 +4,7 @@
 // (a mesma regra do envio, `app/services/rich_messages/types/options.rb`). Mostra qual o cliente tocou.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useMessageContext } from '../../../provider.js';
 import Frame from '../Frame.vue';
 import ActionRow from '../ActionRow.vue';
@@ -17,7 +17,7 @@ const BUTTONS_MAX = 3;
 
 const { id, contentAttributes } = useMessageContext();
 const { t } = useI18n();
-const currentChat = useMapGetter('getSelectedChat');
+const currentChat = useConversaDaTela();
 // #1702: na conversa com a cara do WhatsApp, os botões ficam soltos embaixo do balão.
 const pele = usePele();
 

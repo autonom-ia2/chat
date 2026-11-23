@@ -6,7 +6,7 @@
 // é no celular (a API não vota).
 import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import BaseBubble from '../../message/bubbles/Base.vue';
 import { useMessageContext } from '../../message/provider.js';
 import { SENDER_TYPES } from '../../message/constants';
@@ -17,7 +17,7 @@ import { apurarEnquete, totalDeEleitores } from './enquete';
 const { content, contentAttributes } = useMessageContext();
 const { t, locale } = useI18n();
 const fuso = useFuso();
-const conversa = useMapGetter('getSelectedChat');
+const conversa = useConversaDaTela();
 
 // O conector WAHA (#1709) grava a pergunta no texto da mensagem e `multiple`; a
 // Cloud/robô pode mandar `name` e `multiple_answers`. Vale o que vier.

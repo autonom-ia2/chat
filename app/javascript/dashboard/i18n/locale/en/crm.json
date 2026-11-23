@@ -6316,7 +6316,17 @@
       "ATENDE": "{nome} handles it",
       "SEM_ATENDENTE": "no agent",
       "SO_AS_SUAS": "Showing the 10 most recent you can see.",
-      "VAZIO": "No conversation linked to this customer."
+      "VAZIO": "No conversation linked to this customer.",
+      "VISOR": {
+        "ROTULO": "Conversation #{numero}",
+        "SUBTITULO": "Conversation #{numero} · {caixa}",
+        "SEM_NOME": "Customer",
+        "CARREGANDO": "Loading the conversation",
+        "ERRO": "We couldn't load this conversation now.",
+        "TENTAR_DE_NOVO": "Try again",
+        "VAZIA": "This conversation has no messages yet.",
+        "CARREGANDO_ANTIGAS": "Loading older messages"
+      }
     },
     "RETORNOS": {
       "COMBINADO": "Already set",

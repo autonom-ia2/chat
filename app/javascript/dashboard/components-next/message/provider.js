@@ -1,5 +1,5 @@
 import { inject, provide, computed } from 'vue';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useAnexosDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { ATTACHMENT_TYPES } from './constants';
 
@@ -130,7 +130,8 @@ export function useMessageContext() {
     throw new Error(`Component is missing a parent <Message /> component.`);
   }
 
-  const currentChatAttachments = useMapGetter('getSelectedChatAttachments');
+  // #3165: fora da tela da conversa, os anexos da conversa que a tela mostra.
+  const currentChatAttachments = useAnexosDaTela();
   const filteredCurrentChatAttachments = computed(() => {
     const attachments = currentChatAttachments.value.filter(attachment =>
       [
