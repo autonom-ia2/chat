@@ -18,7 +18,10 @@ import {
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -280,7 +283,7 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
         detailPanel(wrapper),
         'PROSPECTING.SEARCH.OPEN_CONTACT'
       ).attributes('href')
-    ).toBe('/app/accounts/1/contacts/900');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/900');
   });
 
   it('sem permissão de gerenciar o painel não oferece criar card', async () => {

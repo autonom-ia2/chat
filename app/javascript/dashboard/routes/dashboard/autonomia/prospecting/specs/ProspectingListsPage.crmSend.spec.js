@@ -19,7 +19,10 @@ import { linkWithText } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -150,7 +153,7 @@ describe('ProspectingListsPage · enviar ao CRM', () => {
     ).toBe('/app/accounts/1/crm?card_id=1030');
     expect(
       linkWithText(lua, 'PROSPECTING.SEARCH.OPEN_CONTACT').attributes('href')
-    ).toBe('/app/accounts/1/contacts/930');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/930');
     expect(buttonWithText(lua, SEND)).toBeUndefined();
 
     await sendModal(wrapper)

@@ -1,6 +1,7 @@
 import { ref, nextTick } from 'vue';
 import { shallowMount, flushPromises } from '@vue/test-utils';
 import { createStore } from 'vuex';
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import ContactInfo from './ContactInfo.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
 import EditContact from './EditContact.vue';
@@ -104,12 +105,8 @@ function mountPanel(component, props = {}) {
       plugins: [store],
       mocks: {
         $route: { params: { accountId: 1 } },
-        // #3130 — o link da ficha sai do roteador, com o caminho da rota.
-        $router: {
-          resolve: ({ name, params }) => ({
-            href: `/app/accounts/${params.accountId}/${name}/${params.contactId}`,
-          }),
-        },
+        // #3130 — o link da ficha sai do roteador real das fichas.
+        $router: useRoteadorDasFichas(),
       },
       stubs: {
         transition: { template: '<div><slot /></div>' },
@@ -140,7 +137,7 @@ it('shows contact data and navigation without inline editors, merge or edit draw
   const { wrapper, dispatch } = mountPanel(ContactInfo, { contact: record });
   expect(wrapper.text()).toContain('Mariana');
   expect(wrapper.find('a[target="_blank"]').attributes('href')).toContain(
-    '/relacionamentos_pessoa/12'
+    '/app/accounts/1/relacionamentos/pessoas/12'
   );
   expect(
     wrapper

@@ -9,7 +9,10 @@ import ProspectingListsPage from '../pages/ProspectingListsPage.vue';
 import { ChoiceSelectStub, moonLead } from './support/searchPageHarness';
 import { researchBlock } from './support/researchFixtures';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

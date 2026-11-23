@@ -24,7 +24,10 @@ import { leadCheckbox, linkWithText } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -204,7 +207,7 @@ describe('ProspectingSearchPage · lead no CRM, descarte e contatos', () => {
         leadCard(wrapper, 'Pão Quente'),
         'PROSPECTING.SEARCH.OPEN_CONTACT'
       ).attributes('href')
-    ).toBe('/app/accounts/1/contacts/901');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/901');
   });
 
   it('o painel mostra o lead no CRM e descarta um lead só', async () => {

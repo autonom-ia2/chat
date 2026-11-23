@@ -17,7 +17,10 @@ import {
 } from './support/searchPageHarness';
 import { submitMinimalSearch } from './support/searchFormHelpers';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

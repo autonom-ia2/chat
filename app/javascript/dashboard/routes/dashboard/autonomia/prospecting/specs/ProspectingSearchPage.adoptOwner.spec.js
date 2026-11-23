@@ -18,7 +18,10 @@ import { linkWithText } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -100,7 +103,7 @@ describe('ProspectingSearchPage · usar sócio como contato', () => {
         detailPanel(wrapper),
         'PROSPECTING.SEARCH.OPEN_CONTACT'
       ).attributes('href')
-    ).toBe('/app/accounts/1/contacts/901');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/901');
     expect(useAlert).toHaveBeenCalledWith(
       'PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED'
     );

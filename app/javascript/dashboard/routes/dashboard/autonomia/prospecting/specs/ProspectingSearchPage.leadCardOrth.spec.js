@@ -14,7 +14,10 @@ import {
 } from './support/searchPageHarness';
 import { ADDRESS_SEPARATOR, linkWithText } from './support/resultsHelpers';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

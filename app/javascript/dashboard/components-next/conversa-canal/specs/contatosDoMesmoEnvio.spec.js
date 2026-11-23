@@ -21,13 +21,11 @@ import {
   semDuplicadasNaPele,
 } from '../midia/contatos';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
   useRoute: () => ({ query: {}, params: {} }),
-  useRouter: () => ({
-    resolve: ({ name, params }) => ({
-      href: `/app/accounts/${params.accountId}/${name}/${params.contactId}`,
-    }),
-  }),
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
 }));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
@@ -360,6 +358,11 @@ describe('cartão de vários contatos do mesmo envio (#1702)', () => {
   it('"Salvar contato" abre a ficha do contato numa aba nova', async () => {
     const abrir = vi.spyOn(window, 'open').mockImplementation(() => null);
     const store = createStore({
+      // #3130 — conta 1 com o menu novo: a ficha é a nova.
+      getters: {
+        getCurrentAccountId: () => 1,
+        'accounts/isFeatureEnabledonAccount': () => () => true,
+      },
       actions: {
         'contacts/filter': () => [{ id: 9, name: 'Roberto Martins' }],
       },
@@ -369,7 +372,7 @@ describe('cartão de vários contatos do mesmo envio (#1702)', () => {
     document.querySelector('[data-salvar-contato]').click();
     await flushPromises();
     expect(abrir).toHaveBeenCalledWith(
-      expect.stringContaining('/contacts_edit/9'),
+      '/app/accounts/1/relacionamentos/pessoas/9',
       '_blank'
     );
     abrir.mockRestore();

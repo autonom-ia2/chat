@@ -2,17 +2,15 @@ import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import ReportDrilldownCard from '../ReportDrilldownCard.vue';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
   useRoute: () => ({
     params: {
       accountId: 1,
     },
   }),
-  useRouter: () => ({
-    resolve: ({ name, params }) => ({
-      href: `/app/accounts/${params.accountId}/${{ contacts_edit: 'contacts', relacionamentos_pessoa: 'relacionamentos/pessoas' }[name]}/${params.contactId}`,
-    }),
-  }),
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
 }));
 
 vi.mock('vue-i18n', () => ({

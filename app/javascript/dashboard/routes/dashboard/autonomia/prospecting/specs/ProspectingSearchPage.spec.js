@@ -3,7 +3,10 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import ProspectingSearchPage from '../pages/ProspectingSearchPage.vue';
 import { uiSettingsStore } from './support/uiSettingsStore';
 
-vi.mock('vue-router', () => ({
+vi.mock('vue-router', async () => ({
+  useRouter: (
+    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
+  ).useRoteadorDasFichas,
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 
