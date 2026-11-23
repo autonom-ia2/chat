@@ -14,6 +14,8 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
   DA_LISTA = %i[index contagens todas exportar].freeze
   TRAVA_DA_PLANILHA = 'RELACIONAMENTOS_PLANILHA::%<account_id>d::%<user_id>d'.freeze
   ESPERA_DA_PLANILHA = 5.minutes
+  # #3100 — `fidelidade` (perto do prêmio, cartão completo): o "Ver quem está perto do prêmio" do painel da Fidelidade.
+  FILTROS = %i[empresa etiqueta cidade chegou_em compras total_acima fidelidade].freeze
 
   before_action :sem_parametros, except: DA_LISTA
   before_action :achar_pessoa, except: DA_LISTA
@@ -89,7 +91,7 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
   end
 
   def pedido
-    conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:empresa, :etiqueta, :cidade, :chegou_em, :compras, :total_acima]))
+    conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: FILTROS))
   end
 
   def ve_valores?

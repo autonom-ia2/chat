@@ -1186,6 +1186,13 @@ Rails.application.routes.draw do
             resource :configuration, only: [:show, :update], controller: 'configurations'
             patch ':entity/:id/values', to: 'values#update'
           end
+          # #3100 — o cartão fidelidade da conta: ler, criar ou mudar (PUT), pausar ou ligar de novo (PATCH) e os números.
+          namespace :fidelidade do
+            get :programa, to: 'programa#show'
+            put :programa, to: 'programa#update'
+            patch :programa, to: 'programa#ligar'
+            get :resumo, to: 'resumo#show'
+          end
           # #2894 — leituras da Lista nova de Relacionamentos (de todas as contas desde a E9, #2902). Empresa é do Enterprise.
           namespace :relacionamentos do
             # #2895 — as leituras da ficha (show e as de `member`), cada uma no formato que a tela lê.
@@ -1204,6 +1211,12 @@ Rails.application.routes.draw do
                 get :origem
                 # #3097 — o resumo das compras da pessoa (os cards ganhos nos funis de Vender).
                 get :compras
+              end
+              # #3100 — o cartão fidelidade da pessoa: ler, o histórico por página, dar o prêmio e o ajuste à mão.
+              resource :fidelidade, only: [:show], controller: 'fidelidade' do
+                get :movimentos
+                post :premios
+                post :ajustes
               end
             end
             # #3097 — as faixas dos grupos de compra da conta: ler e, o administrador, ajustar.

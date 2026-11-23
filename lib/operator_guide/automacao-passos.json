@@ -618,6 +618,14 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.GRUPO_DE_COMPRA"
         }
       ]
+    },
+    {
+      "tipo": "contato.completou_cartao_fidelidade",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_COMPLETOU_CARTAO_FIDELIDADE",
+      "grupo": "contato",
+      "requer": "automacao_gatilhos",
+      "se_repetir": true
     }
   ],
   "operadores": [
