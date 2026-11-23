@@ -49,7 +49,9 @@ const formatar = texto => new MessageFormatter(texto).formattedMessage;
     data-resposta-com-graficos
   >
     <!-- Mesma cara do CopilotAssistantMessage: nome e, na resposta retida (sem texto), o mesmo aviso acima do gráfico. -->
-    <div class="font-medium">{{ senderName || $t('CAPTAIN.NAME') }}</div>
+    <div class="font-medium">
+      {{ senderName || $t('AUTONOMIA_GUIDE.TITLE') }}
+    </div>
     <span v-if="!message?.content" class="text-n-ruby-11" data-sem-texto>
       {{ $t('CAPTAIN.COPILOT.EMPTY_MESSAGE') }}
     </span>
