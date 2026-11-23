@@ -1,5 +1,6 @@
 // Caracterização dos resultados (#677): lista, ordem, refino local, contagens
 // e mapa. Card do lead em .leadCard.spec.js; lote e CSV em .bulk.spec.js.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
   MapStub,
@@ -26,10 +27,8 @@ import {
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

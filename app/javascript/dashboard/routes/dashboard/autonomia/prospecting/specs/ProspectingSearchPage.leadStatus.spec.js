@@ -3,6 +3,7 @@
 // em lote ao CRM deixa de fora quem já está lá ou foi descartado; descartar
 // pede motivo e deixa o lead visível, marcado; criar contatos em lote usa o
 // contato do lead avulso.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -24,10 +25,8 @@ import { leadCheckbox, linkWithText } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

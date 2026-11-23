@@ -1,6 +1,7 @@
 // Caracterização das ações em lote (#677): seleção, envio ao CRM e exportação. O
 // envio em si (janela, lotes e resumo) está em ProspectingSearchPage.crmSend e
 // CrmSendModal (#680).
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -20,10 +21,8 @@ import { captureCsvDownload, leadCheckbox } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

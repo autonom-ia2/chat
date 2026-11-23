@@ -2,6 +2,7 @@
 // Vários contatos de uma vez pela Cloud (#1702): o Chatwoot cria UMA mensagem por
 // contato, todas com o mesmo source_id. O app mostra um cartão só: "Roberto Martins e
 // 1 outro contato" e "Ver todos", que abre a janela com cada contato e as ações dele.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { computed, defineComponent, h, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
@@ -21,11 +22,9 @@ import {
   semDuplicadasNaPele,
 } from '../midia/contatos';
 
-vi.mock('vue-router', async () => ({
+vi.mock('vue-router', () => ({
   useRoute: () => ({ query: {}, params: {} }),
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+  useRouter: () => useRoteadorDasFichas(),
 }));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({

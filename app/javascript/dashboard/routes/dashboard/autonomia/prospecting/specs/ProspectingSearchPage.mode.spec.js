@@ -1,5 +1,6 @@
 // Frente de modo e jogadas (#677): selo do modo no topo, grade de jogadas no
 // formulário, jogada no pedido, no histórico e ao reabrir uma busca.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import {
   bakerySearch,
@@ -20,10 +21,8 @@ import {
   reviewsMinInput,
 } from './support/filtersHelpers';
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

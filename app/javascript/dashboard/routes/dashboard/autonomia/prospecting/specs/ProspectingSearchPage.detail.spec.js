@@ -1,4 +1,5 @@
 // Caracterização do painel lateral de detalhe do lead e do enriquecimento (#677).
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -18,10 +19,8 @@ import {
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

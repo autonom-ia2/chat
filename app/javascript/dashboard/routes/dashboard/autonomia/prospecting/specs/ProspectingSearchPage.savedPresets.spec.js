@@ -2,6 +2,7 @@
 // gaveta de filtros grava os filtros da conta, e a jogada salva aparece na
 // grade ao lado das prontas, no modo em que foi salva. Só quem gerencia a
 // prospecção salva; quem só vê usa as jogadas salvas.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -24,10 +25,8 @@ import {
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

@@ -2,6 +2,7 @@
 // card, barra de progresso, bloco no painel lateral, pedido pela API e
 // atualização pelo evento prospecting.lead.updated. O texto real é conferido
 // nos specs de componente; aqui vale a ligação da tela.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -26,10 +27,8 @@ import {
   researchBlock,
 } from './support/researchFixtures';
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

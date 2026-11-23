@@ -2,6 +2,7 @@
 // busca: o da pesquisa. O nome gravado antes dela (palpite da IA da E2, ou o
 // sócio de um CNPJ de uma pesquisa anterior) continua no lead, mas não aparece
 // como decisor quando a pesquisa terminou sem dono.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
@@ -9,10 +10,8 @@ import ProspectingListsPage from '../pages/ProspectingListsPage.vue';
 import { ChoiceSelectStub, moonLead } from './support/searchPageHarness';
 import { researchBlock } from './support/researchFixtures';
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

@@ -2,6 +2,7 @@
 // primeira visita de quem pode buscar, percorre modo, jogada, local, decisor,
 // filtros e Buscar, e fecha sozinho com os resultados na tela. O tour só
 // pré-preenche: nenhuma chamada paga sai sem o clique da pessoa.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -18,10 +19,8 @@ import { uiSettingsStore } from './support/uiSettingsStore';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
-vi.mock('vue-router', async () => ({
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

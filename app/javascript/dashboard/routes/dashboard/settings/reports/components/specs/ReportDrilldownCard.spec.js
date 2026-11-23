@@ -1,16 +1,15 @@
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import ReportDrilldownCard from '../ReportDrilldownCard.vue';
 
-vi.mock('vue-router', async () => ({
+vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: {
       accountId: 1,
     },
   }),
-  useRouter: (
-    await import('dashboard/composables/spec/fixtures/roteadorDasFichas')
-  ).useRoteadorDasFichas,
+  useRouter: () => useRoteadorDasFichas(),
 }));
 
 vi.mock('vue-i18n', () => ({
