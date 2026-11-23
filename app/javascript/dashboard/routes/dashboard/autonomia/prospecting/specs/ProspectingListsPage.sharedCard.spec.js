@@ -1,7 +1,9 @@
 // A tela de Listas usa o mesmo card e o mesmo painel da busca (#682, frente B):
 // LeadCard e LeadDetailDrawer, sem cópia do markup. As ações próprias das
 // Listas continuam: remover o lead da lista e montar o segmento de campanha.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { mount, flushPromises } from '@vue/test-utils';
+import { uiSettingsStore } from './support/uiSettingsStore';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
@@ -22,6 +24,7 @@ import {
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -86,7 +89,10 @@ const mountLists = async (leads = [sunLead(), hotBreadLead(), moonLead()]) => {
   );
 
   const wrapper = mount(ProspectingListsPage, {
-    global: { stubs: { ChoiceSelect: ChoiceSelectStub } },
+    global: {
+      plugins: [uiSettingsStore().store],
+      stubs: { ChoiceSelect: ChoiceSelectStub },
+    },
   });
   await flushPromises();
   return wrapper;

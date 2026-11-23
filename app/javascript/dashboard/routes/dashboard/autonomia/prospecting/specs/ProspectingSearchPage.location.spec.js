@@ -1,6 +1,7 @@
 // Frente de local (#677, E1 frente C): tipo de decisor no bloco de quantidade e
 // erro do Google visível nas sugestões e no detalhe do local, que antes
 // falhavam calados.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -12,6 +13,7 @@ import {
 import { locationInput, openNewSearchForm } from './support/searchFormHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

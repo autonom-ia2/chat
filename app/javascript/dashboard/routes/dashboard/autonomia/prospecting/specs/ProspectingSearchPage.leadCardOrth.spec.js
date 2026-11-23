@@ -1,6 +1,7 @@
 // Card do lead como o do Orth (#678, E2 frente E): fotos, telefone formatado
 // com selo de verificado, redes, nota por modo, bairro, card clicável e selos
 // de posição. Cada elemento roda nos dois modos da busca (GMN e Geral).
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import {
   bakerySearch,
@@ -15,6 +16,7 @@ import {
 import { ADDRESS_SEPARATOR, linkWithText } from './support/resultsHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

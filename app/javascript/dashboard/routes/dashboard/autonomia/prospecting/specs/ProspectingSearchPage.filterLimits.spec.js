@@ -1,6 +1,7 @@
 // Limites da gaveta de filtros do formulário (#677): a faixa de posição não
 // começa depois do que o Google devolve, e a nota que vem da jogada aparece no
 // seletor de estrelas mesmo fora dos passos de meia estrela.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import {
   choiceSelect,
   choose,
@@ -19,6 +20,7 @@ import {
 } from './support/filtersHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

@@ -1,5 +1,6 @@
 // Caracterização do card do lead (#677): anel de prioridade, sinais, telefone,
 // WhatsApp, enriquecimento e ações do card.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -18,6 +19,7 @@ import { ADDRESS_SEPARATOR, linkWithText } from './support/resultsHelpers';
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -78,7 +80,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     ).toBe('tel:+5541999990001');
     expect(
       linkWithText(card, 'PROSPECTING.SEARCH.OPEN_CONTACT').attributes('href')
-    ).toBe('/app/accounts/1/contacts/900');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/900');
 
     const enrich = buttonWithText(card, 'PROSPECTING.SEARCH.ENRICH_LEAD');
     expect(enrich.element.disabled).toBe(false);

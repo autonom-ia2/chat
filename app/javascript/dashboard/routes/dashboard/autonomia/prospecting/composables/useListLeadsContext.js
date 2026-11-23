@@ -4,7 +4,8 @@
 // busca; o que só existe na busca (seleção em lote, busca aberta) fica de fora.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { canSendToCrm } from '../utils/prospectingPermissions';
@@ -68,6 +69,8 @@ export const useListLeadsContext = ({
   crmSendLeads,
 }) => {
   const route = useRoute();
+  const router = useRouter();
+  const ficha = useFichaDoContato();
   const listLeads = computed(() => selectedList.value?.leads || []);
   const selectedLeadDetailId = ref(null);
   const crm = {
@@ -116,8 +119,7 @@ export const useListLeadsContext = ({
     openCrmSend: leadsToSend => {
       crmSendLeads.value = leadsToSend;
     },
-    contactUrl: contactId =>
-      `/app/accounts/${route.params.accountId}/contacts/${contactId}`,
+    contactUrl: contactId => router.resolve(ficha.pessoa(contactId)).href,
     crmCardUrl: cardId =>
       `/app/accounts/${route.params.accountId}/crm?card_id=${cardId}`,
   };

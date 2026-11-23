@@ -11,6 +11,7 @@ import { computed } from 'vue';
 import { format, fromUnixTime } from 'date-fns';
 import { dateFnsLocaleFor } from 'shared/helpers/dateFnsLocale';
 import { usePolicy } from 'dashboard/composables/usePolicy';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
@@ -65,6 +66,7 @@ export default {
       locale,
       ...useRelationshipPermissions(),
       exactTimestamp: useExactTimestamp(),
+      ficha: useFichaDoContato(),
     };
   },
   data() {
@@ -94,7 +96,7 @@ export default {
       return this.$t('CONTACT_PANEL.CUSTOMER_SINCE', { date });
     },
     contactProfileLink() {
-      return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
+      return this.$router.resolve(this.ficha.pessoa(this.contact.id)).href;
     },
     additionalAttributes() {
       return this.contact.additional_attributes || {};

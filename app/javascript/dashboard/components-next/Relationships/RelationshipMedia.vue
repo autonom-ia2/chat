@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { computed, ref, watch, onBeforeUnmount, useId } from 'vue';
 import axios from 'dashboard/api/relationships';
 import { useI18n } from 'vue-i18n';
@@ -30,6 +31,7 @@ const { accountId } = useAccount();
 const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const ficha = useFichaDoContato();
 const rows = ref([]);
 const inputId = useId();
 let actionGeneration = 0;
@@ -536,10 +538,7 @@ onBeforeUnmount(() => {
                   <RouterLink
                     :target="embedded ? '_blank' : undefined"
                     :rel="embedded ? 'noopener noreferrer' : undefined"
-                    :to="{
-                      name: 'contacts_edit',
-                      params: { accountId, contactId: row.contact.id },
-                    }"
+                    :to="ficha.pessoa(row.contact.id)"
                     class="block max-w-40 truncate text-n-blue-11 hover:underline"
                     :title="row.contact.name"
                   >
@@ -625,10 +624,7 @@ onBeforeUnmount(() => {
                 :rel="embedded ? 'noopener noreferrer' : undefined"
                 class="block truncate text-xs text-n-blue-11 hover:underline"
                 :title="row.contact.name"
-                :to="{
-                  name: 'contacts_edit',
-                  params: { accountId, contactId: row.contact.id },
-                }"
+                :to="ficha.pessoa(row.contact.id)"
               >
                 {{ row.contact.name }}
               </RouterLink>

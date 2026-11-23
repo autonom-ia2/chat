@@ -1,5 +1,6 @@
 // Caracterização do histórico de buscas (#677): listar, abrir, configurar CRM,
 // apagar e carregar mais, antes da quebra da página em componentes.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
@@ -23,6 +24,7 @@ import {
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

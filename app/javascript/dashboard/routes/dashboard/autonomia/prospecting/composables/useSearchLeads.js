@@ -3,7 +3,8 @@
 // próprio.
 import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
@@ -108,6 +109,8 @@ const useCrmSend = state => {
 export const useSearchLeads = (state, { canManage }) => {
   const { t } = useI18n();
   const route = useRoute();
+  const router = useRouter();
+  const ficha = useFichaDoContato();
   const { leads, enrichingLeadId } = state;
 
   // Toda resposta da API (evento, enriquecimento, pesquisa, WhatsApp) traz
@@ -147,8 +150,7 @@ export const useSearchLeads = (state, { canManage }) => {
     }
   };
 
-  const contactUrl = contactId =>
-    `/app/accounts/${route.params.accountId}/contacts/${contactId}`;
+  const contactUrl = contactId => router.resolve(ficha.pessoa(contactId)).href;
 
   const crmCardUrl = cardId =>
     `/app/accounts/${route.params.accountId}/crm?card_id=${cardId}`;

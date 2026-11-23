@@ -18,6 +18,9 @@ export const uiSettingsStore = (initial = TOUR_ALREADY_SEEN) => {
     getters: {
       getUISettings: state => state.uiSettings,
       getCurrentUser: () => ({ id: CURRENT_USER_ID }),
+      // #3130 — a conta 1 tem o menu novo: o link do contato leva à ficha nova.
+      getCurrentAccountId: () => 1,
+      'accounts/isFeatureEnabledonAccount': () => () => true,
     },
     mutations: {
       setUISettings(state, uiSettings) {

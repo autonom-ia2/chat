@@ -29,6 +29,7 @@ describe('useSearchCommands', () => {
     userPermissions = ['administrator'];
     getters = {
       getCurrentAccountId: 1,
+      'accounts/isFeatureEnabledonAccount': () => true,
       getAllConversations: [conversation],
       'inboxes/getInbox': () => ({ name: 'Support' }),
     };
@@ -129,7 +130,10 @@ describe('useSearchCommands', () => {
     const [article] = await searchArticles({ text: 'refund' });
 
     contact.run();
-    expect(useRouter().push).toHaveBeenCalledWith('/app/accounts/1/contacts/5');
+    expect(useRouter().push).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { accountId: 1, contactId: 5 },
+    });
     expect(contact.subtitle).toBe('s@x.io');
 
     article.run();

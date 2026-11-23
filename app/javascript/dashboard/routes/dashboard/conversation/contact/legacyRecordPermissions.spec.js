@@ -1,6 +1,7 @@
 import { ref, nextTick } from 'vue';
 import { shallowMount, flushPromises } from '@vue/test-utils';
 import { createStore } from 'vuex';
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import ContactInfo from './ContactInfo.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
 import EditContact from './EditContact.vue';
@@ -88,6 +89,7 @@ function mountPanel(component, props = {}) {
       getCurrentUser: () => ({ id: 1 }),
       canOperateConversation: () => () => true,
       getCurrentAccountId: () => 1,
+      'accounts/isFeatureEnabledonAccount': () => () => true,
       'contactNotes/getUIFlags': () => ({}),
       'contactNotes/getAllNotesByContactId': () => () => [
         { id: 3, content: 'Preserve note', user: { id: 1 } },
@@ -101,7 +103,11 @@ function mountPanel(component, props = {}) {
     props,
     global: {
       plugins: [store],
-      mocks: { $route: { params: { accountId: 1 } } },
+      mocks: {
+        $route: { params: { accountId: 1 } },
+        // #3130 — o link da ficha sai do roteador real das fichas.
+        $router: useRoteadorDasFichas(),
+      },
       stubs: {
         transition: { template: '<div><slot /></div>' },
         InlineInput: {
@@ -131,7 +137,7 @@ it('shows contact data and navigation without inline editors, merge or edit draw
   const { wrapper, dispatch } = mountPanel(ContactInfo, { contact: record });
   expect(wrapper.text()).toContain('Mariana');
   expect(wrapper.find('a[target="_blank"]').attributes('href')).toContain(
-    '/contacts/12'
+    '/app/accounts/1/relacionamentos/pessoas/12'
   );
   expect(
     wrapper

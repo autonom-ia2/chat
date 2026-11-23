@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { useRoute, useRouter } from 'vue-router';
 import { emitter } from 'shared/helpers/mitt';
 import { useAlert } from 'dashboard/composables';
@@ -118,6 +119,7 @@ export function useConversationCommands() {
   const store = useStore();
   const route = useRoute();
   const router = useRouter();
+  const ficha = useFichaDoContato();
 
   const {
     activeLabels,
@@ -364,12 +366,7 @@ export function useConversationCommands() {
         title: t('COMMAND_BAR.COMMANDS.VIEW_CONTACT'),
         section: section('CONVERSATION'),
         icon: 'i-lucide-contact-round',
-        run: () =>
-          router.push(
-            frontendURL(
-              `accounts/${currentAccountId.value}/contacts/${currentChat.value.meta.sender.id}`
-            )
-          ),
+        run: () => router.push(ficha.pessoa(currentChat.value.meta.sender.id)),
       });
     }
     commands.push({

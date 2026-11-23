@@ -1,6 +1,7 @@
 // Pedaço do pedido da busca que pertence à frente de local, país e endereço
 // (#677, E1): location, radius, area_type, area_config e location_* no metadata,
 // e o tipo de decisor (decision_maker_type, Proprietário por padrão).
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import {
   bakerySearch,
   choose,
@@ -18,6 +19,7 @@ import {
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
+  useRouter: () => useRoteadorDasFichas(),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {

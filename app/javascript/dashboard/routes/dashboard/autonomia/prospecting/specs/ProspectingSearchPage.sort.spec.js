@@ -2,6 +2,7 @@
 // direção, como no Orth; Distância e Google começam do mais perto e da 1ª
 // posição. A chave continua "<campo>_<direção>", a mesma sort_key que a busca
 // já gravava.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import {
   bakerySearch,
@@ -18,6 +19,7 @@ import {
 import { submitMinimalSearch } from './support/searchFormHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

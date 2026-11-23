@@ -1,4 +1,5 @@
 <script setup>
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import {
   computed,
   nextTick,
@@ -63,6 +64,7 @@ const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+const ficha = useFichaDoContato();
 
 const tituloId = `nova-conversa-titulo-${useId()}`;
 const aberta = ref(false);
@@ -284,10 +286,7 @@ const completarCadastro = () => {
   const jaNaPagina = String(route.params.contactId || '') === String(id);
   fechar();
   if (jaNaPagina || !id) return;
-  router.push({
-    name: 'contacts_edit',
-    params: { accountId: route.params.accountId, contactId: id },
-  });
+  router.push(ficha.pessoa(id));
 };
 
 const criarPronta = () => {

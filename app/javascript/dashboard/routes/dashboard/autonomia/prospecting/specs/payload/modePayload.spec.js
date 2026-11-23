@@ -1,5 +1,6 @@
 // Pedaço do pedido da busca que pertence à frente de modo e jogadas (#677,
 // E1): score_mode e scoring_profile_id no metadata.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { choose, settingsFixture } from '../support/searchPageHarness';
 import {
   openNewSearchForm,
@@ -8,6 +9,7 @@ import {
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
+  useRouter: () => useRoteadorDasFichas(),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {

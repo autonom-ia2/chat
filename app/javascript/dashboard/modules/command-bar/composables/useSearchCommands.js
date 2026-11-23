@@ -1,6 +1,7 @@
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import SearchAPI from 'dashboard/api/search';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -18,6 +19,7 @@ const LIMIT = 6;
 export function useSearchCommands() {
   const { t } = useI18n();
   const router = useRouter();
+  const ficha = useFichaDoContato();
   const { checkPermissions, isFeatureFlagEnabled } = usePolicy();
 
   const accountId = useMapGetter('getCurrentAccountId');
@@ -96,10 +98,7 @@ export function useSearchCommands() {
       subtitle: contact.email || contact.phone_number,
       section: t('COMMAND_BAR.SECTIONS.CONTACTS'),
       avatar: { name: contact.name, src: contact.thumbnail },
-      run: () =>
-        router.push(
-          frontendURL(`accounts/${accountId.value}/contacts/${contact.id}`)
-        ),
+      run: () => router.push(ficha.pessoa(contact.id)),
     }));
   };
 

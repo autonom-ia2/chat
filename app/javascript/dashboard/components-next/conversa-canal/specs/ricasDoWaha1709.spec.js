@@ -1,6 +1,7 @@
 /* eslint-disable vue/one-component-per-file */
 // Chaves que o WhatsApp Híbrido (#1709) grava nas mensagens da caixa WAHA e a pele
 // desenha como o app. Cada item: com a pele e sem a pele (igual à main).
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { computed, defineComponent, h, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
@@ -22,7 +23,10 @@ import {
 } from '../midia/contatos';
 import { ehPedido, resumoDoPedido } from '../pedido/pedido';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
+  useRouter: () => useRoteadorDasFichas(),
+}));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({

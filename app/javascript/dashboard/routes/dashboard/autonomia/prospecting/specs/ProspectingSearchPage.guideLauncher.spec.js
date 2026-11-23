@@ -1,6 +1,7 @@
 // As gavetas do canto direito avisam que estão abertas, para o lançador do Guia
 // (#646) sair de cima dos botões delas. Achado em produção no #699: a bolinha
 // do Guia cobria o Aplicar da gaveta de filtros.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 import {
@@ -13,6 +14,7 @@ import { openNewSearchForm } from './support/searchFormHelpers';
 import { openFormFilters } from './support/filtersHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

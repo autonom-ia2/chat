@@ -1,6 +1,7 @@
 // Atualização ao vivo (#678, frente C): o servidor enriquece e verifica o WhatsApp
 // em fila e avisa pelo evento prospecting.lead.updated. O card e o painel trocam
 // o lead sem recarregar.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -20,6 +21,7 @@ import {
 import { leadCheckbox } from './support/resultsHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

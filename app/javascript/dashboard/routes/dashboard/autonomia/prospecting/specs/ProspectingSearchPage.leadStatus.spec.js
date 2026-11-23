@@ -3,6 +3,7 @@
 // em lote ao CRM deixa de fora quem já está lá ou foi descartado; descartar
 // pede motivo e deixa o lead visível, marcado; criar contatos em lote usa o
 // contato do lead avulso.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
@@ -25,6 +26,7 @@ import { leadCheckbox, linkWithText } from './support/resultsHelpers';
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -204,7 +206,7 @@ describe('ProspectingSearchPage · lead no CRM, descarte e contatos', () => {
         leadCard(wrapper, 'Pão Quente'),
         'PROSPECTING.SEARCH.OPEN_CONTACT'
       ).attributes('href')
-    ).toBe('/app/accounts/1/contacts/901');
+    ).toBe('/app/accounts/1/relacionamentos/pessoas/901');
   });
 
   it('o painel mostra o lead no CRM e descarta um lead só', async () => {

@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { formatTime } from '@chatwoot/utils';
 import format from 'date-fns/format';
 import fromUnixTime from 'date-fns/fromUnixTime';
@@ -19,6 +20,8 @@ const props = defineProps({
 
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+const ficha = useFichaDoContato();
 
 const conversation = computed(() => props.record.conversation || {});
 const message = computed(() => props.record.message || {});
@@ -105,9 +108,7 @@ const conversationPath = computed(() => {
 const contactPath = computed(() => {
   if (!conversation.value.contact_id) return '';
 
-  return frontendURL(
-    `accounts/${route.params.accountId}/contacts/${conversation.value.contact_id}`
-  );
+  return router.resolve(ficha.pessoa(conversation.value.contact_id)).href;
 });
 
 const inboxPath = computed(() => {

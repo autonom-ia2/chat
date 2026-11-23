@@ -1,4 +1,6 @@
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { mount } from '@vue/test-utils';
+import { createStore } from 'vuex';
 import ReportDrilldownCard from '../ReportDrilldownCard.vue';
 
 vi.mock('vue-router', () => ({
@@ -7,6 +9,7 @@ vi.mock('vue-router', () => ({
       accountId: 1,
     },
   }),
+  useRouter: () => useRoteadorDasFichas(),
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -89,6 +92,14 @@ describe('ReportDrilldownCard.vue', () => {
         ...props,
       },
       global: {
+        plugins: [
+          createStore({
+            getters: {
+              getCurrentAccountId: () => 1,
+              'accounts/isFeatureEnabledonAccount': () => () => true,
+            },
+          }),
+        ],
         mocks: {
           $t: key => key,
         },
@@ -138,7 +149,7 @@ describe('ReportDrilldownCard.vue', () => {
     const links = wrapper.findAll('a');
 
     expect(links.map(link => link.attributes('href'))).toEqual([
-      '/app/accounts/1/contacts/11',
+      '/app/accounts/1/relacionamentos/pessoas/11',
       '/app/accounts/1/inbox/12',
       '/app/accounts/1/reports/agents/13',
     ]);

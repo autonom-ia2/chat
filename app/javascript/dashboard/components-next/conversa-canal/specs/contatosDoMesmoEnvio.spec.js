@@ -2,6 +2,7 @@
 // Vários contatos de uma vez pela Cloud (#1702): o Chatwoot cria UMA mensagem por
 // contato, todas com o mesmo source_id. O app mostra um cartão só: "Roberto Martins e
 // 1 outro contato" e "Ver todos", que abre a janela com cada contato e as ações dele.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { computed, defineComponent, h, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
@@ -21,7 +22,10 @@ import {
   semDuplicadasNaPele,
 } from '../midia/contatos';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
+  useRouter: () => useRoteadorDasFichas(),
+}));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({
@@ -353,6 +357,11 @@ describe('cartão de vários contatos do mesmo envio (#1702)', () => {
   it('"Salvar contato" abre a ficha do contato numa aba nova', async () => {
     const abrir = vi.spyOn(window, 'open').mockImplementation(() => null);
     const store = createStore({
+      // #3130 — conta 1 com o menu novo: a ficha é a nova.
+      getters: {
+        getCurrentAccountId: () => 1,
+        'accounts/isFeatureEnabledonAccount': () => () => true,
+      },
       actions: {
         'contacts/filter': () => [{ id: 9, name: 'Roberto Martins' }],
       },
@@ -362,7 +371,7 @@ describe('cartão de vários contatos do mesmo envio (#1702)', () => {
     document.querySelector('[data-salvar-contato]').click();
     await flushPromises();
     expect(abrir).toHaveBeenCalledWith(
-      expect.stringContaining('/contacts/9'),
+      '/app/accounts/1/relacionamentos/pessoas/9',
       '_blank'
     );
     abrir.mockRestore();

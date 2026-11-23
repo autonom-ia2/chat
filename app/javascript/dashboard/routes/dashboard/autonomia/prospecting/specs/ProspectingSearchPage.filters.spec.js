@@ -1,6 +1,7 @@
 // Gaveta de filtros (#677, frente B): os 4 grupos do Orth, com rascunho e
 // Aplicar. O filtro do formulário de nova busca e o refino da busca aberta
 // são estados separados.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -29,6 +30,7 @@ import {
 } from './support/filtersHelpers';
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

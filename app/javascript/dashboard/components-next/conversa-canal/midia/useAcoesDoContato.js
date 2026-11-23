@@ -1,7 +1,9 @@
 // Ações do cartão de contato da pele (#1702): "Salvar contato" e "Conversar". Saíram do
 // bubbles/Contact.vue para servirem também a cada contato da janela "Ver todos" de
 // vários contatos (ContatosDoWhatsapp), com o mesmo comportamento.
+import { useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
 import { useStore } from 'dashboard/composables/store';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import { useI18n } from 'vue-i18n';
@@ -21,6 +23,8 @@ const semNome = (contato, digitos) =>
 
 export const useAcoesDoContato = () => {
   const store = useStore();
+  const router = useRouter();
+  const ficha = useFichaDoContato();
   const { t } = useI18n();
   const { canManageRelationshipRecords } = useRelationshipPermissions();
 
@@ -63,8 +67,7 @@ export const useAcoesDoContato = () => {
   };
 
   const abrirContato = id => {
-    const conta = window.location.pathname.split('/')[3];
-    window.open(`/app/accounts/${conta}/contacts/${id}`, '_blank');
+    window.open(router.resolve(ficha.pessoa(id)).href, '_blank');
   };
 
   const avisarErro = erro => {

@@ -2,6 +2,7 @@
 // de novo com tudo o que a busca original pediu; "Editar" abre o formulário
 // com tudo preenchido: termo, local, área, modo, jogada, filtros, quantidade,
 // decisor, destino no CRM e ordem. O raio é o pedido, não o expandido.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
@@ -20,6 +21,7 @@ import { openFormFilters } from './support/filtersHelpers';
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

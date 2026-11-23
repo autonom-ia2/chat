@@ -3,6 +3,7 @@
 // mostra é o que vai, mesmo com filtro (ACAO-X02). O resultado de cada lead
 // troca o botão pelo link do card, e o histórico não some enquanto uma busca
 // abre.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { config, flushPromises } from '@vue/test-utils';
 import FloatingVue from 'floating-vue';
 import { createI18n } from 'vue-i18n';
@@ -26,6 +27,7 @@ import { applyFilters } from './support/filtersHelpers';
 const permission = vi.hoisted(() => ({ canManage: true }));
 
 vi.mock('vue-router', () => ({
+  useRouter: () => useRoteadorDasFichas(),
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));

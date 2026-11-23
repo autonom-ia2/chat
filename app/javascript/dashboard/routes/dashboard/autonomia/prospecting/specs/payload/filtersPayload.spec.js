@@ -1,5 +1,6 @@
 // Pedaço do pedido da busca que pertence à frente de filtros e ordenação
 // (#677, E1): advanced_filters e sort_key no metadata.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import {
   bakerySearch,
@@ -20,6 +21,7 @@ import {
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
+  useRouter: () => useRoteadorDasFichas(),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {

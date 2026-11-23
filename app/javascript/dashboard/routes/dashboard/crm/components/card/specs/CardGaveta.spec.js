@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { createStore } from 'vuex';
 import CardGaveta from '../CardGaveta.vue';
 
 const { keyboard, alertSpy, dialogos, link, marcar, conta, despachar } =
@@ -614,6 +615,41 @@ describe('CardGaveta (#1423)', () => {
     expect(wrapper.find('[data-criacao-stub]').attributes('data-passo')).toBe(
       '1'
     );
+  });
+  // #3130 — o "Novo card" da ficha nova abre o CRM; voltar do primeiro passo
+  // leva para a ficha nova, não para a tela antiga de Contatos.
+  it('criar a partir de uma pessoa: voltar leva para a ficha nova dela', async () => {
+    const wrapper = mount(CardGaveta, {
+      props: {
+        show: true,
+        mode: 'create',
+        card: null,
+        initialContact: { id: 42, name: 'Rodrigo Victor' },
+        stages: etapas,
+        pipelines: [{ id: 1, name: 'Comercial', counts_as_sale: true }],
+        pipelineId: 1,
+        canManageCards: true,
+      },
+      global: {
+        stubs: { Dialog: DialogStub, CrmCardRelationshipPanel: true },
+        plugins: [
+          createStore({
+            getters: {
+              getCurrentAccountId: () => 1,
+              'accounts/isFeatureEnabledonAccount': () => () => true,
+            },
+          }),
+        ],
+      },
+    });
+    await flushPromises();
+    navigate.mockClear();
+    wrapper.findComponent({ name: 'CardHeroi' }).vm.$emit('voltar');
+    await flushPromises();
+    expect(navigate).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { accountId: 1, contactId: 42 },
+    });
   });
   it('nada se repete: o que está no Próximo passo não volta no cartão Agenda', async () => {
     const wrapper = montar({
