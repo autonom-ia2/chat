@@ -20,6 +20,8 @@ class Autonomia::Guide::Contexto
   # pergunta com várias partes precisa na prática, e um painel estreito não
   # tem espaço para uma lista maior de botões.
   MAX_ITENS = 5
+  # #3158 — até 3 gráficos por turno: eles vão para o jsonb do turno e para o Redis do pedido.
+  MAX_GRAFICOS = 3
 
   # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
   # `turno_id` (#933): o turno onde uma anotação nasce, para o painel dizer de que conversa ela veio.
@@ -41,6 +43,20 @@ class Autonomia::Guide::Contexto
   def registrar_chamada(call, output, milissegundos)
     @registro&.registrar_chamada(call, output, milissegundos)
     ::Autonomia::Guide::Pedido.anotar_etapa(@pedido_id, call.to_h['name'])
+  end
+
+  # #3158 — os gráficos deste turno, na ordem em que a ferramenta os montou. Cada um ganha o id do marcador
+  # `[grafico:<id>]` que o modelo recebe. -> o id, ou nil quando o turno já tem 3.
+  def desenhar(grafico)
+    return nil if graficos.size >= MAX_GRAFICOS
+
+    id = (graficos.size + 1).to_s
+    graficos << grafico.merge('id' => id)
+    id
+  end
+
+  def graficos
+    @graficos ||= []
   end
 
   # O que a pessoa escreveu enquanto este turno trabalhava (`Pedido.acrescentar`). O `Answerer` pergunta a cada rodada
