@@ -4,7 +4,8 @@
 # Ler segue a ficha (quem vê a lista de Relacionamentos). Dar o prêmio é de quem pode mexer no contato, inclusive o
 # atendente (decisão D1 do Rodrigo, 23/11), e aceita a chave de idempotência (Idempotency-Key): o mesmo toque repetido
 # devolve a mesma resposta e não tira a meta duas vezes. Dar ou tirar à mão pede `fidelidade_manage`.
-# O valor da compra no histórico só vai para quem vê valor de venda (Crm::ValorDeVenda).
+# O valor da compra no histórico só vai para quem vê valor de venda (Crm::ValorDeVenda). O código vivo dos cupons só vai
+# para quem pode usá-lo (mexer no contato, como CupomCodigosController#usar) ou vê o painel Fidelidade.
 class Api::V1::Accounts::Relacionamentos::FidelidadeController < Api::V1::Accounts::Relacionamentos::BaseController
   include ::Crm::IdempotentRequests
 
@@ -60,7 +61,12 @@ class Api::V1::Accounts::Relacionamentos::FidelidadeController < Api::V1::Accoun
   end
 
   def da_pessoa
-    ::Fidelidade::DaPessoa.new(Current.account, @pessoa, com_valores: ::Crm::ValorDeVenda.ve?(Current.account_user))
+    com_valores = ::Crm::ValorDeVenda.ve?(Current.account_user)
+    ::Fidelidade::DaPessoa.new(Current.account, @pessoa, com_valores: com_valores, com_codigos: ve_codigos?)
+  end
+
+  def ve_codigos?
+    policy(@pessoa).update? || ::Fidelidade::ProgramaPolicy.new(pundit_user, ::Fidelidade::Programa).view?
   end
 
   def pagina

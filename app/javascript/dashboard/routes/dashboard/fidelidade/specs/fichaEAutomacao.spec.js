@@ -39,6 +39,7 @@ const stubs = {
 };
 
 const CUPOM = {
+  id: 31,
   codigo: 'VOLTA-7KD2',
   estado: 'valido',
   oferta: { tipo: 'porcentagem', valor: 10 },
@@ -96,6 +97,16 @@ describe('SecaoFidelidade (ficha)', () => {
     expect(texto(secao)).toContain('Marcar o cupom VOLTA-7KD2 como usado?');
     await secao.find('[data-confirmar]').trigger('click');
     expect(secao.emitted('usarCupom')[0][0].codigo).toBe('VOLTA-7KD2');
+  });
+
+  it('sem o código (quem só vê o contato), mostra o estado e a oferta', () => {
+    const semCodigo = { ...CUPOM };
+    delete semCodigo.codigo;
+    const secao = montar({ tem: 3, historico: [], cupons: [semCodigo] });
+    expect(secao.find(sel('codigo-do-cupom')).exists()).toBe(false);
+    expect(secao.find(sel('usar-cupom')).exists()).toBe(false);
+    expect(texto(secao)).not.toContain('VOLTA-7KD2');
+    expect(texto(secao)).toContain('10%');
   });
 
   it('cartão completo: faixa verde e Dar o prêmio para quem pode', async () => {

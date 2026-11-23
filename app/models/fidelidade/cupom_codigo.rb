@@ -37,9 +37,11 @@ class Fidelidade::CupomCodigo < ApplicationRecord
     VALIDO
   end
 
-  # Como a ficha lê (SecaoFidelidade): o código, o estado, a oferta e as datas em segundos.
-  def para_a_ficha(agora)
-    { id: id, codigo: codigo, estado: estado(agora), oferta: cupom.oferta, moeda: cupom.moeda, vale_ate: vale_ate&.to_i,
-      usado_em: usado_em&.to_i }
+  # Como a ficha lê (SecaoFidelidade): o código, o estado, a oferta e as datas em segundos. O código vivo só vai
+  # `com_codigo` (quem pode usá-lo ou vê o painel Fidelidade); sem ele, a ficha mostra o estado e a oferta.
+  def para_a_ficha(agora, com_codigo:)
+    ficha = { id: id, codigo: codigo, estado: estado(agora), oferta: cupom.oferta, moeda: cupom.moeda, vale_ate: vale_ate&.to_i,
+              usado_em: usado_em&.to_i }
+    com_codigo ? ficha : ficha.except(:codigo)
   end
 end

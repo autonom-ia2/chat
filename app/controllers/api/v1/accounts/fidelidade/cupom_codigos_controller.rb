@@ -12,6 +12,6 @@ class Api::V1::Accounts::Fidelidade::CupomCodigosController < Api::V1::Accounts:
     codigo = ::Fidelidade::CupomCodigo.where(account_id: Current.account.id).where.not(enviado_em: nil).preload(:cupom).find(params[:id])
     authorize codigo.contact, :update?
     resultado = ::Fidelidade::UsarCupom.new(Current.user).call(codigo)
-    render json: { codigo: resultado.codigo.para_a_ficha(Time.current), ja_estava: resultado.ja_estava }
+    render json: { codigo: resultado.codigo.para_a_ficha(Time.current, com_codigo: true), ja_estava: resultado.ja_estava }
   end
 end

@@ -87,6 +87,25 @@ describe('FidelidadeTela', () => {
     );
   });
 
+  it('na aba Cupons, "Marcar como usado" do conferir é de quem pode mexer no contato', () => {
+    const conferencia = {
+      resultado: {
+        estado: 'valido',
+        oferta: { tipo: 'porcentagem', valor: 10 },
+      },
+    };
+    const pode = montar({
+      aba: 'cupons',
+      cupons: [CUPOM],
+      conferencia,
+      podeUsarCupom: true,
+    });
+    const naoPode = montar({ aba: 'cupons', cupons: [CUPOM], conferencia });
+    expect(pode.find(sel('usar')).exists()).toBe(true);
+    expect(naoPode.find(sel('resultado')).exists()).toBe(true);
+    expect(naoPode.find(sel('usar')).exists()).toBe(false);
+  });
+
   it('as abas trocam pela seta e avisam a aba nova', async () => {
     const tela = montar({ programa: PROGRAMA, resumo: null });
     await tela
@@ -295,6 +314,7 @@ describe('ConferirCupom', () => {
         cliente: 'Maria Souza',
         vale_ate: S + 8 * 86400,
       },
+      podeUsar: true,
     });
     expect(texto(tela)).toContain('Vale! 10% de desconto.');
     expect(texto(tela)).toContain('De Maria Souza.');
@@ -302,12 +322,26 @@ describe('ConferirCupom', () => {
     expect(tela.emitted('usar')).toHaveLength(1);
   });
 
+  it('valendo, quem não pode mexer no contato confere mas não marca', () => {
+    const tela = montar({
+      resultado: {
+        estado: 'valido',
+        oferta: { tipo: 'porcentagem', valor: 10 },
+        cliente: 'Maria Souza',
+        vale_ate: S + 8 * 86400,
+      },
+    });
+    expect(texto(tela)).toContain('Vale! 10% de desconto.');
+    expect(texto(tela)).toContain('De Maria Souza.');
+    expect(tela.find(sel('usar')).exists()).toBe(false);
+  });
+
   it.each([
     ['usado', { estado: 'usado', usado_em: S - 86400 }, 'já foi usado'],
     ['vencido', { estado: 'vencido', vale_ate: S - 86400 }, 'venceu em'],
     ['nao_existe', { estado: 'nao_existe' }, 'Não achamos este código.'],
   ])('%s diz o que aconteceu e não deixa usar', (_, resultado, frase) => {
-    const tela = montar({ resultado });
+    const tela = montar({ resultado, podeUsar: true });
     expect(texto(tela)).toContain(frase);
     expect(tela.find(sel('usar')).exists()).toBe(false);
   });

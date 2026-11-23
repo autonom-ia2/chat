@@ -61,7 +61,6 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
     podeTrazer: { value: false },
     podeEditar: { value: false },
     podeExportar: { value: false },
-    veFidelidade: { value: false },
   }),
 }));
 // #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).

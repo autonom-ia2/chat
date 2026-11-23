@@ -17,6 +17,7 @@ import { PAINEL_DA_FIDELIDADE, idDaAbaDaFidelidade } from '../abas';
 // mandado, abre a automação pronta (`mandarCupom`). `programa` nulo é "a conta
 // ainda não criou"; `carregando` é antes da primeira resposta. `comCupons`
 // falso esconde as abas e mostra só o cartão (o cupom chega na etapa dele).
+// `podeUsarCupom`: quem pode mexer no contato vê "Marcar como usado" no conferir.
 defineProps({
   aba: { type: String, required: true },
   programa: { type: Object, default: null },
@@ -27,6 +28,7 @@ defineProps({
   agora: { type: Number, required: true },
   conferencia: { type: Object, default: () => ({}) },
   comCupons: { type: Boolean, default: true },
+  podeUsarCupom: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'update:aba',
@@ -115,6 +117,7 @@ const { t } = useTextosDaFidelidade();
           :usando="Boolean(conferencia.usando)"
           :usado="Boolean(conferencia.usado)"
           :codigo-inicial="conferencia.codigo || ''"
+          :pode-usar="podeUsarCupom"
           @conferir="codigo => emit('conferir', codigo)"
           @usar="emit('usarCupom')"
         />

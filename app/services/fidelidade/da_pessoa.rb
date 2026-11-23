@@ -3,16 +3,18 @@
 # conta: nil (a ficha não mostra o bloco).
 #
 # "Vence logo": as entradas com resto que vencem nos próximos 30 dias, na data da primeira e no mesmo dia dela. O valor
-# da compra no histórico só vai para quem vê valor de venda (Crm::ValorDeVenda), como as compras da ficha.
+# da compra no histórico só vai para quem vê valor de venda (Crm::ValorDeVenda), como as compras da ficha. O código
+# vivo de cada cupom só vai `com_codigos` (quem pode usá-lo ou vê o painel Fidelidade, FidelidadeController).
 class Fidelidade::DaPessoa
   NO_HISTORICO = 5
   POR_PAGINA = 20
   JANELA_DO_VENCIMENTO = 30.days
 
-  def initialize(account, contato, com_valores:, agora: Time.current)
+  def initialize(account, contato, com_valores:, com_codigos:, agora: Time.current)
     @account = account
     @contato = contato
     @com_valores = com_valores
+    @com_codigos = com_codigos
     @agora = agora
     @programa = Fidelidade::Programa.da_conta(account)
   end
@@ -56,6 +58,6 @@ class Fidelidade::DaPessoa
   # Conferir e no "Marcar como usado".
   def cupons
     Fidelidade::CupomCodigo.where(account_id: @account.id, contact_id: @contato.id).where.not(enviado_em: nil).preload(:cupom)
-                           .order(created_at: :desc).map { |codigo| codigo.para_a_ficha(@agora) }
+                           .order(created_at: :desc).map { |codigo| codigo.para_a_ficha(@agora, com_codigo: @com_codigos) }
   end
 end

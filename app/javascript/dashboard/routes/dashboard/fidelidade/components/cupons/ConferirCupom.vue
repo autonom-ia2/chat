@@ -12,6 +12,9 @@ import { TOM_DO_CODIGO, codigoDigitado } from '../../regras';
 // (`conferir` com o código limpo) e devolve a resposta em `resultado`:
 // { estado, oferta, moeda, cliente, vale_ate, usado_em }. Depois de marcado,
 // `usado` troca a frase por "Pronto… Dê 10% de desconto ao cliente.".
+// "Marcar como usado" só aparece com `podeUsar` (quem pode mexer no contato,
+// a regra do servidor em CupomCodigosController#usar); sem ela, o resultado do
+// conferir aparece igual, sem o botão.
 const props = defineProps({
   resultado: { type: Object, default: null },
   conferindo: { type: Boolean, default: false },
@@ -19,6 +22,7 @@ const props = defineProps({
   usado: { type: Boolean, default: false },
   agora: { type: Number, required: true },
   codigoInicial: { type: String, default: '' },
+  podeUsar: { type: Boolean, default: false },
 });
 const emit = defineEmits(['conferir', 'usar']);
 
@@ -135,7 +139,7 @@ const frase = computed(() => {
         }}
       </p>
       <Button
-        v-if="estado === 'valido' && !usado"
+        v-if="estado === 'valido' && !usado && podeUsar"
         data-fidelidade="usar"
         size="lg"
         class="self-start min-h-11"

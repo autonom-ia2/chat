@@ -29,6 +29,8 @@ import {
 // gastar o cupom. Sem nada ainda, a frase diz como ela ganha o primeiro. O bloco só
 // aparece com o programa criado; pausado, avisa que os carimbos ficam
 // guardados. `saldo`: { tem, vencem, historico, historico_total, cupons }.
+// O código de cada cupom só chega para quem pode usá-lo ou vê o painel
+// Fidelidade; sem ele, o cupom aparece só com o estado e a oferta.
 const props = defineProps({
   programa: { type: Object, required: true },
   saldo: { type: Object, default: null },
@@ -251,11 +253,13 @@ const estadoDoCupom = cupom => {
         <ul class="flex flex-col gap-2 p-0 m-0 list-none">
           <li
             v-for="cupom in cupons"
-            :key="cupom.codigo"
+            :key="cupom.id"
             :data-cupom="cupom.estado"
             class="flex flex-col gap-3 p-3 rounded-xl bg-n-alpha-1 sm:flex-row sm:items-center"
           >
             <code
+              v-if="cupom.codigo"
+              data-fidelidade="codigo-do-cupom"
               class="self-start px-2 py-1 font-mono text-sm font-semibold tracking-wider border border-dashed rounded-md sm:self-center border-n-slate-7 text-n-slate-12"
               :class="
                 cupom.estado === 'valido' ? '' : 'line-through opacity-60'

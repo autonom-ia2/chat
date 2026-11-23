@@ -33,6 +33,10 @@ vi.mock('dashboard/composables', () => ({
 vi.mock('dashboard/composables/useCanManage', () => ({
   useCanManage: () => true,
 }));
+// Quem abre a página aqui pode mexer no contato: vê "Marcar como usado".
+vi.mock('dashboard/composables/usePolicy', () => ({
+  usePolicy: () => ({ checkPermissions: () => true }),
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: rotas.query }),
   useRouter: () => ({

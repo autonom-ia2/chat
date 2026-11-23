@@ -110,7 +110,6 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
         return pode.exportar;
       },
     },
-    veFidelidade: { value: false },
   }),
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
@@ -416,6 +415,36 @@ describe('sem acesso (401 ou 403)', () => {
       'Não consegui carregar. Tente de novo.'
     );
   });
+});
+
+describe('"Mais filtros": o filtro do cartão fidelidade', () => {
+  // #3100 — o cartão da pessoa segue o contato (D1): o filtro do cartão
+  // fidelidade não pede chave de Fidelidade, só o cartão na conta.
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    'com cartão na conta = %s, "Mais filtros" mostra o filtro do cartão: %s',
+    async (temCartao, mostra) => {
+      RelacionamentosAPI.opcoesDeFiltro.mockResolvedValue({
+        data: {
+          empresas: [],
+          etiquetas: [],
+          cidades: [],
+          fidelidade: temCartao,
+        },
+      });
+      const w = await abrir();
+      await w.get(marca('mais-filtros')).trigger('click');
+      await flushPromises();
+      const rotulos = [
+        ...document.querySelectorAll(
+          '[data-relacionamentos="gaveta-filtros"] label'
+        ),
+      ].map(rotulo => rotulo.textContent.trim());
+      expect(rotulos.includes('Cartão fidelidade')).toBe(mostra);
+    }
+  );
 });
 
 describe('ações em grupo: quem vê o quê', () => {

@@ -1,10 +1,12 @@
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 import { FIDELIDADE_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
+import { QUEM_EDITA_CONTATO } from 'dashboard/routes/dashboard/relacionamentos/lista/usePermissoesDaLista';
 import ErroComTentarDeNovo from 'dashboard/routes/dashboard/relacionamentos/components/comum/ErroComTentarDeNovo.vue';
 import FidelidadeTela from '../components/FidelidadeTela.vue';
 import { abaValida } from '../abas';
@@ -31,11 +33,14 @@ import { F } from '../useTextosDaFidelidade';
 // ao abrir: "Novo cupom" abre a tela de criar; "Mandar este cupom" abre a
 // automação pronta e desligada (?receita=FIDELIDADE_CUPOM&cupom=…); pausar e
 // ligar de novo gravam na hora. O Conferir pergunta ao servidor se o código
-// vale e "Marcar como usado" marca (repetir não gasta de novo).
+// vale e "Marcar como usado" marca (repetir não gasta de novo); o botão é de
+// quem pode mexer no contato (QUEM_EDITA_CONTATO, a regra do servidor).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage(FIDELIDADE_MANAGE_PERMISSION);
+const { checkPermissions } = usePolicy();
+const podeUsarCupom = computed(() => checkPermissions(QUEM_EDITA_CONTATO));
 
 const carregando = ref(true);
 const falhou = ref(false);
@@ -178,6 +183,7 @@ onMounted(carregar);
           :agora="agora"
           :cupons="cupons"
           :conferencia="conferencia"
+          :pode-usar-cupom="podeUsarCupom"
           @update:aba="trocarAba"
           @criar="montar"
           @mudar="montar"

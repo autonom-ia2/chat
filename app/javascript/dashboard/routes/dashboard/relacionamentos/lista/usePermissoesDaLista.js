@@ -4,7 +4,6 @@ import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 import { QUEM_TRAZ_LISTA } from '../trazer/quemTraz';
-import { FIDELIDADE_PERMISSIONS } from 'dashboard/constants/permissions';
 
 // As mesmas regras da barra de ações da lista de contatos de hoje
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
@@ -56,11 +55,6 @@ export const usePermissoesDaLista = () => {
     // servidor recusa os outros: GruposDeCompraController#update).
     podeAjustarGruposDeCompra: computed(() =>
       checkPermissions(['administrator'])
-    ),
-    // #3100 — ler o cartão fidelidade da conta (o filtro dele em "Mais
-    // filtros"): a regra do painel da Fidelidade (Fidelidade::ProgramaPolicy).
-    veFidelidade: computed(() =>
-      checkPermissions(['administrator', ...FIDELIDADE_PERMISSIONS])
     ),
   };
 };

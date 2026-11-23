@@ -195,8 +195,13 @@ class CustomRole < ApplicationRecord
                         crm_export].freeze
 
   # A key that only works with another one stored next to it: the CRM editing keys need crm_view (#2124); the tools key
-  # needs autonomia_view, because the tools drawer lives on the agent page (#1430).
-  IMPLIED_VIEWS = { 'crm_view' => CRM_EDITING_KEYS, 'autonomia_view' => %w[autonomia_tools_manage] }.freeze
+  # needs autonomia_view, because the tools drawer lives on the agent page (#1430); fidelidade_manage needs
+  # fidelidade_view, because the card is changed on the Fidelidade panel (#3100).
+  IMPLIED_VIEWS = {
+    'crm_view' => CRM_EDITING_KEYS,
+    'autonomia_view' => %w[autonomia_tools_manage],
+    'fidelidade_view' => %w[fidelidade_manage]
+  }.freeze
 
   # The keys as the role stores them. Readers check the stored keys, and the grant guard checks these, so nobody hands
   # out a view they do not hold.

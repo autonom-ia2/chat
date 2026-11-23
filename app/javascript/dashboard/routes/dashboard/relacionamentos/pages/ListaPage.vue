@@ -11,10 +11,6 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
-import {
-  carregarProgramaDaConta,
-  programaDaConta,
-} from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -209,14 +205,6 @@ const lista = useLista({
   aoMudarConsulta: marcados.limpar,
   ordemPadrao: ordemGuardada.ordemDaAba,
   filtrosIniciais: { fidelidade: fidelidadeValida(route.query.fidelidade) },
-});
-// #3100 — o filtro do cartão fidelidade aparece com o cartão na conta (lido
-// por quem pode ver o painel) ou quando a lista já chegou filtrada por ele.
-const comFidelidade = computed(
-  () => Boolean(programaDaConta()) || Boolean(lista.filtros.value.fidelidade)
-);
-onMounted(() => {
-  if (!demo && permissoes.veFidelidade.value) carregarProgramaDaConta();
 });
 const mudarOrdem = nova => {
   ordemGuardada.guardar(nova, aba.value);
@@ -530,6 +518,14 @@ const maisFiltros = useGavetaDeFiltros({
   fraseSemAcesso: () => fraseSemAcesso.value,
   erroGenerico: () => t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'),
 });
+// #3100 — o filtro do cartão fidelidade aparece para quem vê a lista, com o
+// cartão na conta (as opções da gaveta dizem) ou quando a lista já chegou
+// filtrada por ele. O cartão da pessoa segue o contato (D1).
+const comFidelidade = computed(
+  () =>
+    Boolean(maisFiltros.opcoes.value.fidelidade) ||
+    Boolean(lista.filtros.value.fidelidade)
+);
 
 // Com gente marcada a barra de ação fica colada no rodapé: a lista ganha folga
 // do tamanho dela, e abaixo de `md` a barra deixa livre o canto do botão ☰.

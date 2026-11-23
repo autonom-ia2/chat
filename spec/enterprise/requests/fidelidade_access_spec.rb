@@ -64,4 +64,25 @@ RSpec.describe 'Fidelidade com função personalizada', type: :request do
     call(role_user('contact_manage'), :post, "relacionamentos/pessoas/#{ana.id}/fidelidade/premios")
     expect(response).to have_http_status(:created)
   end
+
+  # O código vivo do cupom só vai para quem pode usá-lo (mexer no contato) ou vê o painel Fidelidade; quem só vê o
+  # contato lê o estado e a oferta.
+  it 'o código do cupom na ficha só vai para quem pode usá-lo ou vê o painel', :aggregate_failures do
+    Fidelidade::Programa.create!(account: account, tipo: 'carimbos', a_cada_centavos: 5_000, ganha: 1, meta: 10,
+                                 premio: 'Uma lavagem grátis', ligado: true, ligado_em: 1.day.ago)
+    cupom = Fidelidade::Cupom.create!(account: account, nome: 'Volta de dezembro', oferta_tipo: 'porcentagem', oferta_valor: 10,
+                                      moeda: 'BRL', prefixo: 'VOLTA', validade_dias: 15)
+    Fidelidade::CupomCodigo.create!(account: account, cupom: cupom, contact: ana, codigo: 'VOLTA-7KD2', enviado_em: 1.day.ago,
+                                    vale_ate: 14.days.from_now)
+    cupons_de = lambda do |*permissions|
+      call(role_user(*permissions), :get, "relacionamentos/pessoas/#{ana.id}/fidelidade")
+      response.parsed_body['cupons']
+    end
+
+    so_ve = cupons_de.call('contact_view')
+    expect(so_ve).to contain_exactly(include('estado' => 'valido', 'oferta' => include('tipo' => 'porcentagem')))
+    expect(so_ve.first).not_to have_key('codigo')
+    expect(cupons_de.call('contact_manage')).to contain_exactly(include('codigo' => 'VOLTA-7KD2'))
+    expect(cupons_de.call('contact_view', 'fidelidade_view')).to contain_exactly(include('codigo' => 'VOLTA-7KD2'))
+  end
 end
