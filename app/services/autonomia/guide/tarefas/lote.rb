@@ -6,7 +6,7 @@
 #
 # Depois do lote, a tarefa para sozinha quando: é o primeiro lote (pausa de segurança), as falhas
 # passam de 20%, ficou pendência sem desfazer, saiu mensagem da conta, o custo passou do teto, a
-# cota do Jev acabou ou o dono deixou de administrar. Cada parada leva o motivo.
+# cota do Jev acabou ou o dono saiu da conta. Cada parada leva o motivo.
 class Autonomia::Guide::Tarefas::Lote
   Tarefa = ::Autonomia::Guide::Tarefa
   Item = ::Autonomia::Guide::TarefaItem
@@ -40,7 +40,8 @@ class Autonomia::Guide::Tarefas::Lote
   private
 
   def motivo_antes
-    return 'admin' unless @contexto.administrador?
+    # #3117: a tarefa vale para quem não administra; cada item sai com a permissão dela. Quem saiu da conta não segue.
+    return 'fora_da_conta' if @contexto.account_user.nil?
 
     anterior = @tarefa.execucoes.order(:id).last
     'mensagens' if anterior && @tarefa.mensagem_saiu?(anterior.created_at, anterior.updated_at + JANELA_DE_MENSAGENS)

@@ -169,8 +169,8 @@ class Autonomia::Guide::Acoes
     end.uniq.sort
   end
 
-  # O que a execução DIRETA (sem clique) recusa — ação fora do catálogo, quem
-  # não administra, identificador faltando e o que não tem volta — recusado
+  # O que a execução DIRETA (sem clique) recusa — ação fora do catálogo,
+  # identificador faltando e o que não tem volta — recusado
   # ANTES de abrir a execução, para a lista "Feito pelo Guia" não ganhar um turno
   # vazio. O que não tem volta fica aqui, e não só na ferramenta (#856): qualquer
   # caminho que execute pelo turno passa por este ponto, e a confirmação não
@@ -229,8 +229,7 @@ class Autonomia::Guide::Acoes
 
     return concluida(acao, dados, resposta, conferencia) if sucesso?(resposta)
 
-    Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta) || traduzir('failed'),
-                  dica: ::Autonomia::Guide::Formatos::Retorno.new(acao, resposta).dica)
+    ::Autonomia::Guide::RecusaDaPlataforma.new(acao, resposta).resultado
   rescue Recusada
     raise
   rescue StandardError => e
@@ -262,12 +261,23 @@ class Autonomia::Guide::Acoes
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
 
-    # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
     # #2889: sem a porta da Automação, ninguém mexe no motor novo pelo Guia (MotorNovo#recusa), nem quem administra.
-    recusa = ::Autonomia::Guide::MotorNovo.new(@account).recusa(acao) ||
-             (::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?)
+    recusa = ::Autonomia::Guide::MotorNovo.new(@account).recusa(acao) || recusa_do_papel(acao, dados ? corpo_de(dados) : {})
     raise Recusada, traduzir(recusa) if recusa
   end
+
+  # #3117 (decisão do Rodrigo, 22/11): o Guia faz para qualquer pessoa da conta. Quem decide o que ela pode é a policy da
+  # plataforma, pelo token dela, como na tela. As regras automáticas ainda passam pelo Porteiro antes, para a recusa dizer
+  # qual chave falta na função.
+  def recusa_do_papel(acao, corpo)
+    return if administrador?
+
+    porteiro = ::Autonomia::Guide::PorteiroDaAutomacao
+    so_administrador? ? porteiro.so_administrador(acao, @account_user, corpo) : porteiro.recusa(acao, @account_user, corpo)
+  end
+
+  # Os apps conectados pelo MCP seguem só para quem administra até decisão própria (#3117): `Mcp::Plataforma::Acoes`.
+  def so_administrador? = false
 
   def administrador? = @account_user&.role.to_s == 'administrator'
 
@@ -340,20 +350,6 @@ class Autonomia::Guide::Acoes
 
   # O que a auditoria leva além da ação: a Automação livre põe o id dela (#2459).
   def trilha = {}
-
-  # O erro que volta é o da própria plataforma: é ele que diz a verdade sobre o
-  # que faltou ou o que não foi permitido. Quando não há motivo legível, devolve
-  # nulo — quem chama troca por uma frase traduzida, em vez de mostrar um número
-  # de status HTTP para quem está tentando trabalhar.
-  def recusa_da_plataforma(resposta)
-    dados = JSON.parse(resposta.corpo.to_s)
-    return unless dados.is_a?(Hash)
-
-    motivo = dados['message'] || dados['error'] || Array(dados['errors']).join(', ')
-    motivo.presence
-  rescue JSON::ParserError
-    nil
-  end
 
   # Algumas ações devolvem uma LISTA (POST teams/:id/team_members devolve os membros). Ler a lista
   # como registro quebrava aqui, DEPOIS de a plataforma ter gravado, e o Guia dizia que não tinha

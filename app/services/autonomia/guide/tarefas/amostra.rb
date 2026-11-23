@@ -5,7 +5,7 @@
 # conferência inteira da ação, inclusive por dentro dos campos JSON (`Conferencia#por_dentro`, #932):
 # um corpo errado aqui seria gravado 500 vezes.
 #
-# Recusa, com o motivo: quem não administra, ação sem desfazer (`SEM_DESFAZER` ou `x-sem-volta`),
+# Recusa, com o motivo: ação sem desfazer (`SEM_DESFAZER` ou `x-sem-volta`),
 # mais de 5.000 itens, cota do Jev que não cabe e corpo fora do formato.
 class Autonomia::Guide::Tarefas::Amostra
   Recusada = ::Autonomia::Guide::Tarefas::Recusada
@@ -32,7 +32,6 @@ class Autonomia::Guide::Tarefas::Amostra
   private
 
   def conferir_pedido!
-    raise Recusada, I18n.t('autonomia.guide.admin_only') unless @contexto.administrador?
     raise Recusada, "a receita não está completa: #{@receita.problemas.join('; ')}" if @receita.problemas.any?
     raise Recusada, "#{@receita.acao} não existe; o que existe é: #{vizinhas}" unless acoes.catalogo.include?(@receita.acao)
     return if acoes.desfazivel?(@receita.acao)

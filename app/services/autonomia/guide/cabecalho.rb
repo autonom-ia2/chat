@@ -11,13 +11,8 @@ module Autonomia::Guide::Cabecalho
       "Tela atual: #{route_context.presence || 'não informada'}." \
       "#{aberto || registro_aberto(route_params)}#{fuso(account)}" \
       "#{motor_das_automacoes(account)} " \
-      'Adapte a resposta a este perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o ' \
-      "perfil não for administrator, explique que é feito pelo administrador da conta#{quem_mais_monta_automacao(account)}.]"
-  end
-
-  # #2414 F1.3: com a flag, regras automáticas também para quem tem a permissão delas (PorteiroDaAutomacao).
-  def self.quem_mais_monta_automacao(account)
-    Autonomia::Automacao.fundacao?(account) ? ' (regras automáticas: também quem tem a permissão delas na função)' : ''
+      'Adapte a resposta a este perfil. Você faz por ele o que a permissão dele alcança na tela; quem decide é a ' \
+      'plataforma: tente, e se ela recusar por permissão, diga isso.]'
   end
 
   # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).

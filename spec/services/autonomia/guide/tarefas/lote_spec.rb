@@ -154,12 +154,13 @@ RSpec.describe Autonomia::Guide::Tarefas::Lote do
       expect_pausou_por('cota_jev')
     end
 
-    it 'pausa quando o dono deixa de administrar' do
+    # #3117: deixar de administrar não para a tarefa (cada item sai com a permissão de quem pediu); sair da conta, sim.
+    it 'pausa quando o dono sai da conta' do
       tarefa
-      conta.account_users.find_by(user: admin).update!(role: :agent)
+      conta.account_users.find_by(user: admin).destroy!
 
       rodar_lote!(tarefa)
-      expect_pausou_por('admin')
+      expect_pausou_por('fora_da_conta')
     end
 
     it 'pausa quando fica parte sem desfazer' do

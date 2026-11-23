@@ -113,10 +113,11 @@ RSpec.describe Autonomia::Guide::Tarefas::Amostra do
       expect(recusa(admin, receita)).to include('não tem desfazer')
     end
 
-    it 'recusa quem não administra' do
+    # #3117: quem não administra também planeja; cada registro muda com a permissão dele.
+    it 'não recusa quem não administra' do
       agente = create(:user, account: conta, role: :agent)
 
-      expect(recusa(agente, receita_de_nomes)).to eq(I18n.t('autonomia.guide.admin_only'))
+      expect(planejar!(conta, agente, receita_de_nomes).status).to eq('amostra_pronta')
     end
 
     it 'recusa mais de 5.000 itens' do
