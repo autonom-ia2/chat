@@ -75,11 +75,12 @@ const contorno = computed(() =>
     >
       {{ ajuda }}
     </p>
-    <!-- Região viva fixa: nasce vazia e recebe o texto do erro depois. -->
+    <!-- Região viva fixa: nasce vazia e recebe o texto do erro depois.
+    #3168 — ruby-11: o ruby-9 não dá contraste de texto pequeno (AA). -->
     <p
       :id="idDoErro"
       aria-live="polite"
-      class="min-w-0 mb-0 text-sm text-n-ruby-9 break-words"
+      class="min-w-0 mb-0 text-sm text-n-ruby-11 break-words"
       :class="erro ? 'mt-2' : 'mt-0'"
     >
       {{ erro }}

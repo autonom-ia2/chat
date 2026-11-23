@@ -7,6 +7,10 @@ import { ehSemAcesso } from './falhas';
 // e "Limpar" fecham e mudam a lista. A leitura que falha avisa: sem acesso,
 // com a frase de quem não pode ver (`fraseSemAcesso`); o resto, com o erro
 // genérico (`erroGenerico`).
+// #3168 — `abrirParaGrupo(grupo)`: a gaveta abre no modo do grupo guardado
+// escolhido (`doGrupo`: "Guardar no grupo" | "Ver sem guardar"), com os filtros
+// que estão na tela. `abrir()` é a gaveta de sempre. `carregarOpcoes()` lê as
+// opções sem abrir (a frase de quem entra no grupo usa os nomes delas).
 export const OPCOES_VAZIAS = Object.freeze({
   empresas: [],
   etiquetas: [],
@@ -22,14 +26,24 @@ export const useGavetaDeFiltros = ({
 }) => {
   const aberta = ref(false);
   const opcoes = ref(OPCOES_VAZIAS);
+  const doGrupo = ref(null);
 
-  const abrir = async () => {
-    aberta.value = true;
+  const lerAsOpcoes = async () => {
     try {
       opcoes.value = await lerOpcoes();
     } catch (falha) {
       useAlert(ehSemAcesso(falha) ? fraseSemAcesso() : erroGenerico());
     }
+  };
+  const abrir = () => {
+    doGrupo.value = null;
+    aberta.value = true;
+    return lerAsOpcoes();
+  };
+  const abrirParaGrupo = grupo => {
+    doGrupo.value = grupo;
+    aberta.value = true;
+    return lerAsOpcoes();
   };
   const aplicar = novos => {
     aberta.value = false;
@@ -40,5 +54,14 @@ export const useGavetaDeFiltros = ({
     lista.limparFiltros();
   };
 
-  return { aberta, opcoes, abrir, aplicar, limpar };
+  return {
+    aberta,
+    opcoes,
+    doGrupo,
+    abrir,
+    abrirParaGrupo,
+    aplicar,
+    limpar,
+    carregarOpcoes: lerAsOpcoes,
+  };
 };

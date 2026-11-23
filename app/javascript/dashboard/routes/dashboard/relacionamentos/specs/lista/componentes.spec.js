@@ -1177,6 +1177,8 @@ describe('GavetaDeFiltros', () => {
           chegouEm: '',
           compras: '',
           totalAcima: '',
+          condicoes: [],
+          juntar: 'todas',
         },
       ],
     ]);
