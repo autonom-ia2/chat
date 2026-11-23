@@ -162,4 +162,37 @@ describe('drilldownConversationFilters', () => {
       expect(filters).toHaveLength(2);
     });
   });
+
+  // #3151: o dia do intervalo sai no fuso da conta, o mesmo que o filtro da
+  // caixa usa, qualquer que seja o fuso do navegador.
+  describe('in the account timezone', () => {
+    // Dia 14/09 em São Paulo: de 14/09 03:00 UTC a 15/09 03:00 UTC.
+    const SP_SEP_14 = Date.UTC(2026, 8, 14, 3) / 1000;
+    const SP_SEP_15 = Date.UTC(2026, 8, 15, 3) / 1000;
+
+    it('bounds the local day of the bucket', () => {
+      const filters = buildDrilldownConversationFilters({
+        bucket: { since: SP_SEP_14, until: SP_SEP_15 },
+        type: 'account',
+        id: null,
+        timezone: 'America/Sao_Paulo',
+      });
+
+      expect(filters).toEqual(createdBetween('2026-09-13', '2026-09-15'));
+    });
+
+    it('bounds a week that ends at the turn of the month', () => {
+      const filters = buildDrilldownConversationFilters({
+        bucket: {
+          since: Date.UTC(2026, 8, 28, 3) / 1000,
+          until: Date.UTC(2026, 9, 5, 3) / 1000,
+        },
+        type: 'account',
+        id: null,
+        timezone: 'America/Sao_Paulo',
+      });
+
+      expect(filters).toEqual(createdBetween('2026-09-27', '2026-10-05'));
+    });
+  });
 });

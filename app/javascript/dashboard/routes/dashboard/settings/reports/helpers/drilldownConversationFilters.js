@@ -1,4 +1,4 @@
-import { addDays, format, fromUnixTime, subDays } from 'date-fns';
+import { addDays, format, fromUnixTime } from 'date-fns';
 import { FILTER_OPS } from 'dashboard/components-next/filter/operators';
 import { CONVERSATION_ATTRIBUTES } from 'dashboard/components-next/filter/helper/filterHelper';
 
@@ -11,11 +11,27 @@ const DIMENSION_ATTRIBUTES = {
   team: CONVERSATION_ATTRIBUTES.TEAM_ID,
 };
 
+// #3151: o filtro "Criada em" conta o dia no fuso da conta; o dia do intervalo
+// sai no mesmo fuso. Sem fuso, o do navegador.
+const dayIn = (timestamp, timezone) => {
+  const date = fromUnixTime(timestamp);
+  if (!timezone) return format(date, DATE_FORMAT);
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+const shiftDay = (day, days) =>
+  format(addDays(new Date(`${day}T12:00:00`), days), DATE_FORMAT);
+
 // The Created-at filter compares dates strictly, so bound by the surrounding days.
-const dayBefore = timestamp =>
-  format(subDays(fromUnixTime(timestamp), 1), DATE_FORMAT);
-const dayAfter = timestamp =>
-  format(addDays(fromUnixTime(timestamp - 1), 1), DATE_FORMAT);
+const dayBefore = (timestamp, timezone) =>
+  shiftDay(dayIn(timestamp, timezone), -1);
+const dayAfter = (timestamp, timezone) =>
+  shiftDay(dayIn(timestamp - 1, timezone), 1);
 
 const condition = (attributeKey, filterOperator, values) => ({
   attribute_key: attributeKey,
@@ -32,17 +48,18 @@ export const buildDrilldownConversationFilters = ({
   type,
   id,
   labelTitle,
+  timezone,
 }) => {
   const filters = [
     condition(
       CONVERSATION_ATTRIBUTES.CREATED_AT,
       FILTER_OPS.IS_GREATER_THAN,
-      dayBefore(bucket.since)
+      dayBefore(bucket.since, timezone)
     ),
     condition(
       CONVERSATION_ATTRIBUTES.CREATED_AT,
       FILTER_OPS.IS_LESS_THAN,
-      dayAfter(bucket.until)
+      dayAfter(bucket.until, timezone)
     ),
   ];
 

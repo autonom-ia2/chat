@@ -9,6 +9,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { useReportDrilldown } from '../composables/useReportDrilldown';
 // #3147: "Ver todas" abre as conversas do detalhamento na caixa de conversas (upstream #15832).
 import {
@@ -43,6 +44,8 @@ const panelRef = ref(null);
 const { t } = useI18n();
 const router = useRouter();
 const getLabelById = useMapGetter('labels/getLabelById');
+const currentAccountId = useMapGetter('getCurrentAccountId');
+const getAccount = useMapGetter('accounts/getAccount');
 const {
   records,
   meta,
@@ -73,6 +76,8 @@ const viewAllConversations = () => {
     type: props.type,
     id: props.id,
     labelTitle: getLabelById.value(props.id)?.title,
+    // #3151: o mesmo fuso que o filtro da caixa usa.
+    timezone: fusoDaConta(getAccount.value(currentAccountId.value)),
   });
   const { href } = router.resolve({
     name: 'home',
