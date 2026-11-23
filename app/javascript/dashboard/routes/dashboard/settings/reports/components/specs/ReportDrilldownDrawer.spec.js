@@ -464,6 +464,9 @@ describe('ReportDrilldownDrawer.vue', () => {
         '_blank',
         'noopener'
       );
+      expect(findViewAll(wrapper).attributes('aria-label')).toBe(
+        'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA'
+      );
     });
 
     it('opens the list in the same tab on a phone', async () => {
@@ -476,10 +479,15 @@ describe('ReportDrilldownDrawer.vue', () => {
 
         await findViewAll(wrapper).trigger('click');
 
-        expect(mockPush).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'home' })
-        );
+        const [destino] = mockPush.mock.calls.at(-1);
+        expect(destino.name).toBe('home');
+        expect(
+          JSON.parse(destino.query.filters).map(filter => filter.values)
+        ).toEqual(['2026-09-13', '2026-09-15', { id: 5, name: 'Vendas' }]);
         expect(open).not.toHaveBeenCalled();
+        expect(findViewAll(wrapper).attributes('aria-label')).toBe(
+          'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA_SAME_TAB'
+        );
       } finally {
         window.innerWidth = larguraOriginal;
         open.mockRestore();
