@@ -2,6 +2,7 @@
 // retângulo ou polígono troca a prévia pelo mapa de desenho, a busca só sai com
 // a área desenhada e o pedido leva o desenho em area_config. Resumo e histórico
 // dizem "área desenhada" com o tipo.
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import SearchAreaDrawMap from '../../components/search/SearchAreaDrawMap.vue';
@@ -21,6 +22,7 @@ import {
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
+  useRouter: () => useRoteadorDasFichas(),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {

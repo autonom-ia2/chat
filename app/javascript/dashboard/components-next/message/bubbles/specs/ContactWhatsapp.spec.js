@@ -1,4 +1,5 @@
 /* eslint-disable vue/one-component-per-file */
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { computed, defineComponent, h, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
@@ -8,6 +9,11 @@ import { provideMessageContext } from '../../provider.js';
 import { PELES, fornecerPele } from '../../../conversa-canal/pele';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3130 — o cadastro abre na ficha nova (conta 1 com o menu novo).
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
+  useRouter: () => useRoteadorDasFichas(),
+}));
 const podeVerContatos = ref(true);
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({
@@ -21,6 +27,10 @@ vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
 const montar = (achado, { comPele = true } = {}) => {
   const despachos = [];
   const store = createStore({
+    getters: {
+      getCurrentAccountId: () => 1,
+      'accounts/isFeatureEnabledonAccount': () => () => true,
+    },
     actions: {
       'contacts/filter': () => (achado ? [achado] : []),
       'contacts/create': (_ctx, dados) => {
@@ -126,7 +136,7 @@ describe('Contato recebido sem pele (como no main)', () => {
     await salvar(wrapper);
     expect(despachos).toEqual([]);
     expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining('/contacts/5'),
+      '/app/accounts/1/relacionamentos/pessoas/5',
       '_blank'
     );
   });

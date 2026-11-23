@@ -1,4 +1,5 @@
 /* eslint-disable vue/one-component-per-file */
+import { useRoteadorDasFichas } from 'dashboard/composables/spec/fixtures/roteadorDasFichas';
 import { computed, defineComponent, h } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
@@ -14,7 +15,10 @@ import CitacaoDoWhatsapp from '../CitacaoDoWhatsapp.vue';
 import { EMOJI, temBico } from '../visualWhatsapp';
 import { ocultaNaPele } from '../marcasDaMensagem';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
+  useRouter: () => useRoteadorDasFichas(),
+}));
 // Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({
