@@ -37,6 +37,16 @@ RSpec.describe Fidelidade::CodigoDoCupom do
     expect(described_class.new(cupom).para(ana).codigo).to eq('VOLTA-BBBB')
   end
 
+  it 'é único na conta sem o hífen: "VOLT-A7KD2" bate com "VOLTA-7KD2"', :aggregate_failures do
+    outro = Fidelidade::Cupom.create!(account: account, nome: 'Volt', oferta_tipo: 'porcentagem', oferta_valor: 5, prefixo: 'VOLT',
+                                      validade_dias: 15)
+    Fidelidade::CupomCodigo.create!(account: account, cupom: cupom, contact: ana, codigo: 'VOLTA-7KD2')
+    repetido = Fidelidade::CupomCodigo.new(account: account, cupom: outro, contact: ana, codigo: 'VOLT-A7KD2')
+
+    expect(repetido).not_to be_valid
+    expect(Fidelidade::CupomCodigo.last.codigo_limpo).to eq('VOLTA7KD2')
+  end
+
   it 'com os códigos de 4 esgotados, passa para 5' do
     outra = create(:contact, account: account)
     Fidelidade::CupomCodigo.create!(account: account, cupom: cupom, contact: outra, codigo: 'VOLTA-AAAA')

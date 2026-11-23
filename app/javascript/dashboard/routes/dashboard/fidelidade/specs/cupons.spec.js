@@ -136,7 +136,7 @@ describe('FidelidadePage, aba Cupons', () => {
     await pagina.find(sel('codigo')).setValue(' volta-7kd2 ');
     await pagina.find(sel('botao-conferir')).trigger('submit');
     await flushPromises();
-    expect(fonte.conferirCupom).toHaveBeenCalledWith('VOLTA-7KD2');
+    expect(fonte.conferirCupom).toHaveBeenCalledWith('VOLTA7KD2');
     expect(pagina.find(sel('resultado')).attributes('data-estado')).toBe(
       'valido'
     );

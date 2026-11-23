@@ -119,6 +119,48 @@ RSpec.describe Autonomia::Automacao::PassoDeMandarCupom, :automacao_motor do
       expect(mandadas).to be_empty
     end
 
+    describe 'a marca de mandado' do
+      let(:execucao) { Autonomia::Automacao::Execucao.new(automacao: automacao_ligada(account, dona, [passo]), account: account) }
+      let(:passo_rodando) { described_class.new(execucao: execucao, passo: passo, alvo: conversa) }
+
+      def codigo = Fidelidade::CupomCodigo.find_by!(cupom: cupom, contact: contato)
+
+      it 'o código já vale quando a mensagem sai: falhar depois do envio não deixa o cliente com código que não existe' do
+        na_hora = nil
+        allow(passo_rodando).to receive(:mandar).and_wrap_original do |original, *args|
+          na_hora = codigo.attributes.slice('enviado_em', 'vale_ate')
+          original.call(*args)
+        end
+
+        expect(passo_rodando.executar.tipo).to eq(:ok)
+        expect(na_hora).to eq('enviado_em' => agora, 'vale_ate' => agora + 15.days)
+      end
+
+      it 'a mensagem que não sai desfaz a marca: o código volta a não ter chegado', :aggregate_failures do
+        allow(passo_rodando).to receive(:mandar).and_return(Autonomia::Automacao::PassoDeMensagem.pulado('fora_da_janela'))
+
+        expect(passo_rodando.executar).to have_attributes(tipo: :pulado, motivo: 'fora_da_janela')
+        expect(codigo).to have_attributes(enviado_em: nil, vale_ate: nil, automacao_execucao_id: nil)
+      end
+
+      it 'o envio que quebra desfaz a marca e o erro sobe', :aggregate_failures do
+        allow(passo_rodando).to receive(:mandar).and_raise(StandardError, 'o canal caiu')
+
+        expect { passo_rodando.executar }.to raise_error(StandardError, 'o canal caiu')
+        expect(codigo).to have_attributes(enviado_em: nil, vale_ate: nil)
+      end
+
+      it 'mandar de novo e não sair não apaga o primeiro envio' do
+        Fidelidade::CupomCodigo.create!(account: account, cupom: cupom, contact: contato, codigo: 'VOLTA-7KD2',
+                                        enviado_em: agora - 2.days, vale_ate: agora + 13.days)
+        allow(passo_rodando).to receive(:mandar).and_return(Autonomia::Automacao::PassoDeMensagem.pulado('fora_da_janela'))
+
+        passo_rodando.executar
+
+        expect(codigo).to have_attributes(enviado_em: agora - 2.days, vale_ate: agora + 13.days)
+      end
+    end
+
     it 'quem ligou sem fidelidade_manage: sem acesso, nada sai e nenhum código é sorteado', :aggregate_failures do
       automacao = automacao_ligada(account, dona, [passo])
       dona.account_users.find_by(account: account).update!(role: :agent)

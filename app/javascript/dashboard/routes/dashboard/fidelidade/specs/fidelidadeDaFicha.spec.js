@@ -61,6 +61,7 @@ const confirmarPremio = peca =>
 
 beforeEach(() => {
   alertas.length = 0;
+  fonte.darPremio.mockReset();
 });
 
 describe('FidelidadeDaFicha', () => {
@@ -99,7 +100,49 @@ describe('FidelidadeDaFicha', () => {
     ).toBe(true);
   });
 
-  it('confirmar o prêmio manda uma chave por toque e refaz o bloco com a resposta', async () => {
+  it('a resposta perdida não troca a chave: o toque seguinte repete a mesma, e depois do prêmio vem outra', async () => {
+    fonte.fidelidadeDaPessoa.mockResolvedValue(DA_PESSOA);
+    fonte.darPremio
+      .mockRejectedValueOnce({ code: 'ECONNABORTED' })
+      .mockRejectedValueOnce({ response: { status: 409 } })
+      .mockResolvedValueOnce({ fidelidade: { ...DA_PESSOA, tem: 10 } })
+      .mockResolvedValueOnce({ fidelidade: { ...DA_PESSOA, tem: 0 } });
+    const peca = await montar({ podeEditar: true });
+
+    for (let toque = 0; toque < 4; toque += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await confirmarPremio(peca);
+      // eslint-disable-next-line no-await-in-loop
+      await flushPromises();
+    }
+
+    const chaves = fonte.darPremio.mock.calls.map(([, chave]) => chave);
+    expect(chaves).toHaveLength(4);
+    expect(typeof chaves[0]).toBe('string');
+    expect(chaves[1]).toBe(chaves[0]);
+    expect(chaves[2]).toBe(chaves[0]);
+    expect(chaves[3]).not.toBe(chaves[0]);
+  });
+
+  it('a recusa do servidor (cartão incompleto) troca a chave para o próximo toque', async () => {
+    fonte.fidelidadeDaPessoa.mockResolvedValue(DA_PESSOA);
+    fonte.darPremio.mockRejectedValue({
+      response: { status: 422, data: { error: 'saldo_insuficiente' } },
+    });
+    const peca = await montar({ podeEditar: true });
+
+    await confirmarPremio(peca);
+    await flushPromises();
+    await confirmarPremio(peca);
+    await flushPromises();
+
+    const [[, primeira], [, segunda]] = fonte.darPremio.mock.calls;
+    expect(typeof primeira).toBe('string');
+    expect(typeof segunda).toBe('string');
+    expect(segunda).not.toBe(primeira);
+  });
+
+  it('confirmar o prêmio manda a chave e refaz o bloco com a resposta', async () => {
     fonte.fidelidadeDaPessoa.mockResolvedValue(DA_PESSOA);
     fonte.darPremio.mockResolvedValue({
       fidelidade: { ...DA_PESSOA, tem: 0 },

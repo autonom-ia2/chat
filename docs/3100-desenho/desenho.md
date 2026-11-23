@@ -313,7 +313,7 @@ de `FichaDaPessoaPage.vue`, depois de `SecaoCompras`, com
 `cupom_codigos`: um por pessoa por cupom.
 
 - `account_id`, `cupom_id`, `contact_id`
-- `codigo`, índice único `(account_id, codigo)`
+- `codigo` e `codigo_limpo` (sem o hífen), índice único `(account_id, codigo_limpo)`
 - `enviado_em`, `vale_ate`, `usos` (integer)
 - `usado_em`, `usado_por_id`
 - `automacao_execucao_id`
@@ -592,9 +592,16 @@ permitidas confere os dois lados, então as duas mudanças entram juntas.
 - **Código:** prefixo da conta + fim sorteado de 4 letras (5 e 6 quando o
   tamanho anterior bate cinco vezes), sem `0 O 1 I L`. Um por pessoa e cupom.
   Mandar de novo manda o mesmo código **com a mesma validade** (não renova).
-- **Validade conta da chegada:** o primeiro envio que sai grava `enviado_em` e
-  `vale_ate`. Código sorteado num envio que não saiu fica sem eles e, no
-  Conferir e no "Marcar como usado", conta como **não existe**.
+- **Validade conta da chegada:** o primeiro envio grava `enviado_em` e
+  `vale_ate` antes de a mensagem sair, e desfaz se ela não sai (pulou, parou ou
+  quebrou): o cliente nunca fica com um código que o Conferir não aceita.
+  Código sorteado num envio que não saiu fica sem eles e, no Conferir, no
+  "Marcar como usado" e na ficha, conta como **não existe**.
+- **Conferir com ou sem hífen:** o código é comparado na forma limpa
+  (maiúsculas, sem espaço e sem o hífen), única na conta: "volta7kd2" acha
+  "VOLTA-7KD2".
+- **Prêmio pela ficha:** a chave de idempotência nasce no primeiro toque e
+  fica até o servidor responder; resposta perdida repete a mesma chave.
 - **Pausar o cupom** não invalida o que já foi mandado: quem recebeu ainda usa.
   Só para de mandar.
 - **Quem pode:** conferir pela aba Cupons pede `fidelidade_view`; marcar como

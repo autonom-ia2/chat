@@ -278,7 +278,7 @@ describe('ConferirCupom', () => {
     const tela = montar();
     await tela.find(sel('codigo')).setValue(' volta-7kd2 ');
     await tela.find('form').trigger('submit');
-    expect(tela.emitted('conferir')[0]).toEqual(['VOLTA-7KD2']);
+    expect(tela.emitted('conferir')[0]).toEqual(['VOLTA7KD2']);
   });
 
   it('não confere com o campo vazio', async () => {

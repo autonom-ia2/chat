@@ -4589,6 +4589,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
     t.bigint "cupom_id", null: false
     t.bigint "contact_id", null: false
     t.string "codigo", limit: 20, null: false
+    t.string "codigo_limpo", limit: 20, null: false
     t.datetime "enviado_em"
     t.datetime "vale_ate"
     t.integer "usos", default: 0, null: false
@@ -4597,7 +4598,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
     t.bigint "automacao_execucao_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "codigo"], name: "idx_fidelidade_cupom_codigos_codigo", unique: true
+    t.index ["account_id", "codigo_limpo"], name: "idx_fidelidade_cupom_codigos_codigo", unique: true
     t.index ["contact_id"], name: "index_fidelidade_cupom_codigos_on_contact_id"
     t.index ["cupom_id", "contact_id"], name: "idx_fidelidade_cupom_codigos_pessoa", unique: true
   end

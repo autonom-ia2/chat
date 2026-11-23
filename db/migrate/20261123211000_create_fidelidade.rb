@@ -10,6 +10,8 @@
 # - fidelidade_saldos: o saldo pronto de cada pessoa, para a ficha, o painel e o filtro. Muda na mesma transação do
 #   movimento, com a linha travada.
 # - fidelidade_cupons e fidelidade_cupom_codigos: o cupom da conta e o código de cada pessoa (um por pessoa e cupom).
+#   O código é único na conta pela forma limpa (`codigo_limpo`: sem o hífen), a que o Conferir procura: digitado com ou
+#   sem o hífen, acha o mesmo código.
 #
 # Chaves: contato em cascata (apagar a pessoa apaga o cartão e os códigos dela); conta e cartão sem cascata, como as
 # outras tabelas da conta (a exclusão da conta, Autonomia::ExclusaoDaConta, apaga antes); quem fez (usuário) vira nulo
@@ -106,6 +108,7 @@ class CreateFidelidade < ActiveRecord::Migration[7.2]
       t.references :cupom, null: false, foreign_key: { to_table: :fidelidade_cupons }, index: false
       t.references :contact, null: false, foreign_key: { on_delete: :cascade }, index: true
       t.string :codigo, limit: 20, null: false
+      t.string :codigo_limpo, limit: 20, null: false
       t.datetime :enviado_em
       t.datetime :vale_ate
       t.integer :usos, null: false, default: 0
@@ -113,7 +116,7 @@ class CreateFidelidade < ActiveRecord::Migration[7.2]
       t.references :usado_por, foreign_key: { to_table: :users, on_delete: :nullify }, index: false
       t.bigint :automacao_execucao_id
       t.timestamps
-      t.index %i[account_id codigo], unique: true, name: 'idx_fidelidade_cupom_codigos_codigo'
+      t.index %i[account_id codigo_limpo], unique: true, name: 'idx_fidelidade_cupom_codigos_codigo'
       t.index %i[cupom_id contact_id], unique: true, name: 'idx_fidelidade_cupom_codigos_pessoa'
     end
   end

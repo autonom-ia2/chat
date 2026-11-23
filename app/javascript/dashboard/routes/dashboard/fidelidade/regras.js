@@ -145,10 +145,13 @@ export const exemploDeCodigo = prefixo => {
 };
 
 // O código que o atendente digita para conferir: sem espaços nas pontas nem no
-// meio, em maiúsculas. Código é coisa de máquina, não frase de pessoa.
+// meio, sem o hífen, em maiúsculas. Código é coisa de máquina, não frase de
+// pessoa. A mesma regra de Fidelidade::CupomCodigo.limpo: "volta 7kd2" e
+// "VOLTA7KD2" acham "VOLTA-7KD2".
+const SEPARADOR_DO_CODIGO = '-';
 export const codigoDigitado = texto =>
   Array.from((texto || '').toUpperCase())
-    .filter(letra => letra.trim())
+    .filter(letra => letra.trim() && letra !== SEPARADOR_DO_CODIGO)
     .join('');
 
 export const errosDoCupom = cupom => {

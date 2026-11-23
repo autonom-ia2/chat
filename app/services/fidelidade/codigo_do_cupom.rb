@@ -1,6 +1,7 @@
 # O código de um cupom para uma pessoa (#3100): "VOLTA-7KD2". O fim é sorteado com SecureRandom num alfabeto sem as
 # letras e números que se confundem no balcão (0 e O, 1, I e L): 23 letras e 8 números. Começa com 4 caracteres; se o
-# sorteio bate num código que a conta já tem, tenta de novo e, depois de algumas vezes, passa para 5 e para 6.
+# sorteio bate num código que a conta já tem (comparado sem o hífen, como o Conferir procura), tenta de novo e, depois
+# de algumas vezes, passa para 5 e para 6.
 #
 # Um código por pessoa e cupom: mandar de novo reaproveita o que ela já tem. Dois envios ao mesmo tempo para a mesma
 # pessoa ficam com o mesmo código: o índice único (cupom, contato) recusa o segundo, e ele lê o que o primeiro gravou.
@@ -9,7 +10,7 @@ class Fidelidade::CodigoDoCupom
   LETRAS = ([*'A'..'Z'] - %w[I L O] + [*'2'..'9']).freeze
   TAMANHOS = [4, 5, 6].freeze
   TENTATIVAS_POR_TAMANHO = 5
-  SEPARADOR = '-'.freeze
+  SEPARADOR = Fidelidade::CupomCodigo::SEPARADOR
 
   # Nenhum sorteio deu certo em todas as tentativas (a conta teria de ter quase todos os códigos do prefixo).
   class Esgotado < StandardError; end

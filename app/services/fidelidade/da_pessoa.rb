@@ -1,6 +1,6 @@
 # O cartão fidelidade de uma pessoa, como a ficha lê (#3100, SecaoFidelidade): o cartão da conta, quanto ela tem, o
-# que vence logo, os últimos movimentos (com o total, para "Ver tudo") e os cupons dela. Sem cartão na conta: nil (a
-# ficha não mostra o bloco).
+# que vence logo, os últimos movimentos (com o total, para "Ver tudo") e os cupons que chegaram a ela. Sem cartão na
+# conta: nil (a ficha não mostra o bloco).
 #
 # "Vence logo": as entradas com resto que vencem nos próximos 30 dias, na data da primeira e no mesmo dia dela. O valor
 # da compra no histórico só vai para quem vê valor de venda (Crm::ValorDeVenda), como as compras da ficha.
@@ -52,8 +52,10 @@ class Fidelidade::DaPessoa
     { quantos: no_dia.sum(&:restante), em: primeira.to_i }
   end
 
+  # Só os que chegaram à pessoa (`enviado_em`): o código sorteado num envio que não saiu não existe para ela, como no
+  # Conferir e no "Marcar como usado".
   def cupons
-    Fidelidade::CupomCodigo.where(account_id: @account.id, contact_id: @contato.id).preload(:cupom).order(created_at: :desc)
-                           .map { |codigo| codigo.para_a_ficha(@agora) }
+    Fidelidade::CupomCodigo.where(account_id: @account.id, contact_id: @contato.id).where.not(enviado_em: nil).preload(:cupom)
+                           .order(created_at: :desc).map { |codigo| codigo.para_a_ficha(@agora) }
   end
 end

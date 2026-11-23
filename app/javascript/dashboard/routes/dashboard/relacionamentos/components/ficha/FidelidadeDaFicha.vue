@@ -21,7 +21,12 @@ import { F } from 'dashboard/routes/dashboard/fidelidade/useTextosDaFidelidade';
 // na conta, ou sem acesso à leitura, o bloco não aparece. "Ver tudo" traz o
 // histórico inteiro, uma página por toque. "Dar o prêmio" é de quem pode mexer
 // no contato (`podeEditar`, decisão D1): confirma no DialogoDarPremio e manda
-// uma chave por toque, para um clique repetido não tirar a meta duas vezes.
+// a chave de idempotência do prêmio. A chave nasce no primeiro toque e é a
+// mesma até o servidor responder: se a resposta se perde (rede caiu, demorou
+// demais), o toque seguinte repete a mesma chave e o servidor devolve o mesmo
+// prêmio, sem tirar a meta duas vezes. Ela só troca depois de uma resposta do
+// servidor (o prêmio dado, ou a recusa, que não tirou nada); o 409 quer dizer
+// que o primeiro pedido ainda corre, e a chave fica.
 // A leitura falhou: o cartão do bloco com "Tentar de novo" (FalhaDaParte), como
 // as outras partes da ficha. "Marcar como usado" num cupom da pessoa também é de
 // quem pode mexer no contato (D1): a SecaoFidelidade pergunta antes, e o toque
@@ -42,6 +47,8 @@ const falhou = ref(false);
 const pagina = ref(0);
 const dando = ref(false);
 const dialogo = ref(null);
+const chaveDoPremio = ref(null);
+const EM_ANDAMENTO = 409;
 
 const carregar = async () => {
   falhou.value = false;
@@ -67,16 +74,25 @@ const verTudo = async () => {
   }
 };
 
+// O servidor respondeu e não está mais com o pedido: o próximo toque é outro.
+const servidorRespondeu = falha => {
+  const status = falha?.response?.status;
+  return Boolean(status) && status !== EM_ANDAMENTO;
+};
+
 const confirmarPremio = async () => {
   if (dando.value) return;
   dando.value = true;
+  chaveDoPremio.value = chaveDoPremio.value || crypto.randomUUID();
   try {
-    const resposta = await darPremio(props.donoId, crypto.randomUUID());
+    const resposta = await darPremio(props.donoId, chaveDoPremio.value);
+    chaveDoPremio.value = null;
     dados.value = resposta.fidelidade;
     pagina.value = 0;
     dialogo.value?.close();
     useAlert(t(`${FA}.PREMIO_DADO`, { nome: props.nome }));
   } catch (falha) {
+    if (servidorRespondeu(falha)) chaveDoPremio.value = null;
     useAlert(t(`${FA}.${semSaldo(falha) ? 'SEM_SALDO' : 'ERRO_PREMIO'}`));
   } finally {
     dando.value = false;
@@ -101,7 +117,13 @@ const usarCupom = async cupom => {
   }
 };
 
-watch(() => props.donoId, carregar);
+watch(
+  () => props.donoId,
+  () => {
+    chaveDoPremio.value = null;
+    carregar();
+  }
+);
 onMounted(carregar);
 </script>
 

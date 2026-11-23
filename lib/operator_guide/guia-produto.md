@@ -1208,7 +1208,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `fidelidade_view` ou `fidelidade_manage`
 - pre_requisitos: para conferir na aba Cupons, ser administrador ou ter uma função com Fidelidade em Ver ou Editar; para marcar como usado, poder editar o contato dono do cupom (o atendente também pode, pela ficha).
 - passos: 1. Na aba Cupons, digite o código em O cliente mostrou um cupom?; 2. Clique em Conferir; 3. Se aparecer Vale!, veja o que o cupom dá, de quem é e até quando vale; 4. Clique em Marcar como usado; 5. Dê o desconto ou o presente no caixa; 6. Pela ficha da pessoa, clique em Marcar como usado ao lado do cupom e confirme.
-- gotchas: espaços e letras minúsculas no código não atrapalham; Já usado mostra a data em que foi usado; Venceu mostra a data e não deixa marcar; Não achamos é código errado ou que nunca chegou ao cliente: confira as letras com ele; o nome do cliente só aparece para quem pode ver o contato; marcar duas vezes não gasta de novo; quem tentar muitos códigos seguidos espera um pouco para conferir de novo; marcar como usado não tem desfazer.
+- gotchas: espaços, letras minúsculas e o tracinho do código não atrapalham (VOLTA7KD2 acha VOLTA-7KD2); a ficha só mostra os cupons que chegaram ao cliente; Já usado mostra a data em que foi usado; Venceu mostra a data e não deixa marcar; Não achamos é código errado ou que nunca chegou ao cliente: confira as letras com ele; o nome do cliente só aparece para quem pode ver o contato; marcar duas vezes não gasta de novo; quem tentar muitos códigos seguidos espera um pouco para conferir de novo; marcar como usado não tem desfazer.
 - nav_target: `fidelidade_index`
 
 ### Ver quantos usaram o cupom e quanto ele vendeu

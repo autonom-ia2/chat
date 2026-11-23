@@ -170,8 +170,9 @@ describe('código do cupom', () => {
     expect(exemploDeCodigo('')).toBe('7KD2');
   });
 
-  it('o código digitado perde os espaços e vira maiúsculas', () => {
-    expect(codigoDigitado('  volta - 7kd2 ')).toBe('VOLTA-7KD2');
+  it('o código digitado perde os espaços e o hífen e vira maiúsculas', () => {
+    expect(codigoDigitado('  volta - 7kd2 ')).toBe('VOLTA7KD2');
+    expect(codigoDigitado('volta7kd2')).toBe('VOLTA7KD2');
   });
 });
 

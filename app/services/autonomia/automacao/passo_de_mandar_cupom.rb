@@ -4,8 +4,10 @@
 # texto: `cupom.codigo`, `cupom.oferta` e `cupom.vale_ate` (Fidelidade::ValoresDoCupom), que só existem aqui.
 #
 # - Um código por pessoa e cupom (Fidelidade::CodigoDoCupom): mandar de novo manda o mesmo código, com a mesma validade.
-# - A validade conta de quando o código chega à pessoa: o primeiro envio que sai grava `enviado_em` e `vale_ate`. O
-#   código sorteado num envio que não saiu fica sem eles e não vale no Conferir.
+# - A validade conta de quando o código chega à pessoa: o primeiro envio grava `enviado_em` e `vale_ate`. Grava ANTES de
+#   mandar e desfaz se a mensagem não sai (pulou, parou ou quebrou): se algo falhar depois de a mensagem sair, o cliente
+#   nunca fica com um código que o Conferir não aceita. O código sorteado num envio que não saiu fica sem eles e não
+#   vale no Conferir nem aparece na ficha.
 # - Pula, com o motivo: cupom apagado (`sem_cupom`) ou pausado (`cupom_pausado`), alvo sem contato
 #   (`cupom_sem_contato`), código que a pessoa já usou (`cupom_ja_usado`) ou que venceu (`cupom_vencido`).
 #
@@ -78,14 +80,39 @@ class Autonomia::Automacao::PassoDeMandarCupom < Autonomia::Automacao::PassoDeMe
     pulo = preparar
     return pulo if pulo
 
+    marcar_como_mandado
     resultado = super
-    return resultado unless resultado.tipo == :ok
+    return mandado(resultado) if resultado.tipo == :ok
 
-    @codigo.update!(enviado_em: @codigo.enviado_em || Time.current, vale_ate: @vale_ate, automacao_execucao_id: @execucao.id)
-    Resultado.new(tipo: :ok, motivo: resultado.motivo, dados: resultado.dados.merge('cupom_id' => @codigo.cupom_id))
+    desmarcar
+    resultado
+  rescue StandardError
+    desmarcar
+    raise
   end
 
   private
+
+  # O primeiro envio marca o código antes de a mensagem sair (ver o topo). Mandar de novo não mexe na data nem na validade.
+  def marcar_como_mandado
+    return if @codigo.enviado_em
+
+    @codigo.update!(enviado_em: Time.current, vale_ate: @vale_ate, automacao_execucao_id: @execucao.id)
+    @marcado = true
+  end
+
+  # A mensagem não saiu: o código volta a não ter chegado à pessoa.
+  def desmarcar
+    return unless @marcado
+
+    @codigo.update!(enviado_em: nil, vale_ate: nil, automacao_execucao_id: nil)
+    @marcado = false
+  end
+
+  def mandado(resultado)
+    @codigo.update!(automacao_execucao_id: @execucao.id) unless @codigo.automacao_execucao_id == @execucao.id
+    Resultado.new(tipo: :ok, motivo: resultado.motivo, dados: resultado.dados.merge('cupom_id' => @codigo.cupom_id))
+  end
 
   # Acha o cupom e o código da pessoa (sorteia, se ela ainda não tem) e a validade que ele terá ao chegar. Devolve o pulo,
   # ou nil para mandar.

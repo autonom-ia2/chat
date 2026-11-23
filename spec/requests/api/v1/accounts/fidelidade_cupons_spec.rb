@@ -131,6 +131,14 @@ RSpec.describe 'Fidelidade: cupons', type: :request do
                                               'vale_ate' => (agora + 14.days).to_i, 'oferta' => include('tipo' => 'porcentagem'))
     end
 
+    it 'código digitado sem o hífen acha o mesmo código' do
+      codigo = mandado(cupom, ana)
+
+      pedir(:post, 'cupons/conferir', params: { codigo: 'volta7kd2' })
+
+      expect(response.parsed_body).to include('id' => codigo.id, 'codigo' => 'VOLTA-7KD2', 'estado' => 'valido')
+    end
+
     it 'diz se já foi usado, se venceu e se não existe', :aggregate_failures do
       mandado(cupom, ana, usado_em: agora - 1.hour)
       mandado(cupom, create(:contact, account: account), codigo: 'VOLTA-VNC2', vale_ate: agora - 1.day)
@@ -201,6 +209,16 @@ RSpec.describe 'Fidelidade: cupons', type: :request do
       pedir(:post, "cupom_codigos/#{codigo.id}/usar")
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it 'a ficha não mostra o código sorteado num envio que não saiu' do
+      Fidelidade::CupomCodigo.create!(account: account, cupom: cupom, contact: ana, codigo: 'VOLTA-NS9X')
+      Fidelidade::Programa.create!(account: account, tipo: 'carimbos', a_cada_centavos: 5_000, ganha: 1, meta: 10,
+                                   premio: 'Uma lavagem grátis', ligado: true, ligado_em: agora - 1.day)
+
+      get "/api/v1/accounts/#{account.id}/relacionamentos/pessoas/#{ana.id}/fidelidade", headers: agente.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['cupons']).to eq([])
     end
 
     it 'a ficha mostra o cupom da pessoa com o id para marcar' do
