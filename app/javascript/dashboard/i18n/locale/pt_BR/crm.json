@@ -4832,6 +4832,9 @@
     "INSERTED": "Inserido na resposta."
   },
   "AUTONOMIA_GUIDE": {
+    "GRAFICO": {
+      "FONTE": "Mesmos números da tela Relatórios · {de} a {ate}"
+    },
     "AVISOS": {
       "LAUNCHER_LABEL": "Pergunte ao Guia, {count} aviso novo | Pergunte ao Guia, {count} avisos novos",
       "SELO": "Aviso do Guia"

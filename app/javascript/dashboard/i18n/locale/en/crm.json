@@ -4831,6 +4831,9 @@
     "INSERTED": "Inserted into the reply."
   },
   "AUTONOMIA_GUIDE": {
+    "GRAFICO": {
+      "FONTE": "Same numbers as the Reports screen · {de} to {ate}"
+    },
     "AVISOS": {
       "LAUNCHER_LABEL": "Ask the Guide, {count} new warning | Ask the Guide, {count} new warnings",
       "SELO": "Warning from the Guide"
