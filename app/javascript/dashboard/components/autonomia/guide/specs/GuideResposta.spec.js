@@ -60,6 +60,41 @@ describe('pedacosDaResposta', () => {
     expect(tipos(pedacos)).toEqual(['G1', 'e']);
   });
 
+  it('marcador sem "]" fica no texto como veio', () => {
+    const pedacos = pedacosDaResposta('Veja [grafico:1 e pronto.', [
+      grafico('1'),
+    ]);
+
+    expect(tipos(pedacos)).toEqual(['Veja [grafico:1 e pronto.', 'G1']);
+  });
+
+  it('marcador com algo além de dígitos fica no texto como veio', () => {
+    const pedacos = pedacosDaResposta(
+      'A [grafico:abc] B [grafico: 1] C [grafico:1a] D',
+      [grafico('1')]
+    );
+
+    expect(tipos(pedacos)).toEqual([
+      'A [grafico:abc] B [grafico: 1] C [grafico:1a] D',
+      'G1',
+    ]);
+  });
+
+  it('depois de um marcador malformado, o marcador certo ainda vale', () => {
+    const pedacos = pedacosDaResposta('A [grafico:x] B [grafico:1] C', [
+      grafico('1'),
+    ]);
+
+    expect(tipos(pedacos)).toEqual(['A [grafico:x] B', 'G1', 'C']);
+  });
+
+  it('marcador vazio fica no texto', () => {
+    expect(tipos(pedacosDaResposta('A [grafico:] B', [grafico('1')]))).toEqual([
+      'A [grafico:] B',
+      'G1',
+    ]);
+  });
+
   it('sem gráfico, o texto fica como veio', () => {
     expect(tipos(pedacosDaResposta('São 3.', null))).toEqual(['São 3.']);
   });
