@@ -510,6 +510,8 @@ describe Contacts::FilterService do
       end
 
       it 'filters custom date attributes by days before' do
+        # #3151: "hoje" é o da conta; com a conta em UTC, as datas abaixo valem a qualquer hora.
+        account.update!(reporting_timezone: 'UTC')
         cs_contact.update!(custom_attributes: cs_contact.custom_attributes.merge('signed_in_at' => (Time.zone.today - 4.days).to_s))
         el_contact.update!(custom_attributes: el_contact.custom_attributes.merge('signed_in_at' => (Time.zone.today - 2.days).to_s))
         params[:payload] = [

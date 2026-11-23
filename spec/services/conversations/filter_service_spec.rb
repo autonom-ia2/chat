@@ -489,6 +489,8 @@ describe Conversations::FilterService do
       let!(:params) { { payload: [], page: 1 } }
 
       it 'filters custom date attributes by days before' do
+        # #3151: "hoje" é o da conta; com a conta em UTC, as datas abaixo valem a qualquer hora.
+        account.update!(reporting_timezone: 'UTC')
         en_conversation_1.update!(
           custom_attributes: en_conversation_1.custom_attributes.merge('conversation_created' => (Time.zone.today - 4.days).to_s)
         )
