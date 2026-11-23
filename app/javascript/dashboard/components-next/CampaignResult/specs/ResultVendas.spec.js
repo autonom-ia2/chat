@@ -30,6 +30,9 @@ describe('ResultVendas', () => {
     expect(w.find('[data-situacao]').exists()).toBe(false);
     expect(w.find('[data-ninguem]').exists()).toBe(false);
     expect(w.find('[data-so-contagem]').exists()).toBe(false);
+    expect(w.find('[data-total]').exists()).toBe(false);
+    expect(w.find('[data-compraram]').exists()).toBe(false);
+    expect(w.find('[data-parte]').exists()).toBe(false);
   });
 
   it('ninguém recebeu: a comparação com o grupo de controle não aparece', () => {
