@@ -12,8 +12,8 @@ import BarChart from 'shared/components/charts/BarChart.vue';
 //    inteiro. No painel de 320 px o BarChart corta o nome embaixo da barra.
 //  - `serie` (por dia, semana, mês): o BarChart da tela Relatórios.
 //
-// Teto de 31 barras na tela. A ferramenta nunca manda mais que isso: acima de
-// 31 dias ela agrupa por semana antes de devolver.
+// Tetos da ferramenta: até 60 barras no ranking; na série, até 31 (acima de
+// 31 dias ela agrupa por semana, e acima de 31 semanas por mês).
 const props = defineProps({
   // 'ranking' | 'serie'.
   modo: {
@@ -104,8 +104,8 @@ const dados = computed(() => ({
     </figcaption>
     <ol v-if="modo === 'ranking'" class="flex flex-col gap-2 m-0 p-0 list-none">
       <li
-        v-for="barra in barras"
-        :key="barra.rotulo"
+        v-for="(barra, indice) in barras"
+        :key="indice"
         class="flex flex-col gap-1"
       >
         <span class="flex items-baseline justify-between gap-2 text-sm">
