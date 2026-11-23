@@ -73,7 +73,7 @@ td small{color:var(--muted);display:block;font-size:12px}
   <h1>Inventário de telas do painel</h1>
   <p>Todas as telas do painel que ainda estão no visual ou na jornada originais do Chatwoot, julgadas pela regra de ouro: design premium e uma jornada tão simples que alguém de QI 70, sem conhecimento de tecnologia, consegue usar.</p>
   <p class="meta"><b>Só telas originais do Chatwoot.</b> Telas feitas pelo nosso time ficam fora. Nas parciais, entra só a parte que ainda é original.</p>
-  <p class="meta">Base: <code>origin/main b81859f3be</code>, comparada com o Chatwoot <code>v4.18.0</code>. Upgrade considerado: <code>v4.20.1</code>. Data: 22/11/2026.</p>
+  <p class="meta">Base: <code>origin/main b81859f3be</code>, comparada com o Chatwoot <code>v4.18.0</code>. Upgrade considerado: <code>v4.20.1</code>, no ar desde 23/11 (<code>main b3b7909460</code>). Data: 22/11/2026; atualizado 23/11.</p>
 </header>
 
 <section>
@@ -109,7 +109,7 @@ td small{color:var(--muted);display:block;font-size:12px}
 
 <section>
   <h2>Lotes propostos, em ordem</h2>
-  <p>Primeiro as telas novas, uma família por PR, com mockup em prints antes de implementar e revisão do diretor de arte com prints de antes e depois. Cada tela nova já nasce com os textos certos. Telas com muitos arquivos mudados pelo upgrade esperam o upgrade terminar. Tudo o que não é tela nova (telas duplicadas, atalhos, chaves antigas e backend) está na Issue #3129, para depois de todas as telas no ar.</p>
+  <p>Primeiro as telas novas, uma família por PR, com mockup em prints antes de implementar e revisão do diretor de arte com prints de antes e depois. Cada tela nova já nasce com os textos certos. O upgrade para o Chatwoot 4.20.1 entrou no ar em 23/11 (main b3b7909460): os oito lotes estão liberados, e os lotes 5 a 8 partem da main nova. Tudo o que não é tela nova (telas duplicadas, atalhos, chaves antigas e backend) está na Issue #3129, para depois de todas as telas no ar.</p>
   <div class="lotes" id="lotes"></div>
 </section>
 
@@ -119,7 +119,7 @@ td small{color:var(--muted);display:block;font-size:12px}
     <button type="button" data-f="todas" aria-pressed="true">Todas</button>
     <button type="button" data-f="original" aria-pressed="false">Originais</button>
     <button type="button" data-f="parcial" aria-pressed="false">Parciais</button>
-    <button type="button" data-f="espera" aria-pressed="false">Esperam o upgrade</button>
+    <button type="button" data-f="espera" aria-pressed="false">Upgrade mexeu</button>
     <button type="button" data-f="backend" aria-pressed="false">Pedem backend</button>
   </div>
   <div class="tablebox"><table>
@@ -136,7 +136,7 @@ td small{color:var(--muted);display:block;font-size:12px}
   <div style="display:grid;gap:12px">
     <h2>Também na #3129</h2>
     <ul class="list">
-      <li><b>Chaves ligadas em todas as contas?</b><span class="why"><code>lista_quem_espera</code>, <code>painel_contato_enxuto</code>, <code>funcoes_guiadas</code>, horário único por canal e agente de IA por caixa. Todas nascem ligadas no <code>features.yml</code>. Se alguma conta estiver sem, a pessoa cai na tela original. Leitura no banco pela Orquestração, quando a fila reabrir.</span></li>
+      <li><b>Chaves ligadas em todas as contas?</b><span class="why"><code>lista_quem_espera</code>, <code>painel_contato_enxuto</code>, <code>funcoes_guiadas</code>, horário único por canal e agente de IA por caixa. Todas nascem ligadas no <code>features.yml</code>. Se alguma conta estiver sem, a pessoa cai na tela original. Leitura no banco pela Orquestração (fila reaberta em 23/11).</span></li>
       <li><b>A ficha nova da pessoa tem tudo da antiga?</b><span class="why">Notas, histórico e juntar contatos, antes de redirecionar a ficha antiga.</span></li>
       <li><b>Telas antigas duplicadas e atalhos.</b><span class="why">Ficha, lista e empresas antigas, editor de portais, automação antiga, Cmd+K e Alt+V.</span></li>
     </ul>
@@ -150,10 +150,10 @@ const LOTES=[
  {id:2,nome:"Configurações › Pessoas e atendimento",tam:"G",livre:true,txt:"Cinco telas no padrão de Automações (herói, cartão-frase, uma ação por tela).",itens:["Usuários","Times (uma tela no lugar do passo a passo de 3 etapas)","Respostas prontas","Etiquetas (bolinha de cor, sem código hexadecimal)","Regras para encerrar (com prévia da mensagem ao cliente)"]},
  {id:3,nome:"Busca, filtros e ações em massa",tam:"M",livre:true,txt:"O que fica em volta da lista de conversas.",itens:["Busca","Filtro avançado com filtros prontos","Filtros salvos (um nome só)","Cabeçalho original que aparece ao filtrar","Ações em massa com texto nos botões"]},
  {id:4,nome:"Configurações restantes",tam:"G",livre:true,txt:"Telas de administrador, de uso mais raro.",itens:["Atribuição: políticas e capacidade","Ações em um clique","Campos extras","Agentes externos","Histórico de alterações","Login da empresa"]},
- {id:5,nome:"Conversa: caixa de resposta e topo",tam:"M",livre:false,txt:"A tela mais usada. Resolve o crítico da anotação × enviar ao cliente. O upgrade muda 13 arquivos aqui.",itens:["Caixa de resposta: Anotação interna × Enviar ao cliente","Botões de 44 px com nome","Topo enxuto no celular"]},
- {id:6,nome:"Canais: criar e configurar",tam:"G",livre:false,txt:"A jornada de maior impacto para conta nova. Resolve o crítico de apagar canal. O upgrade muda 36 arquivos aqui.",itens:["Lista de canais","Escolher canal: os dois WhatsApps em destaque, o resto recolhido","Criar cada tipo de canal","Configurações da caixa e todas as abas"]},
- {id:7,nome:"Relatórios",tam:"G",livre:false,txt:"Nove relatórios com uma frase do que fazer com cada número. O upgrade muda 28 arquivos.",itens:["Visão geral, Conversas, Usuários, Canais, Times, Etiquetas","Satisfação, Prazos, Robôs"]},
- {id:8,nome:"Conexões, perfil e primeiro acesso",tam:"M",livre:false,txt:"Telas raras ou de administrador. O crítico do Site obrigatório se resolve na tela; a parte do servidor está na #3129.",itens:["Integrações e Webhooks","Importar dados","Dados da empresa","Perfil","Primeiro acesso (dados e canais)","Conta suspensa"]}
+ {id:5,nome:"Conversa: caixa de resposta e topo",tam:"M",livre:true,txt:"A tela mais usada. Resolve o crítico da anotação × enviar ao cliente. O upgrade mudou 13 arquivos aqui: mockup parte da main nova.",itens:["Caixa de resposta: Anotação interna × Enviar ao cliente","Botões de 44 px com nome","Topo enxuto no celular"]},
+ {id:6,nome:"Canais: criar e configurar",tam:"G",livre:true,txt:"A jornada de maior impacto para conta nova. Resolve o crítico de apagar canal. O upgrade mudou 36 arquivos aqui: mockup parte da main nova.",itens:["Lista de canais","Escolher canal: os dois WhatsApps em destaque, o resto recolhido","Criar cada tipo de canal","Configurações da caixa e todas as abas"]},
+ {id:7,nome:"Relatórios",tam:"G",livre:true,txt:"Nove relatórios com uma frase do que fazer com cada número. O upgrade mudou 28 arquivos: mockup parte da main nova.",itens:["Visão geral, Conversas, Usuários, Canais, Times, Etiquetas","Satisfação, Prazos, Robôs"]},
+ {id:8,nome:"Conexões, perfil e primeiro acesso",tam:"M",livre:true,txt:"Telas raras ou de administrador. O crítico do Site obrigatório se resolve na tela; a parte do servidor está na #3129.",itens:["Integrações e Webhooks","Importar dados","Dados da empresa","Perfil","Primeiro acesso (dados e canais)","Conta suspensa"]}
 ];
 // s: original | parcial | nossa | morta ; up: upgrade muda muito (espera) ; be: precisa backend
 const T=[
@@ -227,7 +227,7 @@ const media=(notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(1).replace('.',','
 document.getElementById('stats').innerHTML=[
  [rows.length,'telas avaliadas'],[count('original'),'ainda originais'],[count('parcial'),'parciais'],[media,'nota média (0 a 10)'],[rows.filter(r=>r[9]).length,'pedem backend']
 ].map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
-document.getElementById('lotes').innerHTML=LOTES.map(l=>`<article class="lote"><header><h3>${l.id}. ${l.nome}</h3><span class="pill ${l.livre?'p-livre':'p-espera'}">${l.livre?'Pode começar':'Espera o upgrade'}</span></header><p>${l.txt} <span class="meta">Tamanho ${l.tam}.</span></p><ul>${l.itens.map(i=>`<li>${i}</li>`).join('')}</ul></article>`).join('');
+document.getElementById('lotes').innerHTML=LOTES.map(l=>`<article class="lote"><header><h3>${l.id}. ${l.nome}</h3><span class="pill ${l.livre?'p-livre':'p-espera'}">${l.livre?'Pode começar':'Pode começar'}</span></header><p>${l.txt} <span class="meta">Tamanho ${l.tam}.</span></p><ul>${l.itens.map(i=>`<li>${i}</li>`).join('')}</ul></article>`).join('');
 const label={original:['Original','p-orig'],parcial:['Parcial','p-parc'],nossa:['Nossa','p-nossa'],morta:['Código morto','p-morta']};
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;');
 function render(f){
