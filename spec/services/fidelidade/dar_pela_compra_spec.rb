@@ -151,7 +151,7 @@ RSpec.describe Fidelidade::DarPelaCompra do
       allow(Autonomia::Automacao::Escuta).to receive(:automacoes_do_gatilho).with(account.id, gatilho).and_return(ligadas)
     end
 
-    it 'dispara uma vez quando a compra cruza a meta, com a marca do movimento' do
+    it 'dispara uma vez quando a compra cruza a meta, com a marca do cartão' do
       com_automacao_ligada
       compra(ana, reais: 400)
       dar(ana)
@@ -160,10 +160,33 @@ RSpec.describe Fidelidade::DarPelaCompra do
       dar(ana)
       dar(ana)
 
-      movimento = movimentos(ana).last
       expect(Autonomia::Automacao::Escuta).to have_received(:comecar).once
-      expect(Autonomia::Automacao::Escuta).to have_received(:comecar)
-        .with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:#{movimento.id}")
+      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:1")
+    end
+
+    it 'venda desfeita e fechada de novo não é outro cartão: a marca se repete e a automação não começa duas vezes' do
+      com_automacao_ligada
+      card = compra(ana, reais: 500)
+      dar(ana)
+      card.update!(status: :open, closed_at: nil)
+      dar(ana)
+      card.update!(status: :won, closed_at: agora)
+      dar(ana)
+
+      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).twice
+        .with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:1")
+    end
+
+    it 'depois do prêmio, completar de novo é o cartão seguinte' do
+      com_automacao_ligada
+      compra(ana, reais: 500)
+      dar(ana)
+      Fidelidade::DarPremio.new(programa, ana, admin).call
+      compra(ana, reais: 500)
+      dar(ana)
+
+      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:1")
+      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:2")
     end
 
     it 'não dispara sem automação ligada com o gatilho' do
