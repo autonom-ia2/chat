@@ -59,6 +59,11 @@ class Conversations::FilterService < FilterService
     }
   end
 
+  # #3151: "Criada em" e "Última atividade" contam o dia no fuso da conta.
+  def fuso_dos_filtros_de_data
+    @fuso_dos_filtros_de_data ||= Filters::DateFilterHelper.fuso_da_conta(@account)
+  end
+
   def conversations
     Conversations::SortService.apply(@conversations, @params[:sort_by]).page(current_page)
   end

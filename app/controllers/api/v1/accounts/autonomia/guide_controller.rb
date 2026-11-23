@@ -25,12 +25,12 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
     return head :not_found if conversa.nil?
 
     historico = historico_de(conversa)
-    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
+    pedido = SecureRandom.uuid
+    # O turno nasce antes do encaminhamento: se a mensagem entrar no trabalho em curso, ele fica junto daquele pedido
+    # (`Turno.juntar`).
     ::Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: params[:message],
                                     tela: params[:route_context], anexos: params[:anexos])
-    ::Autonomia::Guide::ChatJob.perform_later(pedido, pergunta(historico))
-
-    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id }, status: :accepted
+    encaminhar(pedido, conversa, historico)
   end
 
   # O estado do pedido e, quando pronto, a resposta — com os mesmos campos que a
@@ -181,6 +181,18 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       "[autonomia][guide][acao] account=#{Current.account.id} user=#{Current.user.id} " \
       "acao=#{params[:acao]} ok=#{resultado.ok} registro=#{resultado.registro}"
     )
+  end
+
+  # O trabalho em curso (a mensagem do meio) ou um Guia novo (`Encaminhamento`). Não deu para saber qual: o turno
+  # termina em falha — ao reabrir, a conversa mostra o "Tentar de novo" — e a tela diz que não deu.
+  def encaminhar(pedido, conversa, historico)
+    junto_de = ::Autonomia::Guide::Encaminhamento.encaminhar(pedido, conversa: conversa, junto_de: params[:junto_de].to_s,
+                                                                     pergunta: pergunta(historico))
+    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id,
+                   junto_de: junto_de }.compact, status: :accepted
+  rescue ::Autonomia::Guide::Encaminhamento::Ocupado, Redis::BaseError => e
+    ::Autonomia::Guide::Turno.falhar(pedido, ::Autonomia::Guide::Registro.new.diagnostico(erro: e.class.name))
+    head :service_unavailable
   end
 
   # Quem perguntou, o quê, o histórico, a tela e o idioma: tudo o que o job precisa, serializável.

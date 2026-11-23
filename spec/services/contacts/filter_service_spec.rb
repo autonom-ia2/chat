@@ -273,6 +273,7 @@ describe Contacts::FilterService do
     context 'with standard attributes - last_activity_at' do
       before do
         Time.zone = 'UTC'
+        account.update!(reporting_timezone: 'UTC')
         el_contact.update(last_activity_at: (Time.zone.today - 4.days))
         cs_contact.update(last_activity_at: (Time.zone.today - 5.days))
         en_contact.update(last_activity_at: (Time.zone.today - 2.days))
@@ -340,8 +341,9 @@ describe Contacts::FilterService do
         filters = service.instance_variable_get(:@filters)['contacts']
         condition_query = service.send(:build_condition_query, filters, params[:payload].first, 0)
 
-        expect(condition_query).to include('(contacts.last_activity_at)::date > :value_0')
-        expect(service.instance_variable_get(:@filter_values)['value_0']).to eq(Date.iso8601(date_value))
+        # #3151: "depois de 01/01" começa em 02/01 00:00 no fuso da conta, comparado direto na coluna.
+        expect(condition_query).to include('contacts.last_activity_at >= :value_0')
+        expect(service.instance_variable_get(:@filter_values)['value_0']).to eq(Time.utc(2024, 1, 2))
       end
 
       it 'rejects invalid last_activity_at comparison values' do
@@ -508,6 +510,8 @@ describe Contacts::FilterService do
       end
 
       it 'filters custom date attributes by days before' do
+        # #3151: "hoje" é o da conta; com a conta em UTC, as datas abaixo valem a qualquer hora.
+        account.update!(reporting_timezone: 'UTC')
         cs_contact.update!(custom_attributes: cs_contact.custom_attributes.merge('signed_in_at' => (Time.zone.today - 4.days).to_s))
         el_contact.update!(custom_attributes: el_contact.custom_attributes.merge('signed_in_at' => (Time.zone.today - 2.days).to_s))
         params[:payload] = [

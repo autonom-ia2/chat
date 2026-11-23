@@ -4867,6 +4867,22 @@
     "WITHHELD": "I could not put an answer together right now. Try asking again, in other words.",
     "ERROR": "Could not reach the guide. Try again.",
     "SENDING": "I'm still answering your previous question.",
+    "RETRY": "Try again",
+    "WRITE_WHILE_WORKING": "You can write: I read it while I work.",
+    "STEP": {
+      "READ_ACCOUNT": "Reading your account…",
+      "READ_HELP": "Reading the Help Center…",
+      "READ_ATTACHMENT": "Reading the attachment…",
+      "READ_PAGE": "Reading the page…",
+      "CLASSIFY": "Sorting the items…",
+      "CHECK_FORMAT": "Checking how to do it…",
+      "PICK_SCREEN": "Finding the right screen…",
+      "CHANGE": "Making the change…",
+      "PROPOSE": "Preparing the action…",
+      "PLAN_TASK": "Planning the task…",
+      "REMEMBER": "Taking a note…",
+      "FORGET": "Deleting the note…"
+    },
     "SUGGESTIONS": {
       "KANBAN": "Create a pipeline called Sales",
       "WHATSAPP": "Where do I set up a WhatsApp channel?",
