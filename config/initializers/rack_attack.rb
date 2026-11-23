@@ -107,6 +107,16 @@ class Rack::Attack
     req.ip if req.post? && (req.path.include?('/conversa_canal/reacoes') || req.path.include?('/conversa_canal/encaminhamentos'))
   end
 
+  # Conferir cupom (#3100): contra quem tenta adivinhar códigos. Por pessoa (uid no painel, token na API; sem os dois, o
+  # IP): no balcão ninguém confere 20 códigos num minuto nem 200 numa hora.
+  fidelidade_conferir = lambda do |req|
+    next unless req.post? && req.path.include?('/fidelidade/cupons/conferir')
+
+    req.get_header('HTTP_UID').presence || req.get_header('HTTP_API_ACCESS_TOKEN').presence || req.ip
+  end
+  throttle('fidelidade_conferir/minuto', limit: 20, period: 1.minute, &fidelidade_conferir)
+  throttle('fidelidade_conferir/hora', limit: 200, period: 1.hour, &fidelidade_conferir)
+
   throttle('public_tracked_links/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path_without_extensions.start_with?('/l/')
   end

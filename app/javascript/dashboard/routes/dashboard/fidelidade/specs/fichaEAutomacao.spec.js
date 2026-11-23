@@ -182,6 +182,9 @@ describe('passo Mandar cupom', () => {
         atributosDo: () => [],
         agora: AGORA,
       },
+      global: {
+        stubs: { LivreModelo: { template: '<div data-modelo />' } },
+      },
     });
 
   it('a prévia troca o código pelo exemplo', () => {

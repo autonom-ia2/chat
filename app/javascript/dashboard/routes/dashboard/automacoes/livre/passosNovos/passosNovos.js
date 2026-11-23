@@ -2,10 +2,15 @@
 // editor ganha as entradas aqui, só com a flag ligada. Os seis já têm motor,
 // esquema, salvar, ensaio e histórico de verdade no servidor; o adaptadorFalso
 // guarda só os exemplos das prévias do painel ("Veja como fica").
-// #3100 — e o "Dar carimbos ou pontos" do cartão fidelidade, pela mesma porta
-// (PassoDeDarCarimbos no servidor), com os textos em FIDELIDADE.AUTOMACAO.DAR.
+// #3100 — e os dois da fidelidade, pela mesma porta: "Dar carimbos ou pontos"
+// (PassoDeDarCarimbos no servidor, textos em FIDELIDADE.AUTOMACAO.DAR) e
+// "Mandar cupom" (PassoDeMandarCupom, textos em FIDELIDADE.AUTOMACAO.CUPOM).
 
-import { darCarimbosPronto } from './fidelidadeNaAutomacao';
+import {
+  darCarimbosPronto,
+  mandarCupomPronto,
+  novoMandarCupom,
+} from './fidelidadeNaAutomacao';
 
 export const FLAG = 'automacao_passos_novos';
 export const P = 'AUTOMACAO_LIVRE.PASSOS_NOVOS';
@@ -62,6 +67,16 @@ export const PASSOS_NOVOS = {
     icone: 'i-lucide-stamp',
     permissao: 'fidelidade_manage',
   },
+  // #3100: mandar cupom é de quem cuida do cartão, como criar o cupom. Sem
+  // cupom criado, a peça diz para criar antes (LivreMandarCupom).
+  mandar_cupom: {
+    chave: 'MANDAR_CUPOM',
+    textos: 'FIDELIDADE.AUTOMACAO.CUPOM',
+    grupo: 'MENSAGEM',
+    ramos: [],
+    icone: 'i-lucide-ticket-percent',
+    permissao: 'fidelidade_manage',
+  },
 };
 
 export const ehPassoNovo = passo => Boolean(PASSOS_NOVOS[passo?.tipo]);
@@ -73,6 +88,7 @@ export const COM_MOTOR = [
   'usar_bloco',
   'consultar',
   'dar_carimbos',
+  'mandar_cupom',
 ];
 export const temMotor = passo => COM_MOTOR.includes(passo?.tipo);
 
@@ -167,6 +183,10 @@ const NOVOS = {
     espera: { valor: 2, unidade: 'dias' },
   }),
   dar_carimbos: () => ({ quantos: 1, motivo: '' }),
+  mandar_cupom: t => {
+    const { cupom_id: cupomId, texto } = novoMandarCupom(null, t);
+    return { cupom_id: cupomId, texto };
+  },
 };
 
 export const novoPassoNovo = (tipo, id, t) => ({
@@ -255,6 +275,7 @@ const PRONTO = {
     INTERVALOS.includes(passo.intervalo_dias) &&
     prazoPronto(passo.espera),
   dar_carimbos: darCarimbosPronto,
+  mandar_cupom: mandarCupomPronto,
 };
 
 export const passoNovoPronto = passo =>

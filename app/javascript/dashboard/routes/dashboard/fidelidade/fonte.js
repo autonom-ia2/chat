@@ -38,6 +38,33 @@ export const movimentosDaPessoa = (id, pagina) =>
 export const darPremio = (id, chave) =>
   corpo(RelacionamentosAPI.darPremio(id, chave));
 
+// Os cupons. O cupom vai com o que o servidor aceita (Fidelidade::GravarCupom):
+// o valor em dinheiro em reais inteiros, como a tela fala.
+export const cupomParaOServidor = cupom => ({
+  nome: (cupom.nome || '').trim(),
+  oferta: {
+    tipo: cupom.oferta?.tipo,
+    valor: cupom.oferta?.valor ?? null,
+    texto: (cupom.oferta?.texto || '').trim(),
+  },
+  prefixo: cupom.prefixo,
+  validade_dias: cupom.validade_dias,
+});
+
+export const lerCupons = () => corpo(FidelidadeAPI.cupons());
+export const salvarCupom = cupom =>
+  corpo(FidelidadeAPI.criarCupom(cupomParaOServidor(cupom)));
+export const ligarCupom = (id, ligado) =>
+  corpo(FidelidadeAPI.ligarCupom(id, ligado));
+export const conferirCupom = codigo =>
+  corpo(FidelidadeAPI.conferirCupom(codigo));
+// Marca o código como usado: { codigo, ja_estava }. Repetir não gasta de novo.
+export const usarCodigo = id => corpo(FidelidadeAPI.usarCodigo(id));
+
+// O servidor recusa marcar como usado o código que venceu (422 vencido).
+export const cupomVencido = falha =>
+  falha?.response?.status === 422 && falha.response.data?.error === 'vencido';
+
 // O servidor recusa o prêmio sem o cartão completo (422 saldo_insuficiente).
 export const semSaldo = falha =>
   falha?.response?.status === 422 &&

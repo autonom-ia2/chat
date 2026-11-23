@@ -7,10 +7,12 @@ import DialogoDarPremio from './DialogoDarPremio.vue';
 import FalhaDaParte from './FalhaDaParte.vue';
 import SecaoFidelidade from './SecaoFidelidade.vue';
 import {
+  cupomVencido,
   darPremio,
   fidelidadeDaPessoa,
   movimentosDaPessoa,
   semSaldo,
+  usarCodigo,
 } from 'dashboard/routes/dashboard/fidelidade/fonte';
 import { F } from 'dashboard/routes/dashboard/fidelidade/useTextosDaFidelidade';
 
@@ -21,7 +23,9 @@ import { F } from 'dashboard/routes/dashboard/fidelidade/useTextosDaFidelidade';
 // no contato (`podeEditar`, decisão D1): confirma no DialogoDarPremio e manda
 // uma chave por toque, para um clique repetido não tirar a meta duas vezes.
 // A leitura falhou: o cartão do bloco com "Tentar de novo" (FalhaDaParte), como
-// as outras partes da ficha. Marcar cupom como usado chega com a etapa dos cupons.
+// as outras partes da ficha. "Marcar como usado" num cupom da pessoa também é de
+// quem pode mexer no contato (D1): a SecaoFidelidade pergunta antes, e o toque
+// repetido não gasta de novo (o servidor devolve o código já usado).
 const props = defineProps({
   donoId: { type: Number, required: true },
   nome: { type: String, default: '' },
@@ -79,6 +83,24 @@ const confirmarPremio = async () => {
   }
 };
 
+const usando = ref(false);
+const usarCupom = async cupom => {
+  if (usando.value || !cupom?.id) return;
+  usando.value = true;
+  try {
+    const { codigo } = await usarCodigo(cupom.id);
+    const cupons = (dados.value.cupons || []).map(item =>
+      item.id === codigo.id ? codigo : item
+    );
+    dados.value = { ...dados.value, cupons };
+    useAlert(t(`${FA}.CUPOM_USADO`, { codigo: codigo.codigo }));
+  } catch (falha) {
+    useAlert(t(`${FA}.${cupomVencido(falha) ? 'CUPOM_VENCEU' : 'ERRO_CUPOM'}`));
+  } finally {
+    usando.value = false;
+  }
+};
+
 watch(() => props.donoId, carregar);
 onMounted(carregar);
 </script>
@@ -91,7 +113,9 @@ onMounted(carregar);
       :saldo="dados"
       :agora="agora"
       :pode-dar-premio="podeEditar"
+      :pode-usar-cupom="podeEditar"
       @dar-premio="dialogo?.open()"
+      @usar-cupom="usarCupom"
       @ver-tudo="verTudo"
       @tentar="carregar"
     />

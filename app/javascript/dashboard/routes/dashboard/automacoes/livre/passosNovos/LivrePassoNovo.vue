@@ -8,11 +8,17 @@ import LivreConsulta from './LivreConsulta.vue';
 import LivreReuniao from './LivreReuniao.vue';
 import LivrePesquisa from './LivrePesquisa.vue';
 import LivreDarCarimbos from './LivreDarCarimbos.vue';
+import LivreMandarCupom from './LivreMandarCupom.vue';
 import {
   carregarProgramaDaConta,
   esquecerProgramaDaConta,
   programaDaConta,
 } from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
+import {
+  carregarCuponsDaConta,
+  cuponsDaConta,
+  esquecerCuponsDaConta,
+} from 'dashboard/routes/dashboard/fidelidade/cuponsDaConta';
 import LivrePassoNovoPrevia from './LivrePassoNovoPrevia.vue';
 import { P, emTeste } from './passosNovos';
 
@@ -23,6 +29,8 @@ import { P, emTeste } from './passosNovos';
 // #3100 — "Dar carimbos ou pontos" lê o cartão fidelidade da conta; sem ele,
 // "Criar cartão fidelidade" abre a tela de montar em outra aba, para a
 // automação em montagem não se perder (a próxima abertura relê o cartão).
+// "Mandar cupom" lê os cupons da conta do mesmo jeito; sem nenhum, "Criar
+// cupom" abre a tela de criar em outra aba.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
@@ -39,11 +47,20 @@ const criarPrograma = () => {
   esquecerProgramaDaConta();
   window.open(router.resolve({ name: 'fidelidade_montar' }).href, '_blank');
 };
-const lendoPrograma = ref(props.modelValue.tipo === 'dar_carimbos');
+const criarCupom = () => {
+  esquecerCuponsDaConta();
+  window.open(router.resolve({ name: 'fidelidade_cupom_novo' }).href, '_blank');
+};
+const LEITURAS = {
+  dar_carimbos: carregarProgramaDaConta,
+  mandar_cupom: carregarCuponsDaConta,
+};
+const lendo = ref(Boolean(LEITURAS[props.modelValue.tipo]));
+const agora = Date.now();
 onMounted(async () => {
-  if (!lendoPrograma.value) return;
-  await carregarProgramaDaConta();
-  lendoPrograma.value = false;
+  if (!lendo.value) return;
+  await LEITURAS[props.modelValue.tipo]();
+  lendo.value = false;
 });
 </script>
 
@@ -102,7 +119,7 @@ onMounted(async () => {
       @update:model-value="mudar"
     />
     <div
-      v-else-if="lendoPrograma"
+      v-else-if="lendo"
       aria-busy="true"
       class="h-40 rounded-2xl bg-n-alpha-2 animate-pulse"
     />
@@ -112,6 +129,16 @@ onMounted(async () => {
       :programa="programaDaConta()"
       @update:model-value="mudar"
       @criar-programa="criarPrograma"
+    />
+    <LivreMandarCupom
+      v-else-if="modelValue.tipo === 'mandar_cupom'"
+      :model-value="modelValue"
+      :cupons="cuponsDaConta()"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      :agora="agora"
+      @update:model-value="mudar"
+      @criar-cupom="criarCupom"
     />
 
     <LivrePassoNovoPrevia :passo="modelValue" />

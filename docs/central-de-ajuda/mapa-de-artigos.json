@@ -4504,6 +4504,31 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.37",
+     "titulo": "Criar, mandar e conferir cupons",
+     "para_que_serve": "Criar um cupom com código só de cada cliente, mandar pela automação, conferir no balcão e ver quanto vendeu.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "fidelidade_cupom_novo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "fidelidade_cupom_novo",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: criar_um_cupom",
+      "porques: conferir_e_usar_um_cupom",
+      "porques: ver_quanto_o_cupom_vendeu",
+      "porques: mandar_cupom_pela_automacao"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

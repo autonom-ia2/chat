@@ -268,7 +268,18 @@
         "REGRAS": "Cada cliente recebe um código só dele. Quem já recebeu recebe o mesmo código. Se o cliente não conversou com você no último dia, o WhatsApp só deixa mandar uma mensagem aprovada.",
         "SEM_CUPOM": "Crie um cupom antes de usar este passo.",
         "CRIAR": "Criar cupom",
-        "TEXTO_DICA": "O que estiver entre colchetes é trocado na hora: o código, o desconto e a data entram sozinhos."
+        "TEXTO_DICA": "O que estiver entre colchetes é trocado na hora: o código, o desconto e a data entram sozinhos.",
+        "FRASE": "Mandar o cupom {cupom}",
+        "FRASE_SEM_CUPOM": "Mandar um cupom",
+        "ENSAIO_PREVIA": "Mandaria o cupom com um código só deste cliente",
+        "HISTORICO": "{nome} recebeu o cupom {cupom}",
+        "ENSAIO_NOVO": "Mandaria o cupom {cupom} com um código novo, só deste cliente",
+        "ENSAIO_MESMO": "Mandaria de novo o cupom {cupom}, com o mesmo código de antes",
+        "ENSAIO_SEM_CUPOM": "Nada sairia: o cupom deste passo foi apagado.",
+        "ENSAIO_PAUSADO": "Nada sairia: o cupom está pausado.",
+        "ENSAIO_USADO": "Nada sairia: este cliente já usou o cupom.",
+        "ENSAIO_VENCIDO": "Nada sairia: o cupom deste cliente já venceu.",
+        "ENSAIO_SEM_CONTATO": "Nada sairia: aqui não há um cliente para receber."
       },
       "GATILHO": {
         "NOME": "Quando completa o cartão fidelidade",
@@ -289,13 +300,25 @@
       "SALVO": "Pronto, as regras do cartão mudaram.",
       "PAUSADO": "Pronto, o cartão está pausado.",
       "LIGADO": "Pronto, o cartão está valendo de novo.",
-      "ERRO_LIGAR": "Não deu para mudar o cartão agora. Tente de novo."
+      "ERRO_LIGAR": "Não deu para mudar o cartão agora. Tente de novo.",
+      "ERRO_CUPONS": "Não deu para trazer os cupons agora. Tente de novo.",
+      "CUPOM_CRIADO": "Pronto, o cupom foi criado. Agora é só mandar.",
+      "ERRO_SALVAR_CUPOM": "Não deu para criar o cupom. Confira os campos e tente de novo.",
+      "CUPOM_PAUSADO": "Pronto, o cupom está pausado. Quem já recebeu ainda pode usar.",
+      "CUPOM_LIGADO": "Pronto, o cupom está valendo de novo.",
+      "ERRO_LIGAR_CUPOM": "Não deu para mudar o cupom agora. Tente de novo.",
+      "ERRO_CONFERIR": "Não deu para conferir o código agora. Tente de novo.",
+      "CUPOM_VENCEU": "Este cupom venceu. Não dá mais para usar.",
+      "ERRO_USAR": "Não deu para marcar o cupom agora. Tente de novo."
     },
     "FICHA_ACOES": {
       "PREMIO_DADO": "Pronto, o prêmio de {nome} ficou anotado.",
       "ERRO_PREMIO": "Não deu para dar o prêmio agora. Tente de novo.",
       "SEM_SALDO": "O cartão ainda não está completo. Confira o saldo.",
-      "ERRO_HISTORICO": "Não deu para trazer o histórico agora. Tente de novo."
+      "ERRO_HISTORICO": "Não deu para trazer o histórico agora. Tente de novo.",
+      "CUPOM_USADO": "Pronto, o cupom {codigo} foi marcado como usado.",
+      "CUPOM_VENCEU": "Este cupom venceu. Não dá mais para usar.",
+      "ERRO_CUPOM": "Não deu para marcar o cupom agora. Tente de novo."
     },
     "RECEITAS": {
       "SALDO_NOME": "Avisar o saldo do cartão fidelidade",
@@ -305,7 +328,8 @@
       "SALDO_TEXTO_4": ".",
       "COMPLETO_NOME": "Avisar quando completar o cartão fidelidade",
       "COMPLETO_TEXTO_1": "Parabéns! Você completou o nosso cartão fidelidade. Na próxima visita, o prêmio é seu: ",
-      "COMPLETO_TEXTO_2": "."
+      "COMPLETO_TEXTO_2": ".",
+      "CUPOM_NOME": "Mandar cupom para quem parou de comprar"
     },
     "FILTRO": {
       "ROTULO": "Cartão fidelidade",

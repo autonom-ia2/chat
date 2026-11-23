@@ -268,7 +268,18 @@
         "REGRAS": "Each customer gets their own code. Anyone who already got it gets the same code. If the customer has not talked to you in the last day, WhatsApp only allows an approved message.",
         "SEM_CUPOM": "Create a coupon before using this step.",
         "CRIAR": "Create coupon",
-        "TEXTO_DICA": "Whatever is in brackets is filled in on sending: the code, the discount and the date go in on their own."
+        "TEXTO_DICA": "Whatever is in brackets is filled in on sending: the code, the discount and the date go in on their own.",
+        "FRASE": "Send the coupon {cupom}",
+        "FRASE_SEM_CUPOM": "Send a coupon",
+        "ENSAIO_PREVIA": "Would send the coupon with a code only for this customer",
+        "HISTORICO": "{nome} received the coupon {cupom}",
+        "ENSAIO_NOVO": "Would send the coupon {cupom} with a new code, only for this customer",
+        "ENSAIO_MESMO": "Would send the coupon {cupom} again, with the same code as before",
+        "ENSAIO_SEM_CUPOM": "Nothing would be sent: the coupon of this step was deleted.",
+        "ENSAIO_PAUSADO": "Nothing would be sent: the coupon is paused.",
+        "ENSAIO_USADO": "Nothing would be sent: this customer already used the coupon.",
+        "ENSAIO_VENCIDO": "Nothing would be sent: this customer's coupon has expired.",
+        "ENSAIO_SEM_CONTATO": "Nothing would be sent: there is no customer here to receive it."
       },
       "GATILHO": {
         "NOME": "When the loyalty card is completed",
@@ -289,13 +300,25 @@
       "SALVO": "Done, the card rules changed.",
       "PAUSADO": "Done, the card is paused.",
       "LIGADO": "Done, the card is on again.",
-      "ERRO_LIGAR": "Could not change the card right now. Try again."
+      "ERRO_LIGAR": "Could not change the card right now. Try again.",
+      "ERRO_CUPONS": "Could not load the coupons now. Try again.",
+      "CUPOM_CRIADO": "Done, the coupon was created. Now just send it.",
+      "ERRO_SALVAR_CUPOM": "Could not create the coupon. Check the fields and try again.",
+      "CUPOM_PAUSADO": "Done, the coupon is paused. Whoever already got it can still use it.",
+      "CUPOM_LIGADO": "Done, the coupon is valid again.",
+      "ERRO_LIGAR_CUPOM": "Could not change the coupon now. Try again.",
+      "ERRO_CONFERIR": "Could not check the code now. Try again.",
+      "CUPOM_VENCEU": "This coupon has expired. It can no longer be used.",
+      "ERRO_USAR": "Could not mark the coupon now. Try again."
     },
     "FICHA_ACOES": {
       "PREMIO_DADO": "Done, the reward for {nome} was recorded.",
       "ERRO_PREMIO": "Could not give the reward right now. Try again.",
       "SEM_SALDO": "The card is not complete yet. Check the balance.",
-      "ERRO_HISTORICO": "Could not bring the history right now. Try again."
+      "ERRO_HISTORICO": "Could not bring the history right now. Try again.",
+      "CUPOM_USADO": "Done, coupon {codigo} was marked as used.",
+      "CUPOM_VENCEU": "This coupon has expired. It can no longer be used.",
+      "ERRO_CUPOM": "Could not mark the coupon now. Try again."
     },
     "RECEITAS": {
       "SALDO_NOME": "Tell the loyalty card balance",
@@ -305,7 +328,8 @@
       "SALDO_TEXTO_4": ".",
       "COMPLETO_NOME": "Tell when the loyalty card is complete",
       "COMPLETO_TEXTO_1": "Congratulations! You completed our loyalty card. On your next visit, the reward is yours: ",
-      "COMPLETO_TEXTO_2": "."
+      "COMPLETO_TEXTO_2": ".",
+      "CUPOM_NOME": "Send a coupon to customers who stopped buying"
     },
     "FILTRO": {
       "ROTULO": "Loyalty card",

@@ -1014,6 +1014,19 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "cupom_id", "texto"],
+          "description": "Mandar cupom (#3100): acha ou sorteia o código do cupom para o contato do alvo e manda a mensagem com ele, como o passo mensagem (quem não recebe pula; com a janela de 24 h fechada sai o modelo aprovado, ou nada e a execução para nesta conversa). Um código por pessoa e cupom: mandar de novo manda o mesmo código, com a mesma validade, que conta de quando o código chega à pessoa. O texto precisa ter cupom.codigo; pode ter também cupom.oferta (o que o cupom dá: \"10% de desconto\") e cupom.vale_ate (até quando vale, no fuso da conta), que só existem neste passo, e os dados de sempre do contato. Pula com cupom apagado ou pausado, alvo sem contato, ou código que a pessoa já usou ou que venceu. Pede fidelidade_manage e as flags automacao_passos_novos e automacao_mensagens.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "mandar_cupom" },
+            "cupom_id": { "type": "integer", "description": "O cupom da conta (id), da aba Cupons da Fidelidade." },
+            "texto": { "$ref": "#/definitions/texto" },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["id", "tipo", "quem", "pergunta", "prazo"],
           "description": "Pedir aprovação (#2931): a automação para e pede a quem cuida do card, a uma pessoa ou a um time que aprove ou recuse. O pedido chega no sino e na tela Pedidos de aprovação, com o card ao lado. Só recebe quem vê o registro; o valor de venda na pergunta só aparece para quem vê valores. Segue por aprovado, recusado (com o motivo, se a pessoa disser) ou ninguem_respondeu quando o prazo vence ou ninguém pode aprovar. Pede a flag automacao_passos_novos.",
           "properties": {

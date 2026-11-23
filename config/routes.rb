@@ -1192,6 +1192,11 @@ Rails.application.routes.draw do
             put :programa, to: 'programa#update'
             patch :programa, to: 'programa#ligar'
             get :resumo, to: 'resumo#show'
+            # O relatório, criar, pausar e ligar os cupons; conferir o código que o cliente mostrou; marcar como usado.
+            resources :cupons, only: [:index, :create, :update] do
+              post :conferir, on: :collection
+            end
+            post 'cupom_codigos/:id/usar', to: 'cupom_codigos#usar', as: :usar_cupom_codigo
           end
           # #2894 — leituras da Lista nova de Relacionamentos (de todas as contas desde a E9, #2902). Empresa é do Enterprise.
           namespace :relacionamentos do

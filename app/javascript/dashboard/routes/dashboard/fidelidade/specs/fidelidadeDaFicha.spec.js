@@ -21,6 +21,7 @@ vi.mock('../fonte', async original => ({
   fidelidadeDaPessoa: vi.fn(),
   movimentosDaPessoa: vi.fn(),
   darPremio: vi.fn(),
+  usarCodigo: vi.fn(),
 }));
 
 const AGORA = Date.UTC(2026, 10, 23, 15);
@@ -52,6 +53,11 @@ const montar = async (props = {}) => {
   await flushPromises();
   return peca;
 };
+
+// O bloco tem dois diálogos (marcar cupom como usado e dar o prêmio): o do
+// prêmio vem por último.
+const confirmarPremio = peca =>
+  peca.findAll('[data-confirmar]').at(-1).trigger('click');
 
 beforeEach(() => {
   alertas.length = 0;
@@ -100,7 +106,7 @@ describe('FidelidadeDaFicha', () => {
     });
     const peca = await montar({ podeEditar: true });
 
-    await peca.find('[data-confirmar]').trigger('click');
+    await confirmarPremio(peca);
     await flushPromises();
 
     const [id, chave] = fonte.darPremio.mock.calls[0];
@@ -118,7 +124,7 @@ describe('FidelidadeDaFicha', () => {
     });
     const peca = await montar({ podeEditar: true });
 
-    await peca.find('[data-confirmar]').trigger('click');
+    await confirmarPremio(peca);
     await flushPromises();
 
     expect(alertas).toEqual([

@@ -3,12 +3,13 @@ import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreTexto from '../components/LivreTexto.vue';
+import LivreModelo from '../components/LivreModelo.vue';
 import { useTextosDaFidelidade } from 'dashboard/routes/dashboard/fidelidade/useTextosDaFidelidade';
 import {
   exemploDeCodigo,
   textoDeExemplo,
 } from 'dashboard/routes/dashboard/fidelidade/regras';
-import { FA, faltaOCodigo } from './fidelidadeNaAutomacao';
+import { FA, comValoresDoCupom, faltaOCodigo } from './fidelidadeNaAutomacao';
 
 // #3100 — o passo "Mandar cupom" no "Alterar": qual cupom e a mensagem. O
 // texto é a caixa de sempre da Automação livre (LivreTexto), com os dados do
@@ -17,7 +18,9 @@ import { FA, faltaOCodigo } from './fidelidadeNaAutomacao';
 // cliente recebe um código só dele; quem já recebeu este cupom recebe o mesmo
 // código de novo. Sem o código no texto, a faixa âmbar avisa.
 // A prévia mostra a mensagem com um código de exemplo. Sem cupom criado, o
-// passo diz para criar antes (`criarCupom`).
+// passo diz para criar antes (`criarCupom`). Com a janela de 24 h fechada, vai
+// o modelo aprovado escolhido (as variáveis dele também aceitam o código), ou
+// nada, como no passo mensagem. Os dados do cupom só entram nas caixas daqui.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   cupons: { type: Array, default: () => [] },
@@ -59,6 +62,7 @@ const previa = computed(() => {
   });
 });
 const semCodigo = computed(() => faltaOCodigo(props.modelValue));
+const catalogoComCupom = computed(() => comValoresDoCupom(props.catalogo));
 </script>
 
 <template>
@@ -96,7 +100,7 @@ const semCodigo = computed(() => faltaOCodigo(props.modelValue));
       <LivreTexto
         :rotulo="t(`${C}.MENSAGEM`)"
         :model-value="modelValue.texto"
-        :catalogo="catalogo"
+        :catalogo="catalogoComCupom"
         :atributos-do="atributosDo"
         :rotulo-do-dado="t(`${C}.POR_DADO`)"
         :dica="t(`${C}.TEXTO_DICA`)"
@@ -126,6 +130,14 @@ const semCodigo = computed(() => faltaOCodigo(props.modelValue));
           {{ previa }}
         </p>
       </figure>
+
+      <LivreModelo
+        :rotulo="t('AUTOMACAO_LIVRE.CAMPOS.MODELO')"
+        :model-value="modelValue.modelo || null"
+        :catalogo="catalogoComCupom"
+        :atributos-do="atributosDo"
+        @update:model-value="modelo => mudar({ modelo })"
+      />
 
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${C}.REGRAS`) }}</p>
     </template>

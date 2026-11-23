@@ -11,6 +11,7 @@
 #   passo (AutomacoesPassosNovosController#testar_consulta).
 #
 # - "dar carimbos ou pontos" (#3100): quantos a pessoa tem agora e com quantos ficaria. Nada é gravado.
+# - "mandar cupom" (#3100): qual cupom iria e se a pessoa já tem o código dele. Nada é sorteado nem mandado.
 #
 # Os três que esperam resposta (#2931/#2935/#2936: aprovação, reunião e pesquisa) dizem o que fariam e abrem os
 # caminhos pelo EsperaNoEnsaio; o Ensaio manda os seis para `dos_seis`.
@@ -35,12 +36,16 @@ module Autonomia::Automacao::PassosNovosNoEnsaio
     when 'repetir_lista' then seguir(passo, repetir_lista(passo))
     when 'usar_bloco' then seguir(passo, usar_bloco(passo, valores))
     when ::Autonomia::Automacao::PassoDeDarCarimbos::TIPO then seguir(passo, dar_carimbos(passo))
+    when ::Autonomia::Automacao::PassoDeMandarCupom::TIPO then seguir(passo, mandar_cupom(passo))
     else consultar(passo, valores)
     end
   end
 
   # #3100: quantos a pessoa tem e com quantos ficaria; nunca grava.
   def dar_carimbos(passo) = no(passo, *::Autonomia::Automacao::PassoDeDarCarimbos.ensaiar(passo, @contato, @conta))
+
+  # #3100: qual cupom iria e se a pessoa recebe o mesmo código de antes; nunca sorteia nem manda.
+  def mandar_cupom(passo) = no(passo, *::Autonomia::Automacao::PassoDeMandarCupom.ensaiar(passo, @contato, @conta))
 
   def repetir_lista(passo)
     teto = passo['teto'].to_i.clamp(1, ::Autonomia::Automacao::RepetirLista::TETO_MAXIMO)

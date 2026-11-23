@@ -1,5 +1,6 @@
-# Cartão fidelidade na Automação livre (#3100): o passo "Dar carimbos ou pontos". Arquivo próprio para não disputar o
-# pt_BR.yml com as outras frentes.
+# Cartão fidelidade na Automação livre (#3100): os passos "Dar carimbos ou pontos" e "Mandar cupom", e o que o cupom
+# dá e até quando vale, escritos para a mensagem do cliente (Fidelidade::TextoDoCupom). Arquivo próprio para não
+# disputar o pt_BR.yml com as outras frentes.
 pt_BR:
   autonomia:
     automacao:
@@ -8,7 +9,21 @@ pt_BR:
         sem_cartao_fidelidade: 'A conta não tem cartão fidelidade. Ninguém recebeu carimbos.'
         cartao_fidelidade_pausado: 'O cartão fidelidade está pausado. Ninguém recebeu carimbos.'
         fidelidade_sem_contato: 'Aqui não há contato para receber os carimbos.'
+        sem_cupom: 'O cupom deste passo foi apagado. Escolha outro cupom.'
+        cupom_pausado: 'O cupom está pausado. Nada foi mandado.'
+        cupom_sem_contato: 'Aqui não há contato para receber o cupom.'
+        cupom_ja_usado: 'O cliente já usou este cupom. Nada foi mandado.'
+        cupom_vencido: 'O cupom deste cliente já venceu. Nada foi mandado.'
       receita:
         fidelidade:
           sem_permissao: 'Passo %{passo}: para dar carimbos ou pontos você precisa poder mudar o cartão fidelidade.'
           sem_cartao: 'Passo %{passo}: crie o cartão fidelidade antes de usar este passo.'
+          sem_permissao_cupom: 'Passo %{passo}: para mandar cupom você precisa poder mudar o cartão fidelidade.'
+          sem_cupom: 'Passo %{passo}: escolha um cupom da conta.'
+          sem_codigo: 'Passo %{passo}: a mensagem precisa ter o código do cupom.'
+  fidelidade:
+    cupom:
+      oferta:
+        porcentagem: '%{n}% de desconto'
+        valor: '%{valor} de desconto'
+      data: '%d/%m'

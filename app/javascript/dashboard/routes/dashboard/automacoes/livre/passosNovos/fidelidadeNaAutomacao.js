@@ -1,7 +1,7 @@
 // #3100 — os dois passos da fidelidade na Automação livre ("Dar carimbos ou
 // pontos" e "Mandar cupom"), o gatilho "Quando completa o cartão", os dados
-// novos do "Pôr um dado" e as duas receitas de aviso. "Dar carimbos" já está no
-// editor (PASSOS_NOVOS); o "Mandar cupom" chega com o cupom.
+// novos do "Pôr um dado", as duas receitas de aviso e a do "Mandar este
+// cupom". Os dois passos estão no editor (PASSOS_NOVOS), com fidelidade_manage.
 
 export const FA = 'FIDELIDADE.AUTOMACAO';
 export const QUANTOS_PARA_DAR = [1, 2, 3, 5, 10];
@@ -9,8 +9,9 @@ export const MOTIVO_MAXIMO = 60;
 
 // Os dados do cartão no `catalogo.valores` (mesmo formato dos outros:
 // `caminho` e a `frase`, que é a chave do texto). Os três do cartão o servidor
-// já manda, na base do contato (Fidelidade::NaAutomacao); os do cupom chegam
-// com o cupom.
+// já manda, na base do contato (Fidelidade::NaAutomacao). Os do cupom só
+// existem dentro do "Mandar cupom" (o servidor os lê do código que o passo
+// acabou de achar): entram só no catálogo da caixa de texto dele.
 export const SALDO = 'contato.fidelidade_saldo';
 export const FALTAM = 'contato.fidelidade_faltam';
 export const PREMIO = 'contato.fidelidade_premio';
@@ -22,6 +23,15 @@ export const VALORES_DA_FIDELIDADE = [
   { caminho: 'cupom.oferta', frase: 'FIDELIDADE.VALORES.CUPOM_OFERTA' },
   { caminho: 'cupom.vale_ate', frase: 'FIDELIDADE.VALORES.CUPOM_VALE_ATE' },
 ];
+
+export const CODIGO_DO_CUPOM = 'cupom.codigo';
+export const VALORES_DO_CUPOM = VALORES_DA_FIDELIDADE.filter(valor =>
+  valor.caminho.startsWith('cupom.')
+);
+export const comValoresDoCupom = catalogo => ({
+  ...catalogo,
+  valores: [...(catalogo?.valores || []), ...VALORES_DO_CUPOM],
+});
 
 export const novoDarCarimbos = id => ({
   id,
@@ -53,7 +63,7 @@ export const darCarimbosPronto = passo =>
 
 const temCodigo = partes =>
   (partes || []).some(
-    parte => typeof parte !== 'string' && parte.$valor === 'cupom.codigo'
+    parte => typeof parte !== 'string' && parte.$valor === CODIGO_DO_CUPOM
   );
 
 // O "Mandar cupom" só fica pronto com o cupom escolhido e o código no texto:
@@ -75,10 +85,20 @@ export const RECEITA_DO_AVISO = {
   saldo: 'FIDELIDADE_SALDO',
   meta: 'FIDELIDADE_COMPLETO',
 };
+// "Mandar este cupom" (aba Cupons): ?receita=FIDELIDADE_CUPOM&cupom=<id>. Quem
+// parou de comprar (grupo "em risco" da Lista de Relacionamentos) recebe o
+// cupom; a pessoa confere, troca o grupo se quiser e liga.
+export const RECEITA_DO_CUPOM = 'FIDELIDADE_CUPOM';
+export const GRUPO_DO_CUPOM = 'compra_em_risco';
 export const ESPERA_DO_SALDO = { valor: 10, unidade: 'minutos' };
 export const GATILHO_COMPLETO = 'contato.completou_cartao_fidelidade';
 // As flags que as duas pedem: a mensagem e os gatilhos de card e de contato.
 export const REQUER_DOS_AVISOS = ['automacao_mensagens', 'automacao_gatilhos'];
+// O do cupom pede também a dos passos novos (o "Mandar cupom" é um deles).
+export const requerDaReceita = chave =>
+  chave === RECEITA_DO_CUPOM
+    ? [...REQUER_DOS_AVISOS, 'automacao_passos_novos']
+    : REQUER_DOS_AVISOS;
 
 const R = 'FIDELIDADE.RECEITAS';
 const dado = $valor => ({ $valor });
@@ -106,6 +126,16 @@ const RECEITAS = {
       ],
     },
   }),
+  FIDELIDADE_CUPOM: (t, unidade, cupomId) => ({
+    nome: t(`${R}.CUPOM_NOME`),
+    receita: {
+      gatilho: {
+        tipo: 'contato.entrou_no_grupo_de_compra',
+        grupo_de_compra: GRUPO_DO_CUPOM,
+      },
+      passos: [{ ...novoMandarCupom('p1', t), cupom_id: cupomId }],
+    },
+  }),
   FIDELIDADE_COMPLETO: t => ({
     nome: t(`${R}.COMPLETO_NOME`),
     receita: {
@@ -127,13 +157,19 @@ const RECEITAS = {
 
 export const ehReceitaDaFidelidade = chave => Boolean(RECEITAS[chave]);
 
-// { nome, receita } da receita de aviso, ou null para outra chave. A unidade
-// ("carimbos" ou "pontos") vem do cartão; sem ela, carimbos.
-export const receitaDaFidelidade = (chave, t, tipo = 'carimbos') => {
+// { nome, receita } da receita de aviso ou do cupom, ou null para outra chave.
+// A unidade ("carimbos" ou "pontos") vem do cartão; sem ela, carimbos. O cupom
+// vem do endereço (?cupom=); sem ele, o passo pede para escolher.
+export const receitaDaFidelidade = (
+  chave,
+  t,
+  tipo = 'carimbos',
+  cupomId = null
+) => {
   const montar = RECEITAS[chave];
   if (!montar) return null;
   const unidade = t(
     `FIDELIDADE.NOME_DA_UNIDADE.${tipo === 'pontos' ? 'pontos' : 'carimbos'}`
   );
-  return montar(t, unidade);
+  return montar(t, unidade, cupomId);
 };

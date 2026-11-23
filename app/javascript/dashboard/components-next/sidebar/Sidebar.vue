@@ -1291,7 +1291,11 @@ const menuItems = computed(() => {
             label: t('FIDELIDADE.TITULO'),
             icon: 'i-lucide-gift',
             to: accountScopedRoute('fidelidade_index'),
-            activeOn: ['fidelidade_index', 'fidelidade_montar'],
+            activeOn: [
+              'fidelidade_index',
+              'fidelidade_montar',
+              'fidelidade_cupom_novo',
+            ],
           },
         ]
       : []),

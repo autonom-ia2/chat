@@ -5,7 +5,8 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 // cria, e ele mesmo tem pausar e ligar (docs/3100-desenho, seção 11).
 // - fidelidade_index (?aba=cartao): o painel do cartão, para quem vê
 //   (administrador ou fidelidade_view; fidelidade_manage também vê);
-// - fidelidade_montar: criar ou mudar as regras, só para quem pode mudar.
+// - fidelidade_montar: criar ou mudar as regras, só para quem pode mudar;
+// - fidelidade_cupom_novo: criar um cupom, também só para quem pode mudar.
 // O servidor confere de novo (Fidelidade::ProgramaPolicy).
 export const PERMISSOES_DA_FIDELIDADE = [
   'administrator',
@@ -26,5 +27,11 @@ export const routes = [
     name: 'fidelidade_montar',
     meta: { permissions: PERMISSOES_DE_MONTAR },
     component: () => import('./pages/MontarProgramaPage.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/fidelidade/cupons/novo'),
+    name: 'fidelidade_cupom_novo',
+    meta: { permissions: PERMISSOES_DE_MONTAR },
+    component: () => import('./pages/MontarCupomPage.vue'),
   },
 ];

@@ -1,5 +1,6 @@
-# Loyalty card in the free automation (#3100): the "Give stamps or points" step. Own file so it does not compete for
-# en.yml with the other fronts.
+# Loyalty card in the free automation (#3100): the "Give stamps or points" and "Send coupon" steps, and what the coupon
+# gives and until when it is valid, written for the customer message (Fidelidade::TextoDoCupom). Own file so it does
+# not compete for en.yml with the other fronts.
 en:
   autonomia:
     automacao:
@@ -8,7 +9,21 @@ en:
         sem_cartao_fidelidade: 'The account has no loyalty card. Nobody received stamps.'
         cartao_fidelidade_pausado: 'The loyalty card is paused. Nobody received stamps.'
         fidelidade_sem_contato: 'There is no contact here to receive the stamps.'
+        sem_cupom: 'The coupon of this step was deleted. Choose another coupon.'
+        cupom_pausado: 'The coupon is paused. Nothing was sent.'
+        cupom_sem_contato: 'There is no contact here to receive the coupon.'
+        cupom_ja_usado: 'The customer already used this coupon. Nothing was sent.'
+        cupom_vencido: 'This customer''s coupon has expired. Nothing was sent.'
       receita:
         fidelidade:
           sem_permissao: 'Step %{passo}: to give stamps or points you need permission to change the loyalty card.'
           sem_cartao: 'Step %{passo}: create the loyalty card before using this step.'
+          sem_permissao_cupom: 'Step %{passo}: to send coupons you need permission to change the loyalty card.'
+          sem_cupom: 'Step %{passo}: choose a coupon of the account.'
+          sem_codigo: 'Step %{passo}: the message needs the coupon code.'
+  fidelidade:
+    cupom:
+      oferta:
+        porcentagem: '%{n}% off'
+        valor: '%{valor} off'
+      data: '%m/%d'

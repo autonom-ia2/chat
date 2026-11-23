@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (297 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (301 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1158,7 +1158,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `fidelidade_view` ou `fidelidade_manage`
 - pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Ver (só lê) ou Editar (cria, muda e pausa o cartão). A compra que dá carimbo é o card ganho num funil de Vender do CRM.
 - passos: 1. Abra Fidelidade no menu lateral; 2. Sem cartão, clique em Criar meu cartão fidelidade; 3. Com cartão, leia Seu cartão (como o cliente junta, quanto precisa para o prêmio, o prêmio e quando os carimbos vencem); 4. Leia os números: clientes no cartão, quantos estão perto do prêmio e prêmios dados nos últimos 30 dias; 5. Clique em Ver quem está perto do prêmio para abrir a lista de Relacionamentos já filtrada; 6. Para mudar as regras, clique em Mudar as regras; para parar de dar carimbos, clique em Pausar o cartão e confirme (e em Ligar o cartão de novo para voltar).
-- gotchas: cada venda fechada (card ganho) dá carimbos ou pontos sozinha, pelo valor da compra, sem troco (o que sobra não passa para a próxima); compras de antes de ligar o cartão não contam; perto do prêmio é quem falta até 20% da meta e ainda não completou; pausado, as compras não dão carimbos, mas os que o cliente tem continuam guardados; card desfeito tira os carimbos que ele deu, sem deixar o saldo negativo; o mesmo card não dá carimbo duas vezes; quem só vê (Fidelidade em Ver) lê o painel sem os botões de mudar; os cupons ainda não aparecem nesta página.
+- gotchas: cada venda fechada (card ganho) dá carimbos ou pontos sozinha, pelo valor da compra, sem troco (o que sobra não passa para a próxima); compras de antes de ligar o cartão não contam; perto do prêmio é quem falta até 20% da meta e ainda não completou; pausado, as compras não dão carimbos, mas os que o cliente tem continuam guardados; card desfeito tira os carimbos que ele deu, sem deixar o saldo negativo; o mesmo card não dá carimbo duas vezes; quem só vê (Fidelidade em Ver) lê o painel sem os botões de mudar; os cupons ficam na aba Cupons, ao lado do cartão.
 - nav_target: `fidelidade_index`
 
 ### Criar ou mudar o cartão fidelidade
@@ -1178,7 +1178,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
 - pre_requisitos: a conta com o cartão fidelidade criado; poder ver contatos. Dar o prêmio é de quem pode editar o contato.
 - passos: 1. Abra a ficha da pessoa; 2. No cartão Fidelidade, veja quantos ela tem e quanto falta; 3. Veja o que vence logo e os últimos movimentos (clique em Ver tudo para o histórico inteiro); 4. Completou o cartão, a faixa verde avisa: clique em Dar o prêmio; 5. Confira o prêmio e quantos saem do cartão e clique em Dar o prêmio de novo para confirmar.
-- gotchas: o bloco só aparece quando a conta tem cartão fidelidade; dar o prêmio tira a meta do cartão, e o que passou da meta fica para o próximo cartão; fica anotado quem deu o prêmio; um clique repetido não tira a meta duas vezes; pausado, o bloco avisa que os carimbos continuam guardados; o valor da compra no histórico só aparece para quem pode ver valor de venda; dar ou tirar carimbos à mão é de quem tem Fidelidade em Editar.
+- gotchas: o bloco só aparece quando a conta tem cartão fidelidade; dar o prêmio tira a meta do cartão, e o que passou da meta fica para o próximo cartão; fica anotado quem deu o prêmio; um clique repetido não tira a meta duas vezes; pausado, o bloco avisa que os carimbos continuam guardados; o valor da compra no histórico só aparece para quem pode ver valor de venda; dar ou tirar carimbos à mão é de quem tem Fidelidade em Editar; os cupons da pessoa aparecem no mesmo bloco, e Marcar como usado (de quem pode editar o contato) pergunta antes, porque depois o cupom não vale mais.
 - nav_target: `relacionamentos_pessoa`
 
 ### Dar carimbos de presente por uma automação (aniversário, indicação, avaliação)
@@ -1189,6 +1189,46 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: a conta com o cartão fidelidade criado; poder montar automações; para o passo Dar carimbos ou pontos, ser administrador ou ter uma função com Fidelidade em Editar.
 - passos: 1. Crie uma automação nova e escolha quando ela começa (por exemplo, Quando completa o cartão fidelidade); 2. Adicione o passo Dar carimbos ou pontos; 3. Diga quantos dar e, se quiser, por quê (aparece na ficha); 4. Numa mensagem, use Pôr um dado para colocar quantos o cliente tem, quantos faltam ou o prêmio; 5. Use Ensaiar para ver com quantos o cliente ficaria; 6. Guarde e ligue.
 - gotchas: a compra já dá carimbos sozinha, este passo é para o presente; sem cartão na conta, ou com o cartão pausado, o passo é pulado e ninguém recebe; quem ligou a automação precisa continuar com Fidelidade em Editar, senão ela pausa; o ensaio não dá carimbo de verdade; se o presente completar o cartão, a automação Quando completa o cartão fidelidade também começa; os carimbos dados aqui vencem como os outros.
+- nav_target: `automacoes_livre_nova`
+
+### Criar um cupom de desconto ou presente
+- intent: Como crio um cupom de desconto?; Como dou um cupom para o cliente voltar?; Dá para fazer cupom de presente?; Como escolho o começo do código do cupom?; Quanto tempo o cupom vale?; Cada cliente tem um código diferente?
+- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > Criar cupom (ou Novo cupom)
+- rota: `fidelidade_cupom_novo` - `/app/accounts/:accountId/fidelidade/cupons/novo`
+- gate: papel `administrator` ou `fidelidade_manage`
+- pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Editar.
+- passos: 1. Em Fidelidade, abra a aba Cupons; 2. Clique em Criar cupom (ou Novo cupom); 3. Dê um nome ao cupom (só você vê); 4. Escolha o que ele dá: desconto em %, desconto em dinheiro ou um presente; 5. Escreva o começo do código (por exemplo VOLTA); 6. Escolha quanto tempo ele vale depois que o cliente recebe; 7. Confira a mensagem como chega e clique em Criar cupom; 8. Na aba Cupons, clique em Mandar este cupom para abrir a automação que manda.
+- gotchas: cada cliente recebe um código só dele, como VOLTA-7KD2, e usa uma vez; mandar de novo para a mesma pessoa manda o mesmo código; o prazo conta de quando o cliente recebe; o código não tem letras que se confundem (0 e O, 1, I e L); o cupom não dá desconto sozinho: o desconto você dá no caixa, depois de conferir; pausar o cupom para de mandar, mas quem já recebeu ainda pode usar até vencer.
+- nav_target: `fidelidade_cupom_novo`
+
+### Conferir o cupom que o cliente mostrou e marcar como usado
+- intent: O cliente mostrou um cupom, como confiro?; Este cupom ainda vale?; Como marco o cupom como usado?; O cupom diz que já foi usado, e agora?; Por que diz que não achou o código?; Dá para marcar o cupom pela ficha do cliente?
+- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > O cliente mostrou um cupom? (ou a ficha da pessoa em Relacionamentos, no bloco Fidelidade)
+- rota: `fidelidade_index` - `/app/accounts/:accountId/fidelidade`
+- gate: papel `administrator` ou `fidelidade_view` ou `fidelidade_manage`
+- pre_requisitos: para conferir na aba Cupons, ser administrador ou ter uma função com Fidelidade em Ver ou Editar; para marcar como usado, poder editar o contato dono do cupom (o atendente também pode, pela ficha).
+- passos: 1. Na aba Cupons, digite o código em O cliente mostrou um cupom?; 2. Clique em Conferir; 3. Se aparecer Vale!, veja o que o cupom dá, de quem é e até quando vale; 4. Clique em Marcar como usado; 5. Dê o desconto ou o presente no caixa; 6. Pela ficha da pessoa, clique em Marcar como usado ao lado do cupom e confirme.
+- gotchas: espaços e letras minúsculas no código não atrapalham; Já usado mostra a data em que foi usado; Venceu mostra a data e não deixa marcar; Não achamos é código errado ou que nunca chegou ao cliente: confira as letras com ele; o nome do cliente só aparece para quem pode ver o contato; marcar duas vezes não gasta de novo; quem tentar muitos códigos seguidos espera um pouco para conferir de novo; marcar como usado não tem desfazer.
+- nav_target: `fidelidade_index`
+
+### Ver quantos usaram o cupom e quanto ele vendeu
+- intent: Quantos clientes usaram meu cupom?; Quanto o cupom vendeu?; Quantos cupons eu mandei?; Por que aparece um traço em vendas?; Como o sistema sabe que a venda veio do cupom?
+- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > Seus cupons
+- rota: `fidelidade_index` - `/app/accounts/:accountId/fidelidade`
+- gate: papel `administrator` ou `fidelidade_view` ou `fidelidade_manage`
+- pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Ver ou Editar; o valor das vendas só aparece para quem pode ver valor de venda.
+- passos: 1. Abra a aba Cupons; 2. Em cada cupom, veja quantos foram mandados e quantos usaram (com a porcentagem); 3. Veja quanto venderam; 4. Cupom ainda não mandado mostra Mandar este cupom.
+- gotchas: em vendas entram as vendas fechadas (card ganho) de quem usou o cupom, até 7 dias depois do uso; venda em funil que você não vê nos relatórios não entra; quem não pode ver valor de venda vê um traço; mandados conta só o que chegou a sair; venda em outra moeda aparece separada.
+- nav_target: `fidelidade_index`
+
+### Mandar um cupom por uma automação
+- intent: Como mando um cupom pelo WhatsApp?; Como mando cupom para quem parou de comprar?; Como ponho o código do cupom na mensagem?; O cliente recebe o mesmo código se eu mandar de novo?; Por que o cupom não foi mandado?
+- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > Mandar este cupom (ou Automações > Nova automação > adicionar passo > Mandar cupom)
+- rota: `automacoes_livre_nova` - `/app/accounts/:accountId/automacoes/livre/nova`
+- gate: feature flag `automacao_editor`; papel `administrator` ou `automation_manage`
+- pre_requisitos: a conta com um cupom criado; poder montar automações; para o passo Mandar cupom, ser administrador ou ter uma função com Fidelidade em Editar.
+- passos: 1. Na aba Cupons, clique em Mandar este cupom: a automação abre pronta e desligada, para quem entrou no grupo Em risco da lista de Relacionamentos; 2. Troque quando ela começa, se quiser; 3. No passo Mandar cupom, confira o cupom e a mensagem (o código, o que dá e até quando vale entram sozinhos); 4. Escolha um modelo aprovado para quando o cliente não conversou no último dia; 5. Use Ensaiar para ver o que aconteceria; 6. Guarde e ligue.
+- gotchas: a mensagem precisa ter o código do cupom; cada cliente recebe um código só dele, e mandar de novo manda o mesmo código, com a mesma validade; cliente que já usou o cupom, ou com o cupom vencido, não recebe de novo; cupom pausado não é mandado; fora da janela de 24 horas do WhatsApp oficial, sai o modelo aprovado ou nada; quem ligou a automação precisa continuar com Fidelidade em Editar, senão ela pausa; o ensaio não sorteia código nem manda nada.
 - nav_target: `automacoes_livre_nova`
 
 ### Deixar a IA cuidar dos comentários de um anúncio

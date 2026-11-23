@@ -58,13 +58,17 @@ describe('catálogo dos passos novos', () => {
 
   // #2934: as consultas prontas servem a quem monta automações; só o "Outro
   // endereço", dentro da peça, pede a chave de integrações. #3100: dar
-  // carimbos fora da compra é de quem cuida do cartão (fidelidade_manage, D1).
-  it('só o "Dar carimbos" pede chave além de montar automações', () => {
+  // carimbos fora da compra e mandar cupom são de quem cuida do cartão
+  // (fidelidade_manage, D1).
+  it('só os dois da fidelidade pedem chave além de montar automações', () => {
     expect(
       catalogo.passos
         .filter(item => PASSOS_NOVOS[item.tipo] && item.chave)
         .map(item => [item.tipo, item.chave])
-    ).toEqual([['dar_carimbos', 'fidelidade_manage']]);
+    ).toEqual([
+      ['dar_carimbos', 'fidelidade_manage'],
+      ['mandar_cupom', 'fidelidade_manage'],
+    ]);
   });
 
   it('o passo da receita acha a entrada dele', () => {

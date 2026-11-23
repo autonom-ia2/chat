@@ -34,10 +34,18 @@ class Fidelidade::Cupom < ApplicationRecord
   validates :limite_por_cliente, numericality: { only_integer: true, greater_than: 0 }
   validate :prefixo_so_letras_e_numeros
 
+  scope :da_conta, ->(account) { where(account_id: account.id) }
+
   # A oferta como a tela lê (useTextosDaFidelidade#oferta): o valor em dinheiro vai em reais.
   def oferta
     valor = oferta_tipo == VALOR ? oferta_valor.to_i / CENTAVOS : oferta_valor
     { tipo: oferta_tipo, valor: valor, texto: oferta_texto }
+  end
+
+  # Como a tela lê (LinhaDoCupom, MontarCupom, o passo "Mandar cupom"), sem os números do relatório.
+  def para_a_tela
+    { id: id, nome: nome, oferta: oferta, moeda: moeda, prefixo: prefixo, validade_dias: validade_dias,
+      limite_por_cliente: limite_por_cliente, ligado: ligado }
   end
 
   private

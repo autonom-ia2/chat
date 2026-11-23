@@ -586,3 +586,35 @@ sem servidor), a regeneração dos formatos do Guia
 recursos novos da etapa 1 (`fidelidade/programa`, `fidelidade/resumo`,
 `relacionamentos/fidelidade`) em `automacao-recursos.yml`: o spec de ações
 permitidas confere os dois lados, então as duas mudanças entram juntas.
+
+## 13. Cupom, etapa 3 (o que mudou do desenho)
+
+- **Código:** prefixo da conta + fim sorteado de 4 letras (5 e 6 quando o
+  tamanho anterior bate cinco vezes), sem `0 O 1 I L`. Um por pessoa e cupom.
+  Mandar de novo manda o mesmo código **com a mesma validade** (não renova).
+- **Validade conta da chegada:** o primeiro envio que sai grava `enviado_em` e
+  `vale_ate`. Código sorteado num envio que não saiu fica sem eles e, no
+  Conferir e no "Marcar como usado", conta como **não existe**.
+- **Pausar o cupom** não invalida o que já foi mandado: quem recebeu ainda usa.
+  Só para de mandar.
+- **Quem pode:** conferir pela aba Cupons pede `fidelidade_view`; marcar como
+  usado pede poder mexer no contato (`update?`, D1), também pela ficha; criar e
+  pausar pedem `fidelidade_manage`. Marcar de novo não gasta de novo
+  (`ja_estava`), com trava na linha.
+- **Tentativas:** o Conferir tem limite no rack-attack, 20 por minuto e 200 por
+  hora por pessoa (cai no IP quando a requisição não traz quem é).
+- **Relatório:** mandados, usados e vendas pela régua da F2 (D4: vendas fechadas
+  até 7 dias depois do uso). Sem `sales_value_view`, as vendas vêm `null`.
+- **Passo "Mandar cupom":** é o passo de mensagem inteiro (janela, modelo,
+  robô do outro lado), com `cupom.codigo`, `cupom.oferta` e `cupom.vale_ate`
+  no texto, que só existem dentro dele. Pede `fidelidade_manage` de quem salva e
+  de quem ligou, a flag dos passos novos e a das mensagens. O texto precisa ter
+  o código.
+- **"Mandar este cupom"** abre a automação pronta para o grupo "parou de
+  comprar" (`compra_em_risco`), com o cupom escolhido.
+- **Guia e Central:** quatro blocos em `porques.md` (criar, conferir e usar,
+  quanto vendeu, passo na automação) e o artigo 13.37.
+
+Fica para depois: a regeneração dos formatos do Guia e de
+`automacao-recursos.yml` com os controllers novos (`fidelidade/cupons`,
+`fidelidade/cupom_codigos`), junto com os da etapa 1, pelo log da CI.

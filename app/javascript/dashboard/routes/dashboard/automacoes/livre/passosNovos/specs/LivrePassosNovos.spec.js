@@ -27,6 +27,25 @@ vi.mock('dashboard/routes/dashboard/fidelidade/programaDaConta', () => {
     esquecerProgramaDaConta: () => {},
   };
 });
+// #3100: o "Mandar cupom" lê os cupons da conta do mesmo jeito.
+vi.mock('dashboard/routes/dashboard/fidelidade/cuponsDaConta', () => {
+  const cupons = [
+    {
+      id: 1,
+      nome: 'Volta',
+      oferta: { tipo: 'porcentagem', valor: 10 },
+      moeda: 'BRL',
+      prefixo: 'VOLTA',
+      validade_dias: 15,
+    },
+  ];
+  return {
+    cuponsDaConta: () => cupons,
+    cupomDaConta: id => cupons.find(cupom => cupom.id === id) || null,
+    carregarCuponsDaConta: () => Promise.resolve(cupons),
+    esquecerCuponsDaConta: () => {},
+  };
+});
 // #2932–#2934: o que vem do servidor (os públicos, os blocos, a contagem e o
 // teste da busca). Os outros três passos seguem no adaptador falso. As
 // respostas entram a cada teste: a config zera os mocks (mockReset).

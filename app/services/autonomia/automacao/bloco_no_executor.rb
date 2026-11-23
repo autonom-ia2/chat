@@ -38,6 +38,8 @@ module Autonomia::Automacao::BlocoNoExecutor
 
   def passo_novo(passo)
     return encerrar(passo['id'], 'parada', 'passos_novos_desligados') unless ::Autonomia::Automacao::PassosNovos.ligados?(@account)
+    # #3100: o "Mandar cupom" manda mensagem: a flag das mensagens, o ritmo e a janela, como o passo "mensagem".
+    return passo_nativo(passo, ::Autonomia::Automacao::PassoDeMandarCupom) if ::Autonomia::Automacao::PassoDeMandarCupom.do_tipo?(passo)
 
     ::Autonomia::Automacao::Bloco.do_tipo?(passo) ? usar_bloco(passo) : acao(passo)
   end
