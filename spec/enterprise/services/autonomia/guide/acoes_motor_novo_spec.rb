@@ -340,10 +340,35 @@ RSpec.describe Autonomia::Guide::Acoes do
     it 'sem a porta, o cabeçalho é o de antes' do
       account.disable_features!('automacao_porta')
 
-      texto = cabecalho('automacoes_editar', { 'id' => 7 })
+      regra = create(:automation_rule, account: account)
+
+      texto = cabecalho('automacoes_editar', { 'id' => regra.id })
 
       expect(texto).not_to include('Motor das automações')
-      expect(texto).to include('Tela atual: automacoes_editar. Registro aberto na tela: id=7. ')
+      expect(texto).not_to include('regra antiga')
+      expect(texto).to include("Tela atual: automacoes_editar. Registro aberto na tela: id=#{regra.id}. ")
+    end
+
+    # #3103: com a porta, a regra antiga ainda abre na tela de sempre, e o Guia a ajusta ali (automation_rules).
+    it 'com a porta, a regra antiga aberta vem dita como antiga, com o estado dela', :aggregate_failures do
+      regra = create(:automation_rule, account: account, active: false)
+
+      texto = cabecalho('automacoes_editar', { 'id' => regra.id })
+
+      expect(texto).to include("Registro aberto na tela: regra antiga de automação id=#{regra.id} (automation_rules), desligada.")
+      expect(texto).to include('Motor das automações desta conta: novo')
+      regra.update!(active: true)
+      expect(cabecalho('automacoes_editar', { 'id' => regra.id })).to include("id=#{regra.id} (automation_rules), ligada.")
+    end
+
+    it 'regra antiga de outra conta, ou para quem não vê automações, fica só com o id', :aggregate_failures do
+      alheia = create(:automation_rule, account: create(:account))
+      propria = create(:automation_rule, account: account)
+      _agente, sem_chave = create_crm_agent(account: account, name: 'Agente sem chave')
+
+      expect(cabecalho('automacoes_editar', { 'id' => alheia.id })).not_to include('regra antiga')
+      expect(cabecalho('automacoes_editar', { 'id' => alheia.id })).to include("Registro aberto na tela: id=#{alheia.id}.")
+      expect(cabecalho('automacoes_editar', { 'id' => propria.id }, account_user: sem_chave)).not_to include('regra antiga')
     end
 
     it 'automação de outra conta não entra no cabeçalho; a da conta entra', :aggregate_failures do
