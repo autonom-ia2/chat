@@ -61,8 +61,11 @@ class Autonomia::Guide::Contexto
   end
 
   # #3158 — os gráficos deste turno, na ordem em que a ferramenta os montou. Cada um ganha o id do marcador
-  # `[grafico:<id>]` que o modelo recebe. -> o id, ou nil quando o turno já tem 3.
+  # `[grafico:<id>]` que o modelo recebe. O mesmo gráfico pedido de novo (mesmo conteúdo, o que inclui período,
+  # título e barras) devolve o id que já tem e não gasta o teto. -> o id, ou nil quando o turno já tem 3.
   def desenhar(grafico)
+    igual = graficos.find { |desenhado| desenhado.except('id') == grafico }
+    return igual['id'] if igual
     return nil if graficos.size >= MAX_GRAFICOS
 
     id = (graficos.size + 1).to_s

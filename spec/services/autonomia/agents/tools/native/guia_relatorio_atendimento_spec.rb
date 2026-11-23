@@ -209,9 +209,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento do
       expect(contexto.graficos).to be_empty
     end
 
+    it 'o mesmo pedido de novo devolve o mesmo marcador e não gasta o teto', :aggregate_failures do
+      primeiro = relatorio(serie)
+      de_novo = relatorio(serie)
+
+      expect([primeiro['grafico'], de_novo['grafico']]).to eq(['[grafico:1]', '[grafico:1]'])
+      expect(contexto.graficos.size).to eq(1)
+    end
+
     it 'no máximo 3 gráficos por turno; o quarto avisa o modelo', :aggregate_failures do
-      3.times { relatorio(serie) }
-      quarto = relatorio(serie)
+      %w[2026-09-10 2026-09-11 2026-09-12].each { |ultimo| relatorio(serie.merge('ate' => ultimo)) }
+      quarto = relatorio(serie.merge('ate' => '2026-09-13'))
 
       expect(contexto.graficos.size).to eq(3)
       expect(quarto).not_to have_key('grafico')
