@@ -63,7 +63,7 @@ class Autonomia::Guide::Turno < ApplicationRecord
 
     # A mensagem junta que vai ser respondida por conta própria: virou a pergunta seguinte (`ChatJob#encerrar`).
     def reabrir(pedido_id)
-      find_by(pedido_id: pedido_id)&.update!(status: PENDENTE, diagnostico: nil)
+      find_by(pedido_id: pedido_id)&.update!(status: PENDENTE, diagnostico: {})
     rescue StandardError => e
       Rails.logger.warn("[autonomia][guide][turno] reabrir pedido=#{pedido_id} #{e.class}")
     end

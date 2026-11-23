@@ -89,7 +89,7 @@ RSpec.describe Autonomia::Guide::Conversa do
 
     def turno(pergunta, resposta: nil, status: 'done', junto_de: nil)
       Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: SecureRandom.uuid, pergunta: pergunta, tela: 'home').tap do |t|
-        t.update!(resposta: resposta, status: status, diagnostico: junto_de ? { 'junto_de' => junto_de } : nil)
+        t.update!(resposta: resposta, status: status, diagnostico: junto_de ? { 'junto_de' => junto_de } : {})
       end
     end
 
@@ -133,6 +133,16 @@ RSpec.describe Autonomia::Guide::Conversa do
 
       expect(principal.reload.para_tela).to include('fora_do_ar' => true, 'junto_de' => nil)
       expect(junta.para_tela).to include('junto_de' => principal.pedido_id, 'fora_do_ar' => false)
+    end
+
+    # CI do #3144: `diagnostico` não aceita nulo, e o erro era engolido — a seguinte ficava escondida como junta.
+    it 'a mensagem que vira a pergunta seguinte volta a esperar resposta', :aggregate_failures do
+      junta = turno('alô?', status: 'junto', junto_de: SecureRandom.uuid)
+
+      Autonomia::Guide::Turno.reabrir(junta.pedido_id)
+
+      expect(junta.reload).to have_attributes(status: 'pending', diagnostico: {})
+      expect(junta.para_tela).to include('junto_de' => nil)
     end
   end
 end
