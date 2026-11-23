@@ -289,7 +289,8 @@
         "EMAIL_REPETIDO": "Este e-mail já está na ficha de outra pessoa. Procure esse e-mail na busca da lista ou apague o e-mail daqui.",
         "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui.",
         "LINK": "Este endereço de site não está certo. Escreva assim: seusite.com.br",
-        "EMPRESA_SEM_ESCOLHA": "Toque no nome da empresa na lista para escolher. Se o nome não estiver lá, toque em “Cadastrar como empresa nova”."
+        "EMPRESA_SEM_ESCOLHA": "Toque no nome da empresa na lista para escolher. Se o nome não estiver lá, toque em “Cadastrar como empresa nova”.",
+        "DATA": "Esta data não está certa. Escreva assim: {formato}"
       },
       "SAIR": {
         "TITULO": "Sair sem salvar?",
@@ -323,7 +324,13 @@
         "LIMPAR": "Limpar",
         "LIMPAR_O": "Limpar o que está em {campo}",
         "LINK_EXEMPLO": "Ex.: seusite.com.br",
-        "VAI_SAIR": "Este campo fica em branco quando você salvar."
+        "VAI_SAIR": "Este campo fica em branco quando você salvar.",
+        "CALENDARIO": "Calendário",
+        "CALENDARIO_DE": "Escolher {campo} no calendário",
+        "DATA_DIA": "dd",
+        "DATA_MES": "mm",
+        "DATA_ANO": "aaaa",
+        "DATA_ASSIM": "Escreva assim: {formato}"
       },
       "FOTO": {
         "POR": "Pôr foto",
