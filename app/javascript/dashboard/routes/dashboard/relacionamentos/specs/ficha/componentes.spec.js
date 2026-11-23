@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import CabecalhoDaPessoa from '../../components/ficha/CabecalhoDaPessoa.vue';
 import MenuMais from '../../components/ficha/MenuMais.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -1165,6 +1165,42 @@ describe('SecaoArquivos', () => {
     expect(w.get('[data-relacionamentos="arquivo"]').element.tagName).toBe(
       'DIV'
     );
+  });
+
+  it('ao tocar, o foco vai para o player', async () => {
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { nome: 'local.mp4', tipo: 'video' })],
+        agora: AGORA,
+      },
+      attachTo: document.body,
+    });
+    await w.get('[data-relacionamentos="arquivo"]').trigger('click');
+    await flushPromises();
+    expect(document.activeElement).toBe(w.get('video').element);
+    w.unmount();
+  });
+
+  it('vídeo que não toca vira o cartão do tipo, que abre numa aba nova', async () => {
+    const play = vi
+      .spyOn(window.HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(
+        Object.assign(new Error('formato'), { name: 'NotSupportedError' })
+      );
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { nome: 'local.mp4', tipo: 'video' })],
+        agora: AGORA,
+      },
+    });
+    await w.get('[data-relacionamentos="arquivo"]').trigger('click');
+    await flushPromises();
+    const cartao = w.get('[data-relacionamentos="arquivo"]');
+    expect(w.find('video').exists()).toBe(false);
+    expect(cartao.element.tagName).toBe('A');
+    expect(cartao.attributes('target')).toBe('_blank');
+    expect(w.find('.i-lucide-video').exists()).toBe(true);
+    play.mockRestore();
   });
 
   it('planilha tem ícone próprio; o nome não repete a extensão do selo', () => {

@@ -36,6 +36,8 @@ const MAIOR_EXTENSAO = 4;
 const { t } = useI18n();
 const idioma = useIdioma();
 const miniaturaFalhou = ref(false);
+// O vídeo que não carrega ou não toca (formato, endereço vencido) vira o cartão do tipo, que abre numa aba nova.
+const videoFalhou = ref(false);
 const tocando = ref(false);
 const video = ref(null);
 const raiz = ref(null);
@@ -77,6 +79,7 @@ const comMiniatura = computed(
 const ehVideo = computed(
   () =>
     !comMiniatura.value &&
+    !videoFalhou.value &&
     props.arquivo.tipo === 'video' &&
     Boolean(props.arquivo.url)
 );
@@ -116,11 +119,23 @@ const atributos = computed(() => {
   return {};
 });
 
+const falhouAoTocar = () => {
+  tocando.value = false;
+  videoFalhou.value = true;
+};
+
+// O botão vira o player: o foco vai para ele, para quem usa teclado não cair no topo da página.
 const tocar = async () => {
   if (!ehVideo.value || tocando.value) return;
   tocando.value = true;
   await nextTick();
-  Promise.resolve(video.value?.play?.()).catch(() => {});
+  video.value?.focus?.();
+  try {
+    await video.value?.play?.();
+  } catch (erro) {
+    // AbortError: a pessoa pausou ou trocou de vídeo antes de começar; não é falha.
+    if (erro?.name !== 'AbortError') falhouAoTocar();
+  }
 };
 </script>
 
@@ -153,7 +168,7 @@ const tocar = async () => {
         playsinline
         :muted="!tocando"
         :controls="tocando"
-        :tabindex="tocando ? undefined : -1"
+        :tabindex="tocando ? 0 : -1"
         :aria-hidden="tocando ? undefined : 'true'"
         class="size-full"
         :class="
@@ -161,6 +176,7 @@ const tocar = async () => {
             ? 'object-contain bg-n-slate-12'
             : 'object-cover pointer-events-none'
         "
+        @error="falhouAoTocar"
       />
       <span
         v-else
