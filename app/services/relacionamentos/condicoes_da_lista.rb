@@ -17,13 +17,6 @@ class Relacionamentos::CondicoesDaLista
     CustomExceptions::CustomFilter::InvalidValue
   ].freeze
 
-  # O filtro de hoje, sobre a conta inteira em vez da base da lista de contatos.
-  class Filtro < Contacts::FilterService
-    def base_relation
-      @account.contacts
-    end
-  end
-
   def initialize(account, texto)
     @account = account
     linhas = Relacionamentos::CondicoesDaLista::Conferencia.new(account, texto).linhas
@@ -38,7 +31,7 @@ class Relacionamentos::CondicoesDaLista
   private
 
   def montar(linhas)
-    Filtro.new(@account, nil, { payload: linhas }).perform(count: false)[:contacts]
+    Relacionamentos::CondicoesDaLista::Filtro.new(@account, nil, { payload: linhas }).perform(count: false)[:contacts]
   rescue *RECUSAS_DO_FILTRO => e
     raise Relacionamentos::PedidoInvalido, "condicoes: #{e.message}"
   end

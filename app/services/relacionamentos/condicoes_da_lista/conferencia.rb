@@ -68,19 +68,25 @@ class Relacionamentos::CondicoesDaLista::Conferencia
 
   def valores(chave, como, recebidos, sim_nao:)
     recusar("#{chave}: valores em formato inválido") unless recebidos.nil? || recebidos.is_a?(Array)
-    lista = Array(recebidos)
     return [] if SEM_VALOR.include?(como)
 
+    lista = quantos_cabem(chave, Array(recebidos))
+    sim_nao ? sim_ou_nao(chave, lista) : textos(chave, lista)
+  end
+
+  def quantos_cabem(chave, lista)
     recusar("#{chave}: valor que falta") if lista.empty?
     recusar("#{chave}: valores demais") if lista.size > MAXIMO_DE_VALORES
-    return sim_ou_nao(chave, lista) if sim_nao
+    lista
+  end
 
+  def textos(chave, lista)
     recusar("#{chave}: valor em formato inválido") unless lista.all? { |valor| valor.is_a?(String) && valor.strip.present? }
     lista
   end
 
   def sim_ou_nao(chave, lista)
-    recusar("#{chave}: valor em formato inválido") unless lista.one? && [true, false].include?(lista.first)
+    recusar("#{chave}: valor em formato inválido") unless lista.size == 1 && [true, false].include?(lista.first)
     lista
   end
 
