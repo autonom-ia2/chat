@@ -46,6 +46,9 @@ const router = useRouter();
 const getLabelById = useMapGetter('labels/getLabelById');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const getAccount = useMapGetter('accounts/getAccount');
+const getInbox = useMapGetter('inboxes/getInbox');
+const getAgentById = useMapGetter('agents/getAgentById');
+const getTeamById = useMapGetter('teams/getTeamById');
 const {
   records,
   meta,
@@ -61,13 +64,23 @@ const {
 
 const title = computed(() => props.metricName || '');
 
-// Só para contagem de conversas criadas, por dia, semana ou mês: o filtro da caixa compara datas, não horas.
+const labelTitle = computed(() => getLabelById.value(props.id)?.title);
+const NOME_DA_DIMENSAO = {
+  inbox: () => getInbox.value(props.id)?.name,
+  agent: () => getAgentById.value(props.id)?.name,
+  team: () => getTeamById.value(props.id)?.name,
+};
+
+// Só para contagem de conversas criadas, por dia, semana ou mês: o filtro da caixa compara datas, não horas. Etiqueta
+// que não está carregada fica sem o link: sem o nome, o filtro iria vazio.
 const canViewAll = computed(
   () =>
     canLinkDrilldownToConversations({
       metric: props.metric,
       groupBy: props.groupBy,
-    }) && !!meta.value.bucket
+    }) &&
+    !!meta.value.bucket &&
+    (props.type !== 'label' || !!labelTitle.value)
 );
 
 const viewAllConversations = () => {
@@ -75,7 +88,8 @@ const viewAllConversations = () => {
     bucket: meta.value.bucket,
     type: props.type,
     id: props.id,
-    labelTitle: getLabelById.value(props.id)?.title,
+    labelTitle: labelTitle.value,
+    dimensionName: NOME_DA_DIMENSAO[props.type]?.(),
     // #3151: o mesmo fuso que o filtro da caixa usa.
     timezone: fusoDaConta(getAccount.value(currentAccountId.value)),
   });

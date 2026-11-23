@@ -10,8 +10,19 @@ vi.mock('dashboard/api/reports', () => ({
   },
 }));
 
+const { mockGetters, mockResolve } = vi.hoisted(() => ({
+  mockGetters: {},
+  mockResolve: vi.fn(location => ({
+    href: `/app/accounts/1/dashboard?filters=${location.query.filters}`,
+  })),
+}));
+
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), resolve: mockResolve }),
+}));
+
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: key => ({ value: mockGetters[key] }),
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -385,5 +396,89 @@ describe('ReportDrilldownDrawer.vue', () => {
     wrapper.unmount();
     target.remove();
     opener.remove();
+  });
+
+  // #3147: "Ver todas" abre a caixa com o filtro do intervalo, no fuso da conta
+  // (#3151), e com o nome da caixa para o filtro não mostrar só o id.
+  describe('view all conversations', () => {
+    const viewAllRequest = {
+      metric: 'conversations_count',
+      groupBy: 'day',
+      type: 'inbox',
+      id: 5,
+    };
+    // Dia 14/09 em São Paulo.
+    const bucket = {
+      since: Date.UTC(2026, 8, 14, 3) / 1000,
+      until: Date.UTC(2026, 8, 15, 3) / 1000,
+    };
+
+    const findViewAll = wrapper =>
+      wrapper
+        .findAll('button')
+        .find(button => button.text().includes('REPORT.DRILLDOWN.VIEW_ALL'));
+
+    beforeEach(() => {
+      Object.assign(mockGetters, {
+        getCurrentAccountId: 1,
+        'accounts/getAccount': () => ({
+          custom_attributes: { timezone: 'America/Sao_Paulo' },
+        }),
+        'labels/getLabelById': () => undefined,
+        'inboxes/getInbox': () => ({ id: 5, name: 'Vendas' }),
+        'agents/getAgentById': () => undefined,
+        'teams/getTeamById': () => undefined,
+      });
+      ReportsAPI.getDrilldown.mockResolvedValue({
+        data: {
+          meta: {
+            total_count: 1,
+            current_page: 1,
+            record_type: 'conversation',
+            bucket,
+          },
+          payload,
+        },
+      });
+    });
+
+    it('opens the list filtered by the local day and the inbox', async () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const wrapper = await mountDrawer({ props: viewAllRequest });
+      await flushPromises();
+
+      await findViewAll(wrapper).trigger('click');
+
+      const { query } = mockResolve.mock.calls[0][0];
+      const filters = JSON.parse(query.filters);
+      expect(filters.map(filter => filter.values)).toEqual([
+        '2026-09-13',
+        '2026-09-15',
+        { id: 5, name: 'Vendas' },
+      ]);
+      expect(open).toHaveBeenCalledWith(
+        expect.stringContaining('filters='),
+        '_blank',
+        'noopener'
+      );
+    });
+
+    it('hides the link for hourly buckets', async () => {
+      const wrapper = await mountDrawer({
+        props: { ...viewAllRequest, groupBy: 'hour' },
+      });
+      await flushPromises();
+
+      expect(findViewAll(wrapper)).toBeUndefined();
+    });
+
+    it('hides the link when the label is not loaded', async () => {
+      const wrapper = await mountDrawer({
+        props: { ...viewAllRequest, type: 'label' },
+      });
+      await flushPromises();
+
+      expect(findViewAll(wrapper)).toBeUndefined();
+    });
   });
 });

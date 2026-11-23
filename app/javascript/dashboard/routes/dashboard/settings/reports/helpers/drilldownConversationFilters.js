@@ -48,6 +48,7 @@ export const buildDrilldownConversationFilters = ({
   type,
   id,
   labelTitle,
+  dimensionName,
   timezone,
 }) => {
   const filters = [
@@ -66,12 +67,16 @@ export const buildDrilldownConversationFilters = ({
   if (type === 'label') {
     filters.push(
       condition(CONVERSATION_ATTRIBUTES.LABELS, FILTER_OPS.EQUAL_TO, [
-        { id: labelTitle },
+        { id: labelTitle, name: labelTitle },
       ])
     );
   } else if (DIMENSION_ATTRIBUTES[type]) {
     filters.push(
-      condition(DIMENSION_ATTRIBUTES[type], FILTER_OPS.EQUAL_TO, { id })
+      // O nome vai junto para o filtro da caixa mostrar "Caixa: Vendas", não o id.
+      condition(DIMENSION_ATTRIBUTES[type], FILTER_OPS.EQUAL_TO, {
+        id,
+        ...(dimensionName ? { name: dimensionName } : {}),
+      })
     );
   }
 

@@ -146,7 +146,7 @@ describe('drilldownConversationFilters', () => {
         {
           attribute_key: 'labels',
           filter_operator: 'equal_to',
-          values: [{ id: 'billing' }],
+          values: [{ id: 'billing', name: 'billing' }],
           query_operator: 'and',
         },
       ]);

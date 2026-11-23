@@ -657,6 +657,15 @@ function applyRouteFilters() {
   if (!serializedFilters) return false;
 
   router.replace({ query });
+  // Só na lista geral: numa caixa, etiqueta, time, pasta ou menção o filtro avançado trocaria o escopo da tela.
+  const telaComEscopo =
+    props.conversationInbox ||
+    props.teamId ||
+    props.label ||
+    props.foldersId ||
+    props.conversationType;
+  if (telaComEscopo) return false;
+
   const filters = parseRouteFilters(serializedFilters);
   if (!filters) return false;
 
