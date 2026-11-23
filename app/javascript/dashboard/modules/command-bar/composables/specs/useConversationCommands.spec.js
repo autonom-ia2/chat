@@ -43,6 +43,7 @@ describe('useConversationCommands', () => {
         'draftMessages/getReplyEditorMode': REPLY_EDITOR_MODES.REPLY,
         getContextMenuChatId: null,
         getCurrentAccountId: 1,
+        'accounts/isFeatureEnabledonAccount': () => true,
         'teams/getTeams': mockTeamsList,
         'draftMessages/get': vi.fn(),
       },
@@ -138,9 +139,10 @@ describe('useConversationCommands', () => {
     );
 
     viewContact.run();
-    expect(useRouter().push).toHaveBeenCalledWith(
-      `/app/accounts/1/contacts/${mockCurrentChat.meta.sender.id}`
-    );
+    expect(useRouter().push).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { accountId: 1, contactId: mockCurrentChat.meta.sender.id },
+    });
   });
 
   it('copies the conversation link on the configured host', async () => {
