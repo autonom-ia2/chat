@@ -4,7 +4,9 @@
 //   GET campaign_journey/results/:channel/:id/recipients → { payload: { rows, meta } }
 //   GET campaign_journey/results/:channel/:id/export     → masked CSV (campaign_manage)
 //   GET campaign_journey/results/email/:id/period?period= → { payload: { period, since, until, sent, … } } (#990)
-//   GET campaign_journey/overview?days=&channel=&page=   → { payload: { period, totals, campaigns, meta } }
+//   GET campaign_journey/overview?days=&channel=&page=   → { payload: { period, totals, campaigns, meta,
+//                                                            duas_versoes_esperando (#3099) } }
+//   POST campaign_journey/results/:channel/:id/vencedora { versao } → { payload: <bloco duas_versoes> } (#3099)
 import ApiClient from './ApiClient';
 
 class CampaignResultsAPI extends ApiClient {
@@ -39,6 +41,11 @@ class CampaignResultsAPI extends ApiClient {
       params: { period },
       signal,
     });
+  }
+
+  // #3099: a versão que vai para o resto do público (campaign_send). Outra versão já escolhida → 422.
+  escolherVersao(channel, id, versao) {
+    return axios.post(`${this.resultUrl(channel, id)}/vencedora`, { versao });
   }
 
   getOverview({ days, channel, page = 1, signal } = {}) {

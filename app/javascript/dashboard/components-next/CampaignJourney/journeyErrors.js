@@ -67,3 +67,18 @@ export const createErrorKey = error => {
   if (response?.status === 401) return 'NOT_ALLOWED';
   return CREATE_ERRORS[response?.data?.code] || 'GENERIC';
 };
+
+// #3099: a versão 2 da mensagem recusada pelo servidor (CampaignJourney::DuasVersoes::Segunda) → sufixo sob
+// DUAS_VERSOES.ERROS; outro erro → null (vale o createErrorKey). Os códigos da versão 2 começam com segunda_versao_.
+const DUAS_VERSOES_ERRORS = {
+  segunda_versao_outras_informacoes: 'OUTRAS_INFORMACOES',
+  segunda_versao_modelo_nao_aprovado: 'MODELO',
+  duas_versoes_indisponivel: 'INDISPONIVEL',
+};
+const SEGUNDA_VERSAO_PREFIX = 'segunda_versao_';
+
+export const duasVersoesErrorKey = error => {
+  const code = String(error?.response?.data?.code || '');
+  if (DUAS_VERSOES_ERRORS[code]) return DUAS_VERSOES_ERRORS[code];
+  return code.startsWith(SEGUNDA_VERSAO_PREFIX) ? 'SEGUNDA' : null;
+};

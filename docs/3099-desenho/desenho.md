@@ -379,3 +379,35 @@ automação):
 Fica para os próximos PRs da fase: a ligação das telas (`NewCampaignPage`, revisão, resultado, aviso na lista), a
 automação livre (tabelas já criadas), os blocos do Guia (§7), os formatos do Guia regerados e a flag
 `duas_versoes_mensagem`.
+
+---
+
+## 11. A ligação da campanha (Etapa 2)
+
+As telas da onda 1 passaram a falar com o servidor da Etapa 1. Toque mínimo no Chatwoot e no assistente:
+
+- **Rascunho:** `draft.duasVersoes` (`duasVersoesVazias()`) em `campaignDraft.js`. Rascunho antigo sem o campo ganha o
+  padrão desligado.
+- **Passo Mensagem:** a Nova campanha preenche o slot `duas-versoes` do `StepMessage` com `DuasVersoesMensagem`. Os dados
+  saem de `useDuasVersoesNaCampanha` (modelos aprovados da caixa com "mesmas informações", o e-mail criado, as ideias de
+  assunto da IA guardadas em `ai_subject_variants`). Modelo da versão 2 que deixou de servir (outra caixa, outro modelo
+  na versão 1) volta a ficar vazio. No e-mail, o cartão só aparece depois de o e-mail existir.
+- **`canContinue`:** a versão 1 pronta **e** a versão 2 pronta (`motivoDaSegunda`). Com a versão 1 pronta e a 2 vazia, o
+  cartão diz "Falta a versão 2", para explicar por que "Continuar" não anda.
+- **Plano do servidor:** o mesmo `POST recipient_previews` do "Vão receber" leva `duas_versoes.divisao` e
+  `grupo_de_controle_pct` quando as duas versões estão ligadas, e as frases usam `payload.duas_versoes`. Enquanto ele não
+  volta, a tela faz a mesma conta (`planoDoTeste`).
+- **Revisão:** `ResumoDuasVersoes` no slot `#modelo` e, embaixo do "Vão receber", a linha "Agora vão N (o teste). As
+  outras M vão depois de X horas." (`AgoraVaiOTeste`, slot novo `vao-receber` no `StepReview`, uma linha). O "Vão
+  receber" e a confirmação continuam com o público inteiro. O "Quando começa" (F5) não mudou.
+- **Envio:** `medicaoDaCampanha` leva `duas_versoes` (`criterio`, `divisao`, `espera_horas`, `segunda`) nos quatro canais;
+  no WhatsApp Oficial, `segunda` leva o nome e o idioma do modelo. O multipart da WhatsApp API com anexo passou a mandar
+  objetos aninhados em qualquer profundidade. Código `segunda_versao_*` recusado vira frase própria
+  (`DUAS_VERSOES.ERROS`).
+- **Resultado:** `ResultDuasVersoesDaCampanha` (abaixo da linha que fecha os números, no `MessageResultView` e no
+  `EmailResultView`) mostra `result.duas_versoes` e, no "Sim, mandar", chama `POST …/vencedora`. 422 (outra versão já
+  escolhida) avisa e recarrega.
+- **Lista de Campanhas (D5):** `AvisoDuasVersoesEsperando` lê `duas_versoes_esperando` do overview (período de 7 dias,
+  o menor) e leva ao resultado de cada campanha; mostra até quando dá para escolher antes de a versão 1 ir sozinha.
+- **Guia:** blocos `testar_duas_versoes_na_campanha` e `escolher_a_versao_que_vai_para_o_resto`; os blocos da lista de
+  Campanhas e de "Quem comprou depois" ganharam a ligação.

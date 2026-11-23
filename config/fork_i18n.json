@@ -164,6 +164,9 @@
     },
     {
       "file": "campanhaVendas.json"
+    },
+    {
+      "file": "duasVersoes.json"
     }
   ],
   "pacotes": {

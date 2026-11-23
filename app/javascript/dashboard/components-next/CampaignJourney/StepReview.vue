@@ -260,6 +260,8 @@ const submit = () => {
           </template>
         </p>
       </div>
+      <!-- #3099: quantos recebem agora (o teste das duas versões) e quantos depois, preenchido pela Nova campanha. -->
+      <slot name="vao-receber" />
       <dl class="m-0 flex flex-col gap-1 text-sm" data-test="review-counts">
         <div class="flex justify-between gap-3">
           <dt class="text-n-slate-11">{{ onChannelLabel }}</dt>

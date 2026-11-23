@@ -34,6 +34,8 @@ import ResultHeader from './ResultHeader.vue';
 import ResultKpiStrip from './ResultKpiStrip.vue';
 import ResultCrmBand from './ResultCrmBand.vue';
 import ResultVendas from './ResultVendas.vue';
+// #3099: duas versões da mensagem, logo abaixo dos números.
+import ResultDuasVersoesDaCampanha from './ResultDuasVersoesDaCampanha.vue';
 import ResultLinkClicks from './ResultLinkClicks.vue';
 import ResultRepliedList from './ResultRepliedList.vue';
 import EmailResultActions from './EmailResultActions.vue';
@@ -453,6 +455,15 @@ watch(
           {{ metricsHelp }}
         </p>
       </div>
+
+      <ResultDuasVersoesDaCampanha
+        v-if="result.duas_versoes"
+        :channel="CHANNEL"
+        :campaign-id="campaignId"
+        :teste="result.duas_versoes"
+        @escolhida="refresh"
+        @recarregar="refresh"
+      />
 
       <RecipientImportStatus :campaign="health" :can-recover="canManage" />
       <ResultEmailHealth

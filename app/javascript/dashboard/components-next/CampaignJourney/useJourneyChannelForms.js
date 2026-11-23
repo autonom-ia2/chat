@@ -16,6 +16,11 @@ import {
 
 const PREVIEW_DELAY_MS = 400;
 
+const planoKey = value =>
+  value.duasVersoes?.ligado
+    ? `${value.duasVersoes.divisao}:${value.grupoDeControle || 0}`
+    : '';
+
 export function useJourneyChannelForms({ draft, bindings }) {
   const inboxes = useMapGetter('inboxes/getInboxes');
   const identities = useMapGetter('emailSenderIdentities/getIdentities');
@@ -102,6 +107,8 @@ export function useJourneyChannelForms({ draft, bindings }) {
       () => draft.value.messageBody,
       () => JSON.stringify(draft.value.bindings),
       () => JSON.stringify(draft.value.defaults),
+      // #3099: o plano do teste das duas versões depende da divisão e do grupo de controle (só quando ligadas).
+      () => planoKey(draft.value),
     ],
     refreshPreview
   );

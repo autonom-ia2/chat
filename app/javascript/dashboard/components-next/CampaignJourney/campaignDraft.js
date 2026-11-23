@@ -3,6 +3,7 @@
 // api-993-frontend-needs.md §7). Holds choices, never contact data. Storage can be blocked
 // (private window, policies): every access is guarded and the journey works without it.
 import { CAMPAIGN_CHANNELS } from './campaignChannels';
+import { duasVersoesVazias } from './duasVersoes';
 
 export const DRAFT_VERSION = 1;
 
@@ -33,6 +34,8 @@ export const emptyDraft = () => ({
   // #3098: "Quem comprou depois" da revisão: dias da janela de compra e a porcentagem do grupo de controle (0 = sem).
   janelaDeCompra: 7,
   grupoDeControle: 0,
+  // #3099: "Duas versões da mensagem" do passo Mensagem (desligado; a versão 2 e a regra do teste).
+  duasVersoes: duasVersoesVazias(),
   step: 1,
 });
 
