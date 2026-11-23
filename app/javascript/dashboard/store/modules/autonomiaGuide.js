@@ -163,6 +163,7 @@ const addAssistantMessage = ({
   lembrancas = null,
   aviso = null,
   tarefa = null,
+  graficos = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -194,6 +195,9 @@ const addAssistantMessage = ({
     aviso,
     // #936 — a tarefa longa planejada neste turno: o cartão busca o resto pelo id.
     tarefa,
+    // #3158 — os gráficos do relatório, com os números da ferramenta. O balão
+    // põe cada um no lugar do marcador `[grafico:<id>]`.
+    graficos: Array.isArray(graficos) ? [...graficos] : [],
     // A pergunta que o "Tentar de novo" manda outra vez, quando a resposta não
     // veio (falha, Guia fora do ar ou resposta retida) e o Guia não fez nada.
     repetir,
@@ -287,6 +291,7 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
       acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
+      graficos: turno.graficos || null,
       pedidoId: turno.pedido_id,
       aviso: turno.aviso_id ? { id: turno.aviso_id } : null,
     };
@@ -300,6 +305,8 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
       acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
+      // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
+      graficos: turno.graficos || null,
       pedidoId: turno.pedido_id,
       // O Guia mexeu na conta: o cartão mostra, e repetir faria duas vezes.
       ...semResposta(turno, avisos.retido, avisos, pergunta),
@@ -308,6 +315,7 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
   if (turno.status === 'failed') {
     return {
       execucao: turno.execucao || null,
+      graficos: turno.graficos || null,
       ...semResposta(
         turno,
         turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
