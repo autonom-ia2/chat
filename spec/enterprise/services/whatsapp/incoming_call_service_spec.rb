@@ -86,6 +86,45 @@ describe Whatsapp::IncomingCallService do
         hash_including(data: hash_including(recording_enabled: false))
       )
     end
+
+    # Fork (upgrade 4.20.1, #3120): the upstream call routing (#16637, #16711) is left to Twilio calls; a WhatsApp call
+    # rings as on the fork whatever the routing settings saved on the inbox
+    context 'with the upstream call routing settings saved on the inbox' do
+      let(:params) { call_payload(event: 'connect', session: { sdp: sdp_offer, sdp_type: 'offer' }) }
+
+      before { allow(ActionCable.server).to receive(:broadcast) }
+
+      it 'rings out of business hours too, without declining the call at Meta' do
+        channel.update!(provider_config: channel.provider_config.merge('business_hours_calls_enabled' => true))
+        inbox.update!(working_hours_enabled: true)
+        inbox.working_hours.each { |hours| hours.update!(closed_all_day: true, open_all_day: false) }
+
+        expect { described_class.new(inbox: inbox, params: params).perform }.not_to have_enqueued_job(Whatsapp::DeclineCallJob)
+
+        expect(Call.last).to have_attributes(status: 'ringing', end_reason: nil)
+        expect(ActionCable.server).to have_received(:broadcast).with(agent.pubsub_token, hash_including(event: 'voice_call.incoming'))
+      end
+
+      it 'rings once, with no ring steps and no ring named on the message' do
+        channel.update!(provider_config: channel.provider_config.merge('ring_strategy' => 'sequential'))
+
+        expect { described_class.new(inbox: inbox, params: params).perform }.not_to have_enqueued_job(Voice::RingNextAgentJob)
+
+        call = Call.last
+        expect(call.ring_state).not_to have_key('ring_recipient_ids')
+        expect(call.message.content_attributes['data']).not_to have_key('ring_user_ids')
+      end
+
+      it 'leaves a new caller to the auto-assignment, which does not wait for the ring' do
+        inbox.update!(enable_auto_assignment: true)
+        OnlineStatusTracker.update_presence(account.id, 'User', agent.id)
+        OnlineStatusTracker.set_status(account.id, agent.id, 'online')
+
+        described_class.new(inbox: inbox, params: params).perform
+
+        expect(Call.last.conversation.reload.assignee).to eq(agent)
+      end
+    end
   end
 
   describe 'inbound connect from a username (BSUID) caller' do
@@ -407,6 +446,14 @@ describe Whatsapp::IncomingCallService do
       expect(call.reload).to have_attributes(status: 'ringing')
       expect(Rails.logger).to have_received(:info).with(/Duplicate inbound connect/)
       expect(ActionCable.server).not_to have_received(:broadcast)
+    end
+
+    it 'queues the ring of a call that recorded who it rings but never rang them' do
+      call.update!(ring_state: { 'ring_recipient_ids' => [1] })
+      params = call_payload(event: 'connect', session: { sdp: 'sdp_x', sdp_type: 'offer' })
+
+      expect { described_class.new(inbox: inbox, params: params).perform }
+        .to have_enqueued_job(Voice::VoipPushJob).with(call.id, 'ring')
     end
   end
 

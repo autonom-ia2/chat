@@ -73,15 +73,21 @@ const campoDaDefinicao = (definicao, valores, escolhidos) => {
 // que estão fora da tela (para o valor delas não virar campo solto).
 // `escolhidos`: os ids que o configurador pôs na ficha.
 // `valores`: os custom_attributes da pessoa (ou da empresa, com `modelo`).
+// `guardadas`: #3082 — as chaves dos campos apagados (guardados escondidos). O
+// valor deles continua gravado, mas não aparece como campo solto.
 export const camposDoRegistro = ({
   definicoes = [],
   escolhidos = [],
   valores = {},
+  guardadas = [],
   modelo = MODELOS.pessoa,
 }) => {
   const daConta = definicoes.filter(doModelo(modelo));
   const ids = new Set(escolhidos);
-  const conhecidas = new Set(daConta.map(d => d.attribute_key));
+  const conhecidas = new Set([
+    ...daConta.map(d => d.attribute_key),
+    ...guardadas,
+  ]);
   const comDefinicao = naTela(daConta).map(definicao =>
     campoDaDefinicao(definicao, valores, ids)
   );

@@ -12,6 +12,18 @@ vi.mock('dashboard/composables/store', () => ({
   }),
 }));
 
+// Upgrade 4.20.1 (#3120): a página registra comandos da command bar nova
+// (desligada no fork); aqui só os stubs do que ela passou a ler.
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ accountId: ref(1) }),
+}));
+vi.mock('dashboard/modules/command-bar/composables/usePageCommands', () => ({
+  usePageCommands: vi.fn(),
+  recordCommands: vi.fn(() => []),
+}));
+
 vi.mock('shared/composables/useBranding', () => ({
   useBranding: () => ({ replaceInstallationName: texto => texto }),
 }));

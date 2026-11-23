@@ -5,7 +5,9 @@ import historicalInbox from 'dashboard/helper/specs/inboxFixture';
 import FieldConfigurator from '../FieldConfigurator.vue';
 
 const context = vi.hoisted(() => ({ account: 100, commit: vi.fn() }));
-vi.mock('axios', () => ({ default: { get: vi.fn(), patch: vi.fn() } }));
+vi.mock('axios', () => ({
+  default: { get: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+}));
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () => ref(false),
@@ -580,5 +582,165 @@ it('from the company record: record title', async () => {
   expect(wrapper.find('dialog h3').text()).toBe(
     'RELATIONSHIPS.CONFIGURE_RECORD'
   );
+  wrapper.unmount();
+});
+
+// #3082 — apagar é "guardar escondido": a conferência diz que o campo sai das
+// telas e das IAs e que o escrito fica guardado; depois, a lista mostra o campo
+// em "Campos apagados".
+const campoPlaca = {
+  id: 41,
+  attribute_key: 'placa',
+  attribute_display_name: 'Placa',
+  attribute_description: 'Placa do carro',
+  attribute_model: 'contact_attribute',
+  attribute_display_type: 'text',
+  revision: '2026-11-22T12:00:00.000001Z',
+  attribute_values: [],
+};
+const leitura = (definitions, guardados = []) => ({
+  data: {
+    configuration: { version: 1, revision: 4, surfaces: {} },
+    definitions,
+    guardados,
+    can_manage: true,
+  },
+});
+const guardadoPlaca = {
+  attribute_key: 'placa',
+  attribute_model: 'contact_attribute',
+  attribute_display_name: 'Placa',
+  attribute_display_type: 'text',
+  attribute_description: 'Placa do carro',
+  attribute_values: [],
+  apagado_em: '2026-11-22T12:00:00Z',
+};
+
+it('deletes a field after a clear confirmation and lists it under deleted fields', async () => {
+  axios.get.mockResolvedValue(leitura([campoPlaca]));
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
+  await click(wrapper, 'RELATIONSHIPS.DELETE.OPEN');
+  expect(wrapper.find('dialog h3').text()).toBe('RELATIONSHIPS.DELETE.TITLE');
+  expect(wrapper.text()).toContain('RELATIONSHIPS.DELETE.GONE');
+  expect(wrapper.text()).toContain('RELATIONSHIPS.DELETE.KEPT');
+  expect(wrapper.find('button[type="submit"]').text()).toBe(
+    'RELATIONSHIPS.DELETE.CONFIRM'
+  );
+  axios.delete.mockResolvedValue({ status: 204 });
+  axios.get.mockResolvedValue(leitura([], [guardadoPlaca]));
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.delete).toHaveBeenCalledWith(
+    `/api/v1/accounts/${context.account}/custom_attribute_definitions/41`
+  );
+  expect(axios.patch).not.toHaveBeenCalled();
+  expect(wrapper.find('dialog').element.open).toBe(true);
+  const apagados = wrapper.find('[data-campos-apagados]');
+  expect(apagados.text()).toContain('Placa');
+  expect(apagados.text()).toContain('RELATIONSHIPS.DELETED.BRING_BACK');
+  wrapper.unmount();
+});
+
+it('goes back to the form without deleting when the confirmation is declined', async () => {
+  axios.get.mockResolvedValue(leitura([campoPlaca]));
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
+  await click(wrapper, 'RELATIONSHIPS.DELETE.OPEN');
+  await click(wrapper, 'RELATIONSHIPS.BACK');
+  expect(axios.delete).not.toHaveBeenCalled();
+  expect(wrapper.find('input[type="text"]').element.value).toBe('Placa');
+  wrapper.unmount();
+});
+
+it('keeps the confirmation open and says so when deleting fails', async () => {
+  axios.get.mockResolvedValue(leitura([campoPlaca]));
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
+  await click(wrapper, 'RELATIONSHIPS.DELETE.OPEN');
+  axios.delete.mockRejectedValue({ response: { status: 500 } });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(wrapper.find('[role="alert"]').text()).toBe(
+    'RELATIONSHIPS.DELETE.ERROR'
+  );
+  expect(wrapper.text()).toContain('RELATIONSHIPS.DELETE.KEPT');
+  wrapper.unmount();
+});
+
+it('brings a deleted field back with the same key, type and purpose', async () => {
+  axios.get.mockResolvedValue(leitura([], [guardadoPlaca]));
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.DELETED.BRING_BACK');
+  expect(wrapper.find('dialog h3').text()).toBe(
+    'RELATIONSHIPS.DELETED.BRING_BACK_TITLE'
+  );
+  expect(wrapper.find('input[type="text"]').element.value).toBe('Placa');
+  expect(wrapper.find('textarea').element.value).toBe('Placa do carro');
+  axios.patch.mockResolvedValue({
+    data: {
+      configuration: { version: 1, revision: 5, surfaces: {} },
+      definition: { ...campoPlaca, id: 42 },
+    },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.patch.mock.calls[0][1].configuration.definition).toMatchObject({
+    attribute_key: 'placa',
+    attribute_model: 'contact_attribute',
+    attribute_display_type: 'text',
+    attribute_description: 'Placa do carro',
+  });
+  // Volta para a lista, onde a pessoa vê o campo de novo, e o próximo Salvar
+  // vai com a versão nova.
+  expect(wrapper.find('dialog').element.open).toBe(true);
+  expect(wrapper.find('input[type="search"]').exists()).toBe(true);
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(axios.patch.mock.calls[1][1].configuration.revision).toBe(5);
+  wrapper.unmount();
+});
+
+it('saves the layout after a deletion without the deleted field id', async () => {
+  const comPlaca = leitura([
+    campoPlaca,
+    {
+      ...campoPlaca,
+      id: 43,
+      attribute_key: 'cor',
+      attribute_display_name: 'Cor',
+    },
+  ]);
+  comPlaca.data.configuration.surfaces = {
+    contact_sidebar: { mode: 'custom', ids: [41, 43] },
+  };
+  axios.get.mockResolvedValue(comPlaca);
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT_FIELD');
+  await click(wrapper, 'RELATIONSHIPS.DELETE.OPEN');
+  axios.delete.mockResolvedValue({ status: 204 });
+  axios.get.mockResolvedValue(
+    leitura(
+      [
+        {
+          ...campoPlaca,
+          id: 43,
+          attribute_key: 'cor',
+          attribute_display_name: 'Cor',
+        },
+      ],
+      [guardadoPlaca]
+    )
+  );
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  axios.patch.mockResolvedValue({
+    data: { configuration: { version: 1, revision: 5, surfaces: {} } },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(
+    JSON.stringify(axios.patch.mock.calls[0][1].configuration.surfaces)
+  ).not.toContain('41');
   wrapper.unmount();
 });

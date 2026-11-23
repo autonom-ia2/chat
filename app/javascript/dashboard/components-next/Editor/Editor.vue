@@ -20,6 +20,7 @@ const props = defineProps({
     validator: value => ['info', 'error', 'success'].includes(value),
   },
   enableVariables: { type: Boolean, default: false },
+  variables: { type: Object, default: () => ({}) },
   enableCannedResponses: { type: Boolean, default: true },
   enableCaptainTools: { type: Boolean, default: false },
   signature: { type: String, default: '' },
@@ -111,6 +112,7 @@ watch(
         :focus-on-mount="focusOnMount"
         :disabled="disabled"
         :enable-variables="enableVariables"
+        :variables="variables"
         :enable-canned-responses="enableCannedResponses"
         :enable-captain-tools="enableCaptainTools"
         :signature="signature"

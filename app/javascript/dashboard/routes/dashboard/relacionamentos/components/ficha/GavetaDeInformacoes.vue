@@ -37,6 +37,8 @@ const props = defineProps({
   buscarEmpresas: { type: Function, default: null },
   definicoes: { type: Array, default: () => [] },
   escolhidos: { type: Array, default: () => [] },
+  // #3082: chaves dos campos apagados, que não viram campo solto.
+  guardadas: { type: Array, default: () => [] },
   empresaCadastrada: { type: Object, default: null },
 });
 const emit = defineEmits(['fechar', 'salvar']);
@@ -72,6 +74,7 @@ const campos = computed(() =>
     ? camposDaPessoa({
         definicoes: props.definicoes,
         escolhidos: props.escolhidos,
+        guardadas: props.guardadas,
         valores: inicial.value.atributos,
       })
     : []

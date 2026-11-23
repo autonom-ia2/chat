@@ -84,10 +84,11 @@ class Contact < ApplicationRecord
   after_update_commit :dispatch_update_event
   after_destroy_commit :dispatch_destroy_event
   before_save :sync_contact_attributes
+  include ContactCompanyAssociation
 
-  enum contact_type: { visitor: 0, lead: 1, customer: 2 }
+  enum :contact_type, { visitor: 0, lead: 1, customer: 2 }
   # Este contato é (#2084/#2085). Fora do funil (parceiro, não é negócio): Crm::Relacao.
-  enum relacao: { interessado: 0, parceiro: 1, nao_e_negocio: 2 }, _prefix: true
+  enum :relacao, { interessado: 0, parceiro: 1, nao_e_negocio: 2 }, prefix: true
 
   scope :order_on_last_activity_at, lambda { |direction|
     order(
@@ -102,16 +103,6 @@ class Contact < ApplicationRecord
       Arel::Nodes::SqlLiteral.new(
         sanitize_sql_for_order("\"contacts\".\"created_at\" #{direction}
           NULLS LAST")
-      )
-    )
-  }
-  scope :order_on_company_name, lambda { |direction|
-    order(
-      Arel::Nodes::SqlLiteral.new(
-        sanitize_sql_for_order(
-          "\"contacts\".\"additional_attributes\"->>'company_name' #{direction}
-          NULLS LAST"
-        )
       )
     )
   }
@@ -184,6 +175,11 @@ class Contact < ApplicationRecord
     }
     data[:company_id] = company_id if account.feature_enabled?('companies')
     data
+  end
+
+  # The widget learns which details the contact has, not their values
+  def widget_presence_data
+    { has_email: email.present?, has_name: name.present?, has_phone_number: phone_number.present? }
   end
 
   def webhook_data

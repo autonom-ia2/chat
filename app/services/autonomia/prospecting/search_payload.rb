@@ -2,8 +2,10 @@
 # a ordem das chaves é a de antes, e o retrato do motor legado (spec/support/prospecting_payload_snapshot.rb) confere o
 # JSON byte a byte. `leads` são os leads da busca já carregados, na ordem dela.
 class Autonomia::Prospecting::SearchPayload
+  # Fork (upgrade 4.20.1, #3120): Rails 8 `as_json(only:)` emits keys in the order of this list (Rails 7.2 used the column
+  # order), so the list follows the table's column order to keep the JSON byte for byte.
   ATTRIBUTES = [
-    :id, :query, :location, :radius, :area_type, :area_config, :provider, :status, :requested_limit, :created_at, :updated_at
+    :id, :query, :location, :radius, :provider, :status, :requested_limit, :area_type, :area_config, :created_at, :updated_at
   ].freeze
   CRM_KEYS = %w[crm_pipeline_id crm_stage_id].freeze
   LOCATION_KEYS = %w[location_place_id location_latitude location_longitude location_label].freeze

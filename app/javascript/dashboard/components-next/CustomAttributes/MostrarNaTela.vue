@@ -7,7 +7,7 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 // na conversa. Desligado, ele some dessas telas e continua guardado, nos
 // filtros, na automação e nas IAs. A linha inteira é o alvo do toque.
 // #3082 — `titulo` e `ajuda` trocam o nome e a explicação no configurador da
-// ficha ("Usar este campo"); sem eles, vale o texto de Configurações.
+// ficha ("Mostrar nas telas"); sem eles, vale o texto de Configurações.
 defineProps({
   disabled: { type: Boolean, default: false },
   titulo: { type: String, default: '' },

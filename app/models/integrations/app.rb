@@ -58,20 +58,16 @@ class Integrations::App
 
   def active?(account)
     case params[:id]
+    when 'stripe'
+      stripe_enabled?(account)
     when 'slack'
       GlobalConfigService.load('SLACK_CLIENT_SECRET', nil).present?
     when 'linear'
-      account.feature_enabled?('linear_integration') && GlobalConfigService.load('LINEAR_CLIENT_ID', nil).present?
+      linear_enabled?(account)
     when 'shopify'
       shopify_enabled?(account)
-    when 'leadsquared'
-      account.feature_enabled?('crm_integration')
-    when 'crm_n8n'
-      # Dual-gate (plan B-N1): the apps.yml feature_flag drives card visibility,
-      # this server guard additionally requires the CRM Kanban itself to be on.
-      account.feature_enabled?('crm_integration') && ::Crm::Config.enabled?
-    when 'crm_kanban_ai'
-      ::Crm::Config.enabled? && ::Crm::Ai::Config.enabled?
+    when 'leadsquared', 'crm_n8n', 'crm_kanban_ai'
+      crm_app_active?(account)
     # OpenAI nativa: substituída pela CRM Kanban IA (chave própria por conta + modelo/effort por
     # tarefa). Manter as duas lado a lado vira dois lugares para a mesma credencial. Fica OCULTA,
     # EXCETO onde já houver hook — esconder um existente deixaria a credencial órfã, sem tela p/ ver
@@ -107,7 +103,7 @@ class Integrations::App
       # AI runs on a system API key fallback (Crm::Ai::CredentialResolver) with no
       # Integrations::Hook, so reflect actual credential availability instead of a hook.
       ::Crm::Ai::CredentialResolver.new(account: account).configured?
-    when 'shopify'
+    when 'shopify', 'stripe'
       account.hooks.exists?(app_id: id, status: :enabled)
     else
       account.hooks.exists?(app_id: id)
@@ -144,9 +140,31 @@ class Integrations::App
 
   private
 
+  def stripe_enabled?(account)
+    account.feature_enabled?('stripe_integration') && Integrations::Stripe::Oauth.configured?
+  end
+
+  # Fork CRM apps, moved out of #active? as is (upgrade 4.19.1, #3119: keeps the method within the length limit).
+  def crm_app_active?(account)
+    case params[:id]
+    when 'leadsquared'
+      account.feature_enabled?('crm_integration')
+    when 'crm_n8n'
+      # Dual-gate (plan B-N1): the apps.yml feature_flag drives card visibility,
+      # this server guard additionally requires the CRM Kanban itself to be on.
+      account.feature_enabled?('crm_integration') && ::Crm::Config.enabled?
+    else # crm_kanban_ai
+      ::Crm::Config.enabled? && ::Crm::Ai::Config.enabled?
+    end
+  end
+
+  def linear_enabled?(account)
+    account.feature_enabled?('linear_integration') && GlobalConfigService.load('LINEAR_CLIENT_ID', nil).present?
+  end
+
   def shopify_enabled?(account)
-    Shopify::FeatureGate.enabled?(account: account) &&
-      GlobalConfigService.load('SHOPIFY_CLIENT_ID', nil).present?
+    Shopify::FeatureGate.custom_apps_enabled?(account: account) ||
+      (Shopify::FeatureGate.enabled?(account: account) && GlobalConfigService.load('SHOPIFY_CLIENT_ID', nil).present?)
   end
 
   def notion_enabled?(account)

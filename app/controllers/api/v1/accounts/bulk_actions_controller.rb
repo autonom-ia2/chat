@@ -1,4 +1,6 @@
 class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseController
+  # Fork (upgrade 4.19.1, #3119): `validate_assignment_targets` (upstream) is not wired, as in ConversationsController.
+
   def create
     case normalized_type
     when 'Conversation'
@@ -17,6 +19,19 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
 
   def normalized_type
     params[:type].to_s.camelize
+  end
+
+  def validate_assignment_targets
+    fields = conversation_params[:fields] || {}
+
+    assignee_id = fields[:assignee_id]
+    return render_could_not_create_error('Invalid assignee_id') if !assignee_id.nil? && !@current_account.users.exists?(id: assignee_id)
+
+    team_id = fields[:team_id]
+    # The dashboard sends 0 to remove the team assignment; accept '0' from form-encoded requests too.
+    return if [nil, 0, '0'].include?(team_id) || @current_account.teams.exists?(id: team_id)
+
+    render_could_not_create_error('Invalid team_id')
   end
 
   def enqueue_conversation_job

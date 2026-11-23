@@ -1,3 +1,6 @@
+// Fork (upgrade 4.20.1, #3120): keeps the per-locale index.js registry. Upstream
+// #13856 (glob of every JSON, shallow spread) drops namespaces merged across
+// files and loads files the fork leaves out (specs/catalogoPorIdioma.spec.js).
 import ar from './locale/ar';
 import bg from './locale/bg';
 import ca from './locale/ca';

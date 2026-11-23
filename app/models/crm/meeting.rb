@@ -65,16 +65,16 @@ class Crm::Meeting < ApplicationRecord
   has_many :meeting_guests, class_name: 'Crm::MeetingGuest', dependent: :destroy, inverse_of: :meeting
   has_many :notices, class_name: 'Crm::MeetingNotice', dependent: :delete_all, inverse_of: :meeting
 
-  enum status: { draft: 0, scheduled: 1, completed: 2, canceled: 3, rescheduled: 4, no_show: 5, failed: 6 }
+  enum :status, { draft: 0, scheduled: 1, completed: 2, canceled: 3, rescheduled: 4, no_show: 5, failed: 6 }
   # `internal` = reunião sem provedor de calendário (WhatsApp, link do agente, presencial). Enum é inteiro:
   # valor novo não pede migration.
-  enum provider: { microsoft: 0, google: 1, internal: 2 }
-  enum online_meeting_type: { teams: 0, google_meet: 1, no_online: 2, whatsapp_video: 3, whatsapp_voice: 4, custom_link: 5, in_person: 6 }
+  enum :provider, { microsoft: 0, google: 1, internal: 2 }
+  enum :online_meeting_type, { teams: 0, google_meet: 1, no_online: 2, whatsapp_video: 3, whatsapp_voice: 4, custom_link: 5, in_person: 6 }
   # The `_prefix` keeps these methods (outcome_held?/outcome_no_show?) distinct
   # from the status enum, which already owns `no_show`/`completed` (status_*).
-  enum outcome: { held: 0, no_show: 1 }, _prefix: true
+  enum :outcome, { held: 0, no_show: 1 }, prefix: true
   # Resposta do cliente pela página de gestão (#1192, J5-A6). Prefixo para não colidir com outros enums.
-  enum confirmation_status: { pending: 0, confirmed: 1, change_requested: 2 }, _prefix: :confirmation
+  enum :confirmation_status, { pending: 0, confirmed: 1, change_requested: 2 }, prefix: :confirmation
 
   validates :title, :starts_at, :ends_at, :timezone, :provider, presence: true
   validates :account_id, :card_id, presence: true

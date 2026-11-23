@@ -31,6 +31,10 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
 
   # [modelo, como achar as linhas da conta]. A ordem é a das chaves estrangeiras: filho antes do pai.
   ETAPAS = [
+    # Exportação de dados e app próprio da Shopify (upgrade 4.20.1, #3120): chave para a conta sem cascata, e ninguém
+    # aponta para elas. O arquivo da exportação sai pelo anexo, como nas outras.
+    ['DataExport', :por_conta],
+    ['Shopify::CustomApp', :por_conta],
     # Contador do limite de mensagens por cliente (#3063): ninguém aponta para ele.
     ['Autonomia::EnvioAoCliente', :por_conta],
     # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.
@@ -217,7 +221,13 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     # TeardownSessionJob (que roda depois do commit, na fila low) desligar a sessão; o `release!` dele então não acha
     # nada. O que impede outra conta de pegar o IP de uma sessão ainda ligada é o WhatsappProxy::Assigner#free_ip:
     # ele descarta todo IP que alguma sessão do motor ainda usa, com ou sem atribuição no banco.
-    'WhatsappProxy::Assignment' => 'sai na cascata da conta; o Assigner#free_ip não entrega IP de sessão viva no motor'
+    'WhatsappProxy::Assignment' => 'sai na cascata da conta; o Assigner#free_ip não entrega IP de sessão viva no motor',
+    # Monitores de conversa do Chatwoot (upgrade 4.19.1, #3119): desligados nesta instalação, as tabelas ficam vazias.
+    # A chave delas para a conta já vem com cascata do upstream.
+    'ConversationMonitors::Monitor' => 'monitores do Chatwoot, desligados aqui: sai na cascata da conta',
+    'ConversationMonitors::Evaluation' => 'monitores do Chatwoot, desligados aqui: sai na cascata da conta',
+    'ConversationMonitors::WorkItem' => 'monitores do Chatwoot, desligados aqui: sai na cascata da conta',
+    'ConversationMonitors::DailyUsage' => 'monitores do Chatwoot, desligados aqui: sai na cascata da conta'
   }.freeze
 
   def self.tabelas

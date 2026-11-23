@@ -71,17 +71,17 @@ class EmailCampaign < ApplicationRecord
   # Images the body shows stay attached here, wherever they were uploaded (#1822).
   include RetainsEmailImages
 
-  enum status: {
+  enum :status, {
     draft: 0, scheduled: 1, sending: 2, sent: 3, paused: 4, canceled: 5, failed: 6
   }
 
   # ses = domínio verificado no SES (massa, padrão). direct_inbox = pela própria caixa
   # (webmail conectado), baixo volume + throttle, para o pequeno negócio.
-  enum delivery_mode: { ses: 0, direct_inbox: 1 }
+  enum :delivery_mode, { ses: 0, direct_inbox: 1 }
 
   # Estado da geração de e-mail por IA (assíncrona/durável — modo background da OpenAI).
   # Prefixo `ai_` p/ não colidir com o enum status (que também tem `failed`).
-  enum ai_status: { idle: 0, processing: 1, ready: 2, failed: 3 }, _prefix: :ai
+  enum :ai_status, { idle: 0, processing: 1, ready: 2, failed: 3 }, prefix: :ai
 
   BODY_HTML_MAX = 500_000
   CANCELLATION_BATCH_SIZE = 100

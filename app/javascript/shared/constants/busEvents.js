@@ -1,6 +1,7 @@
 export const BUS_EVENTS = {
   // #935 — chegou um aviso do Guia (ActionCable `guide.aviso.created`).
   GUIDE_AVISO_CREATED: 'GUIDE_AVISO_CREATED',
+  MONITOR_UPDATED: 'MONITOR_UPDATED',
   SHOW_ALERT: 'SHOW_ALERT',
   START_NEW_CONVERSATION: 'START_NEW_CONVERSATION',
   FOCUS_CUSTOM_ATTRIBUTE: 'FOCUS_CUSTOM_ATTRIBUTE',
@@ -38,4 +39,6 @@ export const BUS_EVENTS = {
   TELA_INICIAL_ABA: 'TELA_INICIAL_ABA',
   // Filtros pelo link (#1883): a releitura voltou a lista longa para a primeira página; a rolagem vai ao topo.
   LISTA_DO_FILTRO_DO_LINK_NO_TOPO: 'LISTA_DO_FILTRO_DO_LINK_NO_TOPO',
+  CAPTAIN_PLAYGROUND_RESPONSE: 'CAPTAIN_PLAYGROUND_RESPONSE',
+  ASK_COPILOT: 'ASK_COPILOT',
 };

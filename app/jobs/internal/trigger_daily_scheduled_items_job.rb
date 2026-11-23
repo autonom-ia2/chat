@@ -5,6 +5,8 @@ class Internal::TriggerDailyScheduledItemsJob < ApplicationJob
     # Schedule daily deferred jobs here so each installation can spread load
     # across the day without changing its slot on deploys or restarts.
     schedule_version_check
+    # Fork (upgrade 4.20.1, #3120): upstream (#16541, #16649) also enqueues Internal::ExpireDataOperationFilesJob here,
+    # which deletes import and export files older than 30 days. Deleting customer data waits for Rodrigo's decision.
   end
 
   private

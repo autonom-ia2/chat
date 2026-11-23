@@ -104,10 +104,10 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
     {
       Faraday::TimeoutError.new('execution expired') => 'prazo',
       Faraday::ConnectionFailed.new('connection refused') => 'conexao',
-      RubyLLM::ServerError.new(nil, 'bad gateway') => 'provedor',
-      RubyLLM::ServiceUnavailableError.new(nil, 'unavailable') => 'provedor',
-      RubyLLM::OverloadedError.new(nil, 'overloaded') => 'provedor',
-      RubyLLM::RateLimitError.new(nil, 'slow down') => 'limite_de_taxa'
+      RubyLLM::ServerError.new('bad gateway') => 'provedor',
+      RubyLLM::ServiceUnavailableError.new('unavailable') => 'provedor',
+      RubyLLM::OverloadedError.new('overloaded') => 'provedor',
+      RubyLLM::RateLimitError.new('slow down') => 'limite_de_taxa'
     }.each do |erro, motivo|
       it "turns #{erro.class.name} into a passing failure with the reason #{motivo}", :aggregate_failures do
         allow(ctx).to receive(:embed).and_raise(erro)
@@ -164,7 +164,7 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
     end
 
     it 'keeps a lasting failure (wrong key) as a plain embedding error' do
-      allow(ctx).to receive(:embed).and_raise(RubyLLM::UnauthorizedError.new(nil, 'bad key'))
+      allow(ctx).to receive(:embed).and_raise(RubyLLM::UnauthorizedError.new('bad key'))
 
       expect { service.embed('pergunta') }
         .to raise_error(described_class::EmbeddingError) { |falha| expect(falha).not_to be_a(described_class::Passageira) }

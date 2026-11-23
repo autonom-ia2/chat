@@ -33,7 +33,7 @@ class EmailSenderIdentity < ApplicationRecord
   # #2237: the domain's default reply inbox, preloaded by the campaign list (EmailCampaigns::ReplyTo).
   belongs_to :reply_to_inbox, class_name: 'Inbox', optional: true
 
-  enum status: { pending: 0, verifying: 1, verified: 2, failed: 3 }
+  enum :status, { pending: 0, verifying: 1, verified: 2, failed: 3 }
 
   DOMAIN_REGEX = /\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\z/i
 

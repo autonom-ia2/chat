@@ -205,6 +205,40 @@ RSpec.describe 'Api::V1::Accounts::Portals', type: :request do
     end
   end
 
+  describe 'DELETE /api/v1/accounts/{account.id}/portals/{portal.slug}/remove_locale' do
+    let!(:portal) { create(:portal, slug: 'portal-locales', account_id: account.id, config: { allowed_locales: %w[en es], default_locale: 'en' }) }
+
+    context 'when it is an unauthenticated user' do
+      it 'returns unauthorized' do
+        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/remove_locale", params: { locale: 'es' }
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context 'when it is an authenticated user' do
+      it 'throws error if agent' do
+        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/remove_locale",
+               params: { locale: 'es' },
+               headers: agent.create_new_auth_token,
+               as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      # Fork (upgrade 4.20.1, #3120): the help center is read-only (#501/#502), even for administrators.
+      it 'throws error if administrator' do
+        delete "/api/v1/accounts/#{account.id}/portals/#{portal.slug}/remove_locale",
+               params: { locale: 'es' },
+               headers: admin.create_new_auth_token,
+               as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(portal.reload.allowed_locale_codes).to eq(%w[en es])
+      end
+    end
+  end
+
   describe 'POST /api/v1/accounts/{account.id}/portals/{portal.slug}/send_instructions' do
     let(:portal_with_domain) { create(:portal, slug: 'portal-with-domain', account_id: account.id, custom_domain: 'docs.example.com') }
 

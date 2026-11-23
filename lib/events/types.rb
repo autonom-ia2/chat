@@ -96,4 +96,5 @@ module Events::Types
 
   # lead da Prospecção mudou no servidor (enriquecimento, WhatsApp, varredor): o card e o painel se atualizam sozinhos
   PROSPECTING_LEAD_UPDATED = 'prospecting.lead.updated'
+  COPILOT_MESSAGE_UPDATED = 'copilot.message.updated'
 end

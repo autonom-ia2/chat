@@ -31,7 +31,7 @@ class Api::V1::Widget::ContactsController < Api::V1::Widget::BaseController
       @contact.custom_attributes = @contact.custom_attributes.excluding(params[:custom_attributes])
       @contact.save!
     end
-    render json: @contact
+    render :update
   end
 
   private

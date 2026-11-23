@@ -46,7 +46,7 @@ class Crm::StageAutomation < ApplicationRecord
   has_many :executions, class_name: 'Crm::StageAutomationExecution', foreign_key: :stage_automation_id,
                         dependent: :delete_all, inverse_of: :stage_automation
 
-  enum trigger_event: { on_enter: 0, on_exit: 1 }
+  enum :trigger_event, { on_enter: 0, on_exit: 1 }
 
   validates :name, presence: true
   validates :position, numericality: { only_integer: true, greater_than_or_equal_to: 0 }

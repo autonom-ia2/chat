@@ -34,7 +34,7 @@ class Crm::StageAutomationExecution < ApplicationRecord
   belongs_to :card, class_name: 'Crm::Card'
   belongs_to :stage_automation, class_name: 'Crm::StageAutomation', inverse_of: :executions
 
-  enum status: { running: 0, completed: 1, failed: 2 }
+  enum :status, { running: 0, completed: 1, failed: 2 }
 
   validates :trigger_token, presence: true
   validates :metadata, jsonb_attributes_length: true

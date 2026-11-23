@@ -1,0 +1,240 @@
+# #3119: o que foi neutralizado no merge da 4.19.1
+
+Registro de trabalho do merge do Chatwoot v4.19.1 no fork (épico #3118). Regra: zero regressão —
+o código do upstream entra, o comportamento do upstream não; na dúvida, o fork vence.
+Cada item D citado está detalhado em `2026-11-22-3119-inventario-comportamento.md`.
+
+Nenhum teste foi rodado localmente (regra do repo: teste só na CI). Nenhum dado de produção aparece aqui;
+contagens de uso citadas são agregadas.
+
+- app/listeners/action_cable_listener.rb = fork inteiro. Recusados: #15763 (broadcast `conversation.bot_handoff` → alerta sonoro novo no painel), metadado `automatic_assignment` no `assignee.changed`, helper `broadcast_to_inbox_members` (usava `inbox.members` em vez de `Crm::Access::Recipients`).
+- app/actions/contact_merge_action.rb = fork. Recusado #16077 parcial (`higher_contact_type`: merge que promove visitante a lead). O `tokens:` do dispatch não é lido pelo listener; fica como está.
+- message_builder: `@private` volta a `params[:private] || false` (upstream converte "false" em falso; hoje a string "false" vira nota privada). Encaminhar e-mail (#15871) e assunto entram adormecidos: só disparam com `forwarded_message_id`/`subject`, que só a tela nova manda.
+- contacts_controller#create: recusado `contact_type: :lead` (#16077). Update: `with_lock` do fork; `resolve_legacy_company` tirado depois (ver #38 abaixo).
+- messages_controller#retry: mantido o reset de `content_attributes` do fork (upstream, #15871, passou a preservar).
+- inbox_members: guarda `invalid_user_ids?` do fork; `valid_member_ids?` do upstream removido (devolveria erro novo para lista em string).
+- inboxes_controller: lógica do fork (`inbox_view`), com o nome `inbox_scope` do upstream (o EE estende com super).
+- super_admin/app_configs#create: mantido o redirect do fork para a lista de configurações (upstream volta para a própria página). Stripe entra adormecido.
+- super_admin/accounts: filtro `value == 'true'` do fork + `with_hidden_features` do upstream (só preserva `mobile_voice_push`, a única oculta).
+- shopify: lado do upstream (integrações = uso zero); `HookPolicy#auth?` = `create?`, mesma trava do #2027. TTL do state = 15 min do fork.
+- account.rb: recusada a validação nova de `auto_resolve_after` (mínimo de `Limits`), que recusaria valor aceito hoje.
+- automation_rule + condition_validation + conditions_filter: condição "Captain" (captain_classifier) fora; regras do fork (esquema JSON, CRM, decisor) intactas.
+- conversation.rb: `bot_handoff!` do fork (concern ConversationBotHandoff); recusado o `return false unless pending?` do upstream (#15763), que quebraria o #1377.
+- notification.rb: `voice_call_missed` = 15 (no upstream é 9, que no fork é `crm_followup_reminder`; o bit de `NotificationSetting` sai do número).
+- data_imports/importer: regra do fork para `contact_type` (upstream promove visitante sem conferir).
+- facebook/instagram send: `Meta::HumanAgentTag.apply?` do fork (#15932 do upstream faz o mesmo de outro jeito).
+- search_service: recusada a busca por assunto do e-mail (`mail_subject`), que muda o resultado da busca.
+- message.rb: `not_forwarded` entra (só afeta mensagem encaminhada, que só a tela nova cria).
+- **Campanhas WhatsApp = motor do fork inteiro.** OSS e EE `oneoff_campaign_service` = fork; specs = fork. Motivo: o upstream (#15854/#16281) troca o envio síncrono do fork por `SendWhatsappBatchJob` com cursor, e o `audience_contacts` novo colide com o `CampaignJourney::AudienceContacts#audience_contacts` (Públicos): numa campanha por etiqueta, o lote do upstream mandaria para ninguém.
+- `Campaign#feature_enabled?` do fork (`whatsapp_campaign`); recusado o `campaigns`. `mark_processing!` do fork: recusado `scheduled_at > Time.current` (quebra com `scheduled_at` nil e muda o "enviar agora").
+- `Enterprise::Campaign#initialize_whatsapp_cursor` recusado: com ele, campanha do fork que passasse de 15 min em Processing seria "recuperada" pelo job novo e mandaria de novo (envio duplicado). Apagados `Campaigns::SendWhatsappBatchJob`, `Campaigns::RecoverWhatsappCampaignsJob`, os specs deles, o agendamento no `TriggerScheduledItemsJob` e a chave `WHATSAPP_CAMPAIGN_MUTEX`. Migration `whatsapp_cursor`/`send_attempted_at` fica (aditiva, sem uso).
+- **#16281 (retomada de campanha travada) não entra**: depende do envio por lotes do upstream. Desvio da decisão 4 — levar ao Rodrigo; vira Issue própria.
+- **Super Admin**: o 4.19.1 já traz o redesenho do upstream (navegação, layout, login, páginas). Fica o novo (decisão do épico), com o do fork por cima: página Automação do Instagram em `settings_pages` (com `path`), aba "Autonom.ia" na conta com os 6 toggles (Prospecção ×3, Seguros ×2, Carteira), login/onboarding com nome e logos da instalação (`_standalone`), widget de suporte desligável na página do Instagram. Mudança visual interna (só o Super Admin) — avisar o Rodrigo e passar pelo diretor de arte.
+- **#16077 (contato vira lead) neutralizado em todos os pontos**: `Conversation#mark_contact_as_lead` (after_create) removido; `Contacts::SyncAttributes` = fork (sem promover por `identifier`); `DataImport::ContactManager` e `DataImports::Importer#contact_attributes` = fork; `contacts#create` sem `contact_type: :lead`; merge sem `higher_contact_type`. Spec do upstream "marks a visitor contact as a lead" recusado.
+- `Contact#webhook_data` ganha `contact_type` (#16089): chave nova no payload do webhook (aditiva). Aceito — conferir com o revisor se algum consumidor n8n valida esquema fechado.
+- Facebook/Instagram HUMAN_AGENT: arquivos do fork inteiros (serviços e specs); `Facebook::HumanAgentTagHelpers` do upstream (#15932) apagado, o fork já tem `Meta::HumanAgentTag`.
+- Inventário (seção 5) aplicado no back: #11 gate `whatsapp_campaign` no `incoming_message_base_service`; #15 sem o 422 de campanha iniciada (`campaigns_controller` = fork); #17/#18 encadeamento de e-mail por `in_reply_to` do fork (`new_conversation_strategy`, `imap_mailbox` = fork, inclusive sem o `duplicate_email?` novo); #24 `auto_assignment_handler` = fork, menos o #16154 (classe A: o job da Atribuição V2 entra na fila depois do commit; ver sétima rodada); #25–#28 API de empresas com 25/15 por página, conversas da empresa = as 20 mais recentes sem página (view sem `meta`), sem `validate_social_profiles`; #30 `Labelable::Persistence` fora; #31 sem `:table` no markdown (`markdown_renderer_service`, `chatwoot_markdown_renderer` = fork); #32 e-mails de continuidade = fork; #36/#37 um provedor de robô por caixa recusado (`agent_bot_inbox`, `hook`, `captain_inbox`, `inbox_bot_status` = fork; `hook` sem a validação de credencial do Google Translate e sem limite de tamanho do token); #42 `hook_execution_service` = fork; #43 log de auditoria de login/logout continua registrando personificação; #44 `api_access_token` tem precedência sobre Bearer; #45 `filter_service` = fork (sem fuso do navegador); #46 conversas do contato por `created_at desc`; #47 `contact_type` fora do `webhook_data`; #48 nome do contato Messenger = fork; #2/#4 `mobile_voice_push` desligada e migration do upstream vazia (mesma versão).
+- `contacts_controller#update`: tirado o `resolve_legacy_company` (#38).
+
+## ruby_llm 1.15 → 2.0 (Gemfile do upstream: `~> 2.0.0`)
+- API usada pelo fork conferida no código da gem 2.0.0: `RubyLLM.context { |config| }`, `Context#embed(texts, model:)`, `Embedding#vectors` (array de arrays quando a entrada é array), `config.openai_api_key`/`openai_api_base`/`request_timeout` (300)/`max_retries` (3), classes `Error`, `ServerError`, `ServiceUnavailableError`, `OverloadedError`, `RateLimitError`, `UnauthorizedError` (todas `< Error`). Sem mudança no código de produção do fork.
+- Mudou: construtor de erro `new(response, message)` → `new(message = nil, response: nil)`. Só os specs do fork construíam erro: `embedding_service_spec.rb` ajustado para `new('mensagem')` (5 linhas).
+- `ruby_llm-schema` saiu do Gemfile; nenhum uso no fork.
+
+## Flags (travas em spec)
+- `spec/models/concerns/featurable_positions_spec.rb` (novo): trava a posição de todas as flags nas 3 colunas (63 + 63 + 58) e confere que a ext_3 está vazia e que as 8 flags do upstream vêm desligadas. Conferido contra a main 1c0e973828: as posições do fork são as mesmas nas 3 colunas; só há 8 nomes novos, no fim da ext_2.
+- `spec/models/account_spec.rb`: `flag_columns` inclui a ext_3; o mapa da ext_2 ganha as posições 51–58.
+- `deprecated: true` do upstream em `captain_v1_action_classifier` e `captain_integration_v2`: aceito. Só esconde as duas chaves do Captain na tela de recursos do Super Admin (Captain não é usado). `whatsapp_campaign` fica sem `deprecated` (gate mantido).
+
+## Front fora das listas dos subagentes (arquivos sem conflito)
+- D24 #15843 filtro de data no fuso do navegador: RECUSADO por inteiro. `filterQueryGenerator.js` sem `withTimestampTimezone`/`useLocalTimezone` (fica o conserto de tipo #15768, classe A); `filterHelpers.js` só com o conserto #15768 (sem `createFiltersMatcher`); `ChatList.vue` e `getters.js` voltam a usar `matchesFilters(conversa, filtros)` do fork; `actions.js` sem `withTimestampTimezone`; `automationHelper.js` sem `useLocalTimezone`; `ContactListHeaderWrapper.vue` e `ChatList.vue` sem `timezone: transformed.timezone`; `custom_filters_controller.rb` = fork (sem `validate_query_timezones`); `app/services/filters/date_filter_helper.rb` apagado (só o filter_service do upstream usava). Specs e swagger: patch reverso do fe6e56372b (`conversations/filter_service_spec`, `contacts/filter_service_spec`, `custom_filters_controller_spec`, `filterQueryGenerator.spec.js`, `filterHelpers.spec.js`, `swagger/paths/.../filter.yml`, `swagger.json`).
+- D19 #16119 assunto do e-mail: `ReplyEmailHead.vue` = fork. Ficam (inertes, sem campo ninguém manda): `params[:subject]` no builder, `subject` no `api/inbox/message.js`, assunto opcional no mailer, `emailHeadHelper.js`.
+- D20 #15998 botão de pedir contato: `RequestContactInfoButton.vue` = fork (lê o bloco estático do JSON da conversa). Ficam sem uso: `show` no controller, rota, action `getContactInfoRequestAvailability`. `availability_by_conversation` saiu do serviço e o fork não usa.
+- f953bca130 #16099 modelo do WhatsApp guardado entre conversas: `WhatsappTemplates/Modal.vue` = fork; spec do upstream revertido.
+- D32 #16027 macro em massa: `conversationBulkActions/Index.vue` = fork (sem `BulkMacroActions`); classe do dropdown em `BulkTeamActions.vue` = fork. Ficam sem uso: `BulkMacroActions.vue`, funções novas em `useBulkActions.js`, `export` em `useMacroExecution.js`.
+- `automationHelper.js`: ficam `getCaptainConditionUsage`, `monitor_matched` em `getDefaultConditions` e o guarda de condições vazias (inertes sem a condição Captain e sem monitores na tela; o subagente B pode importar).
+
+## Auto-resolve e crons (#16182, monitores, voz)
+- `account_settings_schema.rb`: volta o `'minimum': 10` do `auto_resolve_after`. O upstream tirou do schema e pôs uma validação no `account.rb` (que ficou do fork); sem isso não sobrava mínimo nenhum e a API aceitaria 1 minuto. Spec do upstream "keeps a saved value valid after the minimum is raised" removido do `account_spec.rb` (testa o comportamento recusado).
+- `AUTO_RESOLVE_MIN_MINUTES`: só move a checagem da tela (padrão 10, igual ao fork). O back fica fixo em 10. Não configurar essa variável em produção.
+- `trigger_conversations_resolution_job`: o upstream tirou a chamada do `TriggerScheduledItemsJob` (*/5) e criou um cron próprio */5 (`AUTO_RESOLVE_CRON`). Mesma cadência: aceito.
+- Crons novos de recurso desligado fora do `schedule.yml`: `dispatch_conversation_monitors_job` (todo minuto) e `voice_ringing_timeout_job` (a cada 30 s). As classes ficam.
+
+## Pendências dos subagentes de front (log-front-a.md e log-front-b.md), aplicadas pelo coordenador
+- Restaurados do fork (o upstream apagou ou mudou e o fork usa): `WhatsAppCampaign/WhatsAppCampaignDialog.vue` e `WhatsAppCampaignForm.vue`, `CompanyContactsSidebar.vue`, `CompanyHistorySidebar.vue`, `contact/SocialIcons.vue`, `useUISettings.js`, `quotedEmailHelper.js`, `QuotedEmailPreview.vue`, `ReplyBottomPanel.vue` (citação do e-mail do fork, #15746 recusado).
+- Voltaram ao fork por mudança visual ou de comportamento: `CompaniesListLayout.vue` (25 por página, igual ao back), `CompanyCustomAttributes.vue` (espaçamento), `CompanySortMenu.vue` (posição no celular), `ResizableEditorWrapper.vue` (puxar para recolher, #16074), `CSAT.vue` (tradução), `useContactConversationNavigation.js`, `ConversationView.vue` e `InboxView.vue` (provide do modo leitura), página Segurança (`Index.vue`, `SamlSettings.vue`; `EnforceMfa.vue` apagado), `routes/index.js` e `index.spec.js` (guard sem os redirecionamentos da Shopify e sem `getTargetAccount`, que trocava a conta-alvo em caso de borda).
+- `featureFlags.js`: volta `WHATSAPP_CAMPAIGNS: 'whatsapp_campaign'` (gate das rotas e do canal WhatsApp na jornada).
+- Tabelas no e-mail (#15830) recusadas: patch reverso em `constants/editor.js`, `MessageFormatter.js`, `lib/base_markdown_renderer.rb`; `Editor.vue` sem `resizableTableColumns` e sem o CSS de tabela; `FullEditor.vue` volta a altura mínima/máxima (o upstream tirou o teto de todos os editores); `@chatwoot/prosemirror-schema` volta para 1.4.5.
+- `enforce_mfa` (#15877): fora do `permitted_settings_attributes` do `AccountsController` (spec ajustado: o parâmetro é ignorado). O modelo e o guard ficam, mas nenhuma conta consegue ligar.
+- Specs do upstream apagados (testam recurso recusado; o componente voltou ao fork ou o helper não existe): `CopilotAssistantMessage.spec.js`, `handoffAlertWindow.spec.js`, `ReplyBoxBanner.spec.js`, `MessageContextMenu.spec.js`, `bubbles/Email/specs/Index.spec.js`, `ResizableEditorWrapper.spec.js`, `AutomationInstantTrigger.spec.js`, `WhatsAppCampaignAnalyticsPage.spec.js`, `WhatsAppCampaignAnalyticsContent.spec.js`. Caso do cadastro Shopify com cadastro desligado tirado do `RouteHelper.spec.js`. Import duplicado (`BUS_EVENTS`, `emitter`) do `actionCable.spec.js` corrigido.
+- Ficam inertes (código do upstream sem tela que chame): `applyRouteFilters` no `ChatList.vue` (`?filters=`, nada no fork gera), `getAutoTranslate`/`autoTranslateMessages` (flag `auto_translate` desligada), listeners `monitor.updated`, `account.billing_updated`, `copilot.message.updated`, `captain.playground.response` no `actionCable.js`, `ForwardEmailPanel`/`ForwardedEmailBanner` (sem uso), `WhatsAppCampaignFormPage.vue` (fora das rotas), `BulkMacroActions.vue`.
+- Super Admin: o redesenho (#16137) apagou o playground do Super Admin (`superadmin_pages/views/playground`); o fork não mexia nele.
+- Checagem estática de imports (parser do Vue/Babel, `tools/imports_check.cjs`): nenhum import quebrado nem nome não exportado além da linha de base da main (só o alias `test-i18n` de spec, que também aparece na main).
+
+## Modelos de IA (#16266) — decidido: troca aceita (Rodrigo, 22/11; ver oitava rodada)
+- O upstream troca os padrões: texto GPT‑4.1/4.1‑mini → `gpt-6-luna`; transcrição `whisper-1`/`gpt-4o-mini-transcribe` → `gpt-transcribe`; e a migration `20261015063804` regrava `CAPTAIN_OPEN_AI_MODEL` (se começa com `gpt-4`, só no endpoint padrão) e `captain_models` das contas com modelo aposentado.
+- Quem usa em produção: 1 conta com integração `openai` (sugestão/reescrita/resumo no editor) e, talvez, a transcrição de áudio nativa (contagem não feita). Captain: zero.
+- Motivo de não neutralizar por conta própria: a OpenAI desligou o `gpt-4.1-nano` em 23/10/2026, desliga a série GPT‑4 em 14/01/2027 e os modelos antigos de transcrição em 26/02/2027. Ficar com o modelo do fork mantém o comportamento por ~2 meses e depois quebra.
+- Opções: (a) aceitar a troca agora (recomendado); (b) neutralizar (voltar padrões e esvaziar a migration) e trocar em PR próprio antes de 14/01/2027.
+
+## Varredura por item D (2ª passada, depois do merge)
+
+Método: para cada commit D e cada arquivo dele, `git apply --check` direto (ausente) e reverso (presente);
+os presentes e parciais foram lidos contra o inventário e contra o HEAD do fork.
+
+Neutralizado nesta passada:
+- **D6 #15763 (alerta na passagem do robô)**: `DashboardAudioNotificationHelper.js` e `action_cable_broadcast_job.rb` voltaram ao fork; specs do upstream (listener, conversation `bot_handoff!` só em pendente, assignment_service, `action_cable_handoff_assignment_spec`, spec JS do alerta) revertidos ou removidos.
+  - Achado para o dono: no fork, quem usa o toque padrão pode não ouvir alerta (o áudio só é carregado quando o toque muda; `play()` em `null` falha calado). O upstream corrige com `!this.audioConfig.audio ||`. Mantido o do fork (zero regressão); pedir decisão.
+- **D16 #16092 (um robô por caixa)**: `BotConfiguration.vue` (mostrava `error.message` cru no lugar do texto traduzido) e `enterprise/app/models/enterprise/inbox.rb` (`conflicting_bot_provider` chamava `super` inexistente) voltaram ao fork; specs revertidos.
+- **D33 #16272**: `CampaignHistoryController` volta a exigir `whatsapp_campaign` (o upstream trocou para `campaigns`); spec ajustado. Endpoint novo, sem tela ligada.
+- **#15409**: `TemplateParameterConverterService#valid_buttons?` volta ao fork (botão `nil` passava a contar como formato novo).
+- **#15832 (relatório)**: botão novo "ver todas as conversas" no drill-down e leitura de `?filters=` na lista de conversas removidos (drawer = fork, ChatList = fork); prévia do cartão volta a mostrar o texto como antes (sem `getPlainText`). `parseRouteFilters` e `drilldownConversationFilters.js` ficam sem uso.
+- **#16074/#15938 (`ContactConversationLink.vue`)**: volta ao fork. A versão do upstream bloqueava o clique simples (`@click.exact.prevent`) e emitia `navigate`, que o `MessagesView` do fork não escuta: o link pararia de funcionar. Spec novo removido.
+- **#15966 (monitores)**: `DataImports::Importer.prepend_mod_with` removido — o módulo Enterprise faria 1 consulta de monitores por mensagem importada. Arquivo Enterprise fica sem uso; spec removido.
+- **#16056 (sugestão de etiquetas por IA) — restaurada.** O upstream apagou o recurso (componente, composable, serviço, prompt, rota `label_suggestion`, chave nas configurações da integração OpenAI) e trouxe a migration `20261006233107_remove_label_suggestion_settings`, que **apaga** `label_suggestion` de `accounts.settings` e dos hooks `openai`. A Central de Ajuda (06.03, 06.06) documenta o recurso e há 1 conta em produção com hook `openai`. Revertido o commit inteiro (migration some, dado fica). Os modelos antigos (gpt-4.1-nano/mini) saíram do catálogo neste merge: `label_suggestion` ficou com `[gpt-5-mini, gemini-3-flash, claude-haiku-4.5]`, padrão `gpt-5-mini` — entra na decisão de modelos.
+- **#15900 (`GlobalConfig.clear_cache` com SCAN + DEL)**: volta ao fork (`KEYS` + `expire 0`). O efeito é o mesmo, mas os specs do fork (`global_config_spec`, `instagram/automation/redis_isolation_spec`) travam os comandos do Redis e falharam na CI. Na dúvida, fica o fork.
+- **Migration `ext_3`**: versão trocada de `20261122120000` para `20261122103417` (o `migration_version_check` recusa versão redonda escrita à mão). As 8 migrations do upstream com versão redonda (`20260917000000` … `20260929100000`) **mantêm o nome do upstream**: renomear desalinharia do upstream na etapa 2 (#3120). O check acusa essas 8 por serem novas no diff; não colidem com branch do fork.
+
+Segunda rodada (CI do PR #3132 + revisor de frontend):
+- **Arquivos apagados por engano ao desfazer a tentativa no Super Admin — restaurados.** Ao reverter o subagente, 51 arquivos que ele tocou foram apagados por não estarem no backup. 42 tinham sido apagados pelo próprio upstream no redesenho, e o fork não os mudou: continuam fora, pela decisão 6. 9 existiam no fork e no upstream e voltaram por merge de 3 vias: `layouts/vueapp.html.erb` (sem ele o painel não abre), `layouts/_portal_head.html.erb` (Central de Ajuda pública), `SuspensionHistoryField` (todo o Super Admin dava 500), o módulo Enterprise do `AppConfigsController` (`OAUTH_PROVIDER_ENABLED` do fork + chaves novas do upstream), `CaptainModelOverridesField`, os helpers `Captain::Chat*` e `Twilio::VoiceHelper` (o eager load de produção quebraria o boot sem eles). Varredura da árvore inteira: nenhum outro arquivo que existe no fork e no upstream está faltando. Os 22 do upstream que não entraram são as neutralizações desta lista, e nenhum é referenciado.
+- `vueapp` traz duas chaves novas do upstream: `searchTimeRangeLimitDays` (padrão 90, igual ao teto de datas da busca do fork) e `autoResolveMinMinutes` (padrão 10, igual ao mínimo do fork). A busca SQL de mensagens segue com a janela de três meses de calendário (sexta rodada).
+- **Salvar no Super Admin**: o fork volta para `/super_admin/settings`, o upstream fica na própria página. Fica o fork (o controller já era do fork). `spec/controllers/super_admin/app_config_controller_spec.rb` voltou ao fork, e os testes novos do upstream (OpenRouter, verificação de dispositivo) esperam o destino do fork.
+- **IME (`isComposing` com `keyCode 229`)**: sai do `ReplyBox`, do `Editor` e do `CopilotEditor`. Teclado virtual do Android costuma mandar 229 em tecla comum, e o Enter deixaria de enviar. Os três voltam ao fork; os testes de composição do upstream foram removidos.
+- **Filtro e automação com valor `0`/`false`**: `isEmptyValue` e `filterQueryGenerator` voltam ao fork (0 e false contam como vazio). Os testes do upstream para 0/false foram tirados; o de vazio passou a cobrir 0 e false.
+- **Conversas da empresa**: a store volta a entregar camelCase. A aba Histórico do fork lê `inboxId`, e o upstream tinha passado a entregar `inbox_id`.
+- **Etiquetas da conversa**: a atualização otimista e a ordem por aplicação voltam ao fork (store e `useConversationLabels`).
+- **Exclusão de campanha**: o texto próprio para campanha de WhatsApp volta ao texto único do fork.
+- **Distribuição avançada na caixa (`CollaboratorsPage`)**: volta ao fork. O upstream mostrava texto em inglês (chaves só em `en`) e, em self-hosted, abria a página de preços do Chatwoot.
+- **MFA**: concluir o MFA deixa de apagar os rascunhos (`clearLocalStorageOnLogout`), e o evento `verified` volta a levar o corpo da resposta. Na configuração, sem `backup_codes` o assistente não conclui sozinho (como no fork). A tela de código por e-mail (verificação de dispositivo) só aparece em nuvem.
+- **CI**: o script de lint da proteção de e-mail só reconhecia catálogo em `<app>/i18n/en.json`. O widget e o survey usam `<app>/i18n/locale/en.json`, por isso arquivos do widget eram conferidos contra o catálogo do painel (falso "chave faltando"). O script agora aceita os dois, com teste.
+- Inertes, mantidos: `PaymentPendingBanner` (só nuvem com Stripe), `FeatureAnnouncement` (só abre com anúncio criado no Super Admin), paywall de Empresas no `usePolicy` (só nuvem), tradução automática no widget (só com `auto_translate_enabled?`, que é Captain), `captain_false_promise_harness_enabled` (o upstream tirou e ninguém usa).
+- **Pendente de decisão**: `StripeCustomer.vue` (novo do upstream) tem `<select>` nativo, o que o repo proíbe. Só aparece com a flag `stripe_integration`, que não usamos.
+- Preexistente, fora deste PR: o QA do onboarding do Instagram falha na main pelo contraste do botão "Buscar perfil" no modo escuro (3,499 < 4,5).
+
+Terceira rodada (revisor de backend):
+- Os achados de boot e de tela (layouts, campos e helpers apagados, módulo Enterprise do Super Admin) já estavam corrigidos na segunda rodada.
+- **Correções de segurança que mudam o fluxo — neutralizadas, com Issue própria (mesma regra das #3124–#3126):** #3133 (pedir o código do MFA depois de redefinir a senha; o fork entra direto) e #3134 (recusar atendente ou time de outra conta ao criar conversa ou em lote; o fork aceita, e a validação mudaria o contrato da API para robôs e integrações).
+- **Widget**: o upstream respondia 204 para qualquer navegador marcado como robô (`skip_crawler_requests`). Volta ao fork.
+- **Monitores**: os callbacks do upstream faziam 2 consultas a mais em toda mensagem de toda conta. Agora só rodam com `reports` + `conversation_monitors` ligados (flags em memória). Mesma linha do importer acima. Anexo de áudio e exclusão de conversa ganharam o mesmo portão na quinta rodada.
+- **Migration `20261017230231` (provedor de tradução)**: é ela que **mantém** a tradução de hoje. Sem ela, contas com o hook do Google Translate passariam ao provedor `captain`. Ela grava direto em `settings` (sem validações nem callbacks), para que uma conta com dado antigo não aborte o deploy no meio. **Escreve em produção:** vai listada no pedido à Orquestração.
+- **Remetente do e-mail**: o upstream monta `Nome <email>` com `Mail::Address`, que só põe aspas no cabeçalho quando o nome tem vírgula ou ponto. O cliente de e-mail mostra o mesmo nome. Com vírgula, o template do fork gerava um cabeçalho com dois destinatários. Mantido como equivalente.
+- **Limite de tentativas de MFA (`rack_attack`)**: no fork, verificação de MFA via JSON caía no `login/email` com e-mail vazio, um balde único de 10 a cada 15 minutos para a instalação inteira. O upstream separa por IP e por token (10/min cada). Mantido; vai ao Rodrigo como decisão.
+- Inerte, mantido: `Labelable::Persistence` (nenhum model inclui). A validação `ensure_interactive_session` no MFA do perfil **não** era inerte (403 para quem usa `api_access_token`): neutralizada na sexta rodada (#3135).
+- Customizações do fork que ficaram com a versão do upstream: varredura de toda a árvore achou 7. Login e onboarding do Super Admin já levam nome e logos da instalação no `_standalone`; navegação (Prospect, Quote Measurement, Carteira de seguros) e layout do Instagram já estão no redesenho; `skip_company_auto_association` foi para `ContactCompanyAssociation`; o rótulo clicável da flag do onboarding do Instagram vem do `_check_tile` (o `<label>` é o próprio cartão). O teste do fork que barra agente no `/integrations/shopify/auth` (#2027) voltou.
+
+Quarta rodada (CI do commit ea982a0d8d):
+- **Guia da Plataforma**: o catálogo de leitura sai do roteador e vai inteiro em toda pergunta, que tem teto de 16 mil letras. As rotas novas do upstream somavam ~440 letras e empurravam o bloco de memória (#933) para fora do teto. As 33 rotas que a 4.19.1 trouxe para recursos sem uso (monitores, Stripe, ferramentas e execuções do Captain, sugestões, histórico de campanha, tradução automática, enriquecimento de empresa, horário de chamadas) ficam fora do alcance do Guia (`Guide::RotasDoUpgradeFora`), para leitura e escrita, como antes do upgrade. **Fragilidade que já existia:** o contexto da pergunta fica a poucas letras do teto, e qualquer rota nova do próprio fork também corta a memória. Vai como achado no pedido à Orquestração.
+- **`Switch.vue`**: o upstream transformou `disabled` em prop e pôs o visual de desligado (opaco, cursor proibido). Volta ao fork; o atributo `disabled` continua chegando ao botão por herança.
+- **Tradução na mensagem**: com a tradução automática desligada (flag `auto_translate` + ajuste da conta), `TranslationToggle` mostra o mesmo "Ver original"/"Ver tradução" de antes. O helper de teste do fork (`montarMensagem`) ganhou os dois getters novos, desligados.
+- **pt_BR**: as duas chaves novas de voz em `conversation.json` ganharam tradução (o spec do fork cobra pt_BR do onboarding).
+- **Specs do upstream sobre código do fork**: voltaram as versões do fork em `facebook/message_builder_spec` (#48, nome do Messenger), `data_import_job_spec` (#16077, sem lead automático) e `condition_validation_service_spec` (sem a condição Captain). Em `reply_mailbox_spec` saiu o teste que separa por remetente as respostas a um encaminhamento: a estratégia de e-mail segue a do fork (#17/#18).
+- **Exclusão da conta (#2133)**: as tabelas de monitores já têm cascata do upstream para a conta e ficam vazias aqui; entram em `SAEM_COM_A_CONTA`. `copilot_runs` sai pelo `CopilotThread has_many :copilot_runs, dependent: :destroy_async`.
+- **`db/schema.rb`**: reordenado como o `db:schema:dump` da CI gera (tabela `copilot_tool_calls` e chaves dos monitores em ordem alfabética; índice parcial no formato do PG 18).
+- Vitest local: o `balaoDetalhes1702` falha só no fuso do Mac (BRT); com `TZ=UTC`, como na CI, passa.
+
+Quinta rodada (`/code-review` independente, nível high):
+- **Provedor de tradução (importante)**: sem provedor salvo, o upstream traduzia pelo Captain (chamada paga de IA), inclusive para conta que liga o Google Translate depois do deploy; a migration só cobria quem já tinha o hook. Agora o padrão é `google_translate` no servidor (`Enterprise::Account#translation_service`) e na tela (`translationProvider`): sem hook, sem tradução, como no fork. Captain só quando a conta escolhe. Os specs do upstream de tradução automática passam a escolher Captain explicitamente.
+- **Tradução automática desligada não faz pedido**: `autoTranslateMessages` saía para carregar as integrações (GET `/integrations/apps`) em conta com Google antes de olhar se a tradução automática estava ligada. Agora sai antes (`requested` no getter).
+- **Monitores**: os callbacks de anexo (áudio transcrito) e de exclusão de conversa ganharam o mesmo portão do `MessageTracking`.
+- **Configuração de notificação**: volta a do fork; o upstream ligava o push de "ligação perdida" para todo usuário novo, com uma gravação a mais.
+- Mantidos, com motivo: a tela da Shopify passa a exigir a flag `shopify_integration`, porque o backend inteiro do upstream (FeatureGate, callbacks, conta) usa essa flag; voltar só a rota deixaria a tela contra uma API que recusa. Uso da Shopify: zero. O "Ver original/Ver tradução" ganhou `truncate` num balão estreito (diferença visual pequena, vai ao diretor de arte).
+- Fragilidade que já existia, como achado: a pergunta do Guia fica a poucas letras do teto (ver quarta rodada).
+
+Sexta rodada (revisão adversarial do Codex sobre 3208b1a2c9):
+- **Estatística de campanha WhatsApp**: o upstream passou a exigir as flags `campaign_analytics` (nasce desligada) e `campaigns`, e a lista escondia o botão. Controller, spec e `CampaignList` voltam ao fork (gate `whatsapp_campaign`).
+- **MFA** (#3135, mesma linha das #3133 e #3124–#3126): sem 403 para o `api_access_token` no próprio MFA, e confirmar o e-mail volta a entrar direto mesmo com MFA ligado.
+- **Distribuição justa** (`AutoAssignment::RateLimiter`): volta à contagem por chave do fork. O conjunto ordenado do upstream esqueceria as atribuições feitas antes do deploy.
+- **Central de Ajuda**: o slug do artigo volta a ser gerado e aceito como antes (sem sufixo aleatório e sem validação de formato), e o editor de artigo perde o campo de endereço novo. No portal público, o seletor de idioma volta à página inicial do idioma, o logo volta ao idioma padrão, o artigo inexistente volta ao tratamento do fork, e o "•" entre autores e contagem volta ao lugar (os 11 arquivos e os 2 specs = fork).
+- **Configuração de tradução** na tela de fluxo de conversa: o bloco novo sai (aparecia por plano, não pela flag). `GoogleTranslate.vue` e `Translation.vue` ficam sem rota, inertes.
+- **Atributo personalizado** chamado `captain_condition` volta a ser aceito (lista de conflitos do fork).
+- **Notas da empresa**: as 20 mais recentes, sem página nem busca, como antes; o arquivo fica no lugar novo do upstream.
+- **Mudar tom (IA)**: o prompt volta ao do fork.
+- **JSON da conversa**: sai o `anonymous_caller` (nada usa, e carregava o `contact_inbox` de cada conversa). O `can_reply?` e a validação de mensagem só olham ligação anônima em caixa Twilio, para não carregar o `contact_inbox` em toda conversa e em toda mensagem.
+- Inertes, sem rota: `WhatsAppCampaignFormPage.vue` e `WhatsAppCampaignAnalyticsContent.vue`.
+- **Migrations que escrevem dados** (vão listadas no pedido à Orquestração): `20260907092039` (ferramentas do Captain por assistente, sem volta), `20260925000000` (`first_matched_at` dos monitores, tabela vazia), `20261008090132` (criptografa credenciais de ferramentas do Captain), `20261015063804` (troca os modelos de IA aposentados; decisão do Rodrigo pendente) e `20261017230231` (provedor de tradução Google). Nenhuma mexe em linhas de `messages`, `contacts` ou `conversations`; `20260922000000` cria duas chaves para `conversations` (lock curto na criação).
+
+Conferido e mantido (comportamento igual ou inerte):
+- D1/D2/D3: envio síncrono, gate `whatsapp_campaign`, sem `RecoverWhatsappCampaignsJob`, sem `initialize_whatsapp_cursor`, sem `with_lock`/422 no `update`, sem `scheduled_at > Time.current`.
+- D4 #15871: estratégias de e-mail só mudam para mensagem encaminhada; `NewConversationStrategy` e IMAP = fork; `retry_content_attributes` = fork; cast de `private` recusado (fork); ação "Encaminhar" sem ligação na tela. Escopo `not_forwarded` e filtros de encaminhado ficam inertes.
+- D5, D14, D18, D19, D21: `ReplyBox`, `ReplyBoxBanner`, `MessagesView`, `ConversationHeader` = fork (só entrou o `isComposing` do IME, classe A). `isAIAssigneeType` exportado sem uso.
+- D8: sem `HumanAgentTagHelpers`. D10: flag desligada e migration vazia. D11: sem include de `Labelable::Persistence`. D13: views de e-mail = fork. D15: sem lead automático. D20: bloco estático. D22: `unless` do log de auditoria recusados (enterprise = fork); personificação passa a guardar quem personificou e o token vira de uso único (classe A/C). D23: `legacy || bearer`. D25, D26, D27, D29, D30, D31, D32: = fork.
+- Login: `password_pre_auth_intercepted?` faz o mesmo caminho do fork no login por senha. Verificação de dispositivo só em nuvem com chave ligada; 2FA obrigatório depende de `enforce_mfa`, que a API não aceita.
+- Empresas: `ContactCompanyAssociation` e `CompanyPolicy` mudaram de lugar (enterprise → app) com o mesmo conteúdo do fork. `company_id` em `PATCH /contacts` continua aceito (estava no enterprise do fork; o upstream moveu para o OSS).
+- `OnlineStatusTracker`, `apps_controller` (Stripe só com hook Stripe), `CampaignCard` (`showEdit` ninguém passa): equivalentes. Evidências da Central atualizadas para as linhas novas (02.06, 06.01, 06.07, 09.09, 09.15, 13.01).
+- `Captain::Copilot::RecoverRunsJob` no agendador: só age em execução do Copilot, que não usamos.
+
+Detector de "customização perdida": `$S/tools/evid_lost.rb` lê os avisos do `central:check` e aponta trecho do fork citado pela Central que existia no HEAD e sumiu. Resultado final: 0.
+
+Super Admin (D28): o inventário mandava manter o do fork, mas a decisão 6 do épico (aprovada) manda ficar com o redesenho
+do upstream e reaplicar por cima o que é do fork, porque o `administrate` 1.0 da 4.20.1 exige o redesenho. Vale a decisão
+do épico; é o que está no commit (ver a linha "Super Admin" acima). Uma tentativa de voltar ao do fork foi desfeita.
+Mudança visual interna (só Super Admin): passa pelo diretor de arte antes do merge.
+
+Sétima rodada (CI do bcd48c10b6: 151 testes de RSpec falhando, 136 já vinham da CI do ea982a0d8d e não tinham sido tratados):
+- Classificação: 45 testes do fork, 97 do upstream, 9 sem classificação clara. A `main` está verde, então todas eram do upgrade.
+- **Regressões reais do fork, consertadas no código:**
+  - Super Admin (decisão 6, redesenho + fork por cima): o campo de nicho (#1429) volta ao formulário Enterprise da conta e à página da conta; as mensagens voltam a ter o gancho `.flashes`; a página de automação do Instagram volta a esconder nome, e-mail e foto do operador; a barra lateral ganha `role="navigation"`; a barra de comandos cai no inglês quando o `administrate` não tem a chave em `pt_BR`; cada cartão de recurso aponta a caixa de marcar com `for` e tem 44 px de alvo de toque.
+  - `marcel` volta à 1.1.0 do fork e fica fixo no Gemfile: a 1.2.1 veio no lock do upstream sem nenhuma gem exigir e muda a detecção do tipo de anexo (HTML, SVG e outros).
+  - O controller de automações volta a ser exatamente o do fork: sai o `prepend` do módulo Enterprise de monitores, que aceitava `monitor_id` na API e escondia do Guia o aviso de `delayed_automations`. O módulo fica no lugar, sem efeito. O spec só do upstream (`monitor_automation_rules_spec.rb`) sai.
+- **Specs do fork que o merge tinha trocado pelo texto do upstream** (o código já era o do fork): `inbox_members` ("User must exist"), portal público (idiomas), WhatsApp (`whatsapp_campaign`), importador do Intercom (`be_visitor`).
+- **Testes do upstream de comportamento já neutralizado**, apagados ou com o spec voltando ao do fork:
+  - condição Captain nas automações;
+  - um robô por caixa;
+  - contato virando lead e `contact_type` no webhook;
+  - robô de busca no `/widget`;
+  - `Labelable::Persistence`;
+  - regra de não trocar quem o administrador escolheu (#24);
+  - #3134 em `inbox_members`, `bulk_actions` e `conversations`;
+  - log de auditoria de personificação;
+  - Bearer x `api_access_token`;
+  - campanha em processamento;
+  - IMAP sem trava de duplicado;
+  - busca por assunto de e-mail e janela da busca;
+  - link da pesquisa de satisfação;
+  - tabela no markdown;
+  - correção de botão dinâmico em modelo de WhatsApp;
+  - logo do portal.
+- **Adaptação mecânica de spec:**
+  - ruby_llm 2.0 (`tokens` no lugar de `input_tokens`) na sugestão de etiquetas;
+  - provedor Captain escolhido explicitamente na tradução;
+  - data fixa dos monitores (correção que o upstream fez depois, #16551);
+  - webhook de voz assinado com o helper do próprio spec;
+  - push de ligação perdida ligado só no spec de notificação;
+  - preparo do Shopify no spec de permissão de leitura;
+  - seletor do período na carteira e da barra lateral no Instagram.
+- **Entrou do upstream (classe A):** #16154, o job da Atribuição V2 entra na fila só depois do commit, para enxergar a conversa recém-criada. Rollback da gravação deixa de enfileirar o job, o que é inofensivo.
+- **Código do upstream mantido para e-mail encaminhado (inerte):** o `private` é convertido como no upstream só quando há `forwarded_message_id`. Sem encaminhamento, que nenhuma tela manda, continua `params[:private] || false`.
+- **Migrations do upstream no padrão do fork** (`docs/migrations-em-lote.md`; mesma versão, mesmo schema final; ainda não rodaram em nenhum ambiente nosso):
+  - `20260907092035` e `20260922090000` (`campaign_recipients` tem linhas em produção) passam a criar e remover índice `CONCURRENTLY`;
+  - `20260925000000` e `20261009170254` usam `safety_assured` em tabela criada no mesmo lote, vazia em produção.
+- **Guia:** formatos regerados a partir do artefato do gerador da própria CI, com os trechos de automação iguais aos da `main`. A cobertura foi recalculada pelo `Relatorio` do gerador; o mesmo cálculo reproduz o artefato byte a byte.
+- **Fora do upgrade:** o QA de contraste do onboarding do Instagram ("Buscar perfil" 3,5:1 no escuro) também falha na `main`.
+- **Para o Rodrigo decidir:**
+  - verificação de assinatura do Twilio, só no webhook de voz (voz sem uso; com credencial errada a ligação seria recusada);
+  - campanha inexistente responder 404 em vez de 500;
+  - catálogo `administrate` em `pt_BR` (hoje sai em inglês, como no fork);
+  - IMAP sem a trava de e-mail duplicado do upstream;
+  - texto e `_target` do link da pesquisa de satisfação (bug antigo do fork).
+- **Para o diretor de arte:** cartões de recurso com 44 px (eram 40); menu da conta sem identidade na página do Instagram; campo de nicho dentro da linha de campo do redesenho. O `instagram_assisted_onboarding_field/_form` (só fora do Enterprise) ainda usa as classes antigas.
+
+Oitava rodada (CI do 960887f9ce e decisões do Rodrigo, 22/11):
+- **CI 5:** das 151 falhas, sobraram 3.
+  - `contacts/conversations_controller_spec`: teste do upstream de ordenar as conversas do contato pela última atividade. Como as conversas do contato seguem ordenadas por `created_at desc` (#46, fork), o spec voltou ao fork.
+  - `instagram_automation_ui_spec`: o `page` do spec é memoizado da primeira requisição, então a checagem olhava a página de configurações. Agora lê a resposta da página de automação. O spec do fork tinha o mesmo vício.
+  - `Migrations do lote`: o `where: "status IN (...)"` de `index_copilot_runs_claimable` gera no Postgres um predicado que nenhum texto carregado do `schema.rb` reproduz (conferido num Postgres local, em tabela temporária). A migration passa a escrever o predicado como o Postgres o imprime, igual à `20261108580000` do fork.
+- **Decisões do Rodrigo:**
+
+| Item | Decisão | No código |
+|---|---|---|
+| #3133 MFA depois de redefinir senha | manter como hoje | segue neutralizado; Issue fechada como não planejada |
+| #3135 MFA na confirmação de e-mail e no token de API | manter como hoje | segue neutralizado; Issue fechada como não planejada |
+| Limite de tentativas de MFA (`rack_attack`) | manter como hoje | `config/initializers/rack_attack.rb` = fork inteiro. As outras mudanças do arquivo só serviam ao MFA obrigatório, ao Bearer e ao log, e saem junto. O `spec/initializers/rack_attack_spec.rb` (só do upstream) sai |
+| #3134 atendente ou time de outra conta | ligar depois, em PR próprio, conferindo antes robôs e n8n | segue neutralizado; decisão comentada na Issue |
+| Modelos de IA (#16266) | aceitar a troca agora | já estava no branch: `config/llm.yml` do upstream e migration `20261015063804` |
+| Alerta sonoro com o toque padrão | aplicar a correção do upstream | `DashboardAudioNotificationHelper.js`: carrega o áudio também quando nenhum foi carregado |
+| Assinatura do webhook de voz do Twilio | manter a conferência | sem mudança (código do upstream; só voz) |
+| IMAP sem trava de e-mail duplicado | ligar depois, em PR próprio | Issue #3136 |
+| Campanha inexistente | 404 agora | `campaigns_controller` com `find_by!`; teste do upstream de volta ao spec |
+| Link da pesquisa de satisfação | corrigir depois, em PR próprio | Issue #3137 |
+| `<select>` nativo em `StripeCustomer.vue` | trocar agora | `ChoiceSelect` com as mesmas opções e o mesmo `load` na troca |
+| Layout do Super Admin | só o Rodrigo usa; precisa funcionar | sem diretor de arte para o Super Admin |

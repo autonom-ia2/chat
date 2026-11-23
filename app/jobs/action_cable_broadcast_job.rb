@@ -10,27 +10,42 @@ class ActionCableBroadcastJob < ApplicationJob
     CONVERSATION_STATUS_CHANGED
   ].freeze
 
-  def perform(members, event_name, data)
+  # widget_members are web widget sessions. They get widget_data, or the widget payload of a refreshed conversation.
+  def perform(members, event_name, data, widget_members: [], widget_data: nil)
+    return if members.blank? && widget_members.blank?
+
+    conversation = latest_conversation(event_name, data)
+    broadcast_to_people(members, event_name, conversation ? refreshed_data(conversation, data) : data)
+    broadcast_to_members(widget_members, event_name, conversation ? refreshed_widget_data(conversation, data) : widget_data)
+  end
+
+  private
+
+  def broadcast_to_people(members, event_name, broadcast_data)
     return if members.blank?
 
-    broadcast_data = prepare_broadcast_data(event_name, data)
     # Anúncio de origem (#2271): quem não vê o anúncio recebe a conversa sem ele, no mesmo job e depois da busca acima.
     Crm::AnuncioDeOrigem::TempoReal.envios(broadcast_data[:account_id], members, broadcast_data).each do |destino, dados|
       broadcast_to_members(destino, event_name, dados)
     end
   end
 
-  private
-
   # Ensures that only the latest available data is sent to prevent UI issues
   # caused by out-of-order events during high-traffic periods. This prevents
   # the conversation job from processing outdated data.
-  def prepare_broadcast_data(event_name, data)
-    return data unless CONVERSATION_UPDATE_EVENTS.include?(event_name)
+  def latest_conversation(event_name, data)
+    return unless CONVERSATION_UPDATE_EVENTS.include?(event_name)
 
-    account = Account.find(data[:account_id])
-    conversation = account.conversations.find_by!(display_id: data[:id])
+    Account.find(data[:account_id]).conversations.find_by!(display_id: data[:id])
+  end
+
+  # Fork (upgrade 4.19.1, #3119): no `assignment` metadata on assignee.changed (refused with automatic_assignment).
+  def refreshed_data(conversation, data)
     conversation.push_event_data.merge(account_id: data[:account_id])
+  end
+
+  def refreshed_widget_data(conversation, data)
+    conversation.widget_push_event_data.merge(account_id: data[:account_id])
   end
 
   def broadcast_to_members(members, event_name, broadcast_data)

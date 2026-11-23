@@ -29,6 +29,8 @@ const props = defineProps({
   marca: { type: String, default: 'gaveta-empresa' },
   definicoes: { type: Array, default: () => [] },
   escolhidos: { type: Array, default: () => [] },
+  // #3082: chaves dos campos apagados, que não viram campo solto.
+  guardadas: { type: Array, default: () => [] },
   // #3078 — uma frase no topo da gaveta ("Já criada: …" da Nova empresa).
   aviso: { type: String, default: '' },
 });
@@ -70,6 +72,7 @@ const campos = computed(() =>
     ? camposDaEmpresa({
         definicoes: props.definicoes,
         escolhidos: props.escolhidos,
+        guardadas: props.guardadas,
         valores: inicial.value.atributos,
       })
     : []

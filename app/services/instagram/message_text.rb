@@ -19,6 +19,8 @@ class Instagram::MessageText < Instagram::BaseMessageText
 
   private
 
+  # Fork (upgrade 4.20.1, #3120): no Unified Login ID aliases here (#16647); the lookup stays on this inbox (#2781).
+
   def process_successful_response(response)
     result = JSON.parse(response.body).with_indifferent_access
     {

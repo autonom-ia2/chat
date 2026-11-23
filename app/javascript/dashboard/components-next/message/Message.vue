@@ -2,6 +2,7 @@
 import { onMounted, computed, ref, toRefs } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { provideMessageContext } from './provider.js';
+import { isContactSide } from 'dashboard/store/modules/conversations/helpers';
 import { useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -198,6 +199,12 @@ const notaDoConector = computed(() =>
 );
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+// Upgrade 4.19.1: TranslationToggle e CSAT (do upstream) leem estes dois do contexto;
+// sem a tradução automática (desligada), a tela segue igual à de antes.
+const showingOriginal = ref(false);
+const contactSide = computed(() =>
+  isContactSide(props.messageType, props.sender?.type ?? props.senderType)
+);
 
 // #1941: mandada pelo app do celular (eco). O texto sai sem o prefixo do conector WAHA
 // (inclusive no histórico) e o nome é o de quem estava atribuído quando chegou.
@@ -808,6 +815,8 @@ provideMessageContext({
       ? t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO')
       : conteudo.value
   ),
+  showingOriginal,
+  contactSide,
   isPrivate: computed(() => props.private),
   variant,
   orientation,
