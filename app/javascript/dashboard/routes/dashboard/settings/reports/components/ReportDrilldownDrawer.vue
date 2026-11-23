@@ -232,18 +232,21 @@ watch(
         >
           {{ subtitle }}
         </div>
+        <!-- Fork (#3147): abaixo da data, para não espremer o título no celular. -->
+        <Button
+          v-if="canViewAll"
+          faded
+          slate
+          size="md"
+          icon="i-lucide-external-link"
+          class="mt-3 min-h-11"
+          :label="$t('REPORT.DRILLDOWN.OPEN_IN_LIST')"
+          :aria-label="$t('REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA')"
+          @click="viewAllConversations"
+        />
       </div>
     </template>
     <template #header-actions>
-      <Button
-        v-if="canViewAll"
-        faded
-        slate
-        size="sm"
-        icon="i-lucide-external-link"
-        :label="$t('REPORT.DRILLDOWN.VIEW_ALL')"
-        @click="viewAllConversations"
-      />
       <Button
         ghost
         slate

@@ -416,7 +416,9 @@ describe('ReportDrilldownDrawer.vue', () => {
     const findViewAll = wrapper =>
       wrapper
         .findAll('button')
-        .find(button => button.text().includes('REPORT.DRILLDOWN.VIEW_ALL'));
+        .find(button =>
+          button.text().includes('REPORT.DRILLDOWN.OPEN_IN_LIST')
+        );
 
     beforeEach(() => {
       Object.assign(mockGetters, {

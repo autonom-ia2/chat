@@ -315,6 +315,8 @@
       "PREVIOUS_BUCKET": "Previous bar",
       "NEXT_BUCKET": "Next bar",
       "VIEW_ALL": "View all",
+      "OPEN_IN_LIST": "Open in list",
+      "OPEN_IN_LIST_ARIA": "Open these conversations in the conversation list, in a new tab",
       "UNKNOWN_CONTACT": "Unknown contact",
       "UNKNOWN_INBOX": "Unknown inbox",
       "UNASSIGNED_AGENT": "Unassigned",
