@@ -650,6 +650,8 @@ describe Conversations::FilterService do
   end
 
   describe '#perform on date filter' do
+    before { account.update!(reporting_timezone: 'UTC') }
+
     context 'with query present' do
       let!(:params) { { payload: [], page: 1 } }
 
@@ -684,8 +686,9 @@ describe Conversations::FilterService do
         filters = service.instance_variable_get(:@filters)['conversations']
         condition_query = service.send(:build_condition_query, filters, params[:payload].first, 0)
 
-        expect(condition_query).to include('(conversations.created_at)::date > :value_0')
-        expect(service.instance_variable_get(:@filter_values)['value_0']).to eq(Date.iso8601(date_value))
+        # #3151: "depois de 01/01" começa em 02/01 00:00 no fuso da conta, comparado direto na coluna.
+        expect(condition_query).to include('conversations.created_at >= :value_0')
+        expect(service.instance_variable_get(:@filter_values)['value_0']).to eq(Time.utc(2024, 1, 2))
       end
 
       it 'rejects invalid created_at comparison values' do
@@ -828,6 +831,67 @@ describe Conversations::FilterService do
           expect(result[:conversations].length).to eq expected_count
         end
       end
+    end
+  end
+
+  # #3151: o dia do filtro é o dia no fuso da conta. Caso do upstream #15843: 07/09 às 21h49 em São Paulo é
+  # 08/09 00:49 em UTC, e o relatório de 07/09 a conta.
+  describe '#perform on date filter in the account timezone' do
+    let!(:params) { { payload: [], page: 1 } }
+    let!(:conversa_da_noite) do
+      create(:conversation, account: account, inbox: inbox, assignee: user_1, created_at: Time.utc(2026, 9, 8, 0, 49))
+    end
+
+    before { account.update!(reporting_timezone: 'America/Sao_Paulo') }
+
+    def filtro(operador, valor, attribute_key: 'created_at', query_operator: nil)
+      { attribute_key: attribute_key, filter_operator: operador, values: [valor], query_operator: query_operator,
+        custom_attribute_type: '' }.with_indifferent_access
+    end
+
+    def ids_filtrados
+      filter_service.new(params, user_1, account).perform[:conversations].map(&:id)
+    end
+
+    it 'counts the evening in Brazil on its local day' do
+      params[:payload] = [filtro('is_greater_than', '2026-09-06', query_operator: 'AND'), filtro('is_less_than', '2026-09-08')]
+
+      expect(ids_filtrados).to eq([conversa_da_noite.id])
+    end
+
+    it 'leaves the evening out of the next local day' do
+      params[:payload] = [filtro('is_greater_than', '2026-09-07', query_operator: 'AND'), filtro('is_less_than', '2026-09-09')]
+
+      expect(ids_filtrados).not_to include(conversa_da_noite.id)
+    end
+
+    it 'compares the column directly with the local day start in UTC' do
+      service = filter_service.new(params, user_1, account)
+      filters = service.instance_variable_get(:@filters)['conversations']
+      condition_query = service.send(:build_condition_query, filters, filtro('is_less_than', '2026-09-08'), 0)
+
+      expect(condition_query).to include('conversations.created_at < :value_0')
+      expect(condition_query).not_to include('::date')
+      expect(service.instance_variable_get(:@filter_values)['value_0']).to eq(Time.utc(2026, 9, 8, 3))
+    end
+
+    it 'takes today from the account timezone for days_before' do
+      travel_to Time.utc(2026, 9, 8, 1, 0) do
+        antiga = create(:conversation, account: account, inbox: inbox, last_activity_at: Time.utc(2026, 9, 5, 12))
+        recente = create(:conversation, account: account, inbox: inbox, last_activity_at: Time.utc(2026, 9, 6, 12))
+        params[:payload] = [filtro('days_before', 1, attribute_key: 'last_activity_at')]
+
+        # Em São Paulo ainda é 07/09: "há mais de 1 dia" é antes de 06/09 00:00 local (06/09 03:00 UTC).
+        expect(ids_filtrados).to include(antiga.id)
+        expect(ids_filtrados).not_to include(recente.id)
+      end
+    end
+
+    it 'falls back to the platform timezone when the account has none' do
+      account.update!(reporting_timezone: nil)
+
+      expect(Filters::DateFilterHelper.fuso_da_conta(account).name)
+        .to eq(ActiveSupport::TimeZone[Crm::Timezone::Resolver.default_timezone].name)
     end
   end
 
