@@ -17,7 +17,8 @@ class Autonomia::Guide::Relatorio::Pedido
 
   def initialize(account:, params:)
     @account = account
-    @fuso = account.report_time_zone
+    # O mesmo fuso do filtro de data da caixa (#3151): o da conta, ou o padrão da plataforma. Funciona sem o EE.
+    @fuso = Filters::DateFilterHelper.fuso_da_conta(account).tzinfo.name
     @tipo = escolha(params['tipo'], TIPOS, 'tipo')
     @metrica = escolha(params['metrica'], METRICAS, 'metrica')
     @por = escolha(params['por'].presence || 'conta', POR.keys, 'por')

@@ -24,7 +24,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento do
 
   # Os parâmetros que a tela Relatórios manda aos builders para a mesma semana, no fuso da conta.
   def params_da_tela(primeiro: '2026-09-07', ultimo: '2026-09-13')
-    fuso = conta.report_time_zone
+    fuso = Filters::DateFilterHelper.fuso_da_conta(conta).tzinfo.name
     { since: Date.iso8601(primeiro).in_time_zone(fuso), until: Date.iso8601(ultimo).next_day.in_time_zone(fuso), business_hours: false,
       timezone: fuso, timezone_offset: ActiveSupport::TimeZone[fuso].now.utc_offset / 3600.0 }
   end
