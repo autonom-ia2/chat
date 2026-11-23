@@ -3,7 +3,6 @@ import {
   computed,
   defineAsyncComponent,
   onMounted,
-  ref,
   useTemplateRef,
   watch,
 } from 'vue';
@@ -44,6 +43,19 @@ import ListaDeLinhas from '../components/lista/ListaDeLinhas.vue';
 import MarcarTodas from '../components/lista/MarcarTodas.vue';
 import MostrarMais from '../components/lista/MostrarMais.vue';
 import NovaEmpresaNaLista from '../components/lista/NovaEmpresaNaLista.vue';
+import MeusGrupos from '../components/lista/MeusGrupos.vue';
+import DialogoNomeDoGrupo from '../components/lista/DialogoNomeDoGrupo.vue';
+import DialogoApagarGrupo from '../components/lista/DialogoApagarGrupo.vue';
+import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
+import {
+  GUARDADOS_DE_EXEMPLO,
+  gruposGuardadosFonte,
+} from '../fonte/gruposGuardados';
+import FaixaGrupoMudou from '../components/lista/FaixaGrupoMudou.vue';
+import { useVisoesDaLista } from '../lista/useVisoesDaLista';
+import { useResumoDoGrupo } from '../lista/useResumoDoGrupo';
+import { useAcoesDosGrupos } from '../lista/useAcoesDosGrupos';
+import { useIdioma } from '../ficha/idioma';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { GRUPOS_DE_COMPRA, VISOES } from '../fonte/gruposDeCompra';
@@ -110,6 +122,10 @@ const SeloDoSeguro = defineAsyncComponent(
 // empresa", as cinco ordens guardadas dela, "Mais filtros" (cidade e quando
 // chegou), a foto e a cidade na linha, e marcar empresas para apagar (a única
 // ação em grupo de empresa; "Marcar todas" fica só em Pessoas).
+// #3168 — "Por outra informação" na gaveta, "Guardar como grupo" e a terceira
+// chave "Meus grupos" (`?grupos=meus`; `?guardados=exemplo` começa com três
+// grupos inventados). Por enquanto só na demonstração: o servidor ainda não lê
+// as condições nem os grupos guardados (lista/useMeusGrupos.js).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -234,20 +250,40 @@ const trocarAba = nova => {
 // está aberta.
 const verGrupo = id => lista.escolherGrupo(id);
 
-// #3097 — em Pessoas, os grupos por conversa ou por compra ("Ver os grupos
-// por"). Por compra, "Todos" abre e vêm os grupos de compra; a linha diz a
-// compra em vez da conversa. Abre pela URL com `?grupos=compra`. Trocar volta
-// para "Todos". Quem é administrador ajusta as faixas ("Ajustar os grupos").
-const visao = ref(
-  route.query.grupos === VISOES.COMPRA ? VISOES.COMPRA : VISOES.CONVERSA
-);
-const porCompra = computed(
-  () => !ehEmpresas.value && visao.value === VISOES.COMPRA
-);
+// #3097 — em Pessoas, os grupos por conversa ou por compra; #3168 — e "Meus
+// grupos" (`?grupos=meus`), só na demonstração: fora dela a lista mostraria
+// todo mundo sem dizer que ignorou o filtro (lista/useVisoesDaLista.js). Abre
+// pela URL com `?grupos=compra`. Quem é administrador ajusta as faixas.
+const comMeusGrupos = naDemonstracao;
+const visaoDaUrl = () => {
+  if (route.query.grupos === VISOES.COMPRA) return VISOES.COMPRA;
+  if (comMeusGrupos && route.query.grupos === VISOES.MEUS) return VISOES.MEUS;
+  return VISOES.CONVERSA;
+};
+const visoes = useVisoesDaLista({
+  visaoInicial: visaoDaUrl(),
+  comMeusGrupos,
+  aba,
+  ehEmpresas,
+  lista,
+  ordemDaAba: ordemGuardada.ordemDaAba,
+  fonteDosGuardados: gruposGuardadosFonte({
+    exemplo: route.query.guardados === GUARDADOS_DE_EXEMPLO,
+  }),
+  aoFalhar: () => useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')),
+});
+const {
+  visao,
+  porCompra,
+  naMeusGrupos,
+  linhasPorCompra,
+  meusGrupos,
+  trocarVisao,
+} = visoes;
 // Por compra, as ordens por compra; sem valor de venda, sem as de valor.
 const ordensDaAba = computed(() => {
   if (ehEmpresas.value) return gruposDeOrdem(t, CAMPOS_DE_ORDEM_DAS_EMPRESAS);
-  if (!porCompra.value) return gruposDeOrdem(t);
+  if (!linhasPorCompra.value) return gruposDeOrdem(t);
   return gruposDeOrdem(
     t,
     faixasDeCompra.veValores.value
@@ -255,17 +291,6 @@ const ordensDaAba = computed(() => {
       : CAMPOS_DE_ORDEM_POR_COMPRA_SEM_VALOR
   );
 });
-// Por compra, a lista abre por quem está há mais tempo sem comprar; de volta
-// à conversa, volta a ordem guardada da pessoa.
-const trocarVisao = nova => {
-  visao.value = nova;
-  lista.escolherGrupo(GRUPO_PADRAO[aba.value]);
-  lista.mudarOrdem(
-    nova === VISOES.COMPRA
-      ? ORDEM_PADRAO_POR_COMPRA
-      : ordemGuardada.ordemDaAba(aba.value)
-  );
-};
 // Aberta pela URL já por compra, a ordem também abre por compra.
 if (porCompra.value) lista.mudarOrdem(ORDEM_PADRAO_POR_COMPRA);
 onMounted(faixasDeCompra.carregar);
@@ -294,6 +319,7 @@ const grupos = computed(() =>
 // "Todos" e "Todas" não dizem nada além do nome: sem explicação. A linha mantém
 // a altura (`min-h-5`) para a tela não pular ao trocar de grupo.
 const explicacao = computed(() => {
+  if (naMeusGrupos.value) return '';
   if (lista.grupo.value === GRUPO_PADRAO[aba.value]) return '';
   const atual = gruposDaLista.value.find(g => g.id === lista.grupo.value);
   return atual ? t(atual.explicacao, textosDeCompra.value) : '';
@@ -521,12 +547,75 @@ const maisFiltros = useGavetaDeFiltros({
 // do tamanho dela, e abaixo de `md` a barra deixa livre o canto do botão ☰.
 const barraVisivel = computed(() => marcados.quantos.value > 0);
 
+// #3168 — os campos da conta e a "Relação" são da seção "Por outra
+// informação": só ela pergunta à conta, e só quando a seção existe (a
+// demonstração mostra sempre).
+const relacaoLigada = useRelacaoLigada();
+const comCondicoes = computed(() => comMeusGrupos && !ehEmpresas.value);
+const comRelacao = computed(
+  () => comCondicoes.value && (naDemonstracao || relacaoLigada.value)
+);
+const definicoesDasCondicoes = () =>
+  comCondicoes.value ? camposDaConta.definicoes.value : [];
+// A frase de quem entra no grupo: o nome da pílula (de conversa ou de compra;
+// "Todos" não diz nada), a busca e os filtros.
+const gruposComNome = computed(() => [
+  ...gruposDaAba(ABAS.PESSOAS, { comSeguros: temSeguros.value }),
+  ...GRUPOS_DE_COMPRA,
+]);
+const nomeDoGrupo = id => {
+  if (id === GRUPO_PADRAO[ABAS.PESSOAS]) return '';
+  const achado = gruposComNome.value.find(item => item.id === id);
+  return achado ? t(achado.nome, textosDeCompra.value) : '';
+};
+const resumoDe = useResumoDoGrupo({
+  t,
+  idioma: useIdioma(),
+  opcoes: maisFiltros.opcoes,
+  definicoes: definicoesDasCondicoes,
+  comRelacao,
+  nomeDoGrupo,
+});
+const resumoDoEscolhido = computed(() =>
+  meusGrupos.grupo.value ? resumoDe(meusGrupos.grupo.value) : ''
+);
+const resumoDaTela = computed(() =>
+  comMeusGrupos ? resumoDe(consultaDaTela()) : ''
+);
+// Com um grupo guardado escolhido, "Mais filtros" abre no modo dele.
+const abrirFiltros = () =>
+  meusGrupos.grupo.value && naMeusGrupos.value
+    ? maisFiltros.abrirParaGrupo(meusGrupos.grupo.value)
+    : maisFiltros.abrir();
+// "Escolher quem entra" (Meus grupos vazio): a lista de sempre e a gaveta.
+const comecarGrupo = () => {
+  trocarVisao(VISOES.CONVERSA);
+  maisFiltros.abrir();
+};
+const dialogoDoNome = useTemplateRef('dialogoDoNome');
+const dialogoApagarGrupo = useTemplateRef('dialogoApagarGrupo');
+const acoesDosGrupos = useAcoesDosGrupos({
+  meusGrupos,
+  maisFiltros,
+  t,
+  aoGuardarNovo: visoes.irParaMeusGrupos,
+  dialogoDoNome,
+  dialogoApagarGrupo,
+});
+
 const raiz = useTemplateRef('raiz');
 useRolarPilula(raiz, lista.grupo);
 
 // Na aba Seguros quem carrega é a peça dela. Ao voltar, a lista se atualiza.
 onMounted(() => {
   if (!naAbaDeSeguros.value) lista.iniciar();
+});
+// Aberta pela URL já em "Meus grupos", entra no primeiro grupo guardado.
+onMounted(async () => {
+  if (!comMeusGrupos) return;
+  maisFiltros.carregarOpcoes();
+  await meusGrupos.carregar();
+  if (naMeusGrupos.value) meusGrupos.entrar();
 });
 watch(naAbaDeSeguros, estaNela => {
   if (!estaNela) lista.recarregar();
@@ -630,6 +719,7 @@ watch(naAbaDeSeguros, estaNela => {
                 >
                   <ChaveDosGrupos
                     :model-value="visao"
+                    :com-meus-grupos="comMeusGrupos"
                     @update:model-value="trocarVisao"
                   />
                   <Button
@@ -651,6 +741,17 @@ watch(naAbaDeSeguros, estaNela => {
                   :model-value="lista.grupo.value"
                   @update:model-value="lista.escolherGrupo"
                 />
+                <MeusGrupos
+                  v-else-if="naMeusGrupos"
+                  :guardados="meusGrupos.guardados.value"
+                  :model-value="meusGrupos.escolhido.value"
+                  :resumo="resumoDoEscolhido"
+                  @update:model-value="meusGrupos.escolher"
+                  @mudar="acoesDosGrupos.mudarGrupo"
+                  @renomear="acoesDosGrupos.abrirTrocarNome"
+                  @apagar="acoesDosGrupos.abrirApagarGrupo"
+                  @comecar="comecarGrupo"
+                />
                 <PilulasDeGrupo
                   v-else
                   sem-vazios
@@ -668,19 +769,31 @@ watch(naAbaDeSeguros, estaNela => {
                 </p>
               </div>
               <BarraDeControles
-                v-if="!lista.semAcesso.value"
+                v-if="
+                  !lista.semAcesso.value && !visoes.semGruposGuardados.value
+                "
                 :busca="lista.busca.value"
                 :ordem="lista.ordem.value"
                 :grupos-de-ordem="ordensDaAba"
                 :filtros-ativos="lista.filtrosAtivos.value"
                 :placeholder="placeholder"
                 :placeholder-curto="placeholderCurto"
+                :pode-guardar-grupo="visoes.podeGuardarGrupo.value"
                 @update:busca="lista.mudarBusca"
                 @update:ordem="mudarOrdem"
-                @abrir-filtros="maisFiltros.abrir"
+                @abrir-filtros="abrirFiltros"
+                @guardar-grupo="acoesDosGrupos.abrirGuardar"
               />
+              <FaixaGrupoMudou
+                v-if="visoes.grupoMudou.value && !lista.semAcesso.value"
+                :guardando="meusGrupos.ocupado.value"
+                @guardar="acoesDosGrupos.guardarDaFaixa"
+                @voltar="meusGrupos.voltar"
+              />
+              <!-- Meus grupos sem nenhum guardado: só o cartão vazio, sem lista. -->
+              <template v-if="visoes.semGruposGuardados.value" />
               <EstadoSemAcesso
-                v-if="lista.semAcesso.value"
+                v-else-if="lista.semAcesso.value"
                 :frase="fraseSemAcesso"
               />
               <ErroComTentarDeNovo
@@ -748,7 +861,7 @@ watch(naAbaDeSeguros, estaNela => {
                       :pode-marcar="podeMarcar"
                       :pode-conversar="naDemonstracao"
                       :pode-editar="podeEditar"
-                      :por-compra="porCompra"
+                      :por-compra="linhasPorCompra"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
@@ -825,10 +938,28 @@ watch(naAbaDeSeguros, estaNela => {
       :ve-valores="faixasDeCompra.veValores.value"
       :filtros="lista.filtros.value"
       :opcoes="maisFiltros.opcoes.value"
+      :com-condicoes="comCondicoes"
+      :definicoes="definicoesDasCondicoes()"
+      :com-relacao="comRelacao"
+      :do-grupo="maisFiltros.doGrupo.value?.nome ?? ''"
       @fechar="maisFiltros.aberta.value = false"
       @aplicar="maisFiltros.aplicar"
       @limpar="maisFiltros.limpar"
+      @guardar="acoesDosGrupos.guardarNoGrupo"
     />
+    <template v-if="comMeusGrupos">
+      <DialogoNomeDoGrupo
+        ref="dialogoDoNome"
+        :salvando="meusGrupos.ocupado.value"
+        :resumo="resumoDaTela"
+        @guardar="acoesDosGrupos.guardarNome"
+      />
+      <DialogoApagarGrupo
+        ref="dialogoApagarGrupo"
+        :apagando="meusGrupos.ocupado.value"
+        @apagar="acoesDosGrupos.apagarGrupo"
+      />
+    </template>
     <!-- #2970: sem "Mandar mensagem" fora da demonstração, nada abre isto. -->
     <DialogoMandarMensagem
       v-if="naDemonstracao"

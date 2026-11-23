@@ -20,6 +20,7 @@ import {
   pessoaPassaNosFiltros,
   preenchido,
 } from '../lista/filtros';
+import { paraOServidor } from '../lista/informacoes';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
 // autonomia/prospecting/achar/utils/acharFonte.js). A tela recebe sempre o mesmo
@@ -351,6 +352,16 @@ const filtrosDaAba = (aba, filtros = {}) =>
       )
     : filtros;
 
+// #3168 — "Por outra informação" (só em Pessoas): as linhas prontas no formato
+// do payload de `contacts/filter` (lista/informacoes.js), em JSON no parâmetro
+// `condicoes`. Sem linha pronta, o parâmetro não vai. O servidor ainda não lê
+// este parâmetro: a tela só oferece as condições na demonstração até lá.
+const condicoesDoPedido = (aba, filtros = {}) => {
+  if (aba === ABAS.EMPRESAS) return '';
+  const payload = paraOServidor(filtros.condicoes, filtros.juntar);
+  return payload.length ? JSON.stringify(payload) : '';
+};
+
 // O que vai na URL: só o que está preenchido.
 export const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
   Object.fromEntries(
@@ -360,6 +371,7 @@ export const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
       ['ordem', ordem],
       ['pagina', pagina],
       ...filtrosDoPedido(filtrosDaAba(aba, filtros)),
+      ['condicoes', condicoesDoPedido(aba, filtros)],
     ].filter(([, valor]) => preenchido(valor))
   );
 

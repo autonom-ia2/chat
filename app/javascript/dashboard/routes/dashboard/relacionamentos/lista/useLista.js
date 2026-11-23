@@ -22,6 +22,8 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // #3062 — `ordemPadrao` pode ser a ordem de cada aba (uma função do nome dela):
 // a aba Pessoas abre na ordem que a pessoa guardou e tem ordens que a aba
 // Empresas não tem. Trocar de aba volta para a ordem da aba nova.
+// #3168 — `mudarConsulta` troca de uma vez o que vier de grupo, busca, ordem e
+// filtros (um grupo guardado reaplicado) com uma leitura só.
 export const useLista = ({
   fonte,
   aba,
@@ -211,6 +213,18 @@ export const useLista = ({
     mudarOrdem: nova => mudar(ordem, nova),
     mudarFiltros: novos => {
       filtros.value = { ...filtrosVazios, ...novos };
+      return recomecarRecontando();
+    },
+    mudarConsulta: ({
+      grupo: novoGrupo = grupo.value,
+      busca: novaBusca = busca.value,
+      ordem: novaOrdem = ordem.value,
+      filtros: novosFiltros = filtros.value,
+    }) => {
+      grupo.value = novoGrupo;
+      busca.value = novaBusca;
+      ordem.value = novaOrdem;
+      filtros.value = { ...filtrosVazios, ...novosFiltros };
       return recomecarRecontando();
     },
     limparFiltros: () => {
