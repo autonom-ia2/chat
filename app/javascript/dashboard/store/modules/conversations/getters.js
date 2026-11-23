@@ -16,6 +16,7 @@ import {
   translationProvider,
 } from 'dashboard/helper/translationProvider';
 import { matchesFilters } from './helpers/filterHelpers';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 import {
   getUserPermissions,
@@ -49,12 +50,17 @@ const getters = {
 
     const permissions = getUserPermissions(currentUser, currentAccountId);
     const userRole = getUserRole(currentUser, currentAccountId);
+    // #3151: filtro de data no fuso da conta, como no servidor.
+    const fuso = fusoDaConta(
+      rootGetters['accounts/getAccount']?.(currentAccountId)
+    );
 
     return allConversations
       .filter(conversation => {
         const matchesFilterResult = matchesFilters(
           conversation,
-          appliedFilters
+          appliedFilters,
+          fuso
         );
         const allowedForRole = applyRoleFilter(
           conversation,

@@ -174,22 +174,50 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const isDateOnly = value =>
   typeof value === 'string' && DATE_ONLY_PATTERN.test(value);
 
-/**
- * Reduces a value to the UTC calendar day it falls on
- * @param {*} value - An epoch timestamp, an ISO string or a `YYYY-MM-DD` string
- * @returns {Number|null} - Milliseconds at UTC midnight, or null when unparseable
- *
- * `coerceToDate` reads a `YYYY-MM-DD` string as midnight in the browser
- * timezone, which lands on the previous day for browsers behind UTC.
- */
-const toUtcDay = value => {
-  const date = isDateOnly(value)
-    ? new Date(`${value}T00:00:00.000Z`)
-    : coerceToDate(value);
+// #3151: o dia de um horário é o dia no fuso da conta, o mesmo que o servidor usa
+// (Filters::DateFilterHelper). Só "Criada em" e "Última atividade": atributo
+// personalizado de data o servidor lê como data pura (`::date`), em UTC.
+// Um formatador por fuso; sem fuso, UTC.
+const HORARIOS_NO_FUSO_DA_CONTA = ['created_at', 'last_activity_at'];
+const formatadoresDeDia = new Map();
+const formatadorDeDia = fuso => {
+  const zona = fuso || 'UTC';
+  if (!formatadoresDeDia.has(zona)) {
+    formatadoresDeDia.set(
+      zona,
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: zona,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    );
+  }
+  return formatadoresDeDia.get(zona);
+};
 
+/**
+ * Reduces a value to the calendar day it falls on in the account timezone
+ * @param {*} value - An epoch timestamp, an ISO string or a `YYYY-MM-DD` string
+ * @param {String} fuso - The account timezone (IANA name)
+ * @returns {String|null} - `YYYY-MM-DD`, or null when unparseable
+ *
+ * A `YYYY-MM-DD` value (a date custom attribute, or the filter itself) is
+ * already a day and is kept as is, like the backend `::date` cast does.
+ */
+const diaNoFuso = (value, fuso) => {
+  if (isDateOnly(value)) return value;
+
+  const date = coerceToDate(value);
   if (date === null) return null;
 
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return formatadorDeDia(fuso).format(date);
+};
+
+const diasAntes = (dia, dias) => {
+  const data = new Date(`${dia}T00:00:00.000Z`);
+  data.setUTCDate(data.getUTCDate() - dias);
+  return data.toISOString().slice(0, 10);
 };
 
 /**
@@ -197,24 +225,23 @@ const toUtcDay = value => {
  * @param {*} conversationValue - The conversation value to compare
  * @param {*} filterValue - The filter value to compare against
  * @param {Function} compareFn - The comparison function to apply
+ * @param {String} fuso - The account timezone (IANA name)
  * @returns {Boolean} - Returns true if the comparison succeeds, false otherwise
  */
-const compareDates = (conversationValue, filterValue, compareFn) => {
+const compareDates = (conversationValue, filterValue, compareFn, fuso) => {
   // In saved views, the filterValue might be returned as an Array
   // In conversation list, when filtering, the filterValue will be returned as a string
   const valueToCompare = Array.isArray(filterValue)
     ? filterValue[0]
     : filterValue;
 
-  // A date filter compares whole days. The backend casts both sides with
-  // `::date` (Filters::FilterHelper#date_filter), so the time of day never
-  // takes part and the day is the one in UTC.
+  // A date filter compares whole days, in the account timezone (#3151).
+  // `YYYY-MM-DD` strings compare in calendar order.
   if (isDateOnly(valueToCompare)) {
-    const conversationDay = toUtcDay(conversationValue);
-    const filterDay = toUtcDay(valueToCompare);
+    const conversationDay = diaNoFuso(conversationValue, fuso);
 
-    if (conversationDay === null || filterDay === null) return false;
-    return compareFn(conversationDay, filterDay);
+    if (conversationDay === null) return false;
+    return compareFn(conversationDay, valueToCompare);
   }
 
   const conversationDate = coerceToDate(conversationValue);
@@ -230,7 +257,7 @@ const compareDates = (conversationValue, filterValue, compareFn) => {
  * @param {Object} filter - The filter condition
  * @returns {Boolean} - Returns true if the value matches the filter
  */
-const matchesCondition = (conversationValue, filter) => {
+const matchesCondition = (conversationValue, filter, fuso) => {
   const { filter_operator: filterOperator, values } = filter;
 
   const isNullish =
@@ -244,6 +271,9 @@ const matchesCondition = (conversationValue, filter) => {
   const filterValue = Array.isArray(values)
     ? values.map(resolveValue)
     : resolveValue(values);
+  const fusoDoDia = HORARIOS_NO_FUSO_DA_CONTA.includes(filter.attribute_key)
+    ? fuso
+    : 'UTC';
 
   switch (filterOperator) {
     case 'equal_to':
@@ -265,20 +295,36 @@ const matchesCondition = (conversationValue, filter) => {
       return isAbsent;
 
     case 'is_greater_than':
-      return compareDates(conversationValue, filterValue, (a, b) => a > b);
+      return compareDates(
+        conversationValue,
+        filterValue,
+        (a, b) => a > b,
+        fusoDoDia
+      );
 
     case 'is_less_than':
-      return compareDates(conversationValue, filterValue, (a, b) => a < b);
+      return compareDates(
+        conversationValue,
+        filterValue,
+        (a, b) => a < b,
+        fusoDoDia
+      );
 
     case 'days_before': {
       if (isNullish) {
         return false;
       }
 
-      const today = new Date();
-      const daysInMilliseconds = filterValue * 24 * 60 * 60 * 1000;
-      const targetDate = new Date(today.getTime() - daysInMilliseconds);
-      return conversationValue < targetDate.getTime();
+      // Same rule as the backend: the day it falls on, in the account
+      // timezone, is before "today there" minus N days (#3151).
+      const dias = Number(
+        Array.isArray(filterValue) ? filterValue[0] : filterValue
+      );
+      const conversationDay = diaNoFuso(conversationValue, fusoDoDia);
+      if (conversationDay === null || !Number.isFinite(dias)) return false;
+
+      const hoje = formatadorDeDia(fuso).format(new Date());
+      return conversationDay < diasAntes(hoje, dias);
     }
 
     default:
@@ -286,7 +332,7 @@ const matchesCondition = (conversationValue, filter) => {
   }
 };
 
-const matchesConversationCondition = (conversation, filter) => {
+const matchesConversationCondition = (conversation, filter, fuso) => {
   const isHumanAssigneeFilter =
     filter.attribute_key === 'assignee_id' &&
     ['equal_to', 'not_equal_to'].includes(filter.filter_operator);
@@ -300,7 +346,8 @@ const matchesConversationCondition = (conversation, filter) => {
 
   return matchesCondition(
     getValueFromConversation(conversation, filter.attribute_key),
-    filter
+    filter,
+    fuso
   );
 };
 
@@ -405,9 +452,9 @@ const buildJsonLogicRule = evaluatedFilters => {
  * @param {Array} filters - Filters to apply
  * @returns {Array} - Array of evaluated filter results with operators
  */
-const evaluateFilters = (conversation, filters) => {
+const evaluateFilters = (conversation, filters, fuso) => {
   return filters.map((filter, index) => {
-    const result = matchesConversationCondition(conversation, filter);
+    const result = matchesConversationCondition(conversation, filter, fuso);
 
     // This part determines the logical operator that connects this filter to the next one:
     // - If this is not the last filter (index < filters.length - 1), use the filter's query_operator
@@ -424,9 +471,10 @@ const evaluateFilters = (conversation, filters) => {
  * Checks if a conversation matches the given filters
  * @param {Object} conversation - The conversation object to check
  * @param {Array} filters - Array of filter conditions
+ * @param {String} fuso - The account timezone (IANA name), for date filters
  * @returns {Boolean} - Returns true if conversation matches filters, false otherwise
  */
-export const matchesFilters = (conversation, filters) => {
+export const matchesFilters = (conversation, filters, fuso) => {
   // If no filters, return true
   if (!filters || filters.length === 0) {
     return true;
@@ -434,10 +482,10 @@ export const matchesFilters = (conversation, filters) => {
 
   // Handle single filter case
   if (filters.length === 1) {
-    return matchesConversationCondition(conversation, filters[0]);
+    return matchesConversationCondition(conversation, filters[0], fuso);
   }
 
   // Evaluate all conditions and prepare for jsonLogic
-  const evaluatedFilters = evaluateFilters(conversation, filters);
+  const evaluatedFilters = evaluateFilters(conversation, filters, fuso);
   return jsonLogic.apply(buildJsonLogicRule(evaluatedFilters));
 };
