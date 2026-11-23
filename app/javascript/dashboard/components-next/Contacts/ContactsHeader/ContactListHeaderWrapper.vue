@@ -28,6 +28,7 @@ import CampaignImportDialog from 'dashboard/components-next/Contacts/CampaignImp
 import CreateSegmentDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateSegmentDialog.vue';
 import DeleteSegmentDialog from 'dashboard/components-next/Contacts/ContactsForm/DeleteSegmentDialog.vue';
 import ContactsFilter from 'dashboard/components-next/filter/ContactsFilter.vue';
+import { usePageCommands } from 'dashboard/modules/command-bar/composables/usePageCommands';
 
 const props = defineProps({
   showSearch: { type: Boolean, default: true },
@@ -50,9 +51,9 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
+const { checkPermissions } = usePolicy();
 const store = useStore();
 const router = useRouter();
-const { checkPermissions } = usePolicy();
 
 const createNewContactDialogRef = ref(null);
 const contactExportDialogRef = ref(null);
@@ -298,6 +299,26 @@ const onToggleFilters = () => {
 defineExpose({
   onToggleFilters,
 });
+
+usePageCommands(() => [
+  {
+    id: 'new_contact',
+    title: t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ADD_CONTACT'),
+    run: openCreateNewContactDialog,
+  },
+  ...(checkPermissions(['administrator', 'contact_manage'])
+    ? [
+        {
+          id: 'import_contacts',
+          title: t(
+            'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.IMPORT_CONTACT'
+          ),
+          icon: 'i-lucide-upload',
+          run: openContactImportDialog,
+        },
+      ]
+    : []),
+]);
 </script>
 
 <template>

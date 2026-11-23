@@ -64,11 +64,12 @@ RSpec.describe 'Ver contatos vale na leitura', type: :request do
     end
 
     it 'não consulta os pedidos do Shopify de um contato' do
+      # Fork (upgrade 4.19.1, #3119): mechanical setup for the 4.19.1 Shopify backend, which answers 404 while
+      # `Shopify::FeatureGate` is off and reads its credentials in `Shopify::ApiContext`.
+      account.enable_features!('shopify_integration')
+      InstallationConfig.where(name: 'ENABLE_SHOPIFY_INTEGRATION').first_or_initialize.update!(value: true)
+      allow(Shopify::ApiContext).to receive(:setup!)
       create(:integrations_hook, :shopify, account: account)
-      # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(Api::V1::Accounts::Integrations::ShopifyController).to receive(:client_id).and_return('id')
-      allow_any_instance_of(Api::V1::Accounts::Integrations::ShopifyController).to receive(:client_secret).and_return('secret')
-      # rubocop:enable RSpec/AnyInstance
 
       get "#{base}/integrations/shopify/orders", params: { contact_id: da_base.id }, headers: headers, as: :json
       expect(response).to have_http_status(:unauthorized)

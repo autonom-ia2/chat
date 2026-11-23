@@ -1,8 +1,13 @@
 <script setup>
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
+import CopilotNudge from 'dashboard/components-next/copilot/CopilotNudge.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
-import { computed } from 'vue';
+import {
+  useCopilotDot,
+  COPILOT_OPEN_SOURCES,
+} from 'dashboard/composables/useCopilotDot';
+import { computed, watch } from 'vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -19,6 +24,7 @@ const showCopilotTab = computed(() =>
 );
 
 const { uiSettings } = useUISettings();
+const { showDot, trackDotShown, openCopilot } = useCopilotDot();
 const isContactSidebarOpen = computed(
   () => uiSettings.value.is_contact_sidebar_open
 );
@@ -47,9 +53,14 @@ const handleConversationSidebarToggle = () => {
 };
 
 const handleCopilotSidebarToggle = () => {
+  if (!isCopilotPanelOpen.value) {
+    openCopilot(COPILOT_OPEN_SOURCES.SIDEBAR_TAB);
+    return;
+  }
+
   updateUISettings({
     is_contact_sidebar_open: false,
-    is_copilot_panel_open: !isCopilotPanelOpen.value,
+    is_copilot_panel_open: false,
     is_autonomia_copilot_panel_open: false,
   });
 };
@@ -61,6 +72,21 @@ const handleAutonomiaCopilotToggle = () => {
     is_autonomia_copilot_panel_open: true,
   });
 };
+
+const showCopilotDot = computed(
+  () =>
+    showCopilotTab.value &&
+    !showAutonomiaCopilot.value &&
+    showDot.value &&
+    !isCopilotPanelOpen.value
+);
+watch(
+  showCopilotDot,
+  isDotVisible => {
+    if (isDotVisible) trackDotShown(COPILOT_OPEN_SOURCES.SIDEBAR_TAB);
+  },
+  { immediate: true }
+);
 
 const keyboardEvents = {
   'Alt+KeyO': {
@@ -86,20 +112,24 @@ useKeyboardEvents(keyboardEvents);
       icon="i-ph-user-bold"
       @click="handleConversationSidebarToggle"
     />
-    <Button
+    <CopilotNudge
       v-if="showCopilotTab && !showAutonomiaCopilot"
-      v-tooltip.bottom="$t('CONVERSATION.SIDEBAR.COPILOT')"
-      ghost
-      slate
-      sm
-      class="!rounded-full transition-all duration-[250ms] ease-out active:!scale-95 active:duration-75"
-      :class="{
-        'bg-n-alpha-2 !text-n-iris-9 active:!brightness-105 active:shadow-sm':
-          isCopilotPanelOpen,
-      }"
-      icon="i-woot-captain"
-      @click="handleCopilotSidebarToggle"
-    />
+      :show="showCopilotDot"
+    >
+      <Button
+        v-tooltip.bottom="$t('CONVERSATION.SIDEBAR.COPILOT')"
+        ghost
+        slate
+        sm
+        class="!rounded-full transition-all duration-[250ms] ease-out active:!scale-95 active:duration-75"
+        :class="{
+          'bg-n-alpha-2 !text-n-iris-9 active:!brightness-105 active:shadow-sm':
+            isCopilotPanelOpen,
+        }"
+        icon="i-woot-captain"
+        @click="handleCopilotSidebarToggle"
+      />
+    </CopilotNudge>
     <Button
       v-if="showAutonomiaCopilot"
       v-tooltip.bottom="$t('AUTONOMIA_COPILOT.TITLE')"

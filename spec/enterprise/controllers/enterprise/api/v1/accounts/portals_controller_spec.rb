@@ -87,6 +87,10 @@ RSpec.describe 'Enterprise Portal API', type: :request do
     end
   end
 
+  # Fork (upgrade 4.20.1, #3120): the upstream spec (#16732) that updates the custom domain and the logo through this
+  # endpoint is left out, because PortalPolicy#update? is false for every user in the fork (#501/#502). The commit-time
+  # enqueue it covers is tested in spec/enterprise/models/enterprise/concerns/portal_spec.rb.
+
   describe 'GET /api/v1/accounts/{account.id}/portals/{portal.slug}/ssl_status' do
     let(:portal_with_domain) { create(:portal, slug: 'portal-with-domain', account_id: account.id, custom_domain: 'docs.example.com') }
 
@@ -152,6 +156,20 @@ RSpec.describe 'Enterprise Portal API', type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.parsed_body['error']).to eq(['API token not found'])
+      end
+
+      it 'retries the Cloudflare registration when the hostname is missing' do
+        allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)
+        mock_service = instance_double(Cloudflare::CheckCustomHostnameService)
+        allow(Cloudflare::CheckCustomHostnameService).to receive(:new).and_return(mock_service)
+        allow(mock_service).to receive(:perform).and_return({ errors: ['Hostname is missing in Cloudflare'] })
+        portal_with_domain
+
+        expect do
+          get "/api/v1/accounts/#{account.id}/portals/#{portal_with_domain.slug}/ssl_status",
+              headers: agent.create_new_auth_token,
+              as: :json
+        end.to have_enqueued_job(Enterprise::CloudflareVerificationJob).with(portal_with_domain.id)
       end
     end
   end

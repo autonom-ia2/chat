@@ -34,4 +34,21 @@ RSpec.context 'with valid schedule.yml' do
       expect { klass.set(queue: entry['queue']).perform_later(*Array(entry['args'])) }.not_to raise_error, entry['class']
     end
   end
+
+  describe 'auto resolve schedule' do
+    def resolution_cron
+      schedule = Sidekiq::Cron::Support.load_yaml(ERB.new(Rails.root.join('config/schedule.yml').read).result)
+      schedule['trigger_conversations_resolution_job']['cron']
+    end
+
+    it 'runs every 5 minutes by default' do
+      expect(resolution_cron).to eq('*/5 * * * *')
+    end
+
+    it 'uses AUTO_RESOLVE_CRON when set' do
+      with_modified_env AUTO_RESOLVE_CRON: '* * * * *' do
+        expect(resolution_cron).to eq('* * * * *')
+      end
+    end
+  end
 end

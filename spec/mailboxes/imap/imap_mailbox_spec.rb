@@ -30,6 +30,22 @@ RSpec.describe Imap::ImapMailbox do
       end
     end
 
+    context 'when reply-to contains an empty quoted address' do
+      let(:inbound_mail) { create_inbound_email_from_fixture('malformed_reply_to.eml') }
+      let(:mail) { inbound_mail.mail }
+
+      it 'creates a conversation and message using the valid from address' do
+        expect(mail.reply_to).to eq([nil])
+
+        expect do
+          class_instance.process(mail, channel)
+        end.to change(Conversation, :count).by(1).and change(Message, :count).by(1)
+
+        expect(conversation.contact.email).to eq('sender@example.com')
+        expect(conversation.messages.last.content_attributes.dig('email', 'from')).to eq(['sender@example.com'])
+      end
+    end
+
     context 'when the email with has empty text content' do
       let(:inbound_mail) { create_inbound_email_from_fixture('attachments_without_text.eml') }
 
@@ -98,6 +114,9 @@ RSpec.describe Imap::ImapMailbox do
         expect(conversation.messages.empty?).to be false
       end
     end
+
+    # Fork (upgrade 4.19.1, #3119): no `duplicate_email?` advisory lock here; IMAP keeps the fork's flow
+    # (inventory #17/#18), so the upstream duplicate-fetch examples were removed.
 
     context 'when a new email contains null bytes' do
       let(:inbound_mail) do
@@ -201,6 +220,9 @@ RSpec.describe Imap::ImapMailbox do
         expect(prev_conversation.messages.last.content_attributes['email']['in_reply_to']).to eq(reply_mail.mail.in_reply_to)
       end
     end
+
+    # Fork (upgrade 4.19.1, #3119): upstream starts a new conversation for replies to a forwarded email.
+    # IMAP keeps the fork's `in_reply_to` threading (inventory #17/#18), so those examples were removed.
 
     context 'when a new conversation with nil in_reply_to' do
       let(:prev_conversation) { create(:conversation, account: account, inbox: channel.inbox, assignee: agent) }

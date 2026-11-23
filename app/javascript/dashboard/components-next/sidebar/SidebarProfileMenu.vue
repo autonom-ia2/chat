@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n';
 import Avatar from 'next/avatar/Avatar.vue';
 import SidebarProfileMenuStatus from './SidebarProfileMenuStatus.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { isVoiceCallEnabled } from 'dashboard/helper/inbox';
 
 import {
   DropdownContainer,
@@ -16,6 +17,7 @@ import {
   DropdownItem,
 } from 'next/dropdown-menu/base';
 import CustomBrandPolicyWrapper from '../../components/CustomBrandPolicyWrapper.vue';
+import { openCommandBar } from 'dashboard/modules/command-bar/openCommandBar';
 
 defineProps({
   isCollapsed: { type: Boolean, default: false },
@@ -31,6 +33,7 @@ const { t } = useI18n();
 
 const currentUser = useMapGetter('getCurrentUser');
 const currentUserAvailability = useMapGetter('getCurrentUserAvailability');
+const inboxes = useMapGetter('inboxes/getInboxes');
 const accountId = useMapGetter('getCurrentAccountId');
 const globalConfig = useMapGetter('globalConfig/get');
 const isFeatureEnabledonAccount = useMapGetter(
@@ -51,6 +54,11 @@ const fetchInviteConnection = async () => {
 
 onMounted(fetchInviteConnection);
 watch(accountId, fetchInviteConnection);
+
+const hasVoiceInbox = computed(() => inboxes.value.some(isVoiceCallEnabled));
+// Fork (upgrade 4.20.1, #3120): the work preferences (accept conversations / calls, #16342) stay
+// hidden, so the status menu matches the fork and nobody turns off conversation assignment.
+const showWorkPreferences = false;
 
 const showChatSupport = computed(() => {
   return (
@@ -107,10 +115,7 @@ const menuItems = computed(() => {
       showOnCustomBrandedInstance: true,
       label: t('SIDEBAR_ITEMS.APPEARANCE'),
       icon: 'i-lucide-palette',
-      click: () => {
-        const ninja = document.querySelector('ninja-keys');
-        ninja.open({ parent: 'appearance_settings' });
-      },
+      click: () => openCommandBar({ page: 'appearance_settings' }),
     },
     {
       show: true,
@@ -201,7 +206,9 @@ const sidebarDropdownStyle = computed(() =>
       :solid-surface="Boolean(sidebarBackgroundColor)"
       :solid-background-color="sidebarBackgroundColor"
     >
-      <SidebarProfileMenuStatus />
+      <SidebarProfileMenuStatus
+        :has-voice-inbox="showWorkPreferences && hasVoiceInbox"
+      />
       <DropdownSeparator />
       <template v-for="item in allowedMenuItems" :key="item.label">
         <CustomBrandPolicyWrapper

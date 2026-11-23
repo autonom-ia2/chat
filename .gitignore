@@ -119,3 +119,5 @@ __pycache__/
 
 # Painel de desempenho (#2226/#2251): o arquivo da vida real e as exportações dele são dados de cliente, só locais.
 public/desempenho-vida-real*
+# Cache that `rake ruby_llm:refresh_models` writes next to the model registry
+config/llm_models.json.published.json

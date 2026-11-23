@@ -3,6 +3,7 @@ import {
   OPERATOR_TYPES_2,
   OPERATOR_TYPES_3,
   OPERATOR_TYPES_6,
+  CAPTAIN_OPERATOR_TYPES,
 } from './operators';
 
 // Card do CRM da conversa (AutomationRules::CrmConditions). Só aparecem com o CRM ligado.
@@ -26,6 +27,18 @@ const CRM_CONDITIONS = [
     filterOperators: OPERATOR_TYPES_1,
   },
 ];
+
+// Free-text condition judged by Captain (#16032). Fora das listas de condição: o fork não
+// oferece a condição Captain (o back também não aceita); a constante fica porque
+// helper/automationHelper.js a importa.
+export const CAPTAIN_CONDITION = {
+  key: 'captain_condition',
+  name: 'CAPTAIN',
+  inputType: 'long_text',
+  placeholder: 'CAPTAIN',
+  maxLength: 500,
+  filterOperators: CAPTAIN_OPERATOR_TYPES,
+};
 
 export const AUTOMATIONS = {
   message_created: {

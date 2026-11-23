@@ -5,6 +5,8 @@ class Messages::Instagram::MessageBuilder < Messages::Instagram::BaseMessageBuil
 
   private
 
+  # Fork (upgrade 4.20.1, #3120): no Unified Login ID aliases here (#16647); the lookup stays on this inbox (#2781).
+
   def get_story_object_from_source_id(source_id)
     url = "#{base_uri}/#{source_id}?fields=story,from&access_token=#{@inbox.channel.access_token}"
 

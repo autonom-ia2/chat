@@ -3,7 +3,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
     api_reply = whatsapp_api_reply? # fork: calculado uma vez para as chaves do WhatsApp API
     {
       additional_attributes: additional_attributes,
-      can_reply: can_reply?,
+      **push_reply_state,
       **whatsapp_api_fields(api_reply), # fork chat#1067 e chat#1709: aviso no editor, tipos ricos nativos, reagir/editar
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
@@ -30,6 +30,16 @@ class Conversations::EventDataPresenter < SimpleDelegator
       account: account.webhook_data,
       messages: webhook_push_messages
     )
+  end
+
+  # The widget learns the conversation's id, inbox, read state and status, not the contact or the agents
+  def widget_data
+    {
+      id: display_id,
+      inbox_id: inbox_id,
+      contact_last_seen_at: contact_last_seen_at.to_i,
+      status: status
+    }
   end
 
   private
@@ -64,6 +74,13 @@ class Conversations::EventDataPresenter < SimpleDelegator
 
   def webhook_push_messages
     [messages.where(account_id: account_id).chat.last&.webhook_push_event_data].compact
+  end
+
+  def push_reply_state
+    {
+      anonymous_caller: contact_inbox&.anonymous_caller?,
+      can_reply: can_reply?
+    }
   end
 
   def push_meta

@@ -106,9 +106,10 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
 
   # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta. Sem o anúncio de origem (#2558): o
   # exemplo fica no Decisor, e quem tem automation_view o lê.
+  # #3082: o significado dos campos não entra no exemplo: ele não é dado da pessoa, e ocuparia o teto do texto guardado.
   def texto_do_exemplo
     lido = @anuncio && dados[:card] ? dados.merge(ler_card(anuncio: false)) : dados
-    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].to_json}" if lido[chave] }
+    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].except(:attribute_meanings).to_json}" if lido[chave] }
     [lido[:subject], *lido[:messages], lido[:last_message], lido[:text], *blocos]
       .compact_blank.join("\n\n").first(Autonomia::Decisor::MAX_TEXTO_DO_EXEMPLO)
   end
@@ -188,11 +189,13 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
     { notes: textos(ultimas(conversation&.messages&.where(private: true))) }
   end
 
-  # Nome e atributos. O e-mail e o telefone ficam de fora sempre, inclusive como nome.
+  # Nome e atributos. O e-mail e o telefone ficam de fora sempre, inclusive como nome. #3082: sem os campos apagados, e
+  # com o nome e o "Para que serve" de cada campo que tem definição (`attribute_meanings`).
   def ler_contato
     return {} if contato.nil?
 
-    { contact: { name: (contato.name unless nome_provisorio?), attributes: curto(contato.custom_attributes) }.compact_blank }
+    { contact: { name: (contato.name unless nome_provisorio?),
+                 **campos_da_conta(contato.account, contato.custom_attributes, 'contact_attribute') }.compact_blank }
   end
 
   # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha: nunca
@@ -219,7 +222,15 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   def ler_empresa
     empresa = contato.respond_to?(:company) ? contato.company : nil
     nome = empresa&.name || contato&.additional_attributes.to_h['company_name']
-    { company: { name: nome, attributes: curto(empresa&.custom_attributes) }.compact_blank }
+    campos = empresa ? campos_da_conta(empresa.account, empresa.custom_attributes, 'company_attribute') : {}
+    { company: { name: nome, **campos }.compact_blank }
+  end
+
+  # #3082 (PR B): os atributos de pessoa ou empresa sem os campos apagados, e o significado dos que têm definição.
+  def campos_da_conta(conta, atributos, modelo)
+    leitor = Relationships::CamposParaIa.new(conta)
+    valores = curto(leitor.valores(atributos, modelo))
+    { attributes: valores, attribute_meanings: leitor.significados(valores.keys, modelo) }
   end
 
   # O nome que a plataforma pôs no lugar de um nome: o e-mail, o começo dele, ou o telefone em qualquer

@@ -21,6 +21,15 @@ class Voice::CallMessageBuilder
     message
   end
 
+  # Every client learns when an agent dismisses the ring. Called under the call's row lock, which
+  # a status change also takes, so the status on the message stays current.
+  def update_ring!
+    message = call.message
+    return if message.nil?
+
+    message.update!(content_attributes: message.content_attributes.deep_merge('data' => ring_data))
+  end
+
   private
 
   attr_reader :call
@@ -40,6 +49,8 @@ class Voice::CallMessageBuilder
   end
 
   # call_source lets the FE disambiguate WhatsApp vs Twilio without re-fetching the Call.
+  # Fork (upgrade 4.20.1, #3120): a WhatsApp call's message names no ring, since its card shows as on the fork; see
+  # Inbox#rings_for_calls?
   def build_data_payload
     {
       'call_id' => call.id,
@@ -47,6 +58,13 @@ class Voice::CallMessageBuilder
       'call_source' => call.provider,
       'call_direction' => call.direction_label,
       'status' => call.display_status
-    }
+    }.compact.merge(call.incoming? && call.inbox.rings_for_calls? ? ring_data : {})
+  end
+
+  # Who an inbound call's ringing card shows for: those it rang who have not dismissed it.
+  # The dismissed are named too, since an agent missing from the ring may be yet to be reached.
+  def ring_data
+    { 'ring_user_ids' => call.ring_state.fetch('ring_recipient_ids', []) - call.dismissed_user_ids,
+      'dismissed_user_ids' => call.dismissed_user_ids }
   end
 end

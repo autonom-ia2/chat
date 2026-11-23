@@ -196,7 +196,7 @@ export default {
       this.$emit('delete', this.attributeKey);
     },
     onCopy() {
-      this.$emit('copy', this.value);
+      this.$emit('copy', this.displayValue);
     },
   },
 };

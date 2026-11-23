@@ -58,11 +58,23 @@ class Autonomia::Decisores::Extrator
 
   def schema(campos)
     propriedades = campos.to_h do |campo|
-      descricao = [campo['descricao'], FORMATOS[campo['destino']]].compact.join('. ')
+      descricao = [campo['descricao'], do_campo_da_conta(campo['destino']), FORMATOS[campo['destino']]].compact.join('. ')
       [campo['chave'], { type: %w[string null], description: descricao }]
     end
     { name: 'decisor_campos',
       schema: { type: 'object', additionalProperties: false, properties: propriedades, required: propriedades.keys } }
+  end
+
+  # #3082: o destino que é campo personalizado da pessoa leva o nome e o "Para que serve" da definição. O
+  # `descricao` do Decisor diz o que extrair; isto diz o que o campo significa para a conta.
+  def do_campo_da_conta(destino)
+    return unless destino.to_s.start_with?(Autonomia::Decisor::ATRIBUTO_DE_CONTATO)
+
+    significado = (@campos_da_conta ||= Relationships::CamposParaIa.new(@account))
+                  .significado(destino.delete_prefix(Autonomia::Decisor::ATRIBUTO_DE_CONTATO), 'contact_attribute')
+    return if significado.nil?
+
+    ["Account field \"#{significado[:name]}\"", significado[:purpose]].compact.join(': ')
   end
 
   def valores(campos, resposta)

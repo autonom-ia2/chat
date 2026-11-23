@@ -28,6 +28,7 @@
 #  index_articles_on_account_id             (account_id)
 #  index_articles_on_associated_article_id  (associated_article_id)
 #  index_articles_on_author_id              (author_id)
+#  index_articles_on_category_id            (category_id)
 #  index_articles_on_portal_id              (portal_id)
 #  index_articles_on_slug                   (slug) UNIQUE
 #  index_articles_on_status                 (status)
@@ -56,22 +57,28 @@ class Article < ApplicationRecord
   before_validation :ensure_account_id
   before_validation :ensure_article_slug
   before_validation :ensure_locale_in_article
+  before_validation :associate_with_root_article, if: :will_save_change_to_associated_article_id?
 
   # Slugs that collide with help center routes (e.g. /hc/:slug/:locale/search)
   RESERVED_SLUGS = %w[search articles categories].freeze
+  PREVIEW_TOKEN_EXPIRY = 1.hour
 
   validates :account_id, presence: true
   validates :author_id, presence: true
   validates :title, presence: true
   validates :content, presence: true, if: :published?
   validates :slug, exclusion: { in: RESERVED_SLUGS }
+  validate :noindex_must_be_boolean
+  validate :cannot_reassociate_with_translations, if: :will_save_change_to_associated_article_id?
+  validate :unique_locale_in_family
 
   # ensuring that the position is always set correctly
   before_create :add_position_to_article
   after_save :category_id_changed_action, if: :saved_change_to_category_id?
 
-  enum status: { draft: 0, published: 1, archived: 2 }
+  enum :status, { draft: 0, published: 1, archived: 2 }
 
+  scope :in_translation_families, ->(root_ids) { where(id: root_ids).or(where(associated_article_id: root_ids)) }
   scope :search_by_category_slug, ->(category_slug) { where(categories: { slug: category_slug }) if category_slug.present? }
   scope :search_by_category_locale, ->(locale) { where(categories: { locale: locale }) if locale.present? }
   scope :search_by_locale, ->(locale) { where(locale: locale) if locale.present? }
@@ -115,19 +122,24 @@ class Article < ApplicationRecord
     records
   end
 
-  def associate_root_article(associated_article_id)
-    article = portal.articles.find(associated_article_id) if associated_article_id.present?
-
-    return if article.nil?
-
-    root_article_id = self.class.find_root_article_id(article)
-
-    update(associated_article_id: root_article_id) if root_article_id.present?
+  def root_id
+    associated_article_id || id
   end
 
-  # Make sure we always associate the parent's associated id to avoid the deeper associations od articles.
-  def self.find_root_article_id(article)
-    article.associated_article_id || article.id
+  def noindex?
+    meta['noindex'] == true
+  end
+
+  def translation_family
+    portal.articles.in_translation_families(root_id)
+  end
+
+  def public_locale
+    category.present? ? category.locale : locale
+  end
+
+  def preview_token
+    signed_id(purpose: :preview, expires_in: PREVIEW_TOKEN_EXPIRY)
   end
 
   def draft!
@@ -178,6 +190,32 @@ class Article < ApplicationRecord
 
   private
 
+  def associate_with_root_article
+    return if associated_article_id.blank?
+
+    linked_article = portal.articles.find(associated_article_id)
+    root_article_id = linked_article.root_id
+    self.associated_article_id = root_article_id == id ? nil : root_article_id
+  end
+
+  def cannot_reassociate_with_translations
+    return if associated_article_id.blank?
+
+    errors.add(:associated_article_id, :invalid) if associated_articles.exists?
+  end
+
+  def unique_locale_in_family
+    return if new_record? && associated_article_id.blank?
+
+    errors.add(:locale, :taken) if translation_family.where(locale: locale).where.not(id: id).exists?
+  end
+
+  def noindex_must_be_boolean
+    return if [nil, true, false].include?(meta['noindex'])
+
+    errors.add(:meta, I18n.t('errors.articles.meta.noindex_not_boolean'))
+  end
+
   def category_id_changed_action
     # We need to update the position of the article in the new category
     return unless persisted?
@@ -224,6 +262,7 @@ class Article < ApplicationRecord
     self.account_id = portal&.account_id
   end
 
+  # Fork (upgrade 4.19.1, #3119): slug generated and accepted as before (no random suffix, no format check).
   def ensure_article_slug
     self.slug ||= "#{Time.now.utc.to_i}-#{title.underscore.parameterize(separator: '-')}" if title.present?
   end

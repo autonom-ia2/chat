@@ -184,6 +184,16 @@ RSpec.describe Inbox do
                                     audited_changes: { 'widget_color' => [previous_color, new_color] }).count).to eq(1)
       end
     end
+
+    context 'when channel hmac token is updated along with other attributes' do
+      it 'does not include hmac token in the audit log' do
+        inbox.channel.update(hmac_token: 'new-hmac-token', widget_color: '#00ff00')
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes).to have_key('widget_color')
+        expect(audit.audited_changes).not_to have_key('hmac_token')
+      end
+    end
   end
 
   describe 'audit log with api channel' do
@@ -214,6 +224,14 @@ RSpec.describe Inbox do
         # Check for the specific webhook_update update in the audit log
         expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update',
                                     audited_changes: { 'webhook_url' => [previous_webhook, new_webhook] }).count).to eq(1)
+      end
+    end
+
+    context 'when channel hmac token is rotated' do
+      it 'has no associated audit log created' do
+        inbox.channel.regenerate_hmac_token
+
+        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
       end
     end
   end
@@ -267,6 +285,134 @@ RSpec.describe Inbox do
         # check if template sync does not create an audit log
         expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
       end
+    end
+
+    context 'when a provider config call setting is toggled' do
+      it 'audits only the allow-listed settings' do
+        channel.update(provider_config: channel.provider_config.merge('recording_enabled' => false))
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes['provider_config']).to eq([{}, { 'recording_enabled' => false }])
+      end
+    end
+
+    context 'when only provider config credentials change' do
+      it 'has no associated audit log created' do
+        channel.update(provider_config: channel.provider_config.merge('api_key' => 'rotated_key'))
+
+        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
+      end
+    end
+
+    context 'when provider config credentials and a call setting change together' do
+      it 'audits only the call setting' do
+        channel.update(provider_config: channel.provider_config.merge('api_key' => 'rotated_key', 'calling_enabled' => true))
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes['provider_config']).to eq([{}, { 'calling_enabled' => true }])
+      end
+    end
+
+    context 'when an allow-listed provider config key holds a non boolean value' do
+      it 'has no associated audit log created' do
+        channel.update(provider_config: channel.provider_config.merge('recording_enabled' => { 'x' => 'secret' }))
+
+        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
+      end
+    end
+
+    context 'when provider config is set for the first time' do
+      it 'audits the call settings present after the change' do
+        channel.update_column(:provider_config, nil) # rubocop:disable Rails/SkipsModelValidations
+        channel.update(provider_config: { 'calling_enabled' => true, 'api_key' => 'test_key' })
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes['provider_config']).to eq([{}, { 'calling_enabled' => true }])
+      end
+    end
+  end
+
+  describe 'audit log with email channel' do
+    let!(:channel) { create(:channel_email, :imap_email) }
+
+    context 'when channel provider config is updated' do
+      it 'does not include provider config in the audit log' do
+        channel.update(imap_address: 'imap.updated.com', provider_config: { access_token: 'super-secret-token' })
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes).to have_key('imap_address')
+        expect(audit.audited_changes).not_to have_key('provider_config')
+      end
+    end
+
+    context 'when channel passwords are updated' do
+      it 'does not include credential attributes in the audit log' do
+        channel.update(imap_login: 'updated@example.com', imap_password: 'new-imap-password', smtp_password: 'new-smtp-password')
+
+        audit = Audited::Audit.where(auditable_type: 'Inbox', action: 'update').last
+        expect(audit.audited_changes).to have_key('imap_login')
+        expect(audit.audited_changes.keys).not_to include('imap_password', 'smtp_password')
+      end
+    end
+  end
+
+  describe 'audit log with telegram channel' do
+    let!(:channel) { create(:channel_telegram) }
+
+    context 'when channel bot token is updated' do
+      it 'does not include credential attributes in the audit log' do
+        channel.update(bot_token: 'updated-bot-token')
+
+        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
+      end
+    end
+  end
+
+  describe '#closed_for_calls?' do
+    let(:account) { create(:account) }
+    let(:twilio_inbox) do
+      allow(Twilio::VoiceWebhookSetupService).to receive(:new)
+        .and_return(instance_double(Twilio::VoiceWebhookSetupService, perform: "AP#{SecureRandom.hex(8)}"))
+      create(:channel_twilio_sms, :with_voice, account: account).inbox
+    end
+    let(:whatsapp_inbox) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
+
+    def configure(calls_inbox, business_hours_calls:, working_hours:, open_now:)
+      calls_inbox.channel.provider_config = calls_inbox.channel.provider_config.merge('business_hours_calls_enabled' => business_hours_calls)
+      calls_inbox.channel.save!(validate: false)
+      calls_inbox.update!(working_hours_enabled: working_hours)
+      calls_inbox.working_hours.each { |hours| hours.update!(closed_all_day: !open_now, open_all_day: open_now) }
+    end
+
+    it 'is closed for calls only outside the hours of a Twilio inbox that applies them to calls' do
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be true
+
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: true)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
+
+      configure(twilio_inbox, business_hours_calls: false, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
+    end
+
+    # Fork (upgrade 4.20.1, #3120): a WhatsApp call is never declined for the hours, as on the fork.
+    it 'never closes a WhatsApp inbox for calls, even outside the hours it applies to calls' do
+      configure(whatsapp_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+
+      expect(whatsapp_inbox.reload.closed_for_calls?).to be false
+    end
+
+    it 'rings as usual when the inbox has business hours turned off, even if calls follow them' do
+      [twilio_inbox, whatsapp_inbox].each do |calls_inbox|
+        configure(calls_inbox, business_hours_calls: true, working_hours: false, open_now: false)
+        expect(calls_inbox.reload.closed_for_calls?).to be false
+      end
+    end
+
+    # Fork (upgrade 4.20.1, #3120): WhatsApp calls stay out of the upstream call routing and its auto-assignment hold
+    it 'holds off auto-assignment for the calls of Twilio inboxes only' do
+      expect([twilio_inbox, whatsapp_inbox].map(&:rings_for_calls?)).to eq([true, false])
+      expect(inbox.rings_for_calls?).to be false
     end
   end
 end

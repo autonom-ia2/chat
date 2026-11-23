@@ -18,6 +18,7 @@ module Enterprise::Api::V1::Accounts::ContactsController
     contacts.or(Current.account.contacts.where(company_id: company_ids)).includes(:company)
   end
 
+  # Fork (upgrade 4.19.1, #3119): `company_id` stays here, as before the merge (the upstream moved it to the OSS controller).
   def permitted_params
     params_with_company_id = super
     return params_with_company_id unless Current.account.feature_enabled?('companies')

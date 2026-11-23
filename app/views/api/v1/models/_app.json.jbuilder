@@ -2,7 +2,9 @@ json.id resource.id
 json.name resource.name
 json.description resource.description
 json.short_description resource.short_description.presence
-json.enabled resource.enabled?(@current_account)
+cleanup_only = resource.id == 'stripe' && !resource.active?(@current_account)
+json.enabled !cleanup_only && resource.enabled?(@current_account)
+json.cleanup_only cleanup_only if resource.id == 'stripe'
 
 # The connect URL carries a signed state: only for who may connect (#2027).
 if Current.account_user&.permission_granted?('integration_manage')

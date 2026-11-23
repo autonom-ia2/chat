@@ -14,6 +14,8 @@ class ArticlePolicy < ApplicationPolicy
   def create? = false
   def destroy? = false
   def reorder? = false
+  # Fork (upgrade 4.20.1, #3120): the public portal does not honor preview links (#16555 neutralized), so no token.
+  def preview_token? = false
 end
 
 ArticlePolicy.prepend_mod_with('ArticlePolicy')

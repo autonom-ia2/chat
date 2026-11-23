@@ -1,5 +1,7 @@
 class Api::V1::Profile::MfaController < Api::BaseController
+  # Fork (upgrade 4.19.1, #3119): no 403 for api_access_token here (`ensure_interactive_session`); approve in #3135.
   before_action :check_mfa_feature_available
+  before_action :check_mfa_not_enforced, only: [:destroy]
   before_action :check_mfa_enabled, only: [:destroy, :backup_codes]
   before_action :check_mfa_disabled, only: [:create, :verify]
   before_action :validate_password, only: [:destroy]
@@ -46,6 +48,14 @@ class Api::V1::Profile::MfaController < Api::BaseController
 
   def check_mfa_disabled
     render_could_not_create_error(I18n.t('errors.mfa.already_enabled')) if current_user.mfa_enabled?
+  end
+
+  def check_mfa_not_enforced
+    return unless current_user.mfa_enforced?
+
+    render json: {
+      error: I18n.t('errors.mfa.enforced_cannot_disable')
+    }, status: :forbidden
   end
 
   def validate_otp

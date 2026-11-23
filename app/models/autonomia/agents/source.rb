@@ -57,14 +57,14 @@ module Autonomia
       # guarda a porta da rede no momento do anexo). Só a resposta a um comentário daquele cuidado lê (Retriever).
       belongs_to :care, class_name: 'Crm::MetaAdsCommentCare', optional: true
 
-      enum status: { pending: 0, processing: 1, ready: 2, failed: 3 }
+      enum :status, { pending: 0, processing: 1, ready: 2, failed: 3 }
 
       # GAP (A) — DOIS grupos de materiais (plano v2 §1). `kind` decide o PIPELINE:
       #   - knowledge: "o que ela SABE" → ingest → chunk → embed → revisora (caminho ATUAL, inalterado).
       #   - media:     "o que ela ENVIA" (catálogo/tabela/imagem) → só armazenada (ready direto), SEM
       #                embed e SEM revisora de qualidade de KB.
       # Prefixo `kind_` evita colisão de métodos com o enum `status` e deixa explícito (kind_media?).
-      enum kind: { knowledge: 0, media: 1 }, _prefix: :kind
+      enum :kind, { knowledge: 0, media: 1 }, prefix: :kind
 
       # Escopos por grupo. `knowledge`/`media` (do enum) já existem; estes são aliases legíveis usados
       # pelos serializers e pelo contexto do Construtor (mídias de envio).

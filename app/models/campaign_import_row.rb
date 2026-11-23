@@ -35,7 +35,7 @@ class CampaignImportRow < ApplicationRecord
   belongs_to :campaign_import
   belongs_to :contact, optional: true
 
-  enum status: {
+  enum :status, {
     pending: 0,
     valid: 1,
     invalid: 2,
@@ -46,7 +46,7 @@ class CampaignImportRow < ApplicationRecord
     # Tirada do Público depois de salvo (#2775, CampaignJourney::AudienceMembership). A linha fica, para a pessoa poder
     # voltar à mesma linha; todo leitor de envio, contagem e amostra filtra por imported (ou valid), então ela não conta.
     removed: 7
-  }, _prefix: true
+  }, prefix: true
 
   validates :row_number, presence: true
 end
