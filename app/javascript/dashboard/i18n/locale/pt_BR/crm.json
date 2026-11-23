@@ -4894,6 +4894,8 @@
       "UNDO": "Desfazer",
       "UNDOING": "Desfazendo…",
       "UNDONE": "Desfeito. Tudo voltou a ser como era.",
+      "UNDONE_PARTIAL": "Desfiz só uma parte.",
+      "UNDONE_NONE": "Não deu para desfazer.",
       "UNTIL": "Dá para desfazer até {quando}",
       "CONFLICTS": "{count} mudança ficou como está porque alguém mexeu nela depois. | {count} mudanças ficaram como estão porque alguém mexeu nelas depois.",
       "PARTIAL": "Parte disto foi apagada sem cópia e não volta.",

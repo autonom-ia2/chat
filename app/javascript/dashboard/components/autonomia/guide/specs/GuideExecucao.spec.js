@@ -137,6 +137,46 @@ describe('GuideExecucao', () => {
     expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.DONE.CONFLICTS');
   });
 
+  // #3140: com algo que ficou, a frase de cima não pode dizer "tudo voltou".
+  const fraseDoDesfecho = wrapper =>
+    wrapper.find('p.font-medium:not(.text-xs)').text();
+  const desfeita = relatorio =>
+    montar({
+      execucao: execucao({
+        desfazivel: false,
+        desfeita_em: '2026-10-02T18:05:00Z',
+        relatorio,
+      }),
+    });
+
+  it('sem conflito, diz que tudo voltou', () => {
+    const wrapper = desfeita({ desfeitas: 2, conflitos: [] });
+
+    expect(fraseDoDesfecho(wrapper)).toBe('AUTONOMIA_GUIDE.DONE.UNDONE');
+  });
+
+  it('com conflito e algo desfeito, diz que desfez só uma parte', () => {
+    const wrapper = desfeita({
+      desfeitas: 1,
+      conflitos: [{ motivo: 'has_children', texto: 'Isto ficou.' }],
+    });
+
+    expect(fraseDoDesfecho(wrapper)).toBe(
+      'AUTONOMIA_GUIDE.DONE.UNDONE_PARTIAL'
+    );
+    expect(wrapper.text()).toContain('Isto ficou.');
+  });
+
+  it('com conflito e nada desfeito, diz que não deu para desfazer', () => {
+    const wrapper = desfeita({
+      desfeitas: 0,
+      conflitos: [{ motivo: 'has_children', texto: 'Isto ficou.' }],
+    });
+
+    expect(fraseDoDesfecho(wrapper)).toBe('AUTONOMIA_GUIDE.DONE.UNDONE_NONE');
+    expect(wrapper.text()).toContain('Isto ficou.');
+  });
+
   it('avisa quando parte não tem volta', () => {
     const wrapper = montar({ execucao: execucao({ pendencias: ['labels'] }) });
 

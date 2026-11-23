@@ -49,6 +49,11 @@ const textosDosConflitos = computed(() => [
 const conflitosSemTexto = computed(
   () => conflitos.value.filter(c => !c.texto).length
 );
+// #3140: "tudo voltou" só quando nada ficou. Com conflito, a frase de cima diz
+// se voltou uma parte ou nada; antes ela dizia "tudo voltou" em verde logo
+// acima do aviso de que algo ficou.
+const tudoVoltou = computed(() => !conflitos.value.length);
+const voltouParte = computed(() => atual.value.relatorio?.desfeitas > 0);
 const temPendencias = computed(() => (atual.value.pendencias || []).length > 0);
 const podeDesfazer = computed(
   () => atual.value.desfazivel && !desfazendo.value
@@ -116,8 +121,17 @@ const desfazer = async () => {
       {{ $t('AUTONOMIA_GUIDE.DONE.PARTIAL') }}
     </p>
     <template v-if="atual.desfeita_em">
-      <p class="mb-0 text-sm font-medium text-n-teal-11">
-        {{ $t('AUTONOMIA_GUIDE.DONE.UNDONE') }}
+      <p
+        class="mb-0 text-sm font-medium"
+        :class="tudoVoltou ? 'text-n-teal-11' : 'text-n-slate-12'"
+      >
+        <template v-if="tudoVoltou">
+          {{ $t('AUTONOMIA_GUIDE.DONE.UNDONE') }}
+        </template>
+        <template v-else-if="voltouParte">
+          {{ $t('AUTONOMIA_GUIDE.DONE.UNDONE_PARTIAL') }}
+        </template>
+        <template v-else>{{ $t('AUTONOMIA_GUIDE.DONE.UNDONE_NONE') }}</template>
       </p>
       <ul
         v-if="textosDosConflitos.length"
