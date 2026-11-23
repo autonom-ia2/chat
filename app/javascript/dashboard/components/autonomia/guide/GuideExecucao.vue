@@ -122,6 +122,7 @@ const desfazer = async () => {
     </p>
     <template v-if="atual.desfeita_em">
       <p
+        data-test="desfecho"
         class="mb-0 text-sm font-medium"
         :class="tudoVoltou ? 'text-n-teal-11' : 'text-n-slate-12'"
       >
