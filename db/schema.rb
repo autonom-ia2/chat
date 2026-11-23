@@ -4639,7 +4639,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "idx_fidelidade_movimentos_conta"
     t.index ["contact_id", "created_at"], name: "idx_fidelidade_movimentos_pessoa"
-    t.index ["programa_id", "contact_id", "origem_type", "origem_id", "tipo", "vez"], name: "idx_fidelidade_movimentos_origem", unique: true, where: "((tipo)::text = ANY (ARRAY[('compra'::character varying)::text, ('estorno'::character varying)::text]))"
+    t.index ["programa_id", "contact_id", "origem_type", "origem_id", "tipo", "vez"], name: "idx_fidelidade_movimentos_origem", unique: true, where: "((tipo)::text = ANY ((ARRAY['compra'::character varying, 'estorno'::character varying])::text[]))"
     t.index ["programa_id", "tipo", "created_at"], name: "idx_fidelidade_movimentos_programa_tipo"
     t.index ["vence_em"], name: "idx_fidelidade_movimentos_a_vencer", where: "((restante > 0) AND (vence_em IS NOT NULL))"
   end

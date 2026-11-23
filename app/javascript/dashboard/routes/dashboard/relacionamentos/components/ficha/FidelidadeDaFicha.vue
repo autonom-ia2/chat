@@ -128,30 +128,33 @@ onMounted(carregar);
 </script>
 
 <template>
-  <div v-if="dados?.programa || falhou" data-fidelidade="da-ficha">
-    <SecaoFidelidade
-      v-if="dados?.programa"
-      :programa="dados.programa"
-      :saldo="dados"
-      :agora="agora"
-      :pode-dar-premio="podeEditar"
-      :pode-usar-cupom="podeEditar"
-      @dar-premio="dialogo?.open()"
-      @usar-cupom="usarCupom"
-      @ver-tudo="verTudo"
-      @tentar="carregar"
-    />
-    <CartaoDaSecao v-else :titulo="t(`${F}.FICHA.TITULO`)">
-      <FalhaDaParte @tentar="carregar" />
-    </CartaoDaSecao>
-    <DialogoDarPremio
-      v-if="dados?.programa"
-      ref="dialogo"
-      :programa="dados.programa"
-      :tem="dados.tem"
-      :nome="nome"
-      :carregando="dando"
-      @confirmar="confirmarPremio"
-    />
+  <!-- A raiz sem v-if (regra do lint): `contents` não cria caixa, então a ficha sem cartão não ganha espaço. -->
+  <div class="contents">
+    <div v-if="dados?.programa || falhou" data-fidelidade="da-ficha">
+      <SecaoFidelidade
+        v-if="dados?.programa"
+        :programa="dados.programa"
+        :saldo="dados"
+        :agora="agora"
+        :pode-dar-premio="podeEditar"
+        :pode-usar-cupom="podeEditar"
+        @dar-premio="dialogo?.open()"
+        @usar-cupom="usarCupom"
+        @ver-tudo="verTudo"
+        @tentar="carregar"
+      />
+      <CartaoDaSecao v-else :titulo="t(`${F}.FICHA.TITULO`)">
+        <FalhaDaParte @tentar="carregar" />
+      </CartaoDaSecao>
+      <DialogoDarPremio
+        v-if="dados?.programa"
+        ref="dialogo"
+        :programa="dados.programa"
+        :tem="dados.tem"
+        :nome="nome"
+        :carregando="dando"
+        @confirmar="confirmarPremio"
+      />
+    </div>
   </div>
 </template>

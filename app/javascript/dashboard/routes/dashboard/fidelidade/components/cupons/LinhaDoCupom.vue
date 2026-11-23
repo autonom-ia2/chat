@@ -125,7 +125,7 @@ const detalhe = computed(
           class="order-1 m-0 text-xl font-bold text-n-slate-11"
           aria-hidden="true"
         >
-          —
+          <span class="block i-lucide-minus size-5" />
         </dd>
       </div>
     </dl>
