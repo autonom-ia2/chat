@@ -1,10 +1,18 @@
 <script setup>
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import LivreAprovacao from './LivreAprovacao.vue';
 import LivreRepetir from './LivreRepetir.vue';
 import LivreBloco from './LivreBloco.vue';
 import LivreConsulta from './LivreConsulta.vue';
 import LivreReuniao from './LivreReuniao.vue';
 import LivrePesquisa from './LivrePesquisa.vue';
+import LivreDarCarimbos from './LivreDarCarimbos.vue';
+import {
+  carregarProgramaDaConta,
+  esquecerProgramaDaConta,
+  programaDaConta,
+} from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
 import LivrePassoNovoPrevia from './LivrePassoNovoPrevia.vue';
 import { P, emTeste } from './passosNovos';
 
@@ -12,7 +20,10 @@ import { P, emTeste } from './passosNovos';
 // um, já pronto, e a prévia do ensaio e do histórico. O passo inteiro entra e
 // sai por `modelValue`, como no "para cada item" (G24). O aviso "em teste" só
 // num passo novo que o servidor ainda não conheça (emTeste; hoje, nenhum).
-defineProps({
+// #3100 — "Dar carimbos ou pontos" lê o cartão fidelidade da conta; sem ele,
+// "Criar cartão fidelidade" abre a tela de montar em outra aba, para a
+// automação em montagem não se perder (a próxima abertura relê o cartão).
+const props = defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
   opcoes: { type: Object, required: true },
@@ -22,6 +33,18 @@ defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 const mudar = novo => emit('update:modelValue', novo);
+
+const router = useRouter();
+const criarPrograma = () => {
+  esquecerProgramaDaConta();
+  window.open(router.resolve({ name: 'fidelidade_montar' }).href, '_blank');
+};
+const lendoPrograma = ref(props.modelValue.tipo === 'dar_carimbos');
+onMounted(async () => {
+  if (!lendoPrograma.value) return;
+  await carregarProgramaDaConta();
+  lendoPrograma.value = false;
+});
 </script>
 
 <template>
@@ -77,6 +100,18 @@ const mudar = novo => emit('update:modelValue', novo);
       :catalogo="catalogo"
       :atributos-do="atributosDo"
       @update:model-value="mudar"
+    />
+    <div
+      v-else-if="lendoPrograma"
+      aria-busy="true"
+      class="h-40 rounded-2xl bg-n-alpha-2 animate-pulse"
+    />
+    <LivreDarCarimbos
+      v-else-if="modelValue.tipo === 'dar_carimbos'"
+      :model-value="modelValue"
+      :programa="programaDaConta()"
+      @update:model-value="mudar"
+      @criar-programa="criarPrograma"
     />
 
     <LivrePassoNovoPrevia :passo="modelValue" />

@@ -60,6 +60,10 @@ import {
   comPassosNovos,
 } from '../passosNovos/passosNovos';
 import { guardarNomesDosPassosNovos } from '../passosNovos/nomesDaConta';
+import {
+  REQUER_DOS_AVISOS,
+  receitaDaFidelidade,
+} from '../passosNovos/fidelidadeNaAutomacao';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -241,7 +245,20 @@ const receitaPronta = chave => {
   const liberada = item && (item.requer || []).every(isCloudFeatureEnabled);
   return liberada ? item : null;
 };
+// #3100 — os dois avisos do cartão fidelidade (ProgramaPronto) não moram na
+// porta: chegam pelo endereço (?receita=FIDELIDADE_SALDO&unidade=carimbos) e
+// só abrem com as flags que pedem.
+const avisoDaFidelidade = chave => {
+  const aviso = receitaDaFidelidade(chave, t, route.query.unidade);
+  return aviso && REQUER_DOS_AVISOS.every(isCloudFeatureEnabled) ? aviso : null;
+};
 const usarReceita = async chave => {
+  const aviso = avisoDaFidelidade(chave);
+  if (aviso) {
+    await editor.aplicar(copiar(aviso.receita));
+    nome.value = aviso.nome;
+    return;
+  }
   const item = receitaPronta(chave);
   if (!item) return;
   await editor.aplicar(copiar(item.receita));

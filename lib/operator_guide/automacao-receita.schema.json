@@ -1002,6 +1002,18 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "quantos"],
+          "description": "Dar carimbos ou pontos de presente (#3100) ao contato do alvo, no cartão fidelidade da conta: aniversário, indicação, avaliação. A compra (o card ganho) já dá carimbos sozinha; não use este passo para a compra, senão o cliente recebe em dobro. motivo aparece no histórico da ficha. Sem cartão na conta, o salvar recusa; com o cartão pausado, pula. Completar o cartão dispara o gatilho contato.completou_cartao_fidelidade. Pede fidelidade_manage e a flag automacao_passos_novos.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "dar_carimbos" },
+            "quantos": { "type": "integer", "minimum": 1, "maximum": 100000, "description": "Quantos carimbos (ou pontos) dar." },
+            "motivo": { "type": "string", "maxLength": 60, "description": "Por quê, como aparece no histórico da ficha (\"aniversário\"). Opcional." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["id", "tipo", "quem", "pergunta", "prazo"],
           "description": "Pedir aprovação (#2931): a automação para e pede a quem cuida do card, a uma pessoa ou a um time que aprove ou recuse. O pedido chega no sino e na tela Pedidos de aprovação, com o card ao lado. Só recebe quem vê o registro; o valor de venda na pergunta só aparece para quem vê valores. Segue por aprovado, recusado (com o motivo, se a pessoa disser) ou ninguem_respondeu quando o prazo vence ou ninguém pode aprovar. Pede a flag automacao_passos_novos.",
           "properties": {

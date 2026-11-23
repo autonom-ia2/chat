@@ -49,7 +49,9 @@ class Autonomia::Automacao::Valores
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
     'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
-  }.merge(::Autonomia::Automacao::Ausencia::VALORES, ::Autonomia::Automacao::HorarioDeAtendimento::VALORES).freeze
+  }.merge(::Autonomia::Automacao::Ausencia::VALORES, ::Autonomia::Automacao::HorarioDeAtendimento::VALORES,
+          # #3100: o cartão fidelidade do contato (Fidelidade::NaAutomacao): o saldo, quantos faltam e o prêmio.
+          ::Fidelidade::NaAutomacao::VALORES).freeze
 
   # Os valores que leem outros registros além do alvo: só os que quem ligou a automação vê (ValoresDaReuniao).
   # #2710: a página de agendamento põe a reunião no card aberto do funil e, sem ele (o card já ganho), cria outro: quem

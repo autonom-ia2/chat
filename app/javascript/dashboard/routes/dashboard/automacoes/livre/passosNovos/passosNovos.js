@@ -2,12 +2,17 @@
 // editor ganha as entradas aqui, só com a flag ligada. Os seis já têm motor,
 // esquema, salvar, ensaio e histórico de verdade no servidor; o adaptadorFalso
 // guarda só os exemplos das prévias do painel ("Veja como fica").
+// #3100 — e o "Dar carimbos ou pontos" do cartão fidelidade, pela mesma porta
+// (PassoDeDarCarimbos no servidor), com os textos em FIDELIDADE.AUTOMACAO.DAR.
+
+import { darCarimbosPronto } from './fidelidadeNaAutomacao';
 
 export const FLAG = 'automacao_passos_novos';
 export const P = 'AUTOMACAO_LIVRE.PASSOS_NOVOS';
 
 // Cada passo: a chave dos textos, o grupo do "Adicionar passo", os galhos (na
 // ordem em que aparecem no Confira), o ícone e a permissão para montar.
+// `textos`: onde moram o NOME e a DICA, quando não é em PASSOS_NOVOS.
 export const PASSOS_NOVOS = {
   pedir_aprovacao: {
     chave: 'APROVACAO',
@@ -47,13 +52,28 @@ export const PASSOS_NOVOS = {
     ramos: ['nota_baixa', 'nota_media', 'nota_alta', 'nao_respondeu'],
     icone: 'i-lucide-star',
   },
+  // #3100: dar carimbos fora da compra é de quem cuida do cartão (decisão D1).
+  // Sem cartão na conta, a peça diz para criar antes (LivreDarCarimbos).
+  dar_carimbos: {
+    chave: 'DAR_CARIMBOS',
+    textos: 'FIDELIDADE.AUTOMACAO.DAR',
+    grupo: 'CONTATO',
+    ramos: [],
+    icone: 'i-lucide-stamp',
+    permissao: 'fidelidade_manage',
+  },
 };
 
 export const ehPassoNovo = passo => Boolean(PASSOS_NOVOS[passo?.tipo]);
 
 // #2932–#2934: os que rodam na hora. O ensaio e o histórico deles vêm do
 // servidor, com os galhos fixos.
-export const COM_MOTOR = ['repetir_lista', 'usar_bloco', 'consultar'];
+export const COM_MOTOR = [
+  'repetir_lista',
+  'usar_bloco',
+  'consultar',
+  'dar_carimbos',
+];
 export const temMotor = passo => COM_MOTOR.includes(passo?.tipo);
 
 // #2931, #2935 e #2936: os que perguntam e esperam a resposta. O ensaio e o
@@ -73,7 +93,8 @@ export const emTeste = passo =>
   ehPassoNovo(passo) &&
   !temMotor(passo) &&
   !PASSOS_QUE_SALVAM.includes(passo.tipo);
-export const chaveDoPasso = tipo => `${P}.${PASSOS_NOVOS[tipo].chave}`;
+export const chaveDoPasso = tipo =>
+  PASSOS_NOVOS[tipo].textos || `${P}.${PASSOS_NOVOS[tipo].chave}`;
 
 // Os galhos de cada passo, para a travessia da receita (receita.js, RAMOS).
 export const RAMOS_DOS_PASSOS_NOVOS = Object.fromEntries(
@@ -145,6 +166,7 @@ const NOVOS = {
     intervalo_dias: 30,
     espera: { valor: 2, unidade: 'dias' },
   }),
+  dar_carimbos: () => ({ quantos: 1, motivo: '' }),
 };
 
 export const novoPassoNovo = (tipo, id, t) => ({
@@ -232,6 +254,7 @@ const PRONTO = {
     faixasProntas(passo) &&
     INTERVALOS.includes(passo.intervalo_dias) &&
     prazoPronto(passo.espera),
+  dar_carimbos: darCarimbosPronto,
 };
 
 export const passoNovoPronto = passo =>

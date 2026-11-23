@@ -539,3 +539,50 @@ Fica para as próximas etapas: a matriz de funções no painel
 ligação das telas, os blocos do Guia (`porques.md`), o passo "Dar carimbos", os
 valores do "Pôr um dado", as receitas prontas e todo o cupom (endpoints, código,
 conferir, usar, relatório, passo "Mandar cupom").
+
+## 12. Painel, etapa 2 (o que mudou do desenho)
+
+Ligou as telas da onda 1 ao servidor da etapa 1, sem migration nova.
+
+- **Menu e rotas:** Crescer > Fidelidade, depois de Campanhas, sem flag
+  (`fidelidade_index` e `fidelidade_montar`). Vê o item o administrador ou quem
+  tem `fidelidade_view`/`fidelidade_manage`; montar o cartão pede
+  `fidelidade_manage`.
+- **Painel:** a FidelidadeTela mostra só o cartão (`com-cupons` falso) até a
+  etapa dos cupons. "Ver quem está perto do prêmio" abre Relacionamentos com
+  `?fidelidade=perto`; a lista lê esse valor como filtro inicial, e "Mais
+  filtros" ganha o campo Cartão fidelidade (só em Pessoas, só com cartão na
+  conta ou com o filtro já ligado). A lista da demonstração não filtra por ele.
+- **Ficha:** `FidelidadeDaFicha` (peça própria, como `SegurosDaFicha`) lê o
+  cartão da pessoa, logo depois de Compras, fora da demonstração. "Dar o
+  prêmio" fica para quem pode editar o contato (D1) e manda uma chave de
+  idempotência por toque. Marcar cupom como usado fica para a etapa dos cupons.
+- **Passo "Dar carimbos ou pontos":** entrou pela porta dos passos novos
+  (`PassosNovos::TIPOS`, executor `PassoDeDarCarimbos`, ensaio em
+  `PassosNovosNoEnsaio`), e não como `requer: 'fidelidade'`: não existe flag
+  `fidelidade` (decisão da etapa 1). O passo segue a flag
+  `automacao_passos_novos` e pede `fidelidade_manage` (no catálogo, na Receita ao
+  salvar e a cada execução: quem ligou sem a chave pausa a automação com
+  `sem_acesso`). Sem cartão, salvar recusa; com o cartão apagado ou pausado
+  depois, o passo é pulado com o motivo.
+- **Valores do "Pôr um dado":** `contato.fidelidade_saldo`,
+  `contato.fidelidade_faltam` e `contato.fidelidade_premio` (no lugar de
+  `fidelidade.*`), porque os valores da Automação moram na base do contato.
+  Sem cartão, vazios.
+- **Receitas dos avisos:** montadas no painel (`fidelidadeNaAutomacao.js`) e
+  abertas por `?receita=FIDELIDADE_SALDO|FIDELIDADE_COMPLETO&unidade=`, porque
+  as receitas prontas do servidor não aceitam dado do contato no texto. O aviso
+  de saldo espera 10 minutos depois do card ganho, para a compra já ter virado
+  carimbo (a `DarPelaCompra` roda depois, no job).
+- **Funções:** módulo `LOYALTY` no grupo Marketing da matriz (Ver e Editar),
+  área recolhida em Funções da equipe, "Fidelidade" no menu da frase. Agora são
+  26 módulos e 62 chaves.
+- **Guia e Central:** quatro blocos em `porques.md` (painel, montar, prêmio na
+  ficha, passo na automação) e o artigo 13.36 da Central.
+
+Fica para depois: o cupom inteiro (o passo "Mandar cupom" já está no painel,
+sem servidor), a regeneração dos formatos do Guia
+(`autonomia:guia:formatos`, que precisa do Rails) junto com a classificação dos
+recursos novos da etapa 1 (`fidelidade/programa`, `fidelidade/resumo`,
+`relacionamentos/fidelidade`) em `automacao-recursos.yml`: o spec de ações
+permitidas confere os dois lados, então as duas mudanças entram juntas.

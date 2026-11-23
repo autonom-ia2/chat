@@ -90,6 +90,8 @@ nativos_fora_do_editor:
   repetir_lista: peça própria dos passos novos, com a flag automacao_passos_novos (#2932)
   usar_bloco: peça própria dos passos novos, com a flag automacao_passos_novos (#2933)
   consultar: peça própria dos passos novos, com a flag automacao_passos_novos (#2934)
+  # #3100: a tela monta o "Dar carimbos ou pontos" pela peça dos passos novos (LivreDarCarimbos), com fidelidade_manage.
+  dar_carimbos: peça própria dos passos novos, com a flag automacao_passos_novos e fidelidade_manage (#3100)
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os

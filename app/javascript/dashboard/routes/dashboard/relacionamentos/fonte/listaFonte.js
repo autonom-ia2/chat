@@ -334,6 +334,8 @@ const FILTRO_NO_SERVIDOR = {
   // #3097 — os filtros de compra.
   compras: 'compras',
   totalAcima: 'total_acima',
+  // #3100 — perto do prêmio, cartão completo.
+  fidelidade: 'fidelidade',
 };
 
 const filtrosDoPedido = (filtros = {}) =>

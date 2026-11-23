@@ -149,6 +149,8 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'custom_roles_edit',
   'custom_roles_list',
   'custom_roles_new',
+  'fidelidade_index',
+  'fidelidade_montar',
   'first_steps',
   'folder_conversations',
   'funcoes_equipe_duplicate',

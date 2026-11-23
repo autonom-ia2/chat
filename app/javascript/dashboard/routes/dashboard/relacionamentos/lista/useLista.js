@@ -22,6 +22,8 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // #3062 — `ordemPadrao` pode ser a ordem de cada aba (uma função do nome dela):
 // a aba Pessoas abre na ordem que a pessoa guardou e tem ordens que a aba
 // Empresas não tem. Trocar de aba volta para a ordem da aba nova.
+// #3100 — `filtrosIniciais`: a lista já abre filtrada (o "Ver quem está perto
+// do prêmio" da Fidelidade chega com ?fidelidade=perto).
 export const useLista = ({
   fonte,
   aba,
@@ -30,13 +32,14 @@ export const useLista = ({
   ordemPadrao = ORDENS.ULTIMA_CONVERSA,
   filtrosVazios = FILTROS_VAZIOS,
   contar = contarFiltros,
+  filtrosIniciais = {},
 }) => {
   const ordemDaAba = nome =>
     typeof ordemPadrao === 'function' ? ordemPadrao(nome) : ordemPadrao;
   const grupo = ref(grupoPadrao(aba.value));
   const busca = ref('');
   const ordem = ref(ordemDaAba(aba.value));
-  const filtros = ref({ ...filtrosVazios });
+  const filtros = ref({ ...filtrosVazios, ...filtrosIniciais });
   const pagina = ref(PRIMEIRA_PAGINA);
   const itens = ref([]);
   const total = ref(0);

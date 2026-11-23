@@ -11,6 +11,10 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
+import {
+  carregarProgramaDaConta,
+  programaDaConta,
+} from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -62,6 +66,7 @@ import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
+import { fidelidadeValida } from '../lista/filtros';
 import { useMarcados } from '../lista/useMarcados';
 import {
   CAMPOS_DE_ORDEM_DAS_EMPRESAS,
@@ -203,6 +208,15 @@ const lista = useLista({
   aba,
   aoMudarConsulta: marcados.limpar,
   ordemPadrao: ordemGuardada.ordemDaAba,
+  filtrosIniciais: { fidelidade: fidelidadeValida(route.query.fidelidade) },
+});
+// #3100 — o filtro do cartão fidelidade aparece com o cartão na conta (lido
+// por quem pode ver o painel) ou quando a lista já chegou filtrada por ele.
+const comFidelidade = computed(
+  () => Boolean(programaDaConta()) || Boolean(lista.filtros.value.fidelidade)
+);
+onMounted(() => {
+  if (!demo && permissoes.veFidelidade.value) carregarProgramaDaConta();
 });
 const mudarOrdem = nova => {
   ordemGuardada.guardar(nova, aba.value);
@@ -823,6 +837,7 @@ watch(naAbaDeSeguros, estaNela => {
       :aberta="maisFiltros.aberta.value"
       :de-empresas="ehEmpresas"
       :ve-valores="faixasDeCompra.veValores.value"
+      :com-fidelidade="comFidelidade"
       :filtros="lista.filtros.value"
       :opcoes="maisFiltros.opcoes.value"
       @fechar="maisFiltros.aberta.value = false"

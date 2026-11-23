@@ -33,6 +33,7 @@ import {
   META_ADS_VIEW_PERMISSION,
   META_ADS_MANAGE_PERMISSION,
   POSTS_PERMISSIONS,
+  FIDELIDADE_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
@@ -1282,6 +1283,18 @@ const menuItems = computed(() => {
           : []),
       ]),
     },
+    // Fidelidade (#3100): depois de Campanhas, sem flag. Vê o administrador ou quem tem fidelidade_view/_manage.
+    ...(isAdministrator.value || hasAnyPermission(FIDELIDADE_PERMISSIONS)
+      ? [
+          {
+            name: 'Fidelidade',
+            label: t('FIDELIDADE.TITULO'),
+            icon: 'i-lucide-gift',
+            to: accountScopedRoute('fidelidade_index'),
+            activeOn: ['fidelidade_index', 'fidelidade_montar'],
+          },
+        ]
+      : []),
     // Central de Ajuda da plataforma (#501): a tela de leitura, aberta a todas as contas. O editor de
     // portais do Chatwoot saiu do menu: a Central é só leitura e o conteúdo vem do repositório.
     {

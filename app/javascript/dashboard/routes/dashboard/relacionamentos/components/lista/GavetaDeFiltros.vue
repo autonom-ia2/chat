@@ -8,6 +8,7 @@ import { useFocoPreso } from 'dashboard/components-next/NovaConversa/useFocoPres
 import {
   COMPRAS,
   DIAS_DAS_COMPRAS,
+  FIDELIDADE,
   FILTROS_VAZIOS,
   PERIODOS_DE_CHEGADA,
   TOTAIS_ACIMA,
@@ -27,6 +28,8 @@ const props = defineProps({
   deEmpresas: { type: Boolean, default: false },
   // #3097: sem ver valor de venda, sem o filtro do total comprado.
   veValores: { type: Boolean, default: false },
+  // #3100: com o cartão fidelidade na conta (ou o filtro já ligado), o filtro dele.
+  comFidelidade: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
   opcoes: {
     type: Object,
@@ -105,6 +108,17 @@ const totalAcima = () => ({
     })),
   ],
 });
+// #3100 — o cartão fidelidade (só em Pessoas): perto do prêmio ou completo.
+const FF = 'FIDELIDADE.FILTRO';
+const fidelidade = () => ({
+  chave: 'fidelidade',
+  rotuloCompleto: `${FF}.ROTULO`,
+  opcoes: [
+    { value: '', label: t(`${FF}.QUALQUER`) },
+    { value: FIDELIDADE.PERTO, label: t(`${FF}.PERTO`) },
+    { value: FIDELIDADE.COMPLETO, label: t(`${FF}.COMPLETO`) },
+  ],
+});
 const temOQueEscolher = campo => campo.opcoes.length > 1;
 const rotuloDo = campo =>
   t(campo.rotuloCompleto || `RELACIONAMENTOS.LISTA.FILTROS.${campo.rotulo}`);
@@ -138,6 +152,7 @@ const campos = computed(() =>
         chegouEm(),
         compras(),
         ...(props.veValores ? [totalAcima()] : []),
+        ...(props.comFidelidade ? [fidelidade()] : []),
       ]
   ).filter(temOQueEscolher)
 );

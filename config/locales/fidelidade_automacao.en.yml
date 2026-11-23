@@ -1,0 +1,14 @@
+# Loyalty card in the free automation (#3100): the "Give stamps or points" step. Own file so it does not compete for
+# en.yml with the other fronts.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        quem_ligou_sem_permissao_fidelidade: 'The person who turned on the automation can no longer manage the loyalty card. Take over and turn it back on.'
+        sem_cartao_fidelidade: 'The account has no loyalty card. Nobody received stamps.'
+        cartao_fidelidade_pausado: 'The loyalty card is paused. Nobody received stamps.'
+        fidelidade_sem_contato: 'There is no contact here to receive the stamps.'
+      receita:
+        fidelidade:
+          sem_permissao: 'Step %{passo}: to give stamps or points you need permission to change the loyalty card.'
+          sem_cartao: 'Step %{passo}: create the loyalty card before using this step.'

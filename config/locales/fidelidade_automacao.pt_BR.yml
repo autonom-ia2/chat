@@ -1,0 +1,14 @@
+# Cartão fidelidade na Automação livre (#3100): o passo "Dar carimbos ou pontos". Arquivo próprio para não disputar o
+# pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        quem_ligou_sem_permissao_fidelidade: 'Quem ligou a automação não pode mais cuidar do cartão fidelidade. Assuma e religue.'
+        sem_cartao_fidelidade: 'A conta não tem cartão fidelidade. Ninguém recebeu carimbos.'
+        cartao_fidelidade_pausado: 'O cartão fidelidade está pausado. Ninguém recebeu carimbos.'
+        fidelidade_sem_contato: 'Aqui não há contato para receber os carimbos.'
+      receita:
+        fidelidade:
+          sem_permissao: 'Passo %{passo}: para dar carimbos ou pontos você precisa poder mudar o cartão fidelidade.'
+          sem_cartao: 'Passo %{passo}: crie o cartão fidelidade antes de usar este passo.'

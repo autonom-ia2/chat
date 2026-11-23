@@ -4480,6 +4480,30 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.36",
+     "titulo": "Criar o cartão fidelidade e ver quem está perto do prêmio",
+     "para_que_serve": "Criar o cartão de carimbos ou pontos que a venda fechada enche sozinha, ver os números e quem está perto do prêmio.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "fidelidade_index",
+      "fidelidade_montar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "fidelidade_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: ver_o_painel_da_fidelidade",
+      "porques: criar_o_cartao_fidelidade"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

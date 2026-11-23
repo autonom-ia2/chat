@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (293 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (297 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1150,6 +1150,46 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra o post em Seus posts e veja O que tem nos comentários; 2. Clique em Cuidar dos comentários; 3. Escreva a mensagem que a pessoa recebe no privado (pode ter link, catálogo, cupom ou preço); 4. Em Para quem, toque numa sugestão ou escreva do seu jeito; 5. Veja como fica com os comentários do próprio post e, se quiser, mude a frase que vai no comentário; 6. Clique em Ligar; 7. Se houver comentários de antes, escolha Ler e mandar ou Agora não; 8. Para parar, use Pausar no post, ou Pausar todos na faixa de Seus posts.
 - gotchas: a IA lê cada comentário e manda só para quem for o caso do Para quem, e escreve no comentário que mandou no privado; quem não é o caso fica com você, como Não se aplica; reclamação nunca recebe a mensagem e vai para a caixa como urgente; propaganda ou golpe a IA esconde, em Escondi; cada pessoa recebe uma mensagem só por post; comentário com mais de 7 dias não recebe no privado; Ler e mandar roda uma vez por cuidado ligado e só alcança os comentários de até 7 dias; no Facebook, mandar no privado só sai na Página em que a Meta já liberou o Messenger; nas outras aparece Em breve, e a pergunta fica com você (quando a Meta liberar, entrar de novo com a Página); se a Meta recusar por falta de permissão, o comentário fica com você em Esperando você, dizendo que a Meta não deixou; pausar faz os comentários novos ficarem com você na caixa; ligar, mudar, pausar e Ler e mandar ficam no histórico de auditoria da conta, sem o texto; o texto dos comentários não é guardado, é lido na hora.
 - nav_target: `seus_posts_cuidar`
+
+### Ver o cartão fidelidade e quem está perto do prêmio
+- intent: Tem cartão fidelidade na plataforma?; Quantos clientes estão juntando carimbos?; Quem está perto de ganhar o prêmio?; Quantos prêmios eu já dei?; Como pauso o cartão fidelidade?; Onde mudo as regras do cartão?
+- onde_fica: Menu lateral > Crescer > Fidelidade
+- rota: `fidelidade_index` - `/app/accounts/:accountId/fidelidade`
+- gate: papel `administrator` ou `fidelidade_view` ou `fidelidade_manage`
+- pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Ver (só lê) ou Editar (cria, muda e pausa o cartão). A compra que dá carimbo é o card ganho num funil de Vender do CRM.
+- passos: 1. Abra Fidelidade no menu lateral; 2. Sem cartão, clique em Criar meu cartão fidelidade; 3. Com cartão, leia Seu cartão (como o cliente junta, quanto precisa para o prêmio, o prêmio e quando os carimbos vencem); 4. Leia os números: clientes no cartão, quantos estão perto do prêmio e prêmios dados nos últimos 30 dias; 5. Clique em Ver quem está perto do prêmio para abrir a lista de Relacionamentos já filtrada; 6. Para mudar as regras, clique em Mudar as regras; para parar de dar carimbos, clique em Pausar o cartão e confirme (e em Ligar o cartão de novo para voltar).
+- gotchas: cada venda fechada (card ganho) dá carimbos ou pontos sozinha, pelo valor da compra, sem troco (o que sobra não passa para a próxima); compras de antes de ligar o cartão não contam; perto do prêmio é quem falta até 20% da meta e ainda não completou; pausado, as compras não dão carimbos, mas os que o cliente tem continuam guardados; card desfeito tira os carimbos que ele deu, sem deixar o saldo negativo; o mesmo card não dá carimbo duas vezes; quem só vê (Fidelidade em Ver) lê o painel sem os botões de mudar; os cupons ainda não aparecem nesta página.
+- nav_target: `fidelidade_index`
+
+### Criar ou mudar o cartão fidelidade
+- intent: Como crio um cartão fidelidade?; Como faço o cliente ganhar carimbo a cada compra?; Carimbos ou pontos, qual escolher?; Como mudo o prêmio do cartão?; Como aviso o cliente do saldo pelo WhatsApp?; Os carimbos vencem?
+- onde_fica: Menu lateral > Crescer > Fidelidade > Criar meu cartão fidelidade (ou Mudar as regras)
+- rota: `fidelidade_montar` - `/app/accounts/:accountId/fidelidade/montar`
+- gate: papel `administrator` ou `fidelidade_manage`
+- pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Editar.
+- passos: 1. Em Fidelidade, clique em Criar meu cartão fidelidade (ou em Mudar as regras); 2. Escolha como o cliente junta: Carimbos ou Pontos; 3. Diga a cada quanto em compras ele recebe e quantos recebe; 4. Diga quantos precisa para o prêmio e escreva o prêmio; 5. Escolha até quando os carimbos valem; 6. Confira o exemplo de cartão e clique em Criar e ligar o cartão (ou Salvar as regras, ao mudar); 7. Ao criar, escolha Usar o aviso de saldo ou Usar o aviso de cartão completo para abrir a automação do aviso já montada, ou Agora não para ver o cartão.
+- gotchas: o exemplo mostra como fica o cartão de um cliente com as regras escolhidas; a conta tem um cartão só; mudar as regras vale para as próximas compras; os avisos abrem prontos na Automação, desligados: você confere e liga; o aviso de saldo espera 10 minutos depois da venda para mandar, para o saldo já ter entrado; fora da janela de 24 horas do WhatsApp oficial, a mensagem só sai com um modelo aprovado.
+- nav_target: `fidelidade_montar`
+
+### Ver o cartão fidelidade da pessoa e dar o prêmio
+- intent: Quantos carimbos este cliente tem?; Quanto falta para o prêmio dele?; Como dou o prêmio do cartão fidelidade?; Quando vencem os carimbos dele?; Por que o cliente ganhou carimbos?; Dei o prêmio errado, e agora?
+- onde_fica: Relacionamentos > aba Pessoas > clicar no nome da pessoa > cartão Fidelidade, logo abaixo de Compras
+- rota: `relacionamentos_pessoa` - `/app/accounts/:accountId/relacionamentos/pessoas/:contactId`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: a conta com o cartão fidelidade criado; poder ver contatos. Dar o prêmio é de quem pode editar o contato.
+- passos: 1. Abra a ficha da pessoa; 2. No cartão Fidelidade, veja quantos ela tem e quanto falta; 3. Veja o que vence logo e os últimos movimentos (clique em Ver tudo para o histórico inteiro); 4. Completou o cartão, a faixa verde avisa: clique em Dar o prêmio; 5. Confira o prêmio e quantos saem do cartão e clique em Dar o prêmio de novo para confirmar.
+- gotchas: o bloco só aparece quando a conta tem cartão fidelidade; dar o prêmio tira a meta do cartão, e o que passou da meta fica para o próximo cartão; fica anotado quem deu o prêmio; um clique repetido não tira a meta duas vezes; pausado, o bloco avisa que os carimbos continuam guardados; o valor da compra no histórico só aparece para quem pode ver valor de venda; dar ou tirar carimbos à mão é de quem tem Fidelidade em Editar.
+- nav_target: `relacionamentos_pessoa`
+
+### Dar carimbos de presente por uma automação (aniversário, indicação, avaliação)
+- intent: Como dou carimbos de presente no aniversário?; Como dou pontos para quem indicar um amigo?; Como aviso o cliente quando completar o cartão fidelidade?; Como mando o saldo do cartão para o cliente?; Dá para pôr os carimbos que faltam na mensagem?
+- onde_fica: Menu lateral > Automações > Nova automação > Faça > Pôr o primeiro passo (ou o "+" entre dois passos) > Dar carimbos ou pontos
+- rota: `automacoes_livre_nova` - `/app/accounts/:accountId/automacoes/livre/nova`
+- gate: feature flag `automacao_editor`; papel `administrator` ou `automation_manage`
+- pre_requisitos: a conta com o cartão fidelidade criado; poder montar automações; para o passo Dar carimbos ou pontos, ser administrador ou ter uma função com Fidelidade em Editar.
+- passos: 1. Crie uma automação nova e escolha quando ela começa (por exemplo, Quando completa o cartão fidelidade); 2. Adicione o passo Dar carimbos ou pontos; 3. Diga quantos dar e, se quiser, por quê (aparece na ficha); 4. Numa mensagem, use Pôr um dado para colocar quantos o cliente tem, quantos faltam ou o prêmio; 5. Use Ensaiar para ver com quantos o cliente ficaria; 6. Guarde e ligue.
+- gotchas: a compra já dá carimbos sozinha, este passo é para o presente; sem cartão na conta, ou com o cartão pausado, o passo é pulado e ninguém recebe; quem ligou a automação precisa continuar com Fidelidade em Editar, senão ela pausa; o ensaio não dá carimbo de verdade; se o presente completar o cartão, a automação Quando completa o cartão fidelidade também começa; os carimbos dados aqui vencem como os outros.
+- nav_target: `automacoes_livre_nova`
 
 ### Deixar a IA cuidar dos comentários de um anúncio
 - intent: Como faço a IA responder os comentários do meu anúncio?; Como mando no privado para quem comentar no anúncio pedindo o preço?; A IA pode cuidar dos comentários do anúncio no Instagram e no Facebook?; Como pauso a IA nos comentários do anúncio?; Por que não aparece Cuidar dos comentários no meu anúncio?; Por que diz que falta a caixa da Página?

@@ -10,6 +10,8 @@
 #   usaria desta conversa (`entradas`). A busca de verdade só pelo botão "Buscar agora" da tela, que chama o teste do
 #   passo (AutomacoesPassosNovosController#testar_consulta).
 #
+# - "dar carimbos ou pontos" (#3100): quantos a pessoa tem agora e com quantos ficaria. Nada é gravado.
+#
 # Os três que esperam resposta (#2931/#2935/#2936: aprovação, reunião e pesquisa) dizem o que fariam e abrem os
 # caminhos pelo EsperaNoEnsaio; o Ensaio manda os seis para `dos_seis`.
 module Autonomia::Automacao::PassosNovosNoEnsaio
@@ -32,9 +34,13 @@ module Autonomia::Automacao::PassosNovosNoEnsaio
     case passo['tipo']
     when 'repetir_lista' then seguir(passo, repetir_lista(passo))
     when 'usar_bloco' then seguir(passo, usar_bloco(passo, valores))
+    when ::Autonomia::Automacao::PassoDeDarCarimbos::TIPO then seguir(passo, dar_carimbos(passo))
     else consultar(passo, valores)
     end
   end
+
+  # #3100: quantos a pessoa tem e com quantos ficaria; nunca grava.
+  def dar_carimbos(passo) = no(passo, *::Autonomia::Automacao::PassoDeDarCarimbos.ensaiar(passo, @contato, @conta))
 
   def repetir_lista(passo)
     teto = passo['teto'].to_i.clamp(1, ::Autonomia::Automacao::RepetirLista::TETO_MAXIMO)

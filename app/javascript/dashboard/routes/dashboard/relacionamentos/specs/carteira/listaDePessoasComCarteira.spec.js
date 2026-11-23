@@ -43,6 +43,7 @@ vi.mock('../../lista/usePermissoesDaLista', async () => {
       podeTrazer: ref(false),
       podeEditar: ref(false),
       podeExportar: ref(false),
+      veFidelidade: ref(false),
     }),
   };
 });

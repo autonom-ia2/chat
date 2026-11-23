@@ -18,6 +18,15 @@ const t = (chave, valores) =>
   valores ? `${chave}(${Object.values(valores).join(',')})` : chave;
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t }) }));
+// #3100: o passo "Dar carimbos" lê o cartão fidelidade da conta antes de mostrar o formulário.
+vi.mock('dashboard/routes/dashboard/fidelidade/programaDaConta', () => {
+  const programa = { tipo: 'carimbos', meta: 10, premio: 'Uma lavagem' };
+  return {
+    programaDaConta: () => programa,
+    carregarProgramaDaConta: () => Promise.resolve(programa),
+    esquecerProgramaDaConta: () => {},
+  };
+});
 // #2932–#2934: o que vem do servidor (os públicos, os blocos, a contagem e o
 // teste da busca). Os outros três passos seguem no adaptador falso. As
 // respostas entram a cada teste: a config zera os mocks (mockReset).
@@ -181,7 +190,7 @@ const novo = tipo => novoPassoNovo(tipo, 'p9', t);
 describe('LivrePassoNovo', () => {
   it.each(Object.keys(PASSOS_NOVOS))(
     '%s: mostra o formulário e a prévia, sem o aviso de teste (os seis salvam)',
-    tipo => {
+    async tipo => {
       const tela = montar(LivrePassoNovo, {
         modelValue: novo(tipo),
         catalogo: CATALOGO,
@@ -189,6 +198,7 @@ describe('LivrePassoNovo', () => {
         atributosDo: () => [],
         etapas: ETAPAS,
       });
+      await flushPromises();
 
       expect(tela.find(`[data-passo-novo="${tipo}"]`).exists()).toBe(true);
       expect(tela.find('[data-em-teste]').exists()).toBe(false);

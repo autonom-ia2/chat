@@ -110,6 +110,7 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
         return pode.exportar;
       },
     },
+    veFidelidade: { value: false },
   }),
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
