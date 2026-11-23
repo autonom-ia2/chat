@@ -1003,6 +1003,8 @@ en:
           versao_ja_executada: 'This version of the automation already ran, so it stayed.'
           versao_mais_nova: 'Someone saved a newer version after this, so it stayed.'
           mudou_depois: 'Someone changed the automation after this, so it stayed as it is.'
+          has_children: 'Other things were linked to this later (like conversations or cards), so it stayed. To remove it, delete it on the screen.'
+          not_destroyed: 'The platform did not allow deleting this, so it stayed as it is.'
       records:
         automation_rule: 'Automation'
       fields:
