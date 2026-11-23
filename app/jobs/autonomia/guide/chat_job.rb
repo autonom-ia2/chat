@@ -72,12 +72,13 @@ class Autonomia::Guide::ChatJob < ApplicationJob
 
   # O "pronto" do pedido sai com a fila de mensagens travada (`Pedido.com_trava`): o que a pessoa escreveu durante o
   # turno não se perde. O que o Guia não respondeu vira a pergunta seguinte, que roda logo depois desta e já lê esta
-  # resposta no histórico; a tela sabe dela por `seguinte`. Trava ocupada: a resposta sai mesmo assim.
+  # resposta no histórico; a tela sabe dela por `seguinte`. Trava ocupada: encaminha mesmo assim, sem ela — uma
+  # mensagem que chegue nesse instante pode ficar sem resposta, mas as que já estão na fila não.
   def encerrar(pedido_id, pergunta, respondeu:)
     ::Autonomia::Guide::Pedido.com_trava(pedido_id) { yield encaminhar(pedido_id, pergunta, respondeu) }
   rescue ::Autonomia::Guide::Pedido::TravaOcupada
     Rails.logger.error("[autonomia][guide][chat_job] trava ocupada no fim do turno pedido=#{pedido_id}")
-    yield({})
+    yield encaminhar(pedido_id, pergunta, respondeu)
   end
 
   # Lidas e respondidas ficam juntas deste pedido (o turno delas já é `junto` dele). Lidas sem resposta (falha,
@@ -100,8 +101,10 @@ class Autonomia::Guide::ChatJob < ApplicationJob
     self.class.perform_later(seguinte, pergunta_seguinte(seguinte, adiante, pergunta))
     { 'seguinte' => seguinte, 'tardias' => adiante.pluck('id') }
   rescue StandardError => e
-    # A resposta deste pedido sai mesmo assim. As mensagens que iam adiante ficam sem resposta: o log diz quantas.
+    # A resposta deste pedido sai mesmo assim. A pergunta seguinte termina em falha: ao reabrir a conversa, a tela
+    # mostra as mensagens com o "Tentar de novo", em vez de esperar um trabalho que não existe.
     Rails.logger.error("[autonomia][guide][chat_job] pergunta seguinte pedido=#{seguinte} mensagens=#{adiante.size} #{e.class}")
+    ::Autonomia::Guide::Turno.falhar(seguinte, ::Autonomia::Guide::Registro.new.diagnostico(erro: e.class.name)) if seguinte
     {}
   end
 

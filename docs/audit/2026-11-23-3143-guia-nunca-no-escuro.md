@@ -36,6 +36,11 @@ Data: 23/11/2026. Entrega 2 da lista de valor do Guia.
 - Ficou de fora: `Redis::LockManager#unlock` apaga a trava sem conferir o dono. É lib compartilhada; o bloco do Guia
   mexe só em chaves do Redis, muito abaixo dos 10 s da trava.
 
+Segunda rodada (fechada, sem terceira): 1 bug e 4 riscos, consertados no terceiro commit — trava ocupada no fim do
+turno encaminha a fila mesmo assim; trava ocupada ou Redis fora na chegada da mensagem responde 503 e o turno termina
+em falha (nada de segundo Guia); fila e validade gravadas juntas; pergunta seguinte que não enfileira termina em
+falha; falha de rede numa consulta não esvazia a fila da tela.
+
 ## Limites conhecidos
 
 - Anexo mandado no meio do trabalho espera o Guia terminar (os arquivos são lidos no começo do turno).

@@ -62,8 +62,11 @@ class Autonomia::Guide::Pedido
         next false unless pedido['account_id'] == account.id && pedido['user_id'] == user.id
 
         abrir(account: account, user: user, id: nova)
-        Redis::Alfred.lpush(chave_das_juntas(id), { 'id' => nova, 'texto' => mensagem.to_s }.to_json)
-        Redis::Alfred.expire(chave_das_juntas(id), VALIDADE.to_i)
+        # Juntos: a mensagem não pode entrar na fila e a validade falhar depois, com a tela achando que deu erro.
+        Redis::Alfred.pipelined do |redis|
+          redis.lpush(chave_das_juntas(id), { 'id' => nova, 'texto' => mensagem.to_s }.to_json)
+          redis.expire(chave_das_juntas(id), VALIDADE.to_i)
+        end
         yield if block_given?
         true
       end

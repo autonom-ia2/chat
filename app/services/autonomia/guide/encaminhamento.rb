@@ -7,6 +7,10 @@
 # Se não havia trabalho em curso (ou ele já terminou, ou é de outra conversa), a pergunta abre o próprio pedido e
 # vai para o `ChatJob`.
 module Autonomia::Guide::Encaminhamento
+  # A trava do pedido em curso não abriu, ou o Redis falhou: não dá para saber se a mensagem entraria no trabalho.
+  # Abrir outro pedido poria dois Guias na mesma conversa; a tela diz que não deu e oferece "Tentar de novo".
+  class Ocupado < StandardError; end
+
   module_function
 
   # A conversa é de quem perguntou, na conta dele (`Conversa.de`): é dela que sai o dono do pedido.
@@ -19,8 +23,7 @@ module Autonomia::Guide::Encaminhamento
     nil
   end
 
-  # Só o pedido da MESMA conversa: a mensagem de uma conversa não pode ser respondida dentro de outra. Trava
-  # ocupada ou Redis fora: a mensagem segue como pergunta comum em vez de dar erro na tela.
+  # Só o pedido da MESMA conversa: a mensagem de uma conversa não pode ser respondida dentro de outra.
   def junto?(pedido, conversa, junto_de, mensagem)
     return false if junto_de.blank?
     return false unless ::Autonomia::Guide::Turno.exists?(pedido_id: junto_de, conversation_id: conversa.id)
@@ -31,6 +34,6 @@ module Autonomia::Guide::Encaminhamento
     end
   rescue ::Autonomia::Guide::Pedido::TravaOcupada, Redis::BaseError => e
     Rails.logger.warn("[autonomia][guide][encaminhamento] junto_de=#{junto_de} #{e.class}")
-    false
+    raise Ocupado, e.class.name
   end
 end

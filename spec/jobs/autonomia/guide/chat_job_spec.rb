@@ -143,6 +143,16 @@ RSpec.describe Autonomia::Guide::ChatJob do
       expect(Autonomia::Guide::Turno.find_by(pedido_id: pedido)).to have_attributes(status: 'done', resposta: 'Olá.')
     end
 
+    it 'trava ocupada no fim do turno: as mensagens da fila seguem adiante mesmo assim' do
+      nova = SecureRandom.uuid
+      Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: 'e mais uma')
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))
+      allow(Autonomia::Guide::Pedido).to receive(:com_trava).and_raise(Autonomia::Guide::Pedido::TravaOcupada)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(nova, anything)
+    end
+
     it 'sem mensagem nova, o pedido termina sem pergunta seguinte' do
       allow(Autonomia::Guide::Chat).to receive(:new)
         .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))

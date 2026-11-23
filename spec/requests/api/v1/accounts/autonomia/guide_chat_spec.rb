@@ -161,12 +161,14 @@ RSpec.describe 'Guia da Plataforma — pergunta em segundo plano', type: :reques
       expect { junto(admin, pedido, nil) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
     end
 
-    it 'trava ocupada: a mensagem segue como pergunta comum, sem erro' do
+    # Revisão do #3144: trava ocupada não pode pôr um segundo Guia na conversa. A tela diz que não deu.
+    it 'trava ocupada: não abre outro Guia e o turno termina em falha', :aggregate_failures do
       pedido, conversa_id = primeira_pergunta
       allow(Autonomia::Guide::Pedido).to receive(:acrescentar).and_raise(Autonomia::Guide::Pedido::TravaOcupada)
 
-      expect { junto(admin, pedido, conversa_id) }.to have_enqueued_job(Autonomia::Guide::ChatJob)
-      expect(response).to have_http_status(:accepted)
+      expect { junto(admin, pedido, conversa_id) }.not_to have_enqueued_job(Autonomia::Guide::ChatJob)
+      expect(response).to have_http_status(:service_unavailable)
+      expect(Autonomia::Guide::Turno.where(status: 'failed').pluck(:pergunta)).to eq(['pensei melhor, pare'])
     end
   end
 end

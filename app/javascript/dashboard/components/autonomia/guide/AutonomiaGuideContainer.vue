@@ -613,7 +613,6 @@ const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
     etapa.value = null;
     if (!aindaInteressa(requestAccount, requestId)) return;
     store.fecharPendente(chave);
-    esquecerFila();
     avisarFalha({ repetir: pergunta });
   } finally {
     if (requestId === requestSequence) isSending.value = false;
