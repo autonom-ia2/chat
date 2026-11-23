@@ -6,6 +6,7 @@ import { provideSidebarContext, useSidebarResize } from './provider';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
+import { useCommandBar } from '@chatwoot/jumpbar';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
@@ -92,6 +93,7 @@ const searchShortcut = useKbd([`$mod`, 'k']);
 // A página /search continua existindo (link antigo, Guia 08.12), só sem entrada aqui.
 const listaNova = useListaNova();
 useAtalhoDaBusca();
+const commandBar = useCommandBar();
 const { t } = useI18n();
 
 const isACustomBrandedInstance = useMapGetter(
@@ -108,6 +110,10 @@ const currentUserId = useMapGetter('getCurrentUserID');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
+
+// Fork (upgrade 4.20.1, #3120): the new command bar (jumpbar, #16503) stays off, so its search
+// button never shows; ⌘K focuses the conversation list search (#2211).
+const hasCommandBarV2 = computed(() => false);
 
 const hasAdvancedAssignment = computed(() => {
   return isFeatureEnabledonAccount.value(
@@ -349,10 +355,19 @@ const forkMenuOn = computed(() =>
   )
 );
 
+// Fork (upgrade 4.20.1, #3120): Data stays behind the data_import flag; upstream (#16181) shows it to
+// every account, and its migration that turns the flag on everywhere is a no-op here.
 const hasDataImport = computed(() => {
   return isFeatureEnabledonAccount.value(
     accountId.value,
     FEATURE_FLAGS.DATA_IMPORT
+  );
+});
+
+const hasCaptainMcpServers = computed(() => {
+  return isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.CAPTAIN_MCP_SERVERS
   );
 });
 
@@ -851,8 +866,16 @@ const menuItems = computed(() => {
               },
               {
                 name: 'Tools',
-                label: t('SIDEBAR.CAPTAIN_TOOLS'),
-                activeOn: ['captain_tools_index', 'captain_tools_explore'],
+                label: hasCaptainMcpServers.value
+                  ? t('SIDEBAR.CAPTAIN_TOOLS_AND_MCP')
+                  : t('SIDEBAR.CAPTAIN_TOOLS'),
+                activeOn: [
+                  'captain_tools_index',
+                  'captain_tools_installed',
+                  'captain_tools_custom',
+                  'captain_tools_explore',
+                  'captain_mcp_servers_index',
+                ],
                 to: accountScopedRoute('captain_assistants_index', {
                   navigationPath: 'captain_tools_index',
                 }),
@@ -1564,16 +1587,40 @@ const menuItems = computed(() => {
         pessoa achada); a linha da busca e do lápis sai do menu. -->
       <div
         v-if="!listaNova"
-        class="flex gap-2"
+        class="flex gap-2 min-w-0"
         :class="isEffectivelyCollapsed ? 'flex-col items-center' : 'px-2'"
       >
+        <div
+          v-if="hasCommandBarV2 && !isEffectivelyCollapsed"
+          class="flex items-center w-full min-w-0 h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
+        >
+          <RouterLink
+            :to="{ name: 'search' }"
+            class="flex flex-grow gap-2 items-center px-2 py-1 min-w-0 h-7"
+          >
+            <span
+              class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10"
+            />
+            <span class="flex-grow min-w-0 truncate text-start text-n-slate-10">
+              {{ t('COMBOBOX.SEARCH_PLACEHOLDER') }}
+            </span>
+          </RouterLink>
+          <button
+            type="button"
+            class="flex-shrink-0 px-2 h-full text-xs tracking-wide whitespace-nowrap rounded-e-lg text-n-slate-10 hover:text-n-slate-12 hover:bg-n-alpha-2 dark:hover:bg-n-slate-9/30"
+            :title="t('COMMAND_BAR.SEARCH_PLACEHOLDER')"
+            @click="commandBar.open()"
+          >
+            {{ searchShortcut }}
+          </button>
+        </div>
         <RouterLink
-          v-if="!isEffectivelyCollapsed"
+          v-else-if="!isEffectivelyCollapsed"
           :to="{ name: 'search' }"
-          class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
+          class="flex gap-2 items-center px-2 py-1 w-full min-w-0 h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
         >
           <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
-          <span class="flex-grow text-start text-n-slate-10">
+          <span class="flex-grow min-w-0 truncate text-start text-n-slate-10">
             {{ t('COMBOBOX.SEARCH_PLACEHOLDER') }}
           </span>
           <span

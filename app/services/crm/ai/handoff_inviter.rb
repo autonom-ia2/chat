@@ -2,7 +2,7 @@
 # e SEM calar o bot. Adiciona o agente como participante e dispara uma notificação
 # interna (push + email + sininho) via NotificationBuilder. O bot continua dono e
 # atendendo o cliente até o humano se auto-atribuir — aí a atribuição cala o bot
-# (reset_agent_bot_when_assignee_present). Sem Message no thread → sem vazamento
+# (clear_invalid_ai_assignee). Sem Message no thread → sem vazamento
 # p/ webhook n8n (message_created não dispara).
 class Crm::Ai::HandoffInviter
   # `idempotente`: o convite que a pessoa ainda não leu vale como feito; não cria outra notificação (o motor de entrega

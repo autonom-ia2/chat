@@ -64,7 +64,7 @@ class WhatsappApiCampaignRecipient < ApplicationRecord
   belongs_to :conversation, optional: true
   belongs_to :message, optional: true
 
-  enum status: {
+  enum :status, {
     pending: 0,
     sending: 1,
     sent: 2,

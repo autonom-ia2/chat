@@ -367,4 +367,52 @@ RSpec.describe Inbox do
       end
     end
   end
+
+  describe '#closed_for_calls?' do
+    let(:account) { create(:account) }
+    let(:twilio_inbox) do
+      allow(Twilio::VoiceWebhookSetupService).to receive(:new)
+        .and_return(instance_double(Twilio::VoiceWebhookSetupService, perform: "AP#{SecureRandom.hex(8)}"))
+      create(:channel_twilio_sms, :with_voice, account: account).inbox
+    end
+    let(:whatsapp_inbox) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
+
+    def configure(calls_inbox, business_hours_calls:, working_hours:, open_now:)
+      calls_inbox.channel.provider_config = calls_inbox.channel.provider_config.merge('business_hours_calls_enabled' => business_hours_calls)
+      calls_inbox.channel.save!(validate: false)
+      calls_inbox.update!(working_hours_enabled: working_hours)
+      calls_inbox.working_hours.each { |hours| hours.update!(closed_all_day: !open_now, open_all_day: open_now) }
+    end
+
+    it 'is closed for calls only outside the hours of a Twilio inbox that applies them to calls' do
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be true
+
+      configure(twilio_inbox, business_hours_calls: true, working_hours: true, open_now: true)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
+
+      configure(twilio_inbox, business_hours_calls: false, working_hours: true, open_now: false)
+      expect(twilio_inbox.reload.closed_for_calls?).to be false
+    end
+
+    # Fork (upgrade 4.20.1, #3120): a WhatsApp call is never declined for the hours, as on the fork.
+    it 'never closes a WhatsApp inbox for calls, even outside the hours it applies to calls' do
+      configure(whatsapp_inbox, business_hours_calls: true, working_hours: true, open_now: false)
+
+      expect(whatsapp_inbox.reload.closed_for_calls?).to be false
+    end
+
+    it 'rings as usual when the inbox has business hours turned off, even if calls follow them' do
+      [twilio_inbox, whatsapp_inbox].each do |calls_inbox|
+        configure(calls_inbox, business_hours_calls: true, working_hours: false, open_now: false)
+        expect(calls_inbox.reload.closed_for_calls?).to be false
+      end
+    end
+
+    # Fork (upgrade 4.20.1, #3120): WhatsApp calls stay out of the upstream call routing and its auto-assignment hold
+    it 'holds off auto-assignment for the calls of Twilio inboxes only' do
+      expect([twilio_inbox, whatsapp_inbox].map(&:rings_for_calls?)).to eq([true, false])
+      expect(inbox.rings_for_calls?).to be false
+    end
+  end
 end

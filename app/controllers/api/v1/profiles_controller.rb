@@ -9,11 +9,9 @@ class Api::V1::ProfilesController < Api::BaseController
   def show; end
 
   def update
-    if password_params[:password].present?
-      render_could_not_create_error('Invalid current password') and return unless @user.valid_password?(password_params[:current_password])
+    return render_could_not_create_error('Invalid current password') unless current_password_verified?
 
-      @user.update!(password_params.except(:current_password))
-    end
+    @user.update!(password_params.except(:current_password)) if password_params[:password].present?
 
     @user.assign_attributes(profile_params)
     @user.custom_attributes.merge!(custom_attributes_params)
@@ -39,6 +37,15 @@ class Api::V1::ProfilesController < Api::BaseController
     @user.account_users.find_by!(account_id: ausencia_params[:account_id]).update!(ausente_ate: ausencia_params.fetch(:ausente_ate))
   end
 
+  def work_preferences
+    preferences = work_preferences_params.except(:account_id)
+    unless preferences.values.all? { |value| [true, false].include?(value) }
+      return render_could_not_create_error(I18n.t('errors.account_user.invalid_work_preference'))
+    end
+
+    @user.account_users.find_by!(account_id: work_preferences_params[:account_id]).update!(preferences)
+  end
+
   def set_active_account
     @user.account_users.find_by(account_id: profile_params[:account_id]).update(active_at: Time.now.utc)
     head :ok
@@ -60,6 +67,14 @@ class Api::V1::ProfilesController < Api::BaseController
     @user = current_user
   end
 
+  # Fork (upgrade 4.20.1, #3120): upstream #16574 also asks for the current password to change the email.
+  # Neutralized (flow change, Issue #3124): only a password change asks for it, as before.
+  def current_password_verified?
+    return true if password_params[:password].blank?
+
+    @user.valid_password?(password_params[:current_password])
+  end
+
   def availability_params
     params.require(:profile).permit(:account_id, :availability)
   end
@@ -70,6 +85,10 @@ class Api::V1::ProfilesController < Api::BaseController
 
   def auto_offline_params
     params.require(:profile).permit(:account_id, :auto_offline)
+  end
+
+  def work_preferences_params
+    params.require(:profile).permit(:account_id, :accepts_conversations, :accepts_calls)
   end
 
   def profile_params

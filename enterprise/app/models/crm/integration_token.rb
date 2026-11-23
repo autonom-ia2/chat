@@ -61,7 +61,7 @@ class Crm::IntegrationToken < ApplicationRecord
   belongs_to :account_user, optional: true
   belongs_to :created_by, class_name: 'User', optional: true
 
-  enum status: { active: 0, revoked: 1 }
+  enum :status, { active: 0, revoked: 1 }
 
   # Virtual: the crm_* scopes chosen at creation time. Persisted onto the managed
   # CustomRole, not on this row.

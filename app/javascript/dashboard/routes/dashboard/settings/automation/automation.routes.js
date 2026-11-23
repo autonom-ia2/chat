@@ -21,6 +21,7 @@ export default {
           name: 'automation_list',
           component: Automation,
           meta: {
+            reuseOnQueryChange: true,
             featureFlag: FEATURE_FLAGS.AUTOMATIONS,
             permissions: [
               'administrator',

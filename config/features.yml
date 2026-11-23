@@ -1506,3 +1506,15 @@
   enabled: false
   premium: true
   column: feature_flags_ext_2
+# Upgrade Chatwoot 4.20.1 (#3120): as 2 flags novas do upstream também vêm na feature_flags_ext_1 (posições 16–17, do
+# fork). Aqui ficam na feature_flags_ext_2, posições 59–60, logo depois das da 4.19.1. Sobram 3 posições na ext_2; a
+# próxima flag do fork que não couber vai para a feature_flags_ext_3 (já criada no #3119).
+- name: shopify_custom_apps
+  display_name: Shopify Custom Apps
+  enabled: false
+  column: feature_flags_ext_2
+- name: captain_mcp_servers
+  display_name: Captain MCP servers
+  enabled: false
+  premium: true
+  column: feature_flags_ext_2

@@ -100,15 +100,15 @@ module Autonomia
                                  foreign_key: :autonomia_agent_id, inverse_of: :agent,
                                  dependent: :delete_all
 
-      enum status: { draft: 0, active: 1, paused: 2 }
-      enum mode:   { guided: 0, manual: 1 }
+      enum :status, { draft: 0, active: 1, paused: 2 }
+      enum :mode, { guided: 0, manual: 1 }
       # Modo vazio (`""`/`null` na API) virava erro do banco, e a mensagem do Postgres levava a linha inteira (com a
       # instrução e o andaime ocultos) ao log e ao Sentry. Validado aqui, vira 422 sem a linha (revisão adversarial
       # do #1492).
       validates :mode, presence: true
       # V2.1 — onde o agente atua. external (atende clientes, comportamento atual) /
       # internal (copiloto da equipe, nunca fala com cliente) / both. Default external.
-      enum actuation: { external: 0, internal: 1, both: 2 }, _prefix: :actuation
+      enum :actuation, { external: 0, internal: 1, both: 2 }, prefix: :actuation
 
       # `insurance_quote` é o Agente de Cotação (PRD §18-19), e não nasce pelo construtor
       # conversacional: a instrução dele é mantida pela Autonom.ia e a corretora não a edita — ela

@@ -34,9 +34,9 @@ class EmailCampaignRecipient < ApplicationRecord
 
   has_many :email_events, foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
 
-  enum status: { pending: 0, sent: 1, failed: 2, suppressed: 3,
-                 delivered: 4, opened: 5, clicked: 6, bounced: 7, complained: 8,
-                 unsubscribed: 9 }
+  enum :status, { pending: 0, sent: 1, failed: 2, suppressed: 3,
+                  delivered: 4, opened: 5, clicked: 6, bounced: 7, complained: 8,
+                  unsubscribed: 9 }
 
   PREFLIGHT_STATUSES = %w[unchecked valid invalid review unknown].freeze
   validates :preflight_status, inclusion: { in: PREFLIGHT_STATUSES }

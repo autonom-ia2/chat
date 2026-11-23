@@ -45,6 +45,7 @@ shared_examples_for 'auto_assignment_handler' do
       expect(conversation.reload.assignee).to be_nil
     end
 
+    # Fork (upgrade 4.20.1, #3120): #16584 refused; the robot stays on the open conversation (#1377).
     it 'keeps AgentBot ownership when the conversation opens' do
       agent_bot = create(:agent_bot, account: account)
       conversation = create(:conversation, account: account, inbox: inbox, status: 'pending', ai_assignee: agent_bot)
@@ -52,6 +53,15 @@ shared_examples_for 'auto_assignment_handler' do
       conversation.update!(status: 'open')
 
       expect(conversation.reload.assigned_entity).to eq(agent_bot)
+    end
+
+    it 'keeps AgentBot ownership when updating a non-open conversation' do
+      agent_bot = create(:agent_bot, account: account)
+      conversation = create(:conversation, account: account, inbox: inbox, status: 'pending', ai_assignee: agent_bot)
+
+      conversation.update!(status: :resolved, priority: :high)
+
+      expect(conversation.reload).to have_attributes(status: 'resolved', ai_assignee: agent_bot, assignee: nil)
     end
 
     it 'assigns an agent when bot handoff clears the agent bot in the same save' do

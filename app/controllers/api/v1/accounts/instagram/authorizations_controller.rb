@@ -6,6 +6,7 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
 
   rescue_from Instagram::Testers::Error, with: :render_tester_error
 
+  # Fork (upgrade 4.20.1, #3120): no Unified Login branch (#16645). New and reconnected inboxes use the fork login (#2406).
   def create
     if browser_assisted_authorization?
       render json: Instagram::Testers::BrowserAuthorization.new.prepare(

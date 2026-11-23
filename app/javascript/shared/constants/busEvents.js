@@ -40,4 +40,5 @@ export const BUS_EVENTS = {
   // Filtros pelo link (#1883): a releitura voltou a lista longa para a primeira página; a rolagem vai ao topo.
   LISTA_DO_FILTRO_DO_LINK_NO_TOPO: 'LISTA_DO_FILTRO_DO_LINK_NO_TOPO',
   CAPTAIN_PLAYGROUND_RESPONSE: 'CAPTAIN_PLAYGROUND_RESPONSE',
+  ASK_COPILOT: 'ASK_COPILOT',
 };

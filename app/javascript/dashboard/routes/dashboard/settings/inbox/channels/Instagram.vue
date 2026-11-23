@@ -18,6 +18,7 @@ const assistedOnboarding = computed(() =>
   isCloudFeatureEnabled(FEATURE_FLAGS.INSTAGRAM_ASSISTED_ONBOARDING)
 );
 
+// Fork (upgrade 4.20.1, #3120): no AccountPicker/connection_token here (Unified Login, #16645).
 const hasError = ref(false);
 const isInboxLimitError = ref(false);
 const errorStateMessage = ref('');

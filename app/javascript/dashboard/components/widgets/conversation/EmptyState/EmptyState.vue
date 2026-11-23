@@ -6,12 +6,14 @@ import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 import EmptyStateMessage from './EmptyStateMessage.vue';
 import TelaInicial from 'dashboard/components-next/tela-inicial/TelaInicial.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import CopilotEmptyStatePrompts from 'dashboard/components-next/copilot/CopilotEmptyStatePrompts.vue';
 
 export default {
   components: {
     FirstSteps,
     EmptyStateMessage,
     TelaInicial,
+    CopilotEmptyStatePrompts,
   },
   props: {
     isOnExpandedLayout: {
@@ -109,6 +111,7 @@ export default {
         v-else-if="allConversations.length && !currentChat.id"
         :message="conversationMissingMessage"
       />
+      <CopilotEmptyStatePrompts />
     </div>
   </div>
 </template>

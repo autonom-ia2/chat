@@ -67,8 +67,8 @@ class Whatsapp::IncomingCallService
 
     return accept_outbound_call(call, payload) if call.outgoing?
 
-    Rails.logger.info "[WHATSAPP CALL] Duplicate inbound connect for #{payload[:id]}; ignoring"
-    Voice::InboundCallBuilder.queue_ring(call)
+    Rails.logger.info "[WHATSAPP CALL] Duplicate inbound connect for #{payload[:id]}; requeueing its ring"
+    Voice::InboundCallBuilder.queue_ring_jobs(call)
   end
 
   def inbound_offer?(payload)
@@ -216,6 +216,8 @@ class Whatsapp::IncomingCallService
   # Ring the assignee if any, else online inbox agents, else fall back to the
   # inbox's own agents and account admins. Never the whole-account stream, which
   # would ring online agents from unrelated inboxes.
+  # Fork (upgrade 4.20.1, #3120): kept from the fork. The upstream routed ring (#16637: Voice::RingRecipients, ring steps,
+  # Whatsapp::IncomingCallBroadcast) is left to Twilio calls; see Inbox#rings_for_calls?
   def broadcast_incoming(call, sdp_offer)
     contact = call.contact
     token = call.conversation.assignee&.pubsub_token
@@ -239,6 +241,7 @@ class Whatsapp::IncomingCallService
     User.where(id: user_ids).pluck(:pubsub_token).compact
   end
 
+  # Acesso por funil (#1148): call events go only to who can see the conversation, not the whole account stream.
   def broadcast(call, event, streams: Crm::Access::CallStreams.for(call.conversation), **extra)
     payload = { event: event, data: base_payload(call).merge(extra) }
     streams.each { |s| ActionCable.server.broadcast(s, payload) }

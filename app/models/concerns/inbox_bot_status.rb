@@ -20,6 +20,6 @@ module InboxBotStatus
   private
 
   def dialogflow_active?
-    hooks.exists?(app_id: %w[dialogflow], status: 'enabled')
+    hooks.exists?(account_id: account_id, app_id: %w[dialogflow], status: 'enabled')
   end
 end

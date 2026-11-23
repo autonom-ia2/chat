@@ -67,6 +67,12 @@ RSpec.describe Channel::Instagram do
     expect(channel.name).to eq('Instagram')
   end
 
+  it 'keeps the existing length limit for Instagram Login tokens' do
+    channel = build(:channel_instagram, account: create(:account), access_token: 'a' * 256)
+    expect(channel).not_to be_valid
+    expect(channel.errors[:access_token]).to be_present
+  end
+
   describe 'concerns' do
     it_behaves_like 'reauthorizable'
 

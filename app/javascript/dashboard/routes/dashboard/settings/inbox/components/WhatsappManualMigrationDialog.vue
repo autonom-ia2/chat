@@ -33,6 +33,7 @@ const buildForm = () => ({
   phoneNumberId: props.inbox.provider_config?.phone_number_id || '',
   displayPhoneNumber: props.inbox.phone_number || '',
   accessToken: '',
+  appSecret: '',
 });
 
 const form = ref(buildForm());
@@ -96,6 +97,12 @@ const copy = computed(() => ({
   ),
   accessTokenPlaceholder: t(
     `INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_MIGRATION.DIALOG.ACCESS_TOKEN_PLACEHOLDER`
+  ),
+  appSecret: t(
+    `INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_MIGRATION.DIALOG.APP_SECRET`
+  ),
+  appSecretPlaceholder: t(
+    `INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_MIGRATION.DIALOG.APP_SECRET_PLACEHOLDER`
   ),
   tokenHelpPrefix: t(
     `INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_MANUAL_MIGRATION.DIALOG.TOKEN_HELP_PREFIX`
@@ -182,6 +189,7 @@ const guideUrl = WHATSAPP_MANUAL_MIGRATION_GUIDE_URL;
 const hasBusinessDetails = computed(
   () => form.value.wabaId.trim() && form.value.phoneNumberId.trim()
 );
+// Fork (upgrade 4.20.1, #3120): the app secret (#16548) is optional; the fork never required it to move to manual setup.
 const hasAccessToken = computed(() => form.value.accessToken.trim());
 const canContinue = computed(() => {
   if (currentStep.value === 1) return hasBusinessDetails.value;
@@ -216,6 +224,7 @@ const reconnect = () => {
     wabaId: form.value.wabaId.trim(),
     phoneNumberId: form.value.phoneNumberId.trim(),
     accessToken: form.value.accessToken.trim(),
+    appSecret: form.value.appSecret.trim(),
   });
 };
 
@@ -410,6 +419,13 @@ defineExpose({ open, close });
               auto-height
               min-height="6rem"
               max-height="12rem"
+            />
+            <Input
+              v-model="form.appSecret"
+              type="password"
+              autocomplete="off"
+              :label="copy.appSecret"
+              :placeholder="copy.appSecretPlaceholder"
             />
             <div
               class="flex gap-3 p-3 border rounded-xl bg-n-blue-3 border-n-blue-4 text-n-blue-11"

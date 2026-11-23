@@ -814,7 +814,8 @@
   "captain/custom_tools": {
     "controller": "api/v1/accounts/captain/custom_tools#index",
     "parametros": [
-      "assistant_id"
+      "assistant_id",
+      "source"
     ]
   },
   "captain/custom_tools/:id": {

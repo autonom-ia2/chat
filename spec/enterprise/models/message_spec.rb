@@ -134,6 +134,34 @@ RSpec.describe Message do
     end
   end
 
+  describe 'reopening Captain-owned conversations' do
+    let(:account) { create(:account, limits: { 'captain_responses' => 10 }) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:assistant) { create(:captain_assistant, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, status: :resolved) }
+
+    before do
+      create(:captain_inbox, inbox: inbox, captain_assistant: assistant)
+      conversation.update!(ai_assignee: assistant)
+    end
+
+    it 'returns a resolved conversation to Captain when the feature is enabled and credits are available' do
+      account.enable_features!('captain_integration')
+
+      create(:message, conversation: conversation, message_type: :incoming)
+
+      expect(conversation.reload).to have_attributes(status: 'pending', ai_assignee: assistant)
+    end
+
+    # Fork (upgrade 4.20.1, #3120): upstream #16391 also cleared Captain when a contact reply reopened the conversation
+    # as open (feature off, credits exhausted, snoozed). The fork refuses it, like #16584: only a human assignee clears
+    # the bot (#1377). Those examples were dropped; see spec/models/conversation_robo_ao_reabrir_spec.rb.
+  end
+
+  # Fork (upgrade 4.20.1, #3120): the upstream example "preserves AgentBot ownership when a resolved conversation
+  # reopens" expected Pending for a webhook bot. In the fork a webhook bot inbox reopens as Open and keeps the bot, which
+  # spec/models/message_spec.rb locks ("reopens as open and keeps the AI assignee"); non-webhook bots still go Pending.
+
   describe 'translation flag' do
     let(:conversation) { create(:conversation, additional_attributes: { 'conversation_language' => 'fr' }) }
     let(:agent) { create(:user, account: conversation.account) }
@@ -150,6 +178,16 @@ RSpec.describe Message do
                                sender: agent, content: 'Hello')
 
       expect([template, reply].map { |message| message.content_attributes['translation_pending'] }).to eq([true, true])
+    end
+
+    it 'marks fixed texts that a bot flags for the contact language' do
+      assistant = create(:captain_assistant, account: conversation.account)
+      fixed_text = create(:message, account: conversation.account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
+                                    sender: assistant, content: 'Hello', content_attributes: { 'translate_for_contact' => true })
+      reply = create(:message, account: conversation.account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
+                               sender: assistant, content: 'Hello')
+
+      expect([fixed_text, reply].map { |message| message.content_attributes.key?('translation_pending') }).to eq([true, false])
     end
 
     it 'leaves contact messages, private notes, bot replies, activity and forwarded replies alone' do
@@ -173,6 +211,16 @@ RSpec.describe Message do
                                sender: agent, content: 'Hello')
 
       expect(reply.content_attributes).not_to have_key('translation_pending')
+    end
+
+    it 'does nothing while auto translate is off for the conversation' do
+      conversation.update!(auto_translate_disabled: true)
+      template = create(:message, account: conversation.account, inbox: conversation.inbox, conversation: conversation, message_type: :template,
+                                  content: 'Hello')
+      reply = create(:message, account: conversation.account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
+                               sender: agent, content: 'Hello')
+
+      expect([template, reply].map { |message| message.content_attributes.key?('translation_pending') }).to eq([false, false])
     end
   end
 end

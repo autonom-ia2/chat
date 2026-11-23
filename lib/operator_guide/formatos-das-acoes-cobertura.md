@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 764 |
 | Sem corpo | 212 |
 | Com corpo | 552 |
-| Com corpo e formato completo | 464 (84,1%) |
-| Com corpo e formato incompleto | 88 |
+| Com corpo e formato completo | 465 (84,2%) |
+| Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 23 de 238 |
-| Leituras cruas tipadas | 230 de 324 |
+| Campos aninhados com vocabulário | 23 de 239 |
+| Leituras cruas tipadas | 235 de 328 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 74 |
+| leitura crua sem tipo | 73 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -69,8 +69,8 @@ Uma ação pode ter mais de um motivo.
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
 - `POST captain/tasks/rewrite` — leitura crua sem tipo: content (repassada a Captain::RewriteService.new), operation (repassada a Captain::RewriteService.new)
-- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:47); leitura crua sem tipo: column_names
-- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:63); params inteiro repassado a ::Contacts::FilterService.new
+- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:55); leitura crua sem tipo: column_names
+- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:71); params inteiro repassado a ::Contacts::FilterService.new
 - `POST conversa_canal/ditados` — leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
@@ -105,7 +105,6 @@ Uma ação pode ter mais de um motivo.
 - `POST inboxes/:inbox_id/whatsapp_templates/media` — leitura crua sem tipo: file (repassada a manager.upload)
 - `POST instagram/authorization` — leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event (repassada a @hook.process_event)
-- `POST integrations/shopify/auth` — leitura crua sem tipo: shop_domain
 - `POST integrations/slack` — leitura crua sem tipo: code (repassada a Integrations::Slack::HookBuilder.new)
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
 - `POST portals/:portal_id/articles/reorder` — leitura crua sem tipo: positions_hash (repassada a Article.update_positions)
@@ -206,7 +205,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
 - `api/v1/accounts/instagram/authorizations#create` purpose — repassada a REAUTH_PURPOSES.[]
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
-- `api/v1/accounts/integrations/shopify#auth` shop_domain — o código não converte nem compara o valor
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor

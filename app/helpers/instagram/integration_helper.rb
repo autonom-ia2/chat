@@ -96,6 +96,7 @@ module Instagram::IntegrationHelper
 
   private
 
+  # Fork (upgrade 4.20.1, #3120): no INSTAGRAM_UNIFIED_APP_SECRET fallback and no configuration_id in the state (#16645).
   def client_secret
     @client_secret ||= GlobalConfigService.load('INSTAGRAM_APP_SECRET', nil)
   end

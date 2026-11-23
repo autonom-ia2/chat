@@ -90,6 +90,8 @@ class DashboardController < ActionController::Base
       VAPID_PUBLIC_KEY: VapidService.public_key,
       ENABLE_ACCOUNT_SIGNUP: GlobalConfigService.load('ENABLE_ACCOUNT_SIGNUP', 'false'),
       FB_APP_ID: GlobalConfigService.load('FB_APP_ID', ''),
+      # Fork (upgrade 4.20.1, #3120): Instagram keeps the fork login (#2406); the unified login app id
+      # (Instagram::LoginConfiguration.app_id, #16645) stays inert.
       INSTAGRAM_APP_ID: GlobalConfigService.load('INSTAGRAM_APP_ID', ''),
       INSTAGRAM_TESTER_AUTOMATION_ENABLED: Instagram::Testers::Configuration.globally_enabled?.to_s,
       TIKTOK_APP_ID: GlobalConfigService.load('TIKTOK_APP_ID', ''),

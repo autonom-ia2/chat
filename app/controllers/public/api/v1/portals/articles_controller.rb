@@ -70,6 +70,8 @@ class Public::Api::V1::Portals::ArticlesController < Public::Api::V1::Portals::B
   end
 
   def set_article
+    # Fork (upgrade 4.20.1, #3120): the visitor sees what the fork shows today. Upstream #16554 (only published
+    # articles) and #16555 (signed preview link) are neutralized: an archived Central article still opens by its link.
     @article = @portal.articles.find_by(slug: permitted_params[:article_slug])
   end
 
@@ -89,7 +91,7 @@ class Public::Api::V1::Portals::ArticlesController < Public::Api::V1::Portals::B
   end
 
   def permitted_params
-    params.permit(:slug, :category_slug, :locale, :id, :article_slug)
+    params.permit(:slug, :category_slug, :locale, :id, :article_slug, :preview_token)
   end
 
   def render_article_content(content)
