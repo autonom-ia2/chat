@@ -15,6 +15,9 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3082 — o botão "Calendário" só aparece no navegador que abre o calendário
+// por `showPicker` (o jsdom não tem).
+HTMLInputElement.prototype.showPicker = vi.fn();
 
 // Endereço que roda código no clique: nunca pode virar link. Montado em partes
 // para não ser um link de verdade dentro do teste.
@@ -90,8 +93,14 @@ describe('gaveta: campos personalizados com o tipo de cada um', () => {
   it('cada tipo tem o seu controle, com o nome que a conta deu', () => {
     const w = montar();
     const campo = chave => w.get(`[data-atributo="${chave}"]`);
-    expect(campo('aniversario').get('input').attributes('type')).toBe('date');
-    expect(campo('aniversario').get('input').element.value).toBe('1990-05-12');
+    // #3082 — a data aparece no formato do idioma do painel (pt_BR), não no
+    // do navegador; o calendário do navegador fica atrás do botão.
+    const data = campo('aniversario').get('input[type="text"]');
+    expect(data.element.value).toBe('12/05/1990');
+    expect(data.attributes('inputmode')).toBe('numeric');
+    expect(
+      campo('aniversario').find(marca('calendario-do-atributo')).exists()
+    ).toBe(true);
     expect(campo('filhos').get('input').attributes('type')).toBe('number');
     expect(campo('site').get('input').attributes('type')).toBe('url');
     expect(campo('plano').findComponent(ChoiceSelect).exists()).toBe(true);
@@ -199,12 +208,94 @@ describe('gaveta: campos personalizados com o tipo de cada um', () => {
         custom_attributes: { cpf: '52998224725', aniversario: '12/05/1990' },
       }),
     });
-    const campo = w.get('[data-atributo="aniversario"] input');
-    expect(campo.attributes('type')).toBe('text');
+    const campo = w.get('[data-atributo="aniversario"] input[type="text"]');
     expect(campo.element.value).toBe('12/05/1990');
     const pedido = await salvar(w);
     expect(pedido.apagar).toEqual([]);
     expect(pedido.contato.custom_attributes).toEqual({});
+  });
+
+  it('data escrita em dia/mês/ano sobe como AAAA-MM-DD', async () => {
+    const w = montar();
+    await w
+      .get('[data-atributo="aniversario"] input[type="text"]')
+      .setValue('03/08/1985');
+    const pedido = await salvar(w);
+    expect(pedido.contato.custom_attributes).toEqual({
+      aniversario: '1985-08-03',
+    });
+  });
+
+  it('data escolhida no calendário sobe e aparece em dia/mês/ano', async () => {
+    const w = montar();
+    const calendario = w.get(marca('calendario-escondido'));
+    calendario.element.value = '1985-08-03';
+    await calendario.trigger('change');
+    expect(
+      w.get('[data-atributo="aniversario"] input[type="text"]').element.value
+    ).toBe('03/08/1985');
+    const pedido = await salvar(w);
+    expect(pedido.contato.custom_attributes).toEqual({
+      aniversario: '1985-08-03',
+    });
+  });
+
+  it('enquanto escreve, o texto fica como foi escrito; ao sair, a data arrumada', async () => {
+    const w = montar();
+    const campo = w.get('[data-atributo="aniversario"] input[type="text"]');
+    await campo.setValue('3/8/1985');
+    expect(campo.element.value).toBe('3/8/1985');
+    await campo.trigger('blur');
+    expect(campo.element.value).toBe('03/08/1985');
+    expect((await salvar(w)).contato.custom_attributes).toEqual({
+      aniversario: '1985-08-03',
+    });
+  });
+
+  it('a data diz como se escreve, e "Limpar" apaga o que estava gravado', async () => {
+    const w = montar();
+    const data = w.get('[data-atributo="aniversario"]');
+    expect(data.get(marca('ajuda-do-campo')).text()).toContain(
+      'RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.DATA_ASSIM'
+    );
+    await data.get(marca('limpar-atributo')).trigger('click');
+    expect(data.get('input[type="text"]').element.value).toBe('');
+    expect((await salvar(w)).apagar).toEqual(['aniversario']);
+  });
+
+  it('sem o calendário do navegador, a data só se escreve', () => {
+    const { showPicker } = HTMLInputElement.prototype;
+    delete HTMLInputElement.prototype.showPicker;
+    try {
+      const w = montar();
+      expect(w.find(marca('calendario-do-atributo')).exists()).toBe(false);
+      expect(
+        w.find('[data-atributo="aniversario"] input[type="text"]').exists()
+      ).toBe(true);
+    } finally {
+      HTMLInputElement.prototype.showPicker = showPicker;
+    }
+  });
+
+  it('letra no meio da data não passa', async () => {
+    const w = montar();
+    await w
+      .get('[data-atributo="aniversario"] input[type="text"]')
+      .setValue('12/05/1990 de maio');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    expect(w.emitted('salvar')).toBeUndefined();
+  });
+
+  it('data que não existe não salva e diz como escrever', async () => {
+    const w = montar();
+    await w
+      .get('[data-atributo="aniversario"] input[type="text"]')
+      .setValue('31/02/1990');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    expect(w.emitted('salvar')).toBeUndefined();
+    expect(w.get('[data-atributo="aniversario"]').text()).toContain(
+      'RELACIONAMENTOS_FICHA.GAVETA.ERRO.DATA'
+    );
   });
 
   it('a escolha da lista e o "não" do sim-ou-não gravam', async () => {
