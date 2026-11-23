@@ -78,9 +78,9 @@ class Crm::FollowUp < ApplicationRecord
   belongs_to :assignee, class_name: 'User', optional: true
   belongs_to :created_by, class_name: 'User', optional: true
 
-  enum follow_up_type: { task: 0, message: 1, call: 2, meeting: 3, note: 4 }
-  enum status: { pending: 0, done: 1, canceled: 2, overdue: 3 }
-  enum automation_mode: { reminder_only: 0, snooze_conversation: 1, auto_send_message: 2 }
+  enum :follow_up_type, { task: 0, message: 1, call: 2, meeting: 3, note: 4 }
+  enum :status, { pending: 0, done: 1, canceled: 2, overdue: 3 }
+  enum :automation_mode, { reminder_only: 0, snooze_conversation: 1, auto_send_message: 2 }
 
   # Marca do toque da cadência da IA (Crm::FollowUps::AutoFollowupTouchBuilder).
   AI_FOLLOWUP_SOURCE = 'ai_followup'.freeze

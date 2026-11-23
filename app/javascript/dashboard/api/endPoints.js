@@ -22,6 +22,9 @@ const endPoints = {
   ausencia: {
     url: '/api/v1/profile/ausencia',
   },
+  workPreferences: {
+    url: '/api/v1/profile/work_preferences',
+  },
   logout: {
     url: 'auth/sign_out',
   },

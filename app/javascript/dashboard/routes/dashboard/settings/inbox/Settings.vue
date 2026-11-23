@@ -35,6 +35,8 @@ import HorarioDoCanal from './components/HorarioDoCanal.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import ConnectionPage from './settingsPage/ConnectionPage.vue';
+import BandwidthConfiguration from './settingsPage/BandwidthConfiguration.vue';
+import InboxReconnectionRequired from './components/InboxReconnectionRequired.vue';
 import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import WhatsappCallingPage from './settingsPage/WhatsappCallingPage.vue';
 import WhatsappHybridPage from './settingsPage/WhatsappHybridPage.vue';
@@ -54,6 +56,7 @@ import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue'
 import LockToSingleConversationPreview from './components/LockToSingleConversationPreview.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SpinnerLoader from 'dashboard/components-next/spinner/Spinner.vue';
+import ChannelName from './components/ChannelName.vue';
 import {
   getInboxIconByType,
   tipoDoIconeDaCaixa,
@@ -76,9 +79,12 @@ export default {
     AbaAgenteDeIa,
     Banner,
     BotConfiguration,
+    ChannelName,
     CollaboratorsPage,
     ConfigurationPage,
     ConnectionPage,
+    BandwidthConfiguration,
+    InboxReconnectionRequired,
     VoiceConfigurationPage,
     WhatsappCallingPage,
     WhatsappHybridPage,
@@ -219,8 +225,16 @@ export default {
     shouldShowWhatsAppConfiguration() {
       return this.isAWhatsAppCloudChannel;
     },
+    // Fork (upgrade 4.20.1, #3120): the header keeps the fork look, only the identifier under the
+    // name; the channel name and the "View conversations" button (#16496) stay hidden.
+    showUpstreamHeaderExtras() {
+      return false;
+    },
+    isBandwidthInbox() {
+      return this.inbox.channel_type === INBOX_TYPES.SMS;
+    },
     shouldShowTwilioHealth() {
-      return this.isATwilioChannel && this.inbox.medium === 'sms';
+      return this.isATwilioChannel;
     },
     whatsAppAPIProviderName() {
       if (this.isAWhatsAppCloudChannel) {
@@ -277,8 +291,11 @@ export default {
         ];
       }
 
+      // A Twilio SMS or voice inbox's webhooks are checked on its Health tab; Twilio WhatsApp
+      // keeps this tab for template sync
       if (
-        this.isATwilioChannel ||
+        this.isATwilioWhatsAppChannel ||
+        this.isBandwidthInbox ||
         this.isALineChannel ||
         (this.isAPIInbox && !this.isWahaInbox) ||
         this.isAnEmailChannel ||
@@ -350,7 +367,7 @@ export default {
           ...visibleToAllChannelTabs,
           {
             key: 'voice-configuration',
-            name: this.$t('INBOX_MGMT.TABS.VOICE'),
+            name: this.$t('INBOX_MGMT.TABS.CALLS'),
           },
         ];
       }
@@ -598,6 +615,7 @@ export default {
               phone_number_id: form.phoneNumberId,
               business_account_id: form.wabaId,
               api_key: form.accessToken,
+              app_secret: form.appSecret,
             },
           },
         };
@@ -891,8 +909,43 @@ export default {
     <SettingIntroBanner
       :header-image="inbox.avatarUrl"
       :header-title="inboxName"
-      :header-identifier="inboxIdentifier"
     >
+      <template v-if="showUpstreamHeaderExtras || inboxIdentifier" #meta>
+        <template v-if="showUpstreamHeaderExtras">
+          <ChannelName
+            :channel-type="inbox.channel_type"
+            :medium="inbox.medium"
+            :voice-enabled="inbox.voice_enabled"
+            class="shrink-0"
+          />
+          <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
+          <span v-if="inboxIdentifier" aria-hidden="true">·</span>
+        </template>
+        <bdi
+          v-if="inboxIdentifier"
+          dir="auto"
+          :title="inboxIdentifier"
+          class="truncate text-sm text-n-slate-9"
+        >
+          {{ inboxIdentifier }}
+        </bdi>
+      </template>
+      <template v-if="showUpstreamHeaderExtras" #actions>
+        <router-link
+          :to="{
+            name: 'inbox_dashboard',
+            params: { inbox_id: currentInboxId },
+          }"
+          class="shrink-0"
+        >
+          <NextButton
+            :label="$t('INBOX_MGMT.VIEW_CONVERSATIONS')"
+            icon="i-woot-messages"
+            slate
+            sm
+          />
+        </router-link>
+      </template>
       <woot-tabs
         class="[&_ul]:p-0 top-px relative"
         :index="selectedTabIndex"
@@ -911,6 +964,18 @@ export default {
     </SettingIntroBanner>
     <section class="w-full overflow-auto py-8">
       <div class="max-w-7xl mx-auto w-full">
+        <InboxReconnectionRequired
+          v-if="isBandwidthInbox && !inbox.bandwidth_oauth_enabled"
+          :description="
+            $t('INBOX_MGMT.ADD.SMS.BANDWIDTH.OAUTH.LEGACY_DESCRIPTION')
+          "
+          :action-label="$t('INBOX_MGMT.ADD.SMS.BANDWIDTH.OAUTH.MIGRATE')"
+          class="mx-6 mb-4"
+          :class="bannerMaxWidth"
+          @reauthorize="
+            onTabChange(tabs.findIndex(tab => tab.key === 'configuration'))
+          "
+        />
         <template v-if="canManageIntegrations">
           <MicrosoftReauthorize
             v-if="microsoftUnauthorized"
@@ -1568,19 +1633,34 @@ export default {
           class="mx-6"
           :class="isAWebWidgetInbox ? 'max-w-7xl' : 'max-w-4xl'"
         >
-          <ConfigurationPage :inbox="inbox" />
+          <BandwidthConfiguration
+            v-if="isBandwidthInbox"
+            :key="inbox.id"
+            :inbox="inbox"
+          />
+          <ConfigurationPage v-else :inbox="inbox" />
         </div>
         <div
           v-if="selectedTabKey === 'voice-configuration'"
           class="mx-6 max-w-4xl"
         >
-          <VoiceConfigurationPage :inbox="inbox" />
+          <VoiceConfigurationPage
+            :inbox="inbox"
+            @open-business-hours="
+              onTabChange(tabs.findIndex(tab => tab.key === 'business-hours'))
+            "
+          />
         </div>
         <div
           v-if="selectedTabKey === 'calls-configuration'"
           class="mx-6 max-w-4xl"
         >
-          <WhatsappCallingPage :inbox="inbox" />
+          <WhatsappCallingPage
+            :inbox="inbox"
+            @open-business-hours="
+              onTabChange(tabs.findIndex(tab => tab.key === 'business-hours'))
+            "
+          />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-api'" class="mx-6 max-w-4xl">
           <WhatsappHybridPage :inbox="inbox" />

@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Whatsapp::AuthorizationsController < Api::V1::Accounts::BaseController
+  # Fork (upgrade 4.20.1, #3120): upstream #16525 makes connecting WhatsApp admin-only (check_admin_authorization?).
+  # Neutralized (Issue #3126): the gate below already asks admin or the custom-role key, as before.
   before_action :ensure_embedded_signup_enabled
   # Connecting a new number creates an inbox (inbox_manage); reauthorizing a live one swaps its credentials
   # (integration_manage). Admin always (#452, #2027).

@@ -110,8 +110,8 @@ class Crm::Card < ApplicationRecord
   # #3097: o card ganho é a compra da pessoa; ganhar ou desfazer refaz o resumo de compras dela.
   include Crm::CardRefazCompras
 
-  enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
-  enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
+  enum :status, { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
+  enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }
 
   # Arquivar não desfaz o fechamento: o card ganho, perdido, resolvido ou cancelado que é arquivado guarda aqui o
   # desfecho que tinha, e o closed_at fica. Números, metas e relatórios continuam contando (scope com_desfecho), e

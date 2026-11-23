@@ -65,8 +65,11 @@ class MigrationsSeguras::SchemaRb
     @estrutura['gatilhos']["create_trigger #{texto(argumentos(raiz).first)}"] = Digest::MD5.hexdigest(comando.slice)
   end
 
+  # O Rails 8 escreve a extensão do schema do sistema com o schema na frente (`enable_extension "pg_catalog.plpgsql"`);
+  # o Rails 7.2 escrevia só o nome. É a mesma extensão: sem tirar o prefixo, a blue de um lado e a green do outro do
+  # upgrade viam "plpgsql" removida e travavam o deploy (#3120).
   def ler_extensao(comando)
-    @estrutura['extensoes'] << texto(argumentos(comando).first)
+    @estrutura['extensoes'] << texto(argumentos(comando).first).delete_prefix('pg_catalog.')
   end
 
   def ler_enum(comando)

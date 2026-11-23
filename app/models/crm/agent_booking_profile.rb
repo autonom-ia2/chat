@@ -71,7 +71,7 @@ class Crm::AgentBookingProfile < ApplicationRecord
   # fixed     -> one default_assignee owns every booking (original S6 behaviour).
   # per_agent -> each eligible agent shares their OWN link (agent_booking_links);
   #              a booking through a link is attributed to that agent.
-  enum assignment_mode: { fixed: 0, per_agent: 1 }, _prefix: true
+  enum :assignment_mode, { fixed: 0, per_agent: 1 }, prefix: true
 
   belongs_to :account
   belongs_to :inbox, optional: true

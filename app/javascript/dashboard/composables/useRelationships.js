@@ -10,6 +10,8 @@ const sessions = new WeakMap();
 const emptyState = () => ({
   configuration: null,
   definitions: [],
+  // #3082: campos apagados que a conta guardou escondidos (Relationships::CamposGuardados).
+  guardados: [],
   can_manage: false,
   error: false,
   stale: false,
@@ -182,6 +184,28 @@ export function useRelationships() {
     return data;
   };
 
+  // #3082 — apagar é "guardar escondido": o servidor tira a definição e anota o campo. Depois,
+  // uma leitura nova traz as definições e os guardados de uma vez só.
+  const remove = async (definition, expectedAccountId) => {
+    if (accountId.value !== expectedAccountId || !attributesEnabled.value)
+      throw new Error('Account changed');
+    const identity = key.value;
+    const entry = session.entries[identity];
+    if (!entry?.state.can_manage) throw new Error('Management unavailable');
+    await axios.delete(
+      `/api/v1/accounts/${expectedAccountId}/custom_attribute_definitions/${definition.id}`
+    );
+    if (
+      disposed ||
+      identity !== key.value ||
+      session.entries[identity] !== entry
+    )
+      return undefined;
+    entry.generation += 1;
+    session.pending.delete(identity);
+    return load();
+  };
+
   watch(
     [key, attributesEnabled, companiesEnabled],
     (_next, previous) => {
@@ -208,5 +232,6 @@ export function useRelationships() {
     allDefinitions,
     load,
     save,
+    remove,
   };
 }

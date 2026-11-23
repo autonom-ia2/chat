@@ -57,9 +57,10 @@ class SearchService
   end
 
   def advanced_search_with_fallback
-    advanced_search
-  rescue Faraday::ConnectionFailed, Searchkick::Error, Elasticsearch::Transport::Transport::Error => e
+    advanced_search.load
+  rescue Faraday::Error, Searchkick::Error, OpenSearch::Transport::Transport::Error => e
     Rails.logger.warn("Elasticsearch unavailable, falling back to SQL search: #{e.message}")
+    ChatwootExceptionTracker.new(e, user: current_user, account: current_account).capture_exception
     use_gin_search ? filter_messages_with_gin : filter_messages_with_like
   end
 
@@ -106,6 +107,7 @@ class SearchService
   end
 
   def message_base_query
+    # Fork (upgrade 4.19.1, #3119): the SQL search keeps its calendar window of three months.
     query = current_account.messages.where('created_at >= ?', 3.months.ago)
     query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
     query = query.where(conversation_id: funnel_scope.apply(current_account.conversations).select(:id)) if funnel_scope.restricted?
@@ -196,12 +198,15 @@ class SearchService
     query
   end
 
+  def search_window_start
+    Limits.search_time_range_limit_days.days.ago
+  end
+
   def cap_since_time(since_param)
-    max_lookback = 90.days.ago
     requested_time = Time.zone.at(since_param.to_i)
 
-    # Silently cap to max_lookback if requested time is too far back
-    [requested_time, max_lookback].max
+    # Silently cap to the search window start if requested time is too far back
+    [requested_time, search_window_start].max
   end
 
   def cap_until_time(until_param)

@@ -7,7 +7,7 @@ class Messages::MessageBuilder
 
   def initialize(user, conversation, params)
     @params = params
-    @private = params[:private] || false
+    @private = private_flag
     @conversation = conversation
     @user = user
     @account = conversation.account
@@ -52,9 +52,7 @@ class Messages::MessageBuilder
   end
 
   def process_attachments
-    return if @attachments.blank?
-
-    @attachments.each_with_index do |uploaded_attachment, posicao|
+    (Array(@attachments) + forwarded_attachments).each_with_index do |uploaded_attachment, posicao|
       attachment = @message.attachments.build(
         account_id: @message.account_id,
         file: uploaded_attachment
@@ -80,7 +78,35 @@ class Messages::MessageBuilder
     attachment.meta = (attachment.meta || {}).merge('is_voice_message' => true)
   end
 
+  # Fork (upgrade 4.19.1, #3119): keep the fork's `params[:private] || false` (the string "false" stays truthy).
+  # Only the dormant email forward (#15871), sent by no screen today, casts the flag like upstream.
+  def private_flag
+    return ActiveModel::Type::Boolean.new.cast(@params[:private]) || false if forwarded_message_id.present?
+
+    @params[:private] || false
+  end
+
+  def forwarded_message_id
+    content_attributes[:forwarded_message_id]
+  end
+
+  def forwarded_attachments
+    return [] if forwarded_message_id.blank?
+
+    forwarded_message = @conversation.messages.find(forwarded_message_id)
+    forwarded_message.attachments.where(id: @params[:forwarded_attachment_ids]).map { |attachment| attachment.file.blob }
+  end
+
+  def validate_forward
+    return if forwarded_message_id.blank?
+
+    raise StandardError, 'Forwarded emails need an email inbox' unless @conversation.inbox.email?
+    raise StandardError, 'Forwarded emails cannot be private' if @private
+    raise StandardError, 'Forwarded emails need a recipient' if process_email_string(@params[:to_emails]).empty?
+  end
+
   def process_emails
+    validate_forward
     return unless @conversation.inbox&.inbox_type == 'Email'
 
     cc_emails = process_email_string(@params[:cc_emails])
@@ -93,6 +119,7 @@ class Messages::MessageBuilder
     @message.content_attributes[:cc_emails] = cc_emails
     @message.content_attributes[:bcc_emails] = bcc_emails
     @message.content_attributes[:to_emails] = to_emails
+    @message.content_attributes[:email] = { subject: @params[:subject] } if @params[:subject].present? && !@private
   end
 
   def process_email_content

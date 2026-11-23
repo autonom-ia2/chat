@@ -230,8 +230,10 @@ RSpec.describe ConversaCanal::VistaAoResponder do
     it 'o message.created da resposta já leva a não lida zerada' do
       resposta = nossa
 
+      # Upgrade 4.20.1 (#3120): o upstream #16564 manda o pacote do widget no mesmo job (widget_members/widget_data, o
+      # 4º argumento). A não lida zerada segue no pacote do painel, o 3º.
       expect(ActionCableBroadcastJob).to have_been_enqueued
-        .with(anything, Events::Types::MESSAGE_CREATED, hash_including(id: resposta.id, conversation: hash_including(unread_count: 0)))
+        .with(anything, Events::Types::MESSAGE_CREATED, hash_including(id: resposta.id, conversation: hash_including(unread_count: 0)), any_args)
     end
 
     it 'resposta em sequência não refaz a contagem' do

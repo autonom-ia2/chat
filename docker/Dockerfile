@@ -1,8 +1,18 @@
 # pre-build stage
-FROM node:24-alpine as node
-FROM ruby:3.4.4-alpine3.21 AS pre-builder
+FROM node:24.22.1-alpine as node
 
-ARG NODE_VERSION="24.13.0"
+# npm and corepack are only needed to build assets and to install pnpm in
+# non-production images; production only runs the node binary
+FROM node AS node-modules
+ARG RAILS_ENV=production
+RUN if [ "$RAILS_ENV" = "production" ]; then \
+  rm -rf /usr/local/lib/node_modules/* \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack; \
+  fi
+
+FROM ruby:3.4.13-alpine3.23 AS pre-builder
+
+ARG NODE_VERSION="24.22.1"
 ARG PNPM_VERSION="10.2.0"
 ENV NODE_VERSION=${NODE_VERSION}
 ENV PNPM_VERSION=${PNPM_VERSION}
@@ -96,7 +106,7 @@ RUN mkdir -p /app/log
 RUN if [ "$RAILS_ENV" = "production" ]; then \
   SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile \
   && node scripts/compress-vite-assets.mjs \
-  && rm -rf spec node_modules tmp/cache; \
+  && rm -rf spec tests node_modules tmp/cache; \
   fi
 
 # Generate .git_sha file with current commit hash
@@ -109,9 +119,9 @@ RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
   && rm .gitignore
 
 # final build stage
-FROM ruby:3.4.4-alpine3.21
+FROM ruby:3.4.13-alpine3.23
 
-ARG NODE_VERSION="24.13.0"
+ARG NODE_VERSION="24.22.1"
 ARG PNPM_VERSION="10.2.0"
 ENV NODE_VERSION=${NODE_VERSION}
 ENV PNPM_VERSION=${PNPM_VERSION}
@@ -143,7 +153,9 @@ ENV BUNDLE_PATH="/gems"
 # e a cadeia valida contra qualquer armazenamento que a tenha (conferido com `openssl verify`).
 # O que falhava era o LibreSSL 3.3.6 do macOS numa máquina de desenvolvimento; a imagem usa
 # OpenSSL e não tem esse comportamento.
-RUN apk update && apk add --no-cache \
+#
+# apk upgrade picks up Alpine security fixes released after the base image
+RUN apk update && apk upgrade --no-cache && apk add --no-cache \
   build-base \
   ca-certificates \
   openssl \
@@ -163,7 +175,7 @@ RUN apk update && apk add --no-cache \
 ENV VIPS_BLOCK_UNTRUSTED=1
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/
-COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node-modules /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN if [ "$RAILS_ENV" != "production" ]; then \
   apk add --no-cache curl \

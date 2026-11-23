@@ -41,7 +41,7 @@ module Autonomia
       belongs_to :source, class_name: 'Autonomia::Agents::Source',
                           foreign_key: :source_id, optional: true
 
-      enum status: { pending: 0, ready: 1 }
+      enum :status, { pending: 0, ready: 1 }
 
       # #1431 (PR 1b) — o trecho de item (CortePorSecao: item de lista, verbete, fileira de tabela) existe só para a busca
       # achar a seção; o texto dele já está no trecho da seção. Quem lê o material (resumo, Revisor, autoteste,

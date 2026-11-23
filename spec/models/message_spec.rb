@@ -156,6 +156,40 @@ RSpec.describe Message do
     end
   end
 
+  describe '#widget_sender_data' do
+    it 'returns only the type for a contact sender' do
+      message = create(:message, message_type: :incoming, sender: create(:contact, email: 'jane@example.com'))
+
+      expect(message.widget_sender_data).to eq(type: 'contact')
+    end
+
+    it 'returns the full event data for an agent sender' do
+      message = create(:message, sender: create(:user))
+
+      expect(message.widget_sender_data).to eq(message.sender.push_event_data)
+    end
+  end
+
+  describe '#widget_push_event_data' do
+    it 'keeps the message event and reduces a contact sender to its type' do
+      message = create(:message, message_type: :incoming, sender: create(:contact, email: 'jane@example.com'))
+
+      expect(message.widget_push_event_data).to eq(message.push_event_data.merge(sender: { type: 'contact' }))
+    end
+
+    it 'keeps an agent sender' do
+      message = create(:message, sender: create(:user))
+
+      expect(message.widget_push_event_data).to eq(message.push_event_data)
+    end
+
+    it 'keeps an agent bot sender with the inbox avatar fallback' do
+      message = create(:message, sender: create(:agent_bot))
+
+      expect(message.widget_push_event_data[:sender]).to eq(message.sender.push_event_data(message.inbox))
+    end
+  end
+
   describe 'message create event' do
     let!(:conversation) { create(:conversation) }
 
@@ -171,6 +205,20 @@ RSpec.describe Message do
 
       expect(conversation.first_reply_created_at).to eq outgoing_message.created_at
       expect(conversation.waiting_since).to be_nil
+    end
+
+    it 'does not count a forwarded email as a reply to the contact' do
+      create(:message, message_type: :outgoing, conversation: conversation, content_attributes: { forwarded_message_id: 1 })
+
+      expect(conversation.first_reply_created_at).to be_nil
+      expect(conversation.waiting_since).to eq conversation.created_at
+    end
+
+    it 'records the first reply to the contact after a forwarded email' do
+      create(:message, message_type: :outgoing, conversation: conversation, content_attributes: { forwarded_message_id: 1 })
+      reply = create(:message, message_type: :outgoing, conversation: conversation)
+
+      expect(conversation.first_reply_created_at).to eq reply.created_at
     end
 
     it 'does not update the conversation first reply created at if the message is incoming' do
@@ -299,7 +347,8 @@ RSpec.describe Message do
     end
 
     it 'keeps marking the conversation as pending for a non-webhook bot (dialogflow)' do
-      create(:integrations_hook, :dialogflow, inbox: conversation.inbox)
+      # Upgrade 4.20.1 (#3120): the hook must belong to the inbox account (#16614).
+      create(:integrations_hook, :dialogflow, account: conversation.account, inbox: conversation.inbox)
       conversation.resolved!
       message.save!
       expect(conversation.reload.pending?).to be true

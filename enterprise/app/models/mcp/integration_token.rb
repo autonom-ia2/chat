@@ -19,7 +19,7 @@ class Mcp::IntegrationToken < ApplicationRecord
   belongs_to :account_user, optional: true
   belongs_to :created_by, class_name: 'User', optional: true
 
-  enum status: { active: 0, revoked: 1 }
+  enum :status, { active: 0, revoked: 1 }
 
   validates :identity_subject, presence: true, uniqueness: { scope: :account_id }
   validates :name, presence: true

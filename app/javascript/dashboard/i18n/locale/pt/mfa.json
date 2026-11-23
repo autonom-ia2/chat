@@ -47,7 +47,9 @@
       "REGENERATE": "Gerar novos códigos de recuperação",
       "DISABLE_MFA": "Desabilitar 2FA",
       "DISABLE_MFA_DESC": "Remover a autenticação em dois fatores da sua conta",
-      "DISABLE_BUTTON": "Desabilitar autenticação em dois fatores"
+      "DISABLE_BUTTON": "Desabilitar autenticação em dois fatores",
+      "ENFORCED_TITLE": "Required by your account",
+      "ENFORCED_NOTE": "Your account requires two-factor authentication, so it cannot be disabled here. Contact your administrator if you need help."
     },
     "LOW_BACKUP_CODES": {
       "MESSAGE": "Você tem {n} código de recuperação restante. Gere novos códigos para evitar perder o acesso à sua conta caso não consiga acessar seu autenticador. | Você tem {n} códigos de recuperação restantes. Gere novos códigos para evitar perder o acesso à sua conta caso não consiga acessar seu autenticador.",
@@ -110,6 +112,14 @@
       "CONTACT_DESC_CLOUD": "Se você perdeu o acesso tanto ao aplicativo autenticador quanto aos códigos de recuperação, entre em contato com o suporte do Chatwoot para obter ajuda.",
       "CONTACT_DESC_SELF_HOSTED": "Se você perdeu o acesso tanto ao aplicativo autenticador quanto aos códigos de recuperação, entre em contato com o administrador para obter ajuda."
     },
-    "VERIFICATION_FAILED": "Falha na verificação. Tente novamente."
+    "VERIFICATION_FAILED": "Falha na verificação. Tente novamente.",
+    "EMAIL_TITLE": "Check your email",
+    "EMAIL_DESCRIPTION": "You're signing in from a new device.",
+    "ENTER_EMAIL_CODE": "Enter the 6-digit code from your email",
+    "REMEMBER_DEVICE": "Don't ask again on this device for 30 days"
+  },
+  "MFA_ENFORCED_SETUP": {
+    "TITLE": "Set up two-factor authentication",
+    "DESCRIPTION": "Your account requires two-factor authentication. Scan the QR code with your authenticator app and enter the code to continue."
   }
 }

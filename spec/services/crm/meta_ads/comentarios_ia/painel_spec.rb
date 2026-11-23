@@ -183,11 +183,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   it 'vários cuidados em duas consultas (enviadas e respondidas), com zero para quem não tem nada' do
     conversa(private_reply: true, respondeu: true)
     outro = create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1791', offer: nil, para_quem: 'Quem pedir')
+    # Fork (upgrade 4.20.1, #3120): create the viewer outside the count. Created inside it, the account_users INSERT
+    # carries the new `accepts_conversations` column (upstream #16342) and would be counted as a conversations query.
+    viewer = admin
     consultas = []
     contar = ->(*, payload) { consultas << payload[:sql] if payload[:sql].include?('conversations') }
 
     resultado = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
-      described_class.resultados(account, [care, outro], admin)
+      described_class.resultados(account, [care, outro], viewer)
     end
 
     expect(resultado).to eq(care.id => { sent: 1, replied: 1 }, outro.id => { sent: 0, replied: 0 })

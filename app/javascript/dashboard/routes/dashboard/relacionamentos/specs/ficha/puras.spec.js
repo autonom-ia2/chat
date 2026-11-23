@@ -581,6 +581,19 @@ describe('camposDaPessoa', () => {
     definicao(9, 'cor', 'moeda'),
   ];
 
+  // #3082 — o valor de campo apagado (guardado escondido) não vira campo solto;
+  // o valor sem definição que nunca foi campo continua aparecendo.
+  it('não mostra como solto o valor de um campo apagado', () => {
+    const campos = camposDaPessoa({
+      definicoes: DEFINICOES,
+      guardadas: ['placa'],
+      valores: { placa: 'ABC1D23', solto: 'algo' },
+    });
+    const chaves = campos.map(c => c.chave);
+    expect(chaves).not.toContain('placa');
+    expect(chaves).toContain('solto');
+  });
+
   it('a ordem: escolhidos pelo configurador, os com valor, os soltos e o resto', () => {
     const campos = camposDaPessoa({
       definicoes: DEFINICOES,

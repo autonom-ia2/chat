@@ -54,6 +54,17 @@ RSpec.describe 'Relationships configuration', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
+  # #3082 — os campos apagados (guardados escondidos) vêm na leitura, para a ficha e o "Trazer de volta".
+  it 'lists deleted fields kept hidden, without company ones when companies are off' do
+    account.enable_features!('custom_attributes', 'relationships_attributes')
+    account.disable_features!('companies')
+    %w[contact_attribute company_attribute].each do |model|
+      create(:custom_attribute_definition, account: account, attribute_model: model, attribute_key: 'placa').destroy!
+    end
+    get url, headers: admin.create_new_auth_token
+    expect(response.parsed_body['guardados'].pluck('attribute_model')).to eq(['contact_attribute'])
+  end
+
   it 'does not enable navigation or media when attribute presentation is enabled' do
     account.enable_features!('custom_attributes', 'relationships_attributes')
     expect(account.feature_enabled?('relationships_navigation')).to be(false)

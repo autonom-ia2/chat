@@ -50,20 +50,27 @@ class CustomAttributeDefinition < ApplicationRecord
   include CampoContatoEmUso
 
   # card_attribute (#1146): campos próprios de cada card do CRM.
-  enum attribute_model: { conversation_attribute: 0, contact_attribute: 1, company_attribute: 2, card_attribute: 3 }
+  enum :attribute_model, { conversation_attribute: 0, contact_attribute: 1, company_attribute: 2, card_attribute: 3 }
   # pessoa (G62, #2829): uma pessoa da equipe da conta, guardada pelo id do usuário. Só no card (a responsável
   # original da cobertura de férias, o vendedor que indicou); o card confere que a pessoa é da conta.
   # contato (decisão 16 da Automação, ex. 11): um contato da conta, guardado pelo id dele ("indicado por Maria"). Só no
   # card, como o tipo pessoa; o card confere que o contato é da conta (Crm::CardCampoContato).
-  enum attribute_display_type: { text: 0, number: 1, currency: 2, percent: 3, link: 4, date: 5, list: 6, checkbox: 7, pessoa: 8, contato: 9 }
+  enum :attribute_display_type, { text: 0, number: 1, currency: 2, percent: 3, link: 4, date: 5, list: 6, checkbox: 7, pessoa: 8, contato: 9 }
 
   belongs_to :account
   after_update :update_widget_pre_chat_custom_fields, unless: :outside_pre_chat?
   after_destroy :sync_widget_pre_chat_custom_fields, unless: :outside_pre_chat?
   after_update_commit :invalidate_filtered_unread_count_filters_update, if: :conversation_attribute_before_or_after?
   after_destroy_commit :invalidate_filtered_unread_count_filters_destroy, if: :conversation_attribute?
+  # #3082: o campo de pessoa ou empresa apagado fica "guardado escondido"; criar de novo com a mesma chave o traz de volta.
+  after_destroy_commit(if: :guardado_escondido?) { Relationships::CamposGuardados.new(account).guardar!(self) }
+  after_create_commit(if: :guardado_escondido?) { Relationships::CamposGuardados.new(account).esquecer!(self) }
 
   private
+
+  def guardado_escondido?
+    Relationships::CamposGuardados::MODELOS.include?(attribute_model)
+  end
 
   def pessoa_so_no_card
     errors.add(:attribute_display_type, I18n.t('errors.custom_attribute_definition.pessoa_so_no_card')) if pessoa? && !card_attribute?

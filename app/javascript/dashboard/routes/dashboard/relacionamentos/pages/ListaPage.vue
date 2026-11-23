@@ -885,6 +885,7 @@ watch(naAbaDeSeguros, estaNela => {
       :buscar-empresas="acoes.buscarEmpresas"
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
+      :guardadas="camposDaConta.guardadas.value"
       marca="gaveta-da-pessoa"
       @fechar="gaveta.fechar"
       @salvar="gaveta.salvar"

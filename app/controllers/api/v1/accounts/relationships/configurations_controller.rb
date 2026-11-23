@@ -6,7 +6,7 @@ class Api::V1::Accounts::Relationships::ConfigurationsController < Api::V1::Acco
   def show
     authorize CustomAttributeDefinition, :index?
     render json: { configuration: service.read, definitions: definitions.map { |definition| service.serialize_definition(definition) },
-                   can_manage: Current.account_user.permission_granted?('attribute_manage') }
+                   can_manage: Current.account_user.permission_granted?('attribute_manage'), guardados: guardados }
   end
 
   def update
@@ -17,6 +17,13 @@ class Api::V1::Accounts::Relationships::ConfigurationsController < Api::V1::Acco
   end
 
   private
+
+  # #3082: os campos apagados que a conta guardou escondidos, para a ficha não mostrar o valor deles e o configurador
+  # oferecer "Trazer de volta". Sem empresas ligadas, só os da pessoa.
+  def guardados
+    lista = Relationships::CamposGuardados.new(Current.account).lista
+    Current.account.feature_enabled?('companies') ? lista : lista.reject { |item| item['attribute_model'] == 'company_attribute' }
+  end
 
   def definitions
     scope = Current.account.custom_attribute_definitions.order(:id)

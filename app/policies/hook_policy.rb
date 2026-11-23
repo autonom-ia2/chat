@@ -4,6 +4,14 @@ class HookPolicy < ApplicationPolicy
     integration_manage?
   end
 
+  def auth?
+    create?
+  end
+
+  def complete_install?
+    create?
+  end
+
   def update?
     integration_manage?
   end

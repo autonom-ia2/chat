@@ -10,4 +10,5 @@ export default {
   get: (...args) => client().get(...args),
   patch: (...args) => client().patch(...args),
   post: (...args) => client().post(...args),
+  delete: (...args) => client().delete(...args),
 };

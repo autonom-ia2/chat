@@ -36,7 +36,7 @@ module Autonomia
                          foreign_key: :autonomia_agent_id, optional: true
       belongs_to :created_by, class_name: 'User', optional: true
 
-      enum status: { open: 0, processing: 1, ready: 2, failed: 3 }
+      enum :status, { open: 0, processing: 1, ready: 2, failed: 3 }
 
       # Tenancy (defesa em profundidade): uma thread apontando para agente de OUTRA conta faria o
       # Construtor ler/editar config alheia. Erro claro na escrita, nunca cross-tenant no runtime.

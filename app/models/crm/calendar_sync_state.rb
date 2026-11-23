@@ -38,8 +38,8 @@ class Crm::CalendarSyncState < ApplicationRecord
   belongs_to :account
   belongs_to :inbox
 
-  enum provider: { google: 0, microsoft: 1 }
-  enum status: { active: 0, expired: 1, failed: 2 }, _prefix: true
+  enum :provider, { google: 0, microsoft: 1 }
+  enum :status, { active: 0, expired: 1, failed: 2 }, prefix: true
 
   scope :renewable, -> { where(status: :active) }
 
