@@ -104,4 +104,16 @@ RSpec.describe Autonomia::Guide::Chat do
       expect(chat.send(:navegacoes, resultado)).to eq([escolhida, segunda])
     end
   end
+
+  # Entrega 2 — a resposta retida não perde a ação que o Guia preparou nem as telas que ele escolheu.
+  describe 'resposta retida' do
+    it 'leva a ação proposta e as telas', :aggregate_failures do
+      acao = { nome: 'criar_funil', dados: { nome: 'Vendas' } }
+      tela = { route_name: 'crm_kanban_index' }
+
+      resultado = chat.send(:retido, nil, acao: acao, navs: [tela])
+
+      expect(resultado).to have_attributes(retido: true, text: nil, acao: acao, navigation: tela, navigations: [tela])
+    end
+  end
 end

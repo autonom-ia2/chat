@@ -26,10 +26,7 @@ class Autonomia::Guide::ChatJob < ApplicationJob
       "[autonomia][guide][chat_job] pedido=#{job.arguments.first} #{error.class}: #{error.message}\n" \
       "#{Array(error.backtrace).first(5).join("\n")}"
     )
-    ::Autonomia::Guide::Pedido.falhar(job.arguments.first)
-    # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
-    diagnostico = (job.registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name)
-    ::Autonomia::Guide::Turno.falhar(job.arguments.first, diagnostico)
+    job.send(:falhou, error)
   end
 
   # `pergunta` traz quem perguntou, o quê, o histórico da conversa, a tela em
@@ -45,17 +42,85 @@ class Autonomia::Guide::ChatJob < ApplicationJob
     resultado = @registro.ativo do
       I18n.with_locale(pergunta['locale']) { responder(account, user, pedido_id, pergunta) }
     end
-    ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h)
     ::Autonomia::Guide::Turno.concluir(pedido_id, resultado.to_h, diagnostico_de(resultado))
+    # Daqui em diante a resposta existe: um erro no fim do turno não pode reescrevê-la como falha.
+    @turno_concluido = true
+    encerrar(pedido_id, pergunta, respondeu: respondeu?(resultado)) do |seguinte|
+      ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h.merge(seguinte))
+    end
   end
 
   private
+
+  def falhou(error)
+    pedido_id, pergunta = arguments
+    # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
+    unless @turno_concluido
+      ::Autonomia::Guide::Turno.falhar(pedido_id, (registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name))
+    end
+    encerrar(pedido_id, pergunta, respondeu: false) { |seguinte| ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte) }
+  rescue StandardError => e
+    # Sem a trava, ao menos a tela para de esperar.
+    Rails.logger.error("[autonomia][guide][chat_job] encerrar pedido=#{pedido_id} #{e.class}")
+    ::Autonomia::Guide::Pedido.falhar(pedido_id)
+  end
+
+  # O Guia respondeu de fato: as mensagens que ele leu no meio do trabalho foram respondidas junto.
+  def respondeu?(resultado)
+    resultado.available == true && resultado.text.present?
+  end
+
+  # O "pronto" do pedido sai com a fila de mensagens travada (`Pedido.com_trava`): o que a pessoa escreveu durante o
+  # turno não se perde. O que o Guia não respondeu vira a pergunta seguinte, que roda logo depois desta e já lê esta
+  # resposta no histórico; a tela sabe dela por `seguinte`. Trava ocupada: encaminha mesmo assim, sem ela — uma
+  # mensagem que chegue nesse instante pode ficar sem resposta, mas as que já estão na fila não.
+  def encerrar(pedido_id, pergunta, respondeu:)
+    ::Autonomia::Guide::Pedido.com_trava(pedido_id) { yield encaminhar(pedido_id, pergunta, respondeu) }
+  rescue ::Autonomia::Guide::Pedido::TravaOcupada
+    Rails.logger.error("[autonomia][guide][chat_job] trava ocupada no fim do turno pedido=#{pedido_id}")
+    yield encaminhar(pedido_id, pergunta, respondeu)
+  end
+
+  # Lidas e respondidas ficam juntas deste pedido (o turno delas já é `junto` dele). Lidas sem resposta (falha,
+  # resposta retida) e as que chegaram depois da última rodada seguem adiante.
+  # -> { 'seguinte' => pedido que vai responder, 'tardias' => pedidos das mensagens que ele cobre } ou {}.
+  def encaminhar(pedido_id, pergunta, respondeu)
+    lidas = ::Autonomia::Guide::Pedido.retirar_lidas(pedido_id)
+    lidas.each { |junta| ::Autonomia::Guide::Pedido.concluir(junta['id'], { 'junto_de' => pedido_id }) } if respondeu
+    adiante = (respondeu ? [] : lidas) + ::Autonomia::Guide::Pedido.retirar_juntas(pedido_id)
+    adiante.empty? ? {} : seguir(adiante, pergunta)
+  end
+
+  def seguir(adiante, pergunta)
+    seguinte = adiante.last['id']
+    adiante[0...-1].each do |junta|
+      ::Autonomia::Guide::Pedido.concluir(junta['id'], { 'junto_de' => seguinte })
+      ::Autonomia::Guide::Turno.juntar(junta['id'], seguinte)
+    end
+    ::Autonomia::Guide::Turno.reabrir(seguinte)
+    self.class.perform_later(seguinte, pergunta_seguinte(seguinte, adiante, pergunta))
+    { 'seguinte' => seguinte, 'tardias' => adiante.pluck('id') }
+  rescue StandardError => e
+    # A resposta deste pedido sai mesmo assim. A pergunta seguinte termina em falha: ao reabrir a conversa, a tela
+    # mostra as mensagens com o "Tentar de novo", em vez de esperar um trabalho que não existe.
+    Rails.logger.error("[autonomia][guide][chat_job] pergunta seguinte pedido=#{seguinte} mensagens=#{adiante.size} #{e.class}")
+    ::Autonomia::Guide::Turno.falhar(seguinte, ::Autonomia::Guide::Registro.new.diagnostico(erro: e.class.name)) if seguinte
+    {}
+  end
+
+  # A mesma pessoa, tela e idioma; o texto é o que ela escreveu, e o histórico já traz a resposta que acabou de sair.
+  # Os anexos eram da pergunta anterior: o Guia não os relê.
+  def pergunta_seguinte(seguinte, adiante, pergunta)
+    conversa = ::Autonomia::Guide::Turno.find_by(pedido_id: seguinte)&.conversa
+    pergunta.merge('mensagem' => adiante.pluck('texto').join("\n\n"), 'arquivos' => [],
+                   'historico' => conversa ? conversa.historico(exceto: seguinte) : pergunta['historico'])
+  end
 
   def responder(account, user, pedido_id, pergunta)
     ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
                                  history: pergunta['historico'], route_context: pergunta['tela'],
                                  route_params: pergunta['parametros'], tela: pergunta['contexto_tela'],
-                                 arquivos: pergunta['arquivos'], registro: @registro,
+                                 arquivos: pergunta['arquivos'], registro: @registro, pedido_id: pedido_id,
                                  turno_id: ::Autonomia::Guide::Turno.where(pedido_id: pedido_id).pick(:id)).perform
   end
 

@@ -65,4 +65,98 @@ RSpec.describe Autonomia::Guide::ChatJob do
 
     expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)['status']).to eq('failed')
   end
+
+  # Entrega 2 — a pessoa escreveu depois da última rodada do Guia: a mensagem não pode se perder.
+  describe 'mensagem que chega depois da última rodada' do
+    def escrever_durante(*textos, falha: false)
+      novas = textos.map { SecureRandom.uuid }
+      allow(Autonomia::Guide::Chat).to receive(:new) do
+        novas.zip(textos).each do |nova, texto|
+          Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: texto)
+        end
+        raise StandardError, 'caiu' if falha
+
+        instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Criei as três.'))
+      end
+      novas
+    end
+
+    it 'vira a pergunta seguinte, que roda logo depois e a tela acompanha', :aggregate_failures do
+      novas = escrever_durante('e mais uma', 'chama de Vendas')
+
+      expect { rodar }.to have_enqueued_job(described_class)
+        .with(novas.last, hash_including('mensagem' => "e mais uma\n\nchama de Vendas", 'user_id' => admin.id))
+
+      lido = Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)
+      expect(lido).to include('status' => 'done', 'text' => 'Criei as três.', 'seguinte' => novas.last,
+                              'tardias' => novas)
+      expect(Autonomia::Guide::Pedido.ler(novas.first, account: conta, user: admin))
+        .to include('status' => 'done', 'junto_de' => novas.last)
+    end
+
+    it 'segue adiante mesmo quando o turno falha' do
+      novas = escrever_durante('tenta de novo', falha: true)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(novas.last, anything)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin))
+        .to include('status' => 'failed', 'seguinte' => novas.last)
+    end
+
+    # Revisão do #3144: a mensagem que o Guia leu só conta como respondida se ele respondeu.
+    def ler_durante(texto, resultado)
+      nova = SecureRandom.uuid
+      allow(Autonomia::Guide::Chat).to receive(:new) do
+        Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: texto)
+        Autonomia::Guide::Pedido.ler_juntas(pedido)
+        instance_double(Autonomia::Guide::Chat, perform: resultado)
+      end
+      nova
+    end
+
+    it 'lida e respondida fica junta deste pedido, sem pergunta seguinte', :aggregate_failures do
+      nova = ler_durante('pare', resposta_do_guia('Parei.'))
+
+      expect { rodar }.not_to have_enqueued_job(described_class)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).not_to have_key('seguinte')
+      expect(Autonomia::Guide::Pedido.ler(nova, account: conta, user: admin)).to include('status' => 'done', 'junto_de' => pedido)
+    end
+
+    it 'lida sem resposta (retida) segue adiante como a pergunta seguinte' do
+      retida = Autonomia::Guide::Chat::Result.new(text: nil, available: true, retido: true)
+      nova = ler_durante('pare', retida)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(nova, hash_including('mensagem' => 'pare', 'arquivos' => []))
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).to include('seguinte' => nova, 'tardias' => [nova])
+    end
+
+    it 'a resposta pronta não vira falha quando o fim do turno quebra', :aggregate_failures do
+      conversa = Autonomia::Guide::Conversa.create!(account: conta, user: admin, titulo: 'teste')
+      Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: 'oi', tela: 'home')
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Olá.')))
+      allow(Autonomia::Guide::Pedido).to receive(:concluir).and_raise(Redis::CannotConnectError)
+
+      rodar
+
+      expect(Autonomia::Guide::Turno.find_by(pedido_id: pedido)).to have_attributes(status: 'done', resposta: 'Olá.')
+    end
+
+    it 'trava ocupada no fim do turno: as mensagens da fila seguem adiante mesmo assim' do
+      nova = SecureRandom.uuid
+      Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: 'e mais uma')
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))
+      allow(Autonomia::Guide::Pedido).to receive(:com_trava).and_raise(Autonomia::Guide::Pedido::TravaOcupada)
+
+      expect { rodar }.to have_enqueued_job(described_class).with(nova, anything)
+    end
+
+    it 'sem mensagem nova, o pedido termina sem pergunta seguinte' do
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('ok')))
+
+      expect { rodar }.not_to have_enqueued_job(described_class)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).not_to have_key('seguinte')
+    end
+  end
 end

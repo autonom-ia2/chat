@@ -69,6 +69,9 @@ module Autonomia
         /\bcusta\s+R?\$?\s?\d/i
       ].freeze
 
+      # O que vem antes da mensagem que a pessoa mandou no meio do trabalho do Guia (`mensagens_novas_da_pessoa`).
+      AVISO_DE_MENSAGEM_NOVA = 'A pessoa mandou a mensagem a seguir enquanto você trabalhava no pedido dela. ' \
+                               'Leia junto com o que ela já tinha pedido e decida o que fazer a partir daqui.'.freeze
       # A prova do ajuste: o teto de cada resposta (entrega B do #1428).
       PROVA_TIMEOUT_S = 30
       # Na prova o agente roda sem ferramenta: ele é avisado para não afirmar o que não fez.
@@ -470,6 +473,23 @@ module Autonomia
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         repetidas = @uma_escrita&.repetidas(calls, tools_by_slug, specialists_by_function) || {}
         disparar_consultas(Array(calls).reject { |call| repetidas.key?(call) }, tools_by_slug, specialists_by_function)
+        saidas_das_chamadas(calls, repetidas, tools_by_slug, specialists_by_function) + mensagens_novas_da_pessoa
+      end
+
+      # O Guia (quem chama com `operador`) pode receber, no meio do trabalho, outra mensagem da pessoa. Ela entra
+      # depois das saídas desta rodada, como fala dela, e o modelo decide na próxima ida o que fazer — parar, mudar
+      # o caminho ou seguir. Atendimento não tem `operador`: nada muda.
+      def mensagens_novas_da_pessoa
+        return [] unless @operador.respond_to?(:mensagens_novas)
+
+        textos = @operador.mensagens_novas
+        return [] if textos.empty?
+
+        [PromptParts::Mensagem.montar('developer', AVISO_DE_MENSAGEM_NOVA)] +
+          textos.map { |texto| PromptParts::Mensagem.montar('user', texto) }
+      end
+
+      def saidas_das_chamadas(calls, repetidas, tools_by_slug, specialists_by_function)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           output = executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)

@@ -101,4 +101,38 @@ RSpec.describe Autonomia::Guide::Contexto do
       expect(contexto.artigos.size).to eq(5)
     end
   end
+
+  # Entrega 2 — o Answerer pergunta a cada rodada de ferramentas o que a pessoa escreveu no meio do trabalho.
+  describe '#mensagens_novas' do
+    let(:pedido) { Autonomia::Guide::Pedido.abrir(account: conta, user: admin) }
+    let(:conversa) { Autonomia::Guide::Conversa.create!(account: conta, user: admin, titulo: 'teste') }
+    let(:com_pedido) { described_class.new(account: conta, user: admin, pedido_id: pedido) }
+
+    def escrever(texto)
+      nova = SecureRandom.uuid
+      Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: nova, pergunta: texto, tela: 'home')
+      Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: texto)
+      nova
+    end
+
+    it 'sem pedido (bateria e specs), nada chega' do
+      expect(contexto.mensagens_novas).to eq([])
+    end
+
+    # Quem decide o destino da mensagem lida é o fim do turno (`ChatJob#encerrar`): aqui ela só passa para as lidas.
+    it 'entrega o texto na ordem e guarda as mensagens como lidas', :aggregate_failures do
+      primeira = escrever('pensei melhor')
+      segunda = escrever('pare')
+
+      expect(com_pedido.mensagens_novas).to eq(['pensei melhor', 'pare'])
+      expect(com_pedido.mensagens_novas).to eq([])
+      expect(Autonomia::Guide::Pedido.retirar_lidas(pedido).pluck('id')).to eq([primeira, segunda])
+    end
+
+    it 'anota a etapa no pedido a cada ferramenta chamada' do
+      com_pedido.registrar_chamada({ 'name' => 'ler_da_central', 'arguments' => '{}' }, 'texto', 10)
+
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)['etapa']).to eq('ler_da_central')
+    end
+  end
 end

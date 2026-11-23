@@ -36,6 +36,11 @@ class AutonomiaGuideAPI extends ApiClient {
   // outra e devolve o id em `conversa_id`. `anexos` ({ nome, tipo }) é o que o
   // balão mostrou, para a conversa reabrir igual. `history` fica só durante o
   // deploy: o servidor monta o histórico a partir da conversa guardada.
+  //
+  // `juntoDe`: a pessoa escreveu enquanto o Guia ainda trabalhava nesse pedido.
+  // A mensagem entra no trabalho em curso, e o Guia decide o que fazer com ela;
+  // a resposta traz `junto_de`. Sem `junto_de` na resposta, o anterior já tinha
+  // terminado e a mensagem virou pergunta comum.
   chat({
     message,
     history,
@@ -45,6 +50,7 @@ class AutonomiaGuideAPI extends ApiClient {
     arquivos = [],
     conversaId = null,
     anexos = [],
+    juntoDe = null,
   } = {}) {
     return axios.post(`${this.url}/chat`, {
       message,
@@ -55,6 +61,7 @@ class AutonomiaGuideAPI extends ApiClient {
       arquivos,
       conversa_id: conversaId,
       anexos,
+      ...(juntoDe ? { junto_de: juntoDe } : {}),
     });
   }
 
