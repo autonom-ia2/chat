@@ -141,6 +141,43 @@ RSpec.describe Autonomia::Guide::ChatJob do
       expect(Autonomia::Guide::Turno.find_by(pedido_id: pedido)).to have_attributes(status: 'done', resposta: 'Olá.')
     end
 
+    # Conserto pós-deploy do #3144: sair como falha oferecia "Tentar de novo" para um turno que pode ter mexido na conta.
+    it 'o fim do turno deu erro, mas a resposta existe: o pedido sai com ela, não como falha' do
+      allow(Autonomia::Guide::Chat).to receive(:new)
+        .and_return(instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Criei.')))
+      tentativas = 0
+      allow(Autonomia::Guide::Pedido).to receive(:concluir).and_wrap_original do |original, *args|
+        tentativas += 1
+        raise Redis::CannotConnectError if tentativas == 1
+
+        original.call(*args)
+      end
+
+      rodar
+
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)).to include('status' => 'done', 'text' => 'Criei.')
+    end
+
+    # Revisão do conserto: o `falhou` encerrava de novo e achava a fila vazia — o pedido saía sem `seguinte`.
+    it 'o pedido que não gravou de primeira ainda leva a pergunta seguinte que já está rodando', :aggregate_failures do
+      nova = SecureRandom.uuid
+      allow(Autonomia::Guide::Chat).to receive(:new) do
+        Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: 'e mais uma')
+        instance_double(Autonomia::Guide::Chat, perform: resposta_do_guia('Criei.'))
+      end
+      tentativas = 0
+      allow(Autonomia::Guide::Pedido).to receive(:concluir).and_wrap_original do |original, id, resultado|
+        tentativas += 1 if id == pedido
+        raise Redis::CannotConnectError if id == pedido && tentativas == 1
+
+        original.call(id, resultado)
+      end
+
+      expect { rodar }.to have_enqueued_job(described_class).with(nova, anything).exactly(:once)
+      expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin))
+        .to include('status' => 'done', 'seguinte' => nova, 'tardias' => [nova])
+    end
+
     it 'trava ocupada no fim do turno: as mensagens da fila seguem adiante mesmo assim' do
       nova = SecureRandom.uuid
       Autonomia::Guide::Pedido.acrescentar(pedido, account: conta, user: admin, nova: nova, mensagem: 'e mais uma')
