@@ -131,7 +131,10 @@ module Autonomia
                    available: true, escalate: result.handoff.to_h[:should] == true)
       rescue StandardError => e
         Rails.logger.error("[autonomia][guide][chat] account=#{@account&.id} #{e.class}: #{e.message}")
-        unavailable
+        # O erro pode vir depois de o Guia já ter mexido na conta: o que ele fez vai junto, para a tela
+        # mostrar e poder desfazer — e para não oferecer "Tentar de novo", que faria tudo outra vez.
+        feita = @contexto&.execucao
+        unavailable(feita&.passos.present? ? feita.resumo : nil)
       end
 
       private
@@ -310,9 +313,9 @@ module Autonomia
         linha[prefixo.length..].to_s.delete('`').strip.presence
       end
 
-      def unavailable
+      def unavailable(execucao = nil)
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: false, escalate: false)
+                   available: false, escalate: false, execucao: execucao)
       end
 
       # O Guia está no ar, mas o modelo não devolveu resposta (o portão não retém mais
