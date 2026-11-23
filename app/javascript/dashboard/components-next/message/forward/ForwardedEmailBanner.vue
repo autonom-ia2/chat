@@ -1,13 +1,13 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import Icon from 'next/icon/Icon.vue';
 import { useMessageContext } from '../provider.js';
 
 const { contentAttributes } = useMessageContext();
 const { t } = useI18n();
-const currentChat = useMapGetter('getSelectedChat');
+const currentChat = useConversaDaTela();
 
 const recipients = computed(() => [
   ...(contentAttributes.value.toEmails ?? []),

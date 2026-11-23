@@ -258,6 +258,47 @@ describe('autonomiaGuide store — conversa guardada', () => {
     );
   });
 
+  // Conserto pós-deploy do #3144: o turno em que o Guia mexeu na conta volta
+  // com o cartão e sem "Tentar de novo" — repetir faria tudo outra vez.
+  it('falha e retida em que o Guia já fez algo voltam com o cartão, sem repetir', () => {
+    const feito = { id: 9, passos: [{ acao: 'criar_contato', ok: true }] };
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({
+            status: 'failed',
+            resposta: null,
+            fora_do_ar: true,
+            execucao: feito,
+          }),
+          turno({
+            pedido_id: 'p2',
+            status: 'retido',
+            resposta: null,
+            execucao: feito,
+          }),
+        ],
+      },
+      { ...avisos, fezSemResposta: 'FIZ' }
+    );
+
+    expect(store.messages[1]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ content: 'FIZ' }),
+        execucao: feito,
+        repetir: null,
+      })
+    );
+    expect(store.messages[3]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ content: 'FIZ' }),
+        execucao: feito,
+        repetir: null,
+      })
+    );
+  });
+
   it('a resposta que chegou depois de mensagens novas fica antes delas', () => {
     store.addUserMessage('cria três etiquetas');
     const tardia = store.addUserMessage('e mais uma');

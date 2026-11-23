@@ -219,7 +219,11 @@
     },
     "ARQUIVOS": {
       "TITULO": "Files",
-      "VAZIO": "Nothing has been shared in the conversations yet.",
+      "VAZIO": "No files in the conversations yet.",
+      "ABRIR": "Open {nome} ({tipo}, {quando}) in a new tab",
+      "TOCAR": "Play {nome} ({tipo}, {quando}) here",
+      "VER_MAIS": "See {n} more file | See {n} more files",
+      "MOSTRAR_MENOS": "Show fewer",
       "TIPO": {
         "imagem": "Image",
         "documento": "Document",
@@ -289,7 +293,8 @@
         "EMAIL_REPETIDO": "This email is already on another person's profile. Look for it in the list search or remove the email here.",
         "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here.",
         "LINK": "This website address is not right. Write it like this: yoursite.com",
-        "EMPRESA_SEM_ESCOLHA": "Tap the company name in the list to choose it. If it is not there, tap “Register as a new company”."
+        "EMPRESA_SEM_ESCOLHA": "Tap the company name in the list to choose it. If it is not there, tap “Register as a new company”.",
+        "DATA": "This date is not right. Write it like this: {formato}"
       },
       "SAIR": {
         "TITULO": "Leave without saving?",
@@ -323,7 +328,13 @@
         "LIMPAR": "Clear",
         "LIMPAR_O": "Clear what is in {campo}",
         "LINK_EXEMPLO": "E.g.: yoursite.com",
-        "VAI_SAIR": "This field will be blank when you save."
+        "VAI_SAIR": "This field will be blank when you save.",
+        "CALENDARIO": "Calendar",
+        "CALENDARIO_DE": "Choose {campo} on the calendar",
+        "DATA_DIA": "dd",
+        "DATA_MES": "mm",
+        "DATA_ANO": "yyyy",
+        "DATA_ASSIM": "Write it like this: {formato}"
       },
       "FOTO": {
         "POR": "Add photo",

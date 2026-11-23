@@ -20,6 +20,7 @@ import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
+  fezAlgo,
   MAX_ANEXOS_POR_CONVERSA,
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
@@ -480,7 +481,8 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
     requestId !== requestSequence ||
     accountId.value !== requestAccount
   )
-    return tentativa >= MAX_BUSCAS ? { status: 'failed' } : null;
+    // O prazo acabou sem resposta: o Guia pode estar trabalhando ainda.
+    return tentativa >= MAX_BUSCAS ? { perdida: true } : null;
   await esperar(ESPERA_ENTRE_BUSCAS_MS);
   if (
     desmontado ||
@@ -505,17 +507,26 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
 // nenhuma, e não tinha como saber que devia tentar de novo.
 //
 // Leva o "Tentar de novo" com a pergunta do pedido que falhou. Sem ela (a
-// conversa reaberta no meio), vale a última pergunta da pessoa.
+// conversa reaberta no meio), vale a última pergunta da pessoa. `repetir: null`
+// é "sem botão": o Guia pode já ter feito o pedido, e repetir faria duas vezes.
 const ultimaPergunta = () =>
   [...store.messages].reverse().find(m => m.message_type === 'user')?.message
     ?.content || null;
 
-const avisarFalha = ({ repetir = null, ...extra } = {}) =>
+const avisarFalha = ({ repetir, ...extra }) =>
   store.addAssistantMessage({
     content: t('AUTONOMIA_GUIDE.ERROR'),
-    repetir: repetir || ultimaPergunta(),
+    repetir,
     ...extra,
   });
+
+// O que o Guia fez neste turno vai para a tela que o embute (#859), e a conta
+// avisa quem precisa recarregar.
+const contarOQueFez = execucao => {
+  if (!execucao) return;
+  emit('execucao', execucao);
+  if (execucaoMudouConta(execucao)) avisarContaMudou();
+};
 
 // A resposta ainda interessa: o painel está na tela, na mesma conta e na
 // mesma vez de pergunta.
@@ -528,9 +539,21 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
   // A resposta fica antes das mensagens que a pessoa escreveu depois da última
   // rodada do Guia: elas viraram a pergunta seguinte.
   const antesDosPedidos = data.tardias || null;
-  const repetir = pergunta || ultimaPergunta();
+  // O servidor manda `execucao` em todo desfecho em que o Guia mexeu na conta.
+  // Aí não tem "Tentar de novo": o que ele fez está no cartão, com o desfazer,
+  // e o aviso diz que fez — em vez de convidar a pedir outra vez.
+  const execucao = data.execucao || null;
+  const fez = fezAlgo(execucao);
+  const repetir = fez ? null : pergunta || ultimaPergunta();
+  const aviso = chave => (fez ? t('AUTONOMIA_GUIDE.DONE_NO_REPLY') : t(chave));
   if (data.status !== PRONTO) {
-    avisarFalha({ antesDosPedidos, repetir });
+    avisarFalha({
+      antesDosPedidos,
+      content: aviso('AUTONOMIA_GUIDE.ERROR'),
+      repetir,
+      execucao,
+    });
+    contarOQueFez(execucao);
   } else if (data.available && data.text) {
     store.addAssistantMessage({
       antesDosPedidos,
@@ -540,13 +563,12 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       acao: data.acao || null,
       artigo: data.artigo || null,
       artigos: data.artigos || null,
-      execucao: data.execucao || null,
+      execucao,
       lembrancas: data.lembrancas || null,
       tarefa: data.tarefa || null,
       pedidoId,
     });
-    if (data.execucao) emit('execucao', data.execucao);
-    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+    contarOQueFez(execucao);
   } else if (data.retido) {
     // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
     // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
@@ -556,26 +578,27 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
     // perguntava de novo e o Guia relia tudo.
     store.addAssistantMessage({
       antesDosPedidos,
-      content: t('AUTONOMIA_GUIDE.WITHHELD'),
+      content: aviso('AUTONOMIA_GUIDE.WITHHELD'),
       navigation: data.navigation || null,
       navigations: data.navigations || null,
       acao: data.acao || null,
       artigos: data.artigos || null,
-      execucao: data.execucao || null,
+      execucao,
       tarefa: data.tarefa || null,
       pedidoId,
       repetir,
     });
-    if (data.execucao) emit('execucao', data.execucao);
-    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+    contarOQueFez(execucao);
   } else {
     // Fora do ar fica escrito na conversa, como a falha: o aviso que sumia
     // sozinho deixava a pergunta sem resposta nenhuma para quem olhou depois.
     store.addAssistantMessage({
       antesDosPedidos,
-      content: t('AUTONOMIA_GUIDE.UNAVAILABLE'),
+      content: aviso('AUTONOMIA_GUIDE.UNAVAILABLE'),
+      execucao,
       repetir,
     });
+    contarOQueFez(execucao);
   }
 };
 
@@ -584,39 +607,46 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
 // solta, para o painel lateral adotar (#859).
 const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
   const pergunta = store.perguntaPendente(chave);
+  let data;
   try {
-    const data = await buscarResposta(id, requestAccount, requestId);
-    if (!data || !aindaInteressa(requestAccount, requestId)) return;
-    etapa.value = null;
-    store.fecharPendente(chave);
-    // A mensagem que chegou no meio do trabalho já foi respondida junto.
-    if (data.junto_de) return;
-    entregarResposta(data, id, pergunta);
-    // A pessoa escreveu durante o turno e o Guia não respondeu por ela: o Guia
-    // já começou a pergunta seguinte, e a tela continua esperando por ela.
-    const proxima = data.seguinte
-      ? { id: data.seguinte, pergunta: store.textoDosPedidos(data.tardias) }
-      : filaDepois.shift();
-    if (proxima) {
-      const seguinte = store.abrirPendente(requestAccount, cracha);
-      store.registrarPedidoPendente(seguinte, proxima.id, proxima.pergunta);
-      requestSequence += 1;
-      isSending.value = true;
-      acompanharResposta({
-        id: proxima.id,
-        chave: seguinte,
-        requestAccount,
-        requestId: requestSequence,
-      });
-    }
-  } catch {
-    etapa.value = null;
-    if (!aindaInteressa(requestAccount, requestId)) return;
-    store.fecharPendente(chave);
-    avisarFalha({ repetir: pergunta });
-  } finally {
-    if (requestId === requestSequence) isSending.value = false;
+    data = await buscarResposta(id, requestAccount, requestId);
+  } catch (error) {
+    // A resposta se perdeu no caminho (rede). O pedido que já venceu (404) não
+    // volta mais.
+    data = { perdida: true, venceu: error?.response?.status === 404 };
   }
+  if (requestId === requestSequence) isSending.value = false;
+  if (!data || !aindaInteressa(requestAccount, requestId)) return;
+  etapa.value = null;
+  store.fecharPendente(chave);
+  // O Guia pode continuar trabalhando: o "Tentar de novo" volta a buscar a
+  // resposta do MESMO pedido, em vez de mandar a pergunta outra vez.
+  if (data.perdida) {
+    avisarFalha({
+      repetir: null,
+      retomar: data.venceu ? null : { id, pergunta },
+    });
+    return;
+  }
+  // A mensagem que chegou no meio do trabalho já foi respondida junto.
+  if (data.junto_de) return;
+  entregarResposta(data, id, pergunta);
+  // A pessoa escreveu durante o turno e o Guia não respondeu por ela: o Guia
+  // já começou a pergunta seguinte, e a tela continua esperando por ela.
+  const proxima = data.seguinte
+    ? { id: data.seguinte, pergunta: store.textoDosPedidos(data.tardias) }
+    : filaDepois.shift();
+  if (!proxima) return;
+  const seguinte = store.abrirPendente(requestAccount, cracha);
+  store.registrarPedidoPendente(seguinte, proxima.id, proxima.pergunta);
+  requestSequence += 1;
+  isSending.value = true;
+  acompanharResposta({
+    id: proxima.id,
+    chave: seguinte,
+    requestAccount,
+    requestId: requestSequence,
+  });
 };
 
 // #861 — o que o balão mostrou de anexo, para a conversa reabrir igual.
@@ -668,7 +698,7 @@ const requestReply = async (requestAccount, message, requestId, registro) => {
   } catch {
     // A pergunta nem chegou ao servidor. A falha fica escrita na conversa, mesmo
     // que esta tela já tenha saído: a conversa é a mesma do painel lateral.
-    if (store.pendenteAtivo(chave)) avisarFalha();
+    if (store.pendenteAtivo(chave)) avisarFalha({ repetir: ultimaPergunta() });
     store.fecharPendente(chave);
     if (requestId === requestSequence) isSending.value = false;
     return;
@@ -700,6 +730,7 @@ const retomarPendente = (pedidoId, conta) => {
 };
 
 const avisosDoTurno = () => ({
+  fezSemResposta: t('AUTONOMIA_GUIDE.DONE_NO_REPLY'),
   retido: t('AUTONOMIA_GUIDE.WITHHELD'),
   falhou: t('AUTONOMIA_GUIDE.ERROR'),
   indisponivel: t('AUTONOMIA_GUIDE.UNAVAILABLE'),
@@ -909,8 +940,12 @@ const juntarAoTrabalho = message => {
       }
     })
     .catch(() => {
+      // O pedido anterior continua: a pessoa precisa saber que o "pare" não chegou.
       if (!desmontado && accountId.value === conta)
-        avisarFalha({ repetir: message });
+        avisarFalha({
+          content: t('AUTONOMIA_GUIDE.MID_WORK_NOT_SENT'),
+          repetir: message,
+        });
     });
   return true;
 };
@@ -945,6 +980,16 @@ const sendMessage = message => {
   });
   requestReply(conta, conteudo, pedido, registro);
   return true;
+};
+
+// "Tentar de novo": volta a buscar a resposta do pedido que se perdeu no
+// caminho, ou manda a pergunta outra vez quando o Guia não fez nada.
+const tentarDeNovo = item => {
+  if (item.retomar) {
+    acompanharSozinho(item.retomar.id, accountId.value, item.retomar.pergunta);
+    return;
+  }
+  sendMessage(item.repetir);
 };
 
 // #895 — a mensagem de voz vira texto aqui, e só com o texto o Guia é
@@ -1310,10 +1355,14 @@ const classeDoPainel = computed(() =>
                   :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
                 />
                 <!-- A resposta não veio: um toque manda a mesma pergunta de
-                     novo, sem precisar redigitar. Só na última mensagem. -->
+                     novo, sem precisar redigitar — ou, quando ela só se
+                     perdeu no caminho, busca de novo a do mesmo pedido. Só na
+                     última mensagem. -->
                 <Button
                   v-if="
-                    item.repetir && index === messages.length - 1 && !ocupado
+                    (item.repetir || item.retomar) &&
+                    index === messages.length - 1 &&
+                    !ocupado
                   "
                   data-tentar-de-novo
                   :label="$t('AUTONOMIA_GUIDE.RETRY')"
@@ -1321,7 +1370,7 @@ const classeDoPainel = computed(() =>
                   slate
                   faded
                   class="mt-2 min-h-11"
-                  @click="sendMessage(item.repetir)"
+                  @click="tentarDeNovo(item)"
                 />
               </div>
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->

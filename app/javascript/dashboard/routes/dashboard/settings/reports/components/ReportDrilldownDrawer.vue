@@ -1,13 +1,22 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { useEventListener } from '@vueuse/core';
+import { useEventListener, useWindowSize } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { formatTime } from '@chatwoot/utils';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
+import { useMapGetter } from 'dashboard/composables/store';
+import wootConstants from 'dashboard/constants/globals';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { useReportDrilldown } from '../composables/useReportDrilldown';
+// #3147: "Ver todas" abre as conversas do detalhamento na caixa de conversas (upstream #15832).
+import {
+  buildDrilldownConversationFilters,
+  canLinkDrilldownToConversations,
+} from '../helpers/drilldownConversationFilters';
 import ReportDrilldownCard from './ReportDrilldownCard.vue';
 
 const props = defineProps({
@@ -34,6 +43,17 @@ const emit = defineEmits(['close', 'navigate']);
 
 const panelRef = ref(null);
 const { t } = useI18n();
+const router = useRouter();
+const { width } = useWindowSize();
+const noCelular = computed(
+  () => width.value < wootConstants.SMALL_SCREEN_BREAKPOINT
+);
+const getLabelById = useMapGetter('labels/getLabelById');
+const currentAccountId = useMapGetter('getCurrentAccountId');
+const getAccount = useMapGetter('accounts/getAccount');
+const getInbox = useMapGetter('inboxes/getInbox');
+const getAgentById = useMapGetter('agents/getAgentById');
+const getTeamById = useMapGetter('teams/getTeamById');
 const {
   records,
   meta,
@@ -48,6 +68,44 @@ const {
 } = useReportDrilldown();
 
 const title = computed(() => props.metricName || '');
+
+const labelTitle = computed(() => getLabelById.value(props.id)?.title);
+const NOME_DA_DIMENSAO = {
+  inbox: () => getInbox.value(props.id)?.name,
+  agent: () => getAgentById.value(props.id)?.name,
+  team: () => getTeamById.value(props.id)?.name,
+};
+
+// Só para contagem de conversas criadas, por dia, semana ou mês: o filtro da caixa compara datas, não horas. Etiqueta
+// que não está carregada fica sem o link: sem o nome, o filtro iria vazio.
+const canViewAll = computed(
+  () =>
+    canLinkDrilldownToConversations({
+      metric: props.metric,
+      groupBy: props.groupBy,
+    }) &&
+    !!meta.value.bucket &&
+    (props.type !== 'label' || !!labelTitle.value)
+);
+
+const viewAllConversations = () => {
+  const filters = buildDrilldownConversationFilters({
+    bucket: meta.value.bucket,
+    type: props.type,
+    id: props.id,
+    labelTitle: labelTitle.value,
+    dimensionName: NOME_DA_DIMENSAO[props.type]?.(),
+    // #3151: o mesmo fuso que o filtro da caixa usa.
+    timezone: fusoDaConta(getAccount.value(currentAccountId.value)),
+  });
+  const destino = { name: 'home', query: { filters: JSON.stringify(filters) } };
+  // #3147: no celular a aba nova não tem como voltar ao relatório.
+  if (noCelular.value) {
+    router.push(destino);
+    return;
+  }
+  window.open(router.resolve(destino).href, '_blank', 'noopener');
+};
 
 const bucketValue = computed(() => {
   if (props.bucketValue === null) return '';
@@ -180,6 +238,24 @@ watch(
         >
           {{ subtitle }}
         </div>
+        <!-- Fork (#3147): abaixo da data, para não espremer o título no celular. -->
+        <Button
+          v-if="canViewAll"
+          faded
+          slate
+          size="md"
+          icon="i-lucide-external-link"
+          class="mt-3 min-h-11"
+          :label="$t('REPORT.DRILLDOWN.OPEN_IN_LIST')"
+          :aria-label="
+            $t(
+              noCelular
+                ? 'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA_SAME_TAB'
+                : 'REPORT.DRILLDOWN.OPEN_IN_LIST_ARIA'
+            )
+          "
+          @click="viewAllConversations"
+        />
       </div>
     </template>
     <template #header-actions>

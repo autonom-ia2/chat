@@ -9,7 +9,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import BaseBubble from '../../message/bubbles/Base.vue';
@@ -29,7 +29,7 @@ defineProps({
 
 const { t } = useI18n();
 const { id, content, status, variant } = useMessageContext();
-const conversa = useMapGetter('getSelectedChat');
+const conversa = useConversaDaTela();
 
 const falhou = computed(() => status.value === MESSAGE_STATUS.FAILED);
 const resposta = computed(() =>

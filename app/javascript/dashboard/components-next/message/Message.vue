@@ -5,6 +5,10 @@ import { provideMessageContext } from './provider.js';
 import { isContactSide } from 'dashboard/store/modules/conversations/helpers';
 import { useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import {
+  useConversaDaTela,
+  useSoLeitura,
+} from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
@@ -215,7 +219,7 @@ const conteudo = computed(() =>
 
 // fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
 // Também serve ao "só leitura" do #1800, mais abaixo.
-const selectedChat = useMapGetter('getSelectedChat');
+const selectedChat = useConversaDaTela();
 const messageActionDialogs = ref(null);
 const isReactable = computed(() => canReact(selectedChat.value, props));
 // A janela de edição é conferida na hora em que o menu abre (o computed não anda sozinho com o relógio).
@@ -651,11 +655,14 @@ const allContextMenuOptions = computed(() => {
 
 // Quem só lê a conversa (#1800) copia, copia o link e baixa o áudio; o resto escreve e o servidor recusa.
 // Fora da conversa aberta (outras telas que mostram mensagens) nada muda. `selectedChat` é o mesmo do #1709, acima.
+// #3165: a conversa mostrada fora da tela da conversa (o card do CRM) é sempre só leitura.
 const canOperateConversation = useMapGetter('canOperateConversation');
+const soLeitura = useSoLeitura();
 const isReadOnly = computed(
   () =>
-    selectedChat.value?.id === props.conversationId &&
-    !canOperateConversation.value(selectedChat.value)
+    soLeitura.value ||
+    (selectedChat.value?.id === props.conversationId &&
+      !canOperateConversation.value(selectedChat.value))
 );
 const READ_ONLY_OPTIONS = ['copy', 'copyLink', 'baixarAudio'];
 

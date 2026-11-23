@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import CabecalhoDaPessoa from '../../components/ficha/CabecalhoDaPessoa.vue';
 import MenuMais from '../../components/ficha/MenuMais.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -1099,6 +1099,147 @@ describe('SecaoArquivos', () => {
     expect(mount(SecaoArquivos, { props: { arquivos: [] } }).text()).toContain(
       'ARQUIVOS.VAZIO'
     );
+  });
+
+  // #3113
+  const arquivo = (id, extra = {}) => ({
+    id,
+    nome: `arquivo-${id}.pdf`,
+    tipo: 'documento',
+    quando: SEGUNDOS,
+    url: `/rails/active_storage/blobs/redirect/x/arquivo-${id}.pdf`,
+    miniatura: null,
+    ...extra,
+  });
+
+  it('cada arquivo abre o endereço numa aba nova; com miniatura mostra a imagem', () => {
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [
+          arquivo(1, {
+            nome: 'foto.jpg',
+            tipo: 'imagem',
+            miniatura: '/miniatura/foto.jpg',
+          }),
+          arquivo(2),
+        ],
+        agora: AGORA,
+      },
+    });
+    const [foto, pdf] = w.findAll('[data-relacionamentos="arquivo"]');
+    expect(foto.element.tagName).toBe('A');
+    expect(foto.attributes('href')).toContain('arquivo-1.pdf');
+    expect(foto.attributes('target')).toBe('_blank');
+    expect(foto.attributes('rel')).toContain('noopener');
+    expect(foto.get('img').attributes('src')).toBe('/miniatura/foto.jpg');
+    expect(pdf.find('img').exists()).toBe(false);
+    expect(pdf.text()).toContain('PDF');
+  });
+
+  it('miniatura que não carrega vira o ícone do tipo', async () => {
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { miniatura: '/miniatura/quebrada.png' })],
+        agora: AGORA,
+      },
+    });
+    await w.get('img').trigger('error');
+    expect(w.find('img').exists()).toBe(false);
+  });
+
+  it('vídeo mostra o primeiro quadro e toca ali mesmo, com controles', async () => {
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { nome: 'local.mp4', tipo: 'video' })],
+        agora: AGORA,
+      },
+    });
+    expect(w.get('video').attributes('src')).toContain('#t=0.1');
+    const cartao = w.get('[data-relacionamentos="arquivo"]');
+    expect(cartao.element.tagName).toBe('BUTTON');
+    expect(cartao.attributes('aria-label')).toContain('ARQUIVOS.TOCAR');
+    await cartao.trigger('click');
+    const video = w.get('video');
+    expect(video.attributes('controls')).toBeDefined();
+    expect(video.attributes('src')).not.toContain('#t=0.1');
+    expect(w.get('[data-relacionamentos="arquivo"]').element.tagName).toBe(
+      'DIV'
+    );
+  });
+
+  it('ao tocar, o foco vai para o player', async () => {
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { nome: 'local.mp4', tipo: 'video' })],
+        agora: AGORA,
+      },
+      attachTo: document.body,
+    });
+    await w.get('[data-relacionamentos="arquivo"]').trigger('click');
+    await flushPromises();
+    expect(document.activeElement).toBe(w.get('video').element);
+    w.unmount();
+  });
+
+  it('vídeo que não toca vira o cartão do tipo, que abre numa aba nova', async () => {
+    const play = vi
+      .spyOn(window.HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(
+        Object.assign(new Error('formato'), { name: 'NotSupportedError' })
+      );
+    const w = mount(SecaoArquivos, {
+      props: {
+        arquivos: [arquivo(1, { nome: 'local.mp4', tipo: 'video' })],
+        agora: AGORA,
+      },
+    });
+    await w.get('[data-relacionamentos="arquivo"]').trigger('click');
+    await flushPromises();
+    const cartao = w.get('[data-relacionamentos="arquivo"]');
+    expect(w.find('video').exists()).toBe(false);
+    expect(cartao.element.tagName).toBe('A');
+    expect(cartao.attributes('target')).toBe('_blank');
+    expect(w.find('.i-lucide-video').exists()).toBe(true);
+    play.mockRestore();
+  });
+
+  it('planilha tem ícone próprio; o nome não repete a extensão do selo', () => {
+    const w = mount(SecaoArquivos, {
+      props: { arquivos: [arquivo(1, { nome: 'frota.xlsx' })], agora: AGORA },
+    });
+    expect(w.find('.i-lucide-file-spreadsheet').exists()).toBe(true);
+    expect(w.text()).toContain('XLSX');
+    expect(w.text()).not.toContain('frota.xlsx');
+    expect(w.get('[title="frota.xlsx"]').text()).toBe('frota');
+  });
+
+  it('sem endereço não vira link', () => {
+    const w = mount(SecaoArquivos, {
+      props: { arquivos: [arquivo(1, { url: undefined })], agora: AGORA },
+    });
+    const cartao = w.get('[data-relacionamentos="arquivo"]');
+    expect(cartao.element.tagName).toBe('DIV');
+    expect(cartao.attributes('href')).toBeUndefined();
+  });
+
+  it('mostra 8 e "Ver mais" abre o resto, dizendo quantos faltam', async () => {
+    const arquivos = Array.from({ length: 11 }, (_, i) => arquivo(i + 1));
+    const w = mount(SecaoArquivos, { props: { arquivos, agora: AGORA } });
+    expect(w.findAll('[data-relacionamentos="arquivo"]')).toHaveLength(8);
+    const botao = w.get('[data-relacionamentos="ver-todos-os-arquivos"]');
+    expect(botao.text()).toContain('VER_MAIS {"n":3}');
+    await botao.trigger('click');
+    expect(w.findAll('[data-relacionamentos="arquivo"]')).toHaveLength(11);
+    expect(botao.text()).toContain('MOSTRAR_MENOS');
+  });
+
+  it('com até 8 não tem "Ver mais"', () => {
+    const w = mount(SecaoArquivos, {
+      props: { arquivos: [arquivo(1)], agora: AGORA },
+    });
+    expect(
+      w.find('[data-relacionamentos="ver-todos-os-arquivos"]').exists()
+    ).toBe(false);
   });
 });
 

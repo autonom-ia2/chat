@@ -42,27 +42,42 @@ class Autonomia::Guide::ChatJob < ApplicationJob
     resultado = @registro.ativo do
       I18n.with_locale(pergunta['locale']) { responder(account, user, pedido_id, pergunta) }
     end
-    ::Autonomia::Guide::Turno.concluir(pedido_id, resultado.to_h, diagnostico_de(resultado))
     # Daqui em diante a resposta existe: um erro no fim do turno não pode reescrevê-la como falha.
-    @turno_concluido = true
-    encerrar(pedido_id, pergunta, respondeu: respondeu?(resultado)) do |seguinte|
-      ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h.merge(seguinte))
-    end
+    @resultado = resultado
+    ::Autonomia::Guide::Turno.concluir(pedido_id, resultado.to_h, diagnostico_de(resultado))
+    encerrar(pedido_id, pergunta, respondeu: respondeu?(resultado)) { |seguinte| fechar(pedido_id, seguinte) }
   end
 
   private
 
   def falhou(error)
     pedido_id, pergunta = arguments
-    # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
-    unless @turno_concluido
-      ::Autonomia::Guide::Turno.falhar(pedido_id, (registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name))
-    end
-    encerrar(pedido_id, pergunta, respondeu: false) { |seguinte| ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte) }
+    turno_falhou(pedido_id, error) unless @resultado
+    encerrar(pedido_id, pergunta, respondeu: @resultado.present? && respondeu?(@resultado)) { |seguinte| fechar(pedido_id, seguinte) }
   rescue StandardError => e
     # Sem a trava, ao menos a tela para de esperar.
     Rails.logger.error("[autonomia][guide][chat_job] encerrar pedido=#{pedido_id} #{e.class}")
-    ::Autonomia::Guide::Pedido.falhar(pedido_id)
+    fechar_sem_fila(pedido_id)
+  end
+
+  # Último recurso: nem a fila andou. Com o Redis fora, nada grava — o pedido segue esperando e a tela para no prazo.
+  def fechar_sem_fila(pedido_id)
+    fechar(pedido_id)
+  rescue StandardError => e
+    Rails.logger.error("[autonomia][guide][chat_job] fechar pedido=#{pedido_id} #{e.class}")
+  end
+
+  # Só a classe do erro: a mensagem pode trazer o prompt ou dado da conta.
+  def turno_falhou(pedido_id, error)
+    ::Autonomia::Guide::Turno.falhar(pedido_id, (registro || ::Autonomia::Guide::Registro.new).diagnostico(erro: error.class.name))
+  end
+
+  # O pedido sai com a resposta do Guia quando ela existe — mesmo que o fim do turno tenha dado erro. Sair como
+  # falha faria a tela oferecer "Tentar de novo" para um turno que pode já ter mexido na conta.
+  def fechar(pedido_id, seguinte = {})
+    return ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte) unless @resultado
+
+    ::Autonomia::Guide::Pedido.concluir(pedido_id, @resultado.to_h.merge(seguinte))
   end
 
   # O Guia respondeu de fato: as mensagens que ele leu no meio do trabalho foram respondidas junto.
@@ -75,10 +90,16 @@ class Autonomia::Guide::ChatJob < ApplicationJob
   # resposta no histórico; a tela sabe dela por `seguinte`. Trava ocupada: encaminha mesmo assim, sem ela — uma
   # mensagem que chegue nesse instante pode ficar sem resposta, mas as que já estão na fila não.
   def encerrar(pedido_id, pergunta, respondeu:)
-    ::Autonomia::Guide::Pedido.com_trava(pedido_id) { yield encaminhar(pedido_id, pergunta, respondeu) }
+    ::Autonomia::Guide::Pedido.com_trava(pedido_id) { yield encaminhado(pedido_id, pergunta, respondeu) }
   rescue ::Autonomia::Guide::Pedido::TravaOcupada
     Rails.logger.error("[autonomia][guide][chat_job] trava ocupada no fim do turno pedido=#{pedido_id}")
-    yield encaminhar(pedido_id, pergunta, respondeu)
+    yield encaminhado(pedido_id, pergunta, respondeu)
+  end
+
+  # A fila anda uma vez só. Se o pedido não gravou depois de ela andar, o `falhou` encerra de novo: tirar a fila outra
+  # vez a acharia vazia, e o pedido sairia sem `seguinte` — a tela nunca buscaria a pergunta que já está rodando.
+  def encaminhado(pedido_id, pergunta, respondeu)
+    @encaminhado ||= encaminhar(pedido_id, pergunta, respondeu)
   end
 
   # Lidas e respondidas ficam juntas deste pedido (o turno delas já é `junto` dele). Lidas sem resposta (falha,

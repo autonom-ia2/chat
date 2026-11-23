@@ -4,6 +4,7 @@
 import { soDigitos } from '../fonte/texto';
 import { cpfValido, emailValido } from './validacao';
 import { linkCompleto, temValor } from './atributos';
+import { attributeDate } from 'dashboard/helper/attributeDate';
 
 const mudou = (inicial, atual, campo) => inicial[campo] !== atual[campo];
 
@@ -12,17 +13,25 @@ const mudou = (inicial, atual, campo) => inicial[campo] !== atual[campo];
 // um endereço de site. O erro fica em `atributo:<chave>`.
 // A empresa escrita na busca e não escolhida da lista (`empresaPendente`) trava
 // o "Salvar": sem isso, o nome escrito se perderia calado.
-const errosDosLinks = (inicial, atual, tipos) =>
+// #3082 — a data escrita que não vira um dia de verdade ("31/02/2026", ano com
+// dois números) também trava o "Salvar" (ficha/dataDoCampo.js#valorDaData).
+const PROBLEMA_DO_TIPO = {
+  link: valor => !linkCompleto(valor) && 'LINK',
+  date: valor => !attributeDate(valor) && 'DATA',
+};
+
+const errosDosAtributos = (inicial, atual, tipos) =>
   Object.fromEntries(
     Object.entries(atual.atributos ?? {})
       .filter(
         ([chave, valor]) =>
-          tipos[chave] === 'link' &&
-          temValor(valor) &&
-          valor !== inicial.atributos?.[chave] &&
-          !linkCompleto(valor)
+          temValor(valor) && valor !== inicial.atributos?.[chave]
       )
-      .map(([chave]) => [`atributo:${chave}`, 'LINK'])
+      .map(([chave, valor]) => [
+        `atributo:${chave}`,
+        PROBLEMA_DO_TIPO[tipos[chave]]?.(valor),
+      ])
+      .filter(([, problema]) => problema)
   );
 
 export const errosDoFormulario = (inicial, atual, tipos = {}) => {
@@ -38,7 +47,7 @@ export const errosDoFormulario = (inicial, atual, tipos = {}) => {
   if (String(atual.empresaPendente ?? '').trim()) {
     erros.empresa = 'EMPRESA_SEM_ESCOLHA';
   }
-  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
+  return { ...erros, ...errosDosAtributos(inicial, atual, tipos) };
 };
 
 const TAMANHO_CNPJ = 14;
@@ -62,5 +71,5 @@ export const errosDaEmpresa = (inicial, atual, tipos = {}) => {
   if (site && mudou(inicial, atual, 'site') && !linkCompleto(site)) {
     erros.site = 'LINK';
   }
-  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
+  return { ...erros, ...errosDosAtributos(inicial, atual, tipos) };
 };

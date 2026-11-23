@@ -68,6 +68,11 @@ const temStatusHttp = texto => {
 // e às vezes é a tradução de um status para quem nunca vai olhar um log ("A
 // plataforma respondeu 422."). Só o primeiro tipo ajuda. Devolve '' quando o
 // motivo não serve, e aí quem chama mostra o texto genérico.
+// Um passo que deu certo: o Guia mexeu na conta. Aí não tem "Tentar de novo" —
+// repetir faria tudo outra vez (o contato em dobro).
+export const fezAlgo = execucao =>
+  Boolean(execucao?.passos?.some(passo => passo.ok));
+
 export const motivoUtilizavel = motivo => {
   if (typeof motivo !== 'string') return '';
 
@@ -162,6 +167,7 @@ const addAssistantMessage = ({
   acaoEstado = null,
   acaoResultado = null,
   repetir = null,
+  retomar = null,
   antesDosPedidos = null,
 } = {}) => {
   const record = {
@@ -189,8 +195,11 @@ const addAssistantMessage = ({
     // #936 — a tarefa longa planejada neste turno: o cartão busca o resto pelo id.
     tarefa,
     // A pergunta que o "Tentar de novo" manda outra vez, quando a resposta não
-    // veio (falha, Guia fora do ar ou resposta retida).
+    // veio (falha, Guia fora do ar ou resposta retida) e o Guia não fez nada.
     repetir,
+    // A resposta se perdeu no caminho: o "Tentar de novo" volta a buscar a
+    // do mesmo pedido ({ id, pergunta }), em vez de pedir outra vez.
+    retomar,
     // Os pedidos das mensagens que vieram depois desta resposta (`seguinte`).
     antesDosPedidos: antesDosPedidos || [],
   };
@@ -258,6 +267,13 @@ const definirConversa = id => {
 
 const conversaAtual = () => state.conversaId;
 
+// O turno que não trouxe resposta: se o Guia mexeu na conta, diz isso e não
+// oferece repetir; senão, o aviso de sempre com o "Tentar de novo".
+const semResposta = (turno, aviso, avisos, pergunta) =>
+  fezAlgo(turno.execucao)
+    ? { content: avisos.fezSemResposta, repetir: null }
+    : { content: aviso, repetir: pergunta };
+
 // #861 — a resposta de um turno guardado, no formato de `addAssistantMessage`.
 // Retida e falha mostram o mesmo aviso que a tela mostrou na hora.
 const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
@@ -277,7 +293,6 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
   }
   if (turno.status === 'retido') {
     return {
-      content: avisos.retido,
       navigations: turno.navegacoes,
       artigos: turno.artigos,
       acao: turno.acao,
@@ -286,13 +301,19 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
       pedidoId: turno.pedido_id,
-      repetir: pergunta,
+      // O Guia mexeu na conta: o cartão mostra, e repetir faria duas vezes.
+      ...semResposta(turno, avisos.retido, avisos, pergunta),
     };
   }
   if (turno.status === 'failed') {
     return {
-      content: turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
-      repetir: pergunta,
+      execucao: turno.execucao || null,
+      ...semResposta(
+        turno,
+        turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
+        avisos,
+        pergunta
+      ),
     };
   }
   return null;
