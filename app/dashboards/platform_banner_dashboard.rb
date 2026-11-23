@@ -3,7 +3,10 @@ require 'administrate/base_dashboard'
 class PlatformBannerDashboard < Administrate::BaseDashboard
   ATTRIBUTE_TYPES = {
     id: Field::Number,
-    banner_type: Field::Select.with_options(collection: %w[info warning error feature_announcement]),
+    # Fork (#3148): fora da nuvem só o anúncio de novidade aparece no painel; a faixa do topo continua só da nuvem.
+    banner_type: Field::Select.with_options(
+      collection: -> { ChatwootApp.chatwoot_cloud? ? %w[info warning error feature_announcement] : %w[feature_announcement] }
+    ),
     title: Field::String,
     banner_message: Field::Text.with_options(truncate: 200),
     video_url: Field::String,
