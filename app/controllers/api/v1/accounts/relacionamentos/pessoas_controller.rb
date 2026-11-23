@@ -10,6 +10,9 @@
 # #3097 — as compras: o resumo de compras da ficha (`compras`), o quanto cada grupo de compra já comprou nas contagens
 # (`valores_de_compra`) e o filtro e as ordens por valor, que só quem vê valor de venda (Crm::ValorDeVenda) recebe e
 # pede: para os outros, o valor não vem e o pedido por valor responde 403.
+#
+# #3168 — `condicoes`: as linhas de "Por outra informação" (Relacionamentos::CondicoesDaLista), na lista, nas contagens,
+# em "Marcar todas" e na planilha.
 class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts::Relacionamentos::BaseController
   DA_LISTA = %i[index contagens todas exportar].freeze
   TRAVA_DA_PLANILHA = 'RELACIONAMENTOS_PLANILHA::%<account_id>d::%<user_id>d'.freeze
@@ -89,7 +92,7 @@ class Api::V1::Accounts::Relacionamentos::PessoasController < Api::V1::Accounts:
   end
 
   def pedido
-    conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:empresa, :etiqueta, :cidade, :chegou_em, :compras, :total_acima]))
+    conferido(params.permit(:grupo, :busca, :ordem, :pagina, :condicoes, filtros: [:empresa, :etiqueta, :cidade, :chegou_em, :compras, :total_acima]))
   end
 
   def ve_valores?

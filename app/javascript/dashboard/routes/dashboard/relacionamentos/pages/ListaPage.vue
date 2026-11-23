@@ -251,10 +251,9 @@ const trocarAba = nova => {
 const verGrupo = id => lista.escolherGrupo(id);
 
 // #3097 — em Pessoas, os grupos por conversa ou por compra; #3168 — e "Meus
-// grupos" (`?grupos=meus`), só na demonstração: fora dela a lista mostraria
-// todo mundo sem dizer que ignorou o filtro (lista/useVisoesDaLista.js). Abre
-// pela URL com `?grupos=compra`. Quem é administrador ajusta as faixas.
-const comMeusGrupos = naDemonstracao;
+// grupos" (`?grupos=meus`, lista/useVisoesDaLista.js). Abre pela URL com
+// `?grupos=compra`. Quem é administrador ajusta as faixas.
+const comMeusGrupos = true;
 const visaoDaUrl = () => {
   if (route.query.grupos === VISOES.COMPRA) return VISOES.COMPRA;
   if (comMeusGrupos && route.query.grupos === VISOES.MEUS) return VISOES.MEUS;
@@ -268,6 +267,7 @@ const visoes = useVisoesDaLista({
   lista,
   ordemDaAba: ordemGuardada.ordemDaAba,
   fonteDosGuardados: gruposGuardadosFonte({
+    demo: naDemonstracao,
     exemplo: route.query.guardados === GUARDADOS_DE_EXEMPLO,
   }),
   aoFalhar: () => useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')),
@@ -610,11 +610,16 @@ useRolarPilula(raiz, lista.grupo);
 onMounted(() => {
   if (!naAbaDeSeguros.value) lista.iniciar();
 });
-// Aberta pela URL já em "Meus grupos", entra no primeiro grupo guardado.
-onMounted(async () => {
-  if (!comMeusGrupos) return;
-  maisFiltros.carregarOpcoes();
-  await meusGrupos.carregar();
+// "Meus grupos" (inclusive aberta pela URL já nele) lê os grupos guardados e as
+// opções da gaveta (a frase de quem entra usa os nomes delas) só quando abre.
+watch(
+  naMeusGrupos,
+  nela => {
+    if (nela) maisFiltros.carregarOpcoes();
+  },
+  { immediate: true }
+);
+onMounted(() => {
   if (naMeusGrupos.value) meusGrupos.entrar();
 });
 watch(naAbaDeSeguros, estaNela => {

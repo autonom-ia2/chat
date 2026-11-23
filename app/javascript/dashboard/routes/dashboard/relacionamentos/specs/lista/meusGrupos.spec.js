@@ -35,7 +35,7 @@ const listaFalsa = () => {
 const montar = (opcoes = {}, visao = ref('conversa')) => {
   const lista = listaFalsa();
   const meus = useMeusGrupos({
-    fonte: gruposGuardadosFonte(opcoes),
+    fonte: gruposGuardadosFonte({ demo: true, ...opcoes }),
     lista,
     visaoNaTela: () => visao.value,
     ordemDaVisao: nova => `ordem_de_${nova}`,
@@ -48,9 +48,12 @@ beforeEach(esquecerGruposGuardados);
 
 describe('gruposGuardadosFonte', () => {
   it('começa vazia; com `exemplo`, com os três grupos inventados uma vez só', async () => {
-    expect(await gruposGuardadosFonte().listar()).toEqual([]);
-    gruposGuardadosFonte({ exemplo: true });
-    const guardados = await gruposGuardadosFonte({ exemplo: true }).listar();
+    expect(await gruposGuardadosFonte({ demo: true }).listar()).toEqual([]);
+    gruposGuardadosFonte({ demo: true, exemplo: true });
+    const guardados = await gruposGuardadosFonte({
+      demo: true,
+      exemplo: true,
+    }).listar();
     expect(guardados.map(({ nome }) => nome)).toEqual([
       'Clientes de Campinas',
       'Sumiram há mais de 90 dias',

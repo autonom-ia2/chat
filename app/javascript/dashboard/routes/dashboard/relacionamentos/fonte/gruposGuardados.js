@@ -1,17 +1,24 @@
+import CustomViewsAPI from 'dashboard/api/customViews';
 import { FILTROS_VAZIOS } from '../lista/filtros';
-import { MODELOS, OPERADORES, TIPOS } from '../lista/informacoes';
+import {
+  MODELOS,
+  OPERADORES,
+  TIPOS,
+  paraOServidor,
+} from '../lista/informacoes';
 import { VISOES } from './gruposDeCompra';
 
 // #3168 — "Meus grupos": o que a pessoa da equipe guardou com um nome. No
-// servidor eles serão `custom_filters` de contato (filter_type: contact), como
-// os Segmentos de hoje, com `query = { payload, relacionamentos: { visao,
-// grupo, busca, filtros } }`; essa leitura chega junto com o servidor das
-// condições. Por enquanto só
-// existe a da demonstração: os grupos ficam na memória até a página recarregar.
+// servidor são `custom_filters` de contato (filter_type: contact), os mesmos
+// dos Segmentos da lista de contatos de hoje, de cada pessoa da equipe, com
+// `query = { payload, relacionamentos: { visao, grupo, busca, filtros } }`: o
+// `payload` (as linhas de "Por outra informação") a tela antiga ainda lê; o
+// `relacionamentos` é o que esta lista reaplica. Segmento salvo pela tela
+// antiga (sem `relacionamentos`) não aparece aqui.
 // Cada grupo: { id, nome, visao, grupo, busca, filtros } — o que a pessoa via
 // quando guardou (a visão de onde veio, a pílula, a busca e os filtros). Nada
-// aqui muta o que devolveu antes. `?guardados=exemplo` começa com três grupos
-// inventados.
+// aqui muta o que devolveu antes. Na demonstração os grupos ficam na memória até
+// a página recarregar, e `?guardados=exemplo` começa com três inventados.
 export const GUARDADOS_DE_EXEMPLO = 'exemplo';
 
 const condicao = (id, chave, tipo, como, valor) => ({
@@ -68,7 +75,58 @@ export const esquecerGruposGuardados = () => {
   comecouComExemplo = false;
 };
 
-export const gruposGuardadosFonte = ({ exemplo = false } = {}) => {
+const TIPO = 'contact';
+
+const doServidor = ({ id, name, query }) => {
+  const salvo = query?.relacionamentos;
+  if (!salvo) return null;
+  return {
+    id: String(id),
+    nome: name,
+    visao: salvo.visao ?? VISOES.CONVERSA,
+    grupo: salvo.grupo ?? 'todos',
+    busca: salvo.busca ?? '',
+    filtros: { ...FILTROS_VAZIOS, ...salvo.filtros },
+  };
+};
+
+const paraGuardar = ({ nome, visao, grupo, busca, filtros }) => ({
+  custom_filter: {
+    name: nome,
+    filter_type: TIPO,
+    query: {
+      payload: paraOServidor(filtros?.condicoes, filtros?.juntar),
+      relacionamentos: { visao, grupo, busca, filtros },
+    },
+  },
+});
+
+const doServidorFonte = () => ({
+  async listar() {
+    const { data } = await CustomViewsAPI.getCustomViewsByFilterType(TIPO);
+    return data.map(doServidor).filter(Boolean);
+  },
+  async criar(dados) {
+    const { data } = await CustomViewsAPI.create(paraGuardar(dados));
+    return doServidor(data);
+  },
+  // `grupo`: o grupo inteiro, já com a mudança (useMeusGrupos junta os dois).
+  async mudar(id, grupo) {
+    const { data } = await CustomViewsAPI.update(id, paraGuardar(grupo));
+    return doServidor(data);
+  },
+  async apagar(id) {
+    await CustomViewsAPI.deleteCustomViews(id, TIPO);
+  },
+});
+
+// `demo`: na demonstração, os grupos da memória; fora dela, os do servidor.
+export const gruposGuardadosFonte = ({
+  demo = false,
+  exemplo = false,
+} = {}) => {
+  if (!demo) return doServidorFonte();
+
   if (exemplo && !comecouComExemplo) {
     comecouComExemplo = true;
     guardados = [...guardados, ...EXEMPLOS.map(novoGrupo)];

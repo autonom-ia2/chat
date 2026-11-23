@@ -571,4 +571,70 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       end
     end
   end
+
+  # #3168 — "Por outra informação": as linhas do filtro da lista de contatos de hoje, em JSON no `condicoes`.
+  describe 'condições por outra informação' do
+    def linha(chave, como, valores, ligacao = nil)
+      { attribute_key: chave, filter_operator: como, values: valores, query_operator: ligacao,
+        attribute_model: 'standard', custom_attribute_type: '' }.compact
+    end
+
+    def com_condicoes(*linhas, **pedido)
+      nomes(condicoes: linhas.to_json, **pedido)
+    end
+
+    before do
+      create(:custom_attribute_definition, account: account, attribute_key: 'plano', attribute_display_name: 'Plano',
+                                           attribute_display_type: :text, attribute_model: :contact_attribute)
+      pessoa('Ana Albuquerino', email: 'ana@exemplo.com', custom_attributes: { 'plano' => 'Ouro anual' })
+      pessoa('Bruno Bragantino', email: 'bruno@exemplo.org', custom_attributes: { 'plano' => 'Prata' })
+      pessoa('Carla Carvalhedo', email: 'carla@exemplo.com', blocked: true)
+    end
+
+    it 'mostra quem tem tudo isso (E)' do
+      expect(com_condicoes(linha('email', 'contains', ['exemplo.com'], 'and'), linha('blocked', 'equal_to', [false])))
+        .to contain_exactly('Ana Albuquerino')
+    end
+
+    it 'mostra quem tem pelo menos uma (OU)' do
+      expect(com_condicoes(linha('name', 'contains', ['bruno'], 'or'), linha('blocked', 'equal_to', [true])))
+        .to contain_exactly('Bruno Bragantino', 'Carla Carvalhedo')
+    end
+
+    it 'lê campo da conta pelo texto' do
+      expect(com_condicoes(linha('plano', 'contains', ['ouro']))).to contain_exactly('Ana Albuquerino')
+    end
+
+    it 'soma com o grupo, a busca e as contagens' do
+      expect(com_condicoes(linha('email', 'contains', ['exemplo.com']), busca: 'carla')).to contain_exactly('Carla Carvalhedo')
+      expect(consulta(condicoes: [linha('email', 'contains', ['exemplo.com'])].to_json).contagens).to include('todos' => 2)
+    end
+
+    it 'sem condições, nada muda' do
+      expect(nomes(condicoes: '')).to contain_exactly('Ana Albuquerino', 'Bruno Bragantino', 'Carla Carvalhedo')
+    end
+
+    {
+      'JSON quebrado' => '[{',
+      'objeto em vez de lista' => '{"attribute_key":"name"}',
+      'lista vazia' => '[]',
+      'linha que não é objeto' => '["name"]',
+      'informação desconhecida' => [{ attribute_key: 'nao_existe', filter_operator: 'equal_to', values: ['x'] }].to_json,
+      '"como" que a informação não tem' => [{ attribute_key: 'blocked', filter_operator: 'contains', values: ['x'] }].to_json,
+      'valor que falta' => [{ attribute_key: 'name', filter_operator: 'contains', values: [] }].to_json,
+      'ligação na última linha' => [{ attribute_key: 'name', filter_operator: 'contains', values: ['a'], query_operator: 'and' }].to_json,
+      'ligação desconhecida' => [{ attribute_key: 'name', filter_operator: 'contains', values: ['a'], query_operator: 'xor' },
+                                 { attribute_key: 'name', filter_operator: 'contains', values: ['b'] }].to_json
+    }.each do |caso, texto|
+      it "recusa #{caso} (422 na lista)" do
+        expect { consulta(condicoes: texto) }.to raise_error(Relacionamentos::PedidoInvalido, /condicoes/)
+      end
+    end
+
+    it 'recusa mais de 20 linhas' do
+      linhas = Array.new(21) { |indice| linha('name', 'contains', ["n#{indice}"], indice < 20 ? 'or' : nil) }
+
+      expect { consulta(condicoes: linhas.to_json) }.to raise_error(Relacionamentos::PedidoInvalido, /condicoes/)
+    end
+  end
 end

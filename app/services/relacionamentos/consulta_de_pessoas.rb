@@ -12,6 +12,9 @@
 #
 # #3097 — as compras: os grupos de compra, os filtros "compras" e "total acima de", as ordens por compra e o quanto
 # cada grupo já comprou (Relacionamentos::Compras::NaListaDePessoas).
+#
+# #3168 — "Por outra informação": as linhas do filtro da lista de contatos de hoje, em `condicoes`
+# (Relacionamentos::CondicoesDaLista), somadas aos filtros da gaveta.
 class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   GRUPOS = {
     'todos' => 'TRUE',
@@ -136,6 +139,13 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   def consultados(base = grupo == 'ativos_agora' ? @account.contacts : self.class.base(@account))
     carteira.buscados(buscados(base, textos: TEXTOS, numeros: NUMEROS), base, @pedido[:busca])
             .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou).then { |escopo| com_as_compras(escopo) }
+            .then { |escopo| condicoes ? condicoes.aplicar(escopo) : escopo }
+  end
+
+  def condicoes
+    return @condicoes if defined?(@condicoes)
+
+    @condicoes = @pedido[:condicoes].presence && Relacionamentos::CondicoesDaLista.new(@account, @pedido[:condicoes])
   end
 
   def compras
@@ -186,5 +196,6 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     recusar("empresa inválida: #{filtro(:empresa)}") unless filtro(:empresa).nil? || empresa_id
     motivo = compras.motivo_invalido(filtro(:compras), filtro(:total_acima))
     recusar(motivo) if motivo
+    condicoes
   end
 end

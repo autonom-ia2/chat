@@ -354,8 +354,8 @@ const filtrosDaAba = (aba, filtros = {}) =>
 
 // #3168 — "Por outra informação" (só em Pessoas): as linhas prontas no formato
 // do payload de `contacts/filter` (lista/informacoes.js), em JSON no parâmetro
-// `condicoes`. Sem linha pronta, o parâmetro não vai. O servidor ainda não lê
-// este parâmetro: a tela só oferece as condições na demonstração até lá.
+// `condicoes` (no servidor, Relacionamentos::CondicoesDaLista). Sem linha
+// pronta, o parâmetro não vai.
 const condicoesDoPedido = (aba, filtros = {}) => {
   if (aba === ABAS.EMPRESAS) return '';
   const payload = paraOServidor(filtros.condicoes, filtros.juntar);

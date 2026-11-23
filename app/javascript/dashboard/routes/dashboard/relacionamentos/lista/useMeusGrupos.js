@@ -60,9 +60,13 @@ export const useMeusGrupos = ({
     }
   };
 
+  // Os guardados só são lidos quando a pessoa entra em "Meus grupos" (a lista
+  // de sempre não pergunta nada a mais ao servidor).
+  let carregou = false;
   const carregar = () =>
     comCuidado(async () => {
       guardados.value = await fonte.listar();
+      carregou = true;
       return true;
     });
 
@@ -83,8 +87,10 @@ export const useMeusGrupos = ({
   };
   // Ao entrar em "Meus grupos": o primeiro grupo (sem nenhum, a tela mostra o
   // cartão vazio e não a lista).
-  const entrar = visaoAntes =>
-    escolher(guardados.value[0]?.id ?? '', visaoAntes);
+  const entrar = async visaoAntes => {
+    if (!carregou) await carregar();
+    return escolher(guardados.value[0]?.id ?? '', visaoAntes);
+  };
   const sair = () => {
     escolhido.value = '';
   };
@@ -105,7 +111,10 @@ export const useMeusGrupos = ({
 
   const trocarGrupo = (mudancas, depois = () => {}) =>
     comCuidado(async () => {
-      const mudado = await fonte.mudar(escolhido.value, mudancas);
+      const mudado = await fonte.mudar(escolhido.value, {
+        ...grupo.value,
+        ...mudancas,
+      });
       guardados.value = guardados.value.map(item =>
         item.id === mudado.id ? mudado : item
       );
