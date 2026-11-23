@@ -41,9 +41,12 @@ export const useAcoesDosGrupos = ({
   };
 
   const mudarGrupo = () => maisFiltros.abrirParaGrupo(meusGrupos.grupo.value);
+  // A gaveta só fecha quando o grupo foi gravado: se a escrita falha, o que a
+  // pessoa escolheu continua nela.
   const guardarNoGrupo = async novos => {
+    if (!(await meusGrupos.guardarNoGrupo(novos))) return;
     maisFiltros.aberta.value = false;
-    if (await meusGrupos.guardarNoGrupo(novos)) useAlert(t(`${MG}.GUARDADO`));
+    useAlert(t(`${MG}.GUARDADO`));
   };
   const guardarDaFaixa = () => guardarNoGrupo();
 

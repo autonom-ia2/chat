@@ -236,12 +236,18 @@ export const comComo = (condicao, como) => ({
 });
 
 const vazio = valor => valor === '' || valor === null || valor === undefined;
+const MAXIMO_DE_DIAS = 998;
+const diasValidos = valor => {
+  const dias = Number(valor);
+  return Number.isInteger(dias) && dias >= 1 && dias <= MAXIMO_DE_DIAS;
+};
 
 // O que falta na linha, para a tela dizer (RELACIONAMENTOS.LISTA.CONDICOES.
 // ERRO.<código>), ou '' quando ela está pronta (ou não escolheu informação).
 export const erroDaCondicao = ({ chave, tipo, como, valor }) => {
   if (!chave || !pedeValor(como)) return '';
-  if (como === HA_MAIS_DE_DIAS) return Number(valor) > 0 ? '' : 'FALTA_DIAS';
+  // O servidor aceita de 1 a 998 dias, inteiros (Filters::DateFilterHelper).
+  if (como === HA_MAIS_DE_DIAS) return diasValidos(valor) ? '' : 'FALTA_DIAS';
   if (ehData(tipo)) {
     if (vazio(valor)) return 'FALTA_DIA';
     return attributeDate(valor) ? '' : 'DATA_ERRADA';
@@ -256,7 +262,8 @@ export const condicoesProntas = (condicoes = []) =>
 
 const valoresDoServidor = ({ como, valor }) => {
   if (!pedeValor(como)) return [];
-  return [typeof valor === 'string' ? valor.trim() : valor];
+  if (typeof valor === 'boolean') return [valor];
+  return [String(valor).trim()];
 };
 
 // O payload de `contacts/filter` (o mesmo do filtro antigo, depois do

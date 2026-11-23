@@ -2,11 +2,14 @@
 # monta, no mesmo formato e com a mesma regra do filtro da lista de contatos de hoje (o payload de `contacts/filter`,
 # Contacts::FilterService e lib/filters/filter_keys.yml). Chegam em JSON no parâmetro `condicoes`.
 #
-# O que o filtro de hoje recusa (informação, "como" ou valor que ele não conhece) aqui vira Relacionamentos::PedidoInvalido,
-# que a lista responde com 422: uma linha perdida no caminho mostraria a base inteira. Linha que não é um objeto, lista
-# vazia ou com mais de MAXIMO linhas, idem.
+# O filtro de hoje confia na tela dele: valor que não é texto, ligação que falta no meio, "como" que o tipo do campo da
+# conta não tem viram erro do banco (500) ou filtro pela metade. Aqui cada linha é conferida antes (Conferencia), e o
+# que não serve vira Relacionamentos::PedidoInvalido, que a lista responde com 422: uma linha perdida no caminho
+# mostraria a base inteira.
+#
+# A condição vale sobre todas as pessoas da conta; quem decide a base é a consulta (a lista de hoje, ou a conta inteira
+# no grupo "No site agora", que mostra o visitante anônimo).
 class Relacionamentos::CondicoesDaLista
-  MAXIMO = 20
   RECUSAS_DO_FILTRO = [
     CustomExceptions::CustomFilter::InvalidAttribute,
     CustomExceptions::CustomFilter::InvalidOperator,
@@ -14,35 +17,29 @@ class Relacionamentos::CondicoesDaLista
     CustomExceptions::CustomFilter::InvalidValue
   ].freeze
 
-  def initialize(account, texto)
-    @account = account
-    @filtrados = montar(linhas_de(texto))
+  # O filtro de hoje, sobre a conta inteira em vez da base da lista de contatos.
+  class Filtro < Contacts::FilterService
+    def base_relation
+      @account.contacts
+    end
   end
 
-  # Só as pessoas do escopo que passam nas condições. O filtro de hoje lê a mesma base da lista (resolved_contacts).
+  def initialize(account, texto)
+    @account = account
+    linhas = Relacionamentos::CondicoesDaLista::Conferencia.new(account, texto).linhas
+    @filtrados = montar(linhas)
+  end
+
+  # Só as pessoas do escopo que passam nas condições.
   def aplicar(escopo)
     escopo.where(id: @filtrados.select(:id))
   end
 
   private
 
-  def linhas_de(texto)
-    linhas = JSON.parse(texto.to_s)
-    recusar('condicoes em formato inválido') unless linhas.is_a?(Array) && linhas.all?(Hash)
-    recusar("condicoes: de 1 a #{MAXIMO} linhas") unless linhas.size.between?(1, MAXIMO)
-
-    linhas.map(&:with_indifferent_access)
-  rescue JSON::ParserError
-    recusar('condicoes em formato inválido')
-  end
-
   def montar(linhas)
-    Contacts::FilterService.new(@account, nil, { payload: linhas }).perform(count: false)[:contacts]
+    Filtro.new(@account, nil, { payload: linhas }).perform(count: false)[:contacts]
   rescue *RECUSAS_DO_FILTRO => e
-    recusar("condicoes: #{e.message}")
-  end
-
-  def recusar(mensagem)
-    raise Relacionamentos::PedidoInvalido, mensagem
+    raise Relacionamentos::PedidoInvalido, "condicoes: #{e.message}"
   end
 end

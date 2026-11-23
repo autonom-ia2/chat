@@ -173,6 +173,22 @@ describe('useMeusGrupos', () => {
     expect(meus.guardados.value).toHaveLength(2);
     expect(meus.grupo.value.nome).toBe('Sumiram há mais de 90 dias');
   });
+
+  it('apagar o último volta a lista para todos, sem a busca e os filtros dele', async () => {
+    const { meus, lista } = montar();
+    lista.mudarConsulta({
+      grupo: 'clientes',
+      busca: 'ana',
+      filtros: { cidade: 'Santos' },
+    });
+    await meus.guardarComoGrupo('Só este');
+    await meus.apagar();
+    expect(meus.guardados.value).toEqual([]);
+    expect(meus.grupo.value).toBeNull();
+    expect(lista.grupo.value).toBe('todos');
+    expect(lista.busca.value).toBe('');
+    expect(lista.filtros.value).toEqual(FILTROS_VAZIOS);
+  });
 });
 
 describe('mesmosFiltros e mesmaConsulta', () => {

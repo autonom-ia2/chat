@@ -298,7 +298,7 @@
           "FALTA_TEXTO": "Write what to look for.",
           "FALTA_ESCOLHA": "Pick an option.",
           "FALTA_DIA": "Write the day.",
-          "FALTA_DIAS": "Write how many days."
+          "FALTA_DIAS": "Write how many days, from 1 to 998."
         },
         "EXEMPLO_DE_DATA": "E.g.: {data}",
         "RESUMO": {

@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { ABAS, GRUPO_PADRAO } from '../fonte/grupos';
 import { FILTROS_VAZIOS } from './filtros';
 
 // #3168 — "Meus grupos" da lista de pessoas: os grupos guardados (`fonte`,
@@ -137,7 +138,17 @@ export const useMeusGrupos = ({
       guardados.value = guardados.value.filter(
         ({ id }) => id !== escolhido.value
       );
-      entrar();
+      if (guardados.value.length) {
+        entrar();
+        return true;
+      }
+      // Era o último: a lista volta a ser a de todos, sem os filtros dele.
+      escolhido.value = '';
+      lista.mudarConsulta({
+        grupo: GRUPO_PADRAO[ABAS.PESSOAS],
+        busca: '',
+        filtros: {},
+      });
       return true;
     });
 

@@ -298,7 +298,7 @@
           "FALTA_TEXTO": "Escreva o que procurar.",
           "FALTA_ESCOLHA": "Escolha uma opção.",
           "FALTA_DIA": "Escreva o dia.",
-          "FALTA_DIAS": "Escreva quantos dias."
+          "FALTA_DIAS": "Escreva quantos dias, de 1 a 998."
         },
         "EXEMPLO_DE_DATA": "Ex.: {data}",
         "RESUMO": {

@@ -610,6 +610,16 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       expect(consulta(condicoes: [linha('email', 'contains', ['exemplo.com'])].to_json).contagens).to include('todos' => 2)
     end
 
+    # "No site agora" lê a conta inteira: a condição não pode trazer de volta a base da lista de hoje.
+    it 'no grupo "No site agora", a condição vale também para o visitante anônimo' do
+      visitante = create(:contact, account: account, name: 'Visitante do site')
+      visitante.update_columns(contact_type: 0) # rubocop:disable Rails/SkipsModelValidations
+      OnlineStatusTracker.update_presence(account.id, 'Contact', visitante.id)
+
+      expect(com_condicoes(linha('name', 'contains', ['visitante']), grupo: 'ativos_agora')).to eq(['Visitante do site'])
+      expect(consulta(condicoes: [linha('name', 'contains', ['visitante'])].to_json).contagens).to include('ativos_agora' => 1)
+    end
+
     it 'sem condições, nada muda' do
       expect(nomes(condicoes: '')).to contain_exactly('Ana Albuquerino', 'Bruno Bragantino', 'Carla Carvalhedo')
     end
@@ -623,12 +633,41 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       '"como" que a informação não tem' => [{ attribute_key: 'blocked', filter_operator: 'contains', values: ['x'] }].to_json,
       'valor que falta' => [{ attribute_key: 'name', filter_operator: 'contains', values: [] }].to_json,
       'ligação na última linha' => [{ attribute_key: 'name', filter_operator: 'contains', values: ['a'], query_operator: 'and' }].to_json,
+      'valores fora de uma lista' => [{ attribute_key: 'name', filter_operator: 'equal_to', values: 'Ana' }].to_json,
+      'texto procurado que não é texto' => [{ attribute_key: 'name', filter_operator: 'contains', values: [5] }].to_json,
+      'telefone que não é texto' => [{ attribute_key: 'phone_number', filter_operator: 'equal_to', values: [11] }].to_json,
+      'sim/não que não é true ou false' => [{ attribute_key: 'blocked', filter_operator: 'equal_to', values: ['sim'] }].to_json,
+      '"como" desconhecido' => [{ attribute_key: 'name', filter_operator: 'starts_with', values: ['a'] }].to_json,
+      '"como" que o campo da conta não tem' => [{ attribute_key: 'plano', filter_operator: 'is_greater_than', values: ['a'] }].to_json,
+      'ligação que falta no meio' => [{ attribute_key: 'name', filter_operator: 'contains', values: ['a'] },
+                                      { attribute_key: 'name', filter_operator: 'contains', values: ['b'] }].to_json,
       'ligação desconhecida' => [{ attribute_key: 'name', filter_operator: 'contains', values: ['a'], query_operator: 'xor' },
                                  { attribute_key: 'name', filter_operator: 'contains', values: ['b'] }].to_json
     }.each do |caso, texto|
       it "recusa #{caso} (422 na lista)" do
         expect { consulta(condicoes: texto) }.to raise_error(Relacionamentos::PedidoInvalido, /condicoes/)
       end
+    end
+
+    it 'recusa campo da conta de um tipo que a lista não filtra (moeda) e o de marcar com texto' do
+      create(:custom_attribute_definition, account: account, attribute_key: 'renda', attribute_display_type: :currency,
+                                           attribute_model: :contact_attribute)
+      create(:custom_attribute_definition, account: account, attribute_key: 'vip', attribute_display_type: :checkbox,
+                                           attribute_model: :contact_attribute)
+
+      expect { consulta(condicoes: [linha('renda', 'equal_to', ['10'])].to_json) }
+        .to raise_error(Relacionamentos::PedidoInvalido, /condicoes/)
+      expect { consulta(condicoes: [linha('vip', 'equal_to', ['abc'])].to_json) }
+        .to raise_error(Relacionamentos::PedidoInvalido, /condicoes/)
+    end
+
+    it 'lê campo da conta de marcar com true ou false e "está vazio" sem valor' do
+      create(:custom_attribute_definition, account: account, attribute_key: 'vip', attribute_display_type: :checkbox,
+                                           attribute_model: :contact_attribute)
+      Contact.find_by(name: 'Ana Albuquerino').update!(custom_attributes: { 'plano' => 'Ouro anual', 'vip' => true })
+
+      expect(com_condicoes(linha('vip', 'equal_to', [true]))).to contain_exactly('Ana Albuquerino')
+      expect(com_condicoes(linha('plano', 'is_not_present', []))).to contain_exactly('Carla Carvalhedo')
     end
 
     it 'recusa mais de 20 linhas' do
