@@ -1795,6 +1795,8 @@ pt_BR:
           versao_ja_executada: 'Esta versão da automação já rodou, então ficou.'
           versao_mais_nova: 'Alguém salvou uma versão mais nova depois, então esta ficou.'
           mudou_depois: 'Alguém mexeu na automação depois, então ela ficou como está.'
+          has_children: 'Isto já tem coisas ligadas que vieram depois (como conversas ou cards), então ficou. Se quiser tirar, apague pela tela.'
+          not_destroyed: 'A plataforma não deixou apagar isto, então ficou como está.'
       records:
         automation_rule: 'Automação'
       fields:
