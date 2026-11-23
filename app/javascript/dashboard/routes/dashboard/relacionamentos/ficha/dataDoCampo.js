@@ -6,6 +6,9 @@
 import { attributeDate } from 'dashboard/helper/attributeDate';
 
 const DIGITOS = '0123456789';
+// Entre o dia, o mês e o ano: barra, traço, ponto ou espaço. Qualquer outra
+// coisa ("de maio", "abc") faz o texto não ser uma data.
+const SEPARADORES = '/-. ';
 const TAMANHO = { day: 2, month: 2, year: 4 };
 const DIA_DE_EXEMPLO = new Date(2006, 0, 2, 12);
 
@@ -80,7 +83,11 @@ export const valorDaData = (texto, idioma) => {
   const escrito = String(texto ?? '').trim();
   if (!escrito) return '';
   const { ordem } = formatoDaData(idioma);
-  const partes = partesEscritas(gruposDeDigitos(escrito), ordem);
+  const soDataEscrita = [...escrito].every(
+    letra => DIGITOS.includes(letra) || SEPARADORES.includes(letra)
+  );
+  const partes =
+    soDataEscrita && partesEscritas(gruposDeDigitos(escrito), ordem);
   if (!partes) return escrito;
   const porTipo = Object.fromEntries(ordem.map((tipo, i) => [tipo, partes[i]]));
   if (porTipo.year.length !== TAMANHO.year) return escrito;

@@ -290,7 +290,7 @@
         "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here.",
         "LINK": "This website address is not right. Write it like this: yoursite.com",
         "EMPRESA_SEM_ESCOLHA": "Tap the company name in the list to choose it. If it is not there, tap “Register as a new company”.",
-        "DATA": "This date does not exist. Write it like this: {formato}"
+        "DATA": "This date is not right. Write it like this: {formato}"
       },
       "SAIR": {
         "TITULO": "Leave without saving?",
@@ -329,7 +329,8 @@
         "CALENDARIO_DE": "Choose {campo} on the calendar",
         "DATA_DIA": "dd",
         "DATA_MES": "mm",
-        "DATA_ANO": "yyyy"
+        "DATA_ANO": "yyyy",
+        "DATA_ASSIM": "Write it like this: {formato}"
       },
       "FOTO": {
         "POR": "Add photo",

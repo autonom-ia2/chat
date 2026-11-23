@@ -4,7 +4,10 @@ import {
   textoDaData,
   valorDaData,
 } from '../../ficha/dataDoCampo';
-import { errosDoFormulario } from '../../ficha/errosDoFormulario';
+import {
+  errosDaEmpresa,
+  errosDoFormulario,
+} from '../../ficha/errosDoFormulario';
 
 // #3082 — a data do campo personalizado segue o idioma do painel, não o do
 // navegador: em português, dia/mês/ano; em inglês, mês/dia/ano.
@@ -42,6 +45,10 @@ describe('data do campo no formato do idioma do painel', () => {
     expect(valorDaData('31/02/1990', 'pt-BR')).toBe('31/02/1990');
     expect(valorDaData('03/08/85', 'pt-BR')).toBe('03/08/85');
     expect(valorDaData('03/08', 'pt-BR')).toBe('03/08');
+    expect(valorDaData('12/05/1990 de maio', 'pt-BR')).toBe(
+      '12/05/1990 de maio'
+    );
+    expect(valorDaData('12/05/1990abc', 'pt-BR')).toBe('12/05/1990abc');
   });
 
   it('mostra o jeito de escrever com as letras do idioma', () => {
@@ -79,5 +86,16 @@ describe('conferência do formulário: data do campo personalizado', () => {
         tipos
       )
     ).toEqual({});
+  });
+
+  it('na empresa também', () => {
+    const empresa = { nome: 'Padaria', cnpj: '', site: '' };
+    expect(
+      errosDaEmpresa(
+        { ...empresa, atributos: {} },
+        { ...empresa, atributos: { fundacao: '30/02/2000' } },
+        { fundacao: 'date' }
+      )
+    ).toEqual({ 'atributo:fundacao': 'DATA' });
   });
 });

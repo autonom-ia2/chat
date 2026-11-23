@@ -74,12 +74,24 @@ const exemplo = computed(() =>
   })
 );
 const calendario = ref(null);
-// O calendário do navegador abre por um campo de data escondido.
-const abrirCalendario = () => {
-  const campo = calendario.value;
-  if (!campo) return;
-  if (typeof campo.showPicker === 'function') campo.showPicker();
-  else campo.click();
+// O calendário do navegador abre por um campo de data escondido. O navegador
+// que não sabe abri-lo assim (Safari e Firefox antigos) fica sem o botão: a
+// data se escreve no campo.
+const temCalendario =
+  typeof HTMLInputElement !== 'undefined' &&
+  typeof HTMLInputElement.prototype.showPicker === 'function';
+const abrirCalendario = () => calendario.value?.showPicker();
+
+// Enquanto a pessoa escreve, o campo mostra o que ela escreveu: arrumar o
+// texto a cada tecla ("3/8/1985" virando "03/08/1985") jogaria o cursor para o
+// fim. A data arrumada aparece quando ela sai do campo.
+const textoEscrito = ref(null);
+const sairDoCampo = () => {
+  textoEscrito.value = null;
+};
+const mudarDeFora = valor => {
+  textoEscrito.value = null;
+  emit('mudar', valor);
 };
 
 const PELO_TIPO = {
@@ -98,6 +110,7 @@ const atributosDoCampo = computed(() => {
 });
 
 const textoNoCampo = computed(() => {
+  if (ehData.value && textoEscrito.value !== null) return textoEscrito.value;
   if (!temValor(props.valor)) return '';
   return ehData.value
     ? textoDaData(props.valor, idioma.value)
@@ -111,22 +124,36 @@ const aoDigitarNumero = evento => {
   if (alvo.validity?.badInput) return;
   emit('mudar', alvo.value === '' ? '' : Number(alvo.value));
 };
-const ouvintes = computed(() =>
-  props.campo.tipo === 'number' ? { onInput: aoDigitarNumero } : {}
-);
+const ouvintes = computed(() => {
+  if (props.campo.tipo === 'number') return { onInput: aoDigitarNumero };
+  if (ehData.value) return { onBlur: sairDoCampo };
+  return {};
+});
 const aoEscrever = texto => {
   if (props.campo.tipo === 'number') return;
-  emit('mudar', ehData.value ? valorDaData(texto, idioma.value) : texto);
+  if (!ehData.value) {
+    emit('mudar', texto);
+    return;
+  }
+  textoEscrito.value = texto;
+  emit('mudar', valorDaData(texto, idioma.value));
 };
 
 const vaiSair = computed(
   () => temValor(props.valorInicial) && !temValor(props.valor)
 );
-const ajuda = computed(() => (vaiSair.value ? ga('ATRIBUTO.VAI_SAIR') : ''));
+// A data diz como se escreve (o exemplo do campo some ao digitar e o leitor
+// de tela não o lê).
+const ajuda = computed(() => {
+  if (vaiSair.value) return ga('ATRIBUTO.VAI_SAIR');
+  if (ehData.value && !props.erro)
+    return ga('ATRIBUTO.DATA_ASSIM', { formato: exemplo.value });
+  return '';
+});
 const mensagem = computed(() =>
   props.erro ? ga(`ERRO.${props.erro}`, { formato: exemplo.value }) : ''
 );
-const voltar = () => emit('mudar', props.valorInicial);
+const voltar = () => mudarDeFora(props.valorInicial);
 </script>
 
 <template>
@@ -187,7 +214,7 @@ const voltar = () => emit('mudar', props.valorInicial);
     >
       <template v-if="temLimpar || ehData" #acao>
         <div class="flex items-center shrink-0 -my-2 -me-3">
-          <template v-if="ehData">
+          <template v-if="ehData && temCalendario">
             <Button
               data-relacionamentos="calendario-do-atributo"
               slate
@@ -211,7 +238,7 @@ const voltar = () => emit('mudar', props.valorInicial);
               aria-hidden="true"
               class="sr-only"
               :value="dataDoCalendario"
-              @change="evento => emit('mudar', evento.target.value)"
+              @change="evento => mudarDeFora(evento.target.value)"
             />
           </template>
           <Button
@@ -228,7 +255,7 @@ const voltar = () => emit('mudar', props.valorInicial);
                 campo: campo.rotulo,
               })
             "
-            @click="emit('mudar', '')"
+            @click="mudarDeFora('')"
           />
         </div>
       </template>

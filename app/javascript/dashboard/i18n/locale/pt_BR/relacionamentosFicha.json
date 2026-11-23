@@ -290,7 +290,7 @@
         "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui.",
         "LINK": "Este endereço de site não está certo. Escreva assim: seusite.com.br",
         "EMPRESA_SEM_ESCOLHA": "Toque no nome da empresa na lista para escolher. Se o nome não estiver lá, toque em “Cadastrar como empresa nova”.",
-        "DATA": "Essa data não existe. Escreva assim: {formato}"
+        "DATA": "Esta data não está certa. Escreva assim: {formato}"
       },
       "SAIR": {
         "TITULO": "Sair sem salvar?",
@@ -329,7 +329,8 @@
         "CALENDARIO_DE": "Escolher {campo} no calendário",
         "DATA_DIA": "dd",
         "DATA_MES": "mm",
-        "DATA_ANO": "aaaa"
+        "DATA_ANO": "aaaa",
+        "DATA_ASSIM": "Escreva assim: {formato}"
       },
       "FOTO": {
         "POR": "Pôr foto",
