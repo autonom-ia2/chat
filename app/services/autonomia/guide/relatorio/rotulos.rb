@@ -22,11 +22,14 @@ module Autonomia::Guide::Relatorio::Rotulos
     primeiro > comeco.to_date || ultimo < (termino - 1.second).to_date ? rotulo.merge(parcial: true) : rotulo
   end
 
-  # "2 dias e 1 hora". Zero é tempo medido (resposta fora do expediente); nil é nada medido.
+  # "2 dias e 1 hora". Zero é tempo medido (resposta fora do expediente): "0 segundos". nil é nada medido.
+  # O `Duration.build(0).parts` pode vir vazio (depende da versão do Rails), e zero nunca pode virar texto vazio.
   def tempo(segundos)
     return nil if segundos.nil?
 
     partes = ActiveSupport::Duration.build(segundos.to_f.round).parts.sort_by { |unidade, _| UNIDADES.index(unidade) }
+    return I18n.t("#{CHAVE}.unidades.seconds", count: 0) if partes.empty?
+
     partes.first(2).map { |unidade, quantos| I18n.t("#{CHAVE}.unidades.#{unidade}", count: quantos) }
           .to_sentence(two_words_connector: I18n.t("#{CHAVE}.e"))
   end
