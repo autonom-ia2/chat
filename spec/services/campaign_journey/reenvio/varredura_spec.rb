@@ -266,6 +266,30 @@ RSpec.describe CampaignJourney::Reenvio::Varredura, :aggregate_failures do
       expect(CampaignAudienceLink.for_campaign(nova).campaign_import.campaign_import_rows.pluck(:contact_id)).to eq([pessoa('Bia').id])
     end
 
+    it 'leaves out who wrote in the inbox after the send, even after the 72 hours of the reply mark' do
+      campaign = CampaignJourney::WhatsappApiCampaignCreator.new(
+        account: account, user: user, campaign_import: audience,
+        params: ActionController::Parameters.new(title: 'Vistoria', inbox_id: inbox.id, message_body: 'Oi')
+      ).perform
+      CampaignJourney::Reenvio.guardar!(campaign, reenvio_quem: 'nao_respondeu', reenvio_dias: 7, reenvio_mensagem: { texto: 'De novo' })
+      %w[Ana Bia].each do |nome|
+        campaign.whatsapp_api_campaign_recipients.create!(account: account, inbox: inbox, contact: pessoa(nome), status: :sent,
+                                                          sent_at: 1.hour.ago)
+      end
+      campaign.update!(status: :completed)
+
+      travel 5.days do
+        conversa = create_crm_conversation(account: account, inbox: inbox, contact: pessoa('Ana'))
+        create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, content: 'Quero sim')
+      end
+      travel 7.days do
+        described_class.rodar
+      end
+
+      publico = CampaignAudienceLink.for_campaign(opcoes_de(campaign).reenvio_campanha).campaign_import
+      expect(publico.campaign_import_rows.pluck(:contact_id)).to eq([pessoa('Bia').id])
+    end
+
     it 'cancels when the first one is cancelled' do
       campaign = CampaignJourney::WhatsappApiCampaignCreator.new(
         account: account, user: user, campaign_import: audience,
