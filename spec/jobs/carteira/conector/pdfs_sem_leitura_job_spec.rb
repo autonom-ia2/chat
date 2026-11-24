@@ -41,8 +41,27 @@ RSpec.describe Carteira::Conector::PdfsSemLeituraJob, :aggregate_failures do
 
   it 'conta sem a leitura liberada não entra na fila' do
     seguro_com_pdf('EX-7')
+    expect { described_class.perform_now }.to have_enqueued_job(Carteira::Conector::LerPdfJob).exactly(:once)
+
     Carteira::Leitor::Liberado.desligar!(account)
 
     expect { described_class.perform_now }.not_to have_enqueued_job(Carteira::Conector::LerPdfJob)
+  end
+
+  it 'o seguro sem nada vazio não entra na fila' do
+    vazio = seguro_com_pdf('EX-8')
+    # Os campos que a leitura completa foram decididos à mão (contam como preenchidos) e o ramo veio escrito.
+    cheio = seguro_com_pdf('EX-9', ramo_original: '0531 - Automóvel', corrigido_a_mao: Carteira::Conector::LerPdf::CAMPOS)
+
+    expect { described_class.perform_now }.to have_enqueued_job(Carteira::Conector::LerPdfJob).exactly(:once)
+    expect(Carteira::Conector::LerPdfJob).to have_been_enqueued.with(vazio.id, leitura.id)
+    expect(Carteira::Conector::LerPdfJob).not_to have_been_enqueued.with(cheio.id, anything)
+  end
+
+  it 'o PDF que só a cotação leu volta a ser lido, para completar o resto' do
+    seguro = seguro_com_pdf('EX-10')
+    seguro.eventos.create!(tipo: Carteira::Cotacao::DadosDoPdf::PASSO, quando: Time.current, valores: {})
+
+    expect { described_class.perform_now }.to have_enqueued_job(Carteira::Conector::LerPdfJob).with(seguro.id, leitura.id)
   end
 end
