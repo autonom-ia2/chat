@@ -14,9 +14,9 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
   let(:reply_inbox) { create_crm_inbox(account: account, members: [admin]) }
   let(:whatsapp_inbox) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
   let(:sms_inbox) { create(:channel_sms, account: account).inbox }
-  let(:ana) { account.contacts.create!(name: 'Ana', phone_number: '+5511987654321', email: 'ana@alfa.com.br') }
-  let(:bia) { account.contacts.create!(name: 'Bia', phone_number: '+5521987654322', email: 'bia@beta.com.br') }
-  let(:caio) { account.contacts.create!(name: 'Caio', phone_number: '+5531987654323', email: 'caio@gama.com.br') }
+  let(:ana) { account.contacts.create!(name: 'Ana', phone_number: '+5511900000001', email: 'ana@example.com') }
+  let(:bia) { account.contacts.create!(name: 'Bia', phone_number: '+5511900000002', email: 'bia@example.com') }
+  let(:caio) { account.contacts.create!(name: 'Caio', phone_number: '+5511900000003', email: 'caio@example.com') }
 
   def headers
     { 'api_access_token' => admin.access_token.token }
@@ -37,8 +37,9 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
     CampaignJourney::CampaignMarks.mark!(create_crm_conversation(account: account, inbox: reply_inbox, contact: contact), campaign)
   end
 
-  def campanha_oficial(titulo)
-    create(:campaign, account: account, inbox: whatsapp_inbox, title: titulo, campaign_type: :one_off, template_params: { 'name' => 'oferta' })
+  def campanha_oficial(titulo, status: :completed)
+    create(:campaign, account: account, inbox: whatsapp_inbox, title: titulo, campaign_type: :one_off, campaign_status: status,
+                      template_params: { 'name' => 'oferta' })
   end
 
   def recebeu(campaign, contact, status)
@@ -80,6 +81,19 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
                'receberam' => 2, 'responderam' => 1)
     end
 
+    # #3206: a varredura grava enviado logo que cria a campanha nova, que nasce `active` e só vira `processing` quando o
+    # envio começa. Até lá ela está saindo, com zero receberam — nunca "saiu para 0".
+    it 'tells the second campaign is going out while it has not started yet' do
+      nova = campanha_oficial('Oferta · segunda mensagem', status: :active)
+      reenvio!(primeira, 'enviado', reenvio_em: 1.minute.ago, reenvio_campanha: nova)
+
+      expect(segunda_mensagem('whatsapp_official', primeira.display_id)['campanha'])
+        .to include('processing' => true, 'receberam' => 0, 'responderam' => 0)
+
+      nova.update!(campaign_status: :processing)
+      expect(segunda_mensagem('whatsapp_official', primeira.display_id)['campanha']).to include('processing' => true)
+    end
+
     it 'keeps enviado without the campaign when the second campaign was deleted' do
       nova = campanha_oficial('Oferta · segunda mensagem')
       reenvio!(primeira, 'enviado', reenvio_campanha: nova)
@@ -110,13 +124,14 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
   describe 'SMS' do
     it 'links the second SMS campaign under the sms result' do
       primeira = create(:campaign, account: account, inbox: sms_inbox, title: 'Parcela', campaign_type: :one_off)
-      nova = create(:campaign, account: account, inbox: sms_inbox, title: 'Parcela · segunda mensagem', campaign_type: :one_off)
+      nova = create(:campaign, account: account, inbox: sms_inbox, title: 'Parcela · segunda mensagem', campaign_type: :one_off,
+                            campaign_status: :completed)
       recebeu(nova, ana, :delivered)
       replied!(ana, nova)
       reenvio!(primeira, 'enviado', reenvio_campanha: nova)
 
       expect(segunda_mensagem('sms', primeira.display_id)['campanha'])
-        .to include('channel' => 'sms', 'id' => nova.display_id, 'receberam' => 1, 'responderam' => 1)
+        .to include('channel' => 'sms', 'id' => nova.display_id, 'processing' => false, 'receberam' => 1, 'responderam' => 1)
     end
   end
 
@@ -138,6 +153,17 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
       expect(segunda_mensagem('whatsapp_api', primeira.id)['campanha'])
         .to include('channel' => 'whatsapp_api', 'id' => nova.id, 'processing' => true, 'receberam' => 1, 'responderam' => 0)
     end
+
+    it 'never shows a WhatsApp API campaign of another account as the second message' do
+      primeira = campanha_api('Vistoria', :completed)
+      outra, dono = create_account_and_user
+      alheia = WhatsappApiCampaign.create!(account: outra, inbox: create_crm_whatsapp_api_inbox(account: outra), created_by: dono,
+                                           title: 'Alheia', audience: [{ 'type' => 'Label', 'id' => 1 }], message_body: 'Olá',
+                                           scheduled_at: 1.hour.ago, status: :completed)
+      reenvio!(primeira, 'enviado', reenvio_campanha: alheia)
+
+      expect(segunda_mensagem('whatsapp_api', primeira.id)).to include('status' => 'enviado', 'campanha' => nil)
+    end
   end
 
   describe 'E-mail' do
@@ -145,9 +171,9 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
       primeira = create(:email_campaign, account: account, name: 'Novidades', status: :sent)
       nova = create(:email_campaign, account: account, sender_identity: primeira.sender_identity, name: 'Novidades · segunda mensagem',
                                     status: :sent)
-      create(:email_campaign_recipient, email_campaign: nova, email: 'ana@alfa.com.br', name: 'Ana', contact: ana, status: :delivered,
+      create(:email_campaign_recipient, email_campaign: nova, email: 'ana@example.com', name: 'Ana', contact: ana, status: :delivered,
                                         sent_at: 1.hour.ago)
-      create(:email_campaign_recipient, email_campaign: nova, email: 'bia@beta.com.br', name: 'Bia', status: :bounced, sent_at: 1.hour.ago)
+      create(:email_campaign_recipient, email_campaign: nova, email: 'bia@example.com', name: 'Bia', status: :bounced, sent_at: 1.hour.ago)
       replied!(ana, nova)
       reenvio!(primeira, 'enviado', reenvio_campanha: nova)
 

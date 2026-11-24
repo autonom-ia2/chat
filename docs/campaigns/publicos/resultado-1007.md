@@ -72,7 +72,9 @@ e aparece na Gestão, com `sent: 0`. Retomar: `POST …/campaign_journey/campaig
 (`aguardando`, `enviado`, `sem_ninguem`, `cancelado`, `falhou`); `previsto_em` (epoch) fica nulo até a primeira
 terminar de sair. No `enviado`, `campanha = { channel, id, name, processing, receberam, responderam }` é a campanha
 nova pelo endereço do resultado dela, com os números pela régua dele: receberam = Enviadas (no e-mail, Entregues),
-responderam = Responderam (marca da campanha). `campanha: null` quando a campanha nova foi apagada.
+responderam = Responderam (marca da campanha). `processing` também é verdadeiro enquanto a campanha nova do WhatsApp
+Oficial/SMS ainda não começou (nasce `active`), e a tela segue se atualizando enquanto ele for verdadeiro (#3206).
+`campanha: null` quando a campanha nova foi apagada.
 
 Permissões: `campaign_view` lê (Resultado, pessoas, Gestão); `campaign_manage` exporta (mesma regra do
 export dos relatórios de e-mail). Sem a permissão → 401. Campanha de outra conta ou de outro canal → 404.

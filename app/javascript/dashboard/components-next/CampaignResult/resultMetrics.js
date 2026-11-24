@@ -169,3 +169,12 @@ export const journeyStatus = (channel, status) => {
     return WHATSAPP_API_STATUS[status] || '';
   return ONE_OFF_STATUS[status] || '';
 };
+
+/**
+ * #3206: a segunda mensagem do "Mandar de novo" (`segunda_mensagem` do resultado) saiu e ainda está saindo — o
+ * resultado continua se atualizando para os números dela subirem.
+ * @param {{ status?: string, campanha?: { processing?: boolean } | null } | null | undefined} segunda
+ * @returns {boolean}
+ */
+export const segundaMensagemSaindo = segunda =>
+  segunda?.status === 'enviado' && Boolean(segunda.campanha?.processing);

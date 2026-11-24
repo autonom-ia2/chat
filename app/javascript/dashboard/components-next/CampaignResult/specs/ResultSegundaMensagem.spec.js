@@ -87,9 +87,20 @@ describe('ResultSegundaMensagem', () => {
   });
 
   it('enviada e ainda saindo: avisa que os números sobem', () => {
-    const w = montar(enviada({ processing: true, receberam: 0 }));
-    expect(w.get('[data-receberam]').text()).toBe('0 got it');
+    const w = montar(enviada({ processing: true, receberam: 40 }));
+    expect(w.get('[data-receberam]').text()).toBe('40 got it');
     expect(w.get('[data-saindo]').text()).toBe(R.SAINDO);
+  });
+
+  // #3206: a varredura grava enviado logo que cria a campanha nova; antes de alguém receber, nunca "saiu para 0".
+  it('enviada há pouco, sem ninguém ter recebido: diz que está começando a sair', () => {
+    const w = montar(enviada({ processing: true, receberam: 0 }));
+    expect(w.get('[data-frase]').text()).toBe(
+      "It's starting to go out now, to people who didn't reply."
+    );
+    expect(w.find('[data-receberam]').exists()).toBe(false);
+    expect(w.find('[data-saindo]').exists()).toBe(false);
+    expect(w.find('[data-ver-segunda]').exists()).toBe(true);
   });
 
   it('enviada, mas a campanha nova foi apagada: diz isso, sem caminho', () => {

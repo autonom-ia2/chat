@@ -44,7 +44,11 @@ import EmailResultActions from './EmailResultActions.vue';
 import ResultEmailHealth from './ResultEmailHealth.vue';
 import ResultEmailRecipients from './ResultEmailRecipients.vue';
 import { useResultPolling } from './useResultPolling';
-import { journeyStatus, resultBalance } from './resultMetrics';
+import {
+  journeyStatus,
+  resultBalance,
+  segundaMensagemSaindo,
+} from './resultMetrics';
 
 const props = defineProps({
   campaignId: { type: [String, Number], required: true },
@@ -351,7 +355,8 @@ useResultPolling(
   refresh,
   () =>
     Boolean(result.value?.campaign?.processing) ||
-    hasActiveEmailWork(health.value)
+    hasActiveEmailWork(health.value) ||
+    segundaMensagemSaindo(result.value?.segunda_mensagem)
 );
 
 watch(
