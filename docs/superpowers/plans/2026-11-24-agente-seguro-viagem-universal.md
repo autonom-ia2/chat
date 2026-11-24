@@ -187,19 +187,31 @@ abrir antes, a constante entra vazia e a Tarefa 20 tem um teste pendente nomeado
 
 ### Tarefa 0 — Insumos reais da Universal (gate de dados)
 
-Depende de resposta do Rodrigo: **qual login da Universal usar no teste** (desenho §11, pergunta aberta).
+Login (Rodrigo, 24/11): o **dele**, cadastrado por ele na tela de acesso do agente, na conta 18, depois do deploy. Por
+isso esta tarefa se divide:
 
-- [ ] Com o login de teste, chamar só leitura, fora do repositório, num script no scratchpad (nunca commitado):
+- **0a — antes do código (agora):** as fixtures saem da resposta real de `doQuotation Universal` da execução n8n
+  `5701717` (fluxo `O7AQQa5tGNxEhIop`, cotação nacional `BR`, 2 produtos "Especial UA 100K/30K BRL", 32 benefícios),
+  lida só pela API do n8n e anonimizada como abaixo. É a única execução de cotação que o n8n ainda guarda. As
+  constantes nascem como listas: `IDS_DMH = [2898]`, `IDS_BAGAGEM = [2595]`, `IDS_CANCELAMENTO = [2601]`; benefício
+  sem id conhecido aparece no PDF e em `detalhes_da_cotacao` pela lista completa, só não vira coluna de destaque.
+  Setup, destinos e um produto sem despesas médicas (para o filtro) entram como fixtures montadas à mão, com a forma
+  do Postman.
+- **0b — depois do deploy, com o login do Rodrigo (passo da Tarefa 30):** a primeira cotação internacional (`PT`) pela
+  conversa de teste confirma os ids internacionais, o `tipoTarifa` do Setup e o `FormaPagamento: 8`. Se os ids forem
+  outros, um PR pequeno acrescenta à lista. Os passos abaixo descrevem a conferência; nenhum script com credencial.
+
+- [ ] (0b) Com o login do Rodrigo já salvo na tela do agente, chamar só leitura:
   `GET /v1/Emissor/Setup`, `GET /v1/destinos`, `POST /v1/Cotacao` com `{destinos:['PT'], passageiros:[{nome:'Viajante 1',
   dataNascimento:'1981-08-02'}], dataSaida:'2027-02-02', dataRetorno:'2027-02-06', tipoViagem:1, tipoTarifa:<do Setup>,
   produtoAvulso:false, cupom:'', classificacoes:[1]}`. Cotar não tem custo nem efeito. **Não chamar `/v1/Compras`.**
 - [ ] Anotar os `idBeneficio` de "Despesas médicas e hospitalares", "Bagagem" (extravio) e "Cancelamento" — eles viram
-  as constantes `ID_DMH`, `ID_BAGAGEM`, `ID_CANCELAMENTO` da Tarefa 13. **Já conhecidos numa cotação nacional real
+  as listas `IDS_DMH`, `IDS_BAGAGEM`, `IDS_CANCELAMENTO` da Tarefa 13. **Já conhecidos numa cotação nacional real
   (24/11, `destinos: ['BR']` aceito):** `2898` "Despesas Médicas e Hospitalares (por evento)", `2595` "Perda de
   Bagagem", `2601` "Cancelamento de viagem - plus reason". A cotação internacional (`PT`) desta tarefa confirma se os
-  ids internacionais são os mesmos; se forem outros, as constantes viram listas (`IDS_DMH = [2898, …]`).
+  ids internacionais são os mesmos; se forem outros, um PR pequeno os acrescenta às listas.
   Nota: a mesma cotação real foi aceita com `tipoTarifa: 0` e devolveu `mostrarTarifaAcordo: true`; manter a regra do
-  Setup (1/2) e conferir aqui que `2` funciona para o login de teste.
+  Setup (1/2) e conferir aqui que `2` funciona para o login do Rodrigo.
 - [ ] Gravar as fixtures em `spec/fixtures/universal/` **anonimizadas**: `idCotacao` trocado por `'COT-TESTE-1'`,
   `fkEmpresa`/`idEmissor` por `1`, nenhum nome, CPF, e-mail ou login. Reduzir `cotacao.json` a 3 produtos (um sem
   despesas médicas, para o filtro) e manter os campos internos (`comissao`, `markup`, `rank`, ...) com valores
@@ -584,16 +596,31 @@ Estender o predicado também muda estes leitores (lidos no código em 24/11). A 
 | `agents_controller.rb:170-171`, `build_threads_controller.rb:158,208`, `playground_controller.rb:48` | recusa editar instrução, modo e tipo; Construtor recusado | desejado |
 | `sources_controller.rb:60,146` (foto, leitura Fase 2) | não lê foto nem roda a leitura da Fase 2 | desejado (base é nossa) |
 | `base_de_seguros.rb:25`, `material.rb:11`, `knowledge/resumo_por_secao.rb:84`, `knowledge/fotos_da_criacao.rb:31`, `knowledge/processors/pdf.rb:78,87`, `knowledge/instruction_refresher.rb:72` | sem troca de base de seguros, sem conferência de material, sem refresh da instrução | desejado |
-| `crm/ai/fatos_da_conversa.rb:122` (F1: fala do agente protegido fica fora) | a IA do CRM não conta a fala do contratado como "fala do nosso robô" | **mantido igual à Lia; confirmar com o Rodrigo** |
-| `crm/ai/handoff_executor.rb:110` (promessa do robô) | a IA do CRM não cumpre "alguém vai continuar" dito pelo contratado; a passagem vem do campo de passagem do próprio agente | **mantido igual à Lia; confirmar com o Rodrigo** |
+| `crm/ai/fatos_da_conversa.rb:122` (F1 e `agente_protegido_atendendo?`) | a IA do CRM conta a fala do contratado como "fala do nosso robô" e pode fechar o cartão / sugerir "era teste" enquanto ele atende | **agente comum (Rodrigo, 24/11)**: troca o leitor para `Agent#protegido_no_crm?` |
+| `crm/ai/handoff_executor.rb:110` (promessa do robô) | a IA do CRM cumpre "alguém vai continuar" dito pelo contratado, como em qualquer agente | **agente comum (Rodrigo, 24/11)**: troca o leitor para `Agent#protegido_no_crm?` |
+
+Decisão do Rodrigo (24/11): no CRM o contratado é **agente comum**; só a Lia continua protegida. Novo predicado em
+`app/models/autonomia/agents/agent.rb`: `protegido_no_crm? -> Boolean` = `agent_type == 'insurance_quote'` (comentário:
+"A IA do CRM deixa de fora só a Lia; o agente pronto contratado é tratado como qualquer agente — Rodrigo, 24/11").
+Os dois leitores do CRM (`fatos_da_conversa.rb:122`, `handoff_executor.rb:110`) e os comentários das linhas 10 e 30
+passam a usar `protegido_no_crm?`. Para a Lia nada muda (o predicado devolve o mesmo que antes).
 
 - [ ] Spec que falha: `spec/services/autonomia/agents/contratados/leitores_de_instrucao_mantida_spec.rb`, um exemplo por
   linha da tabela, afirmando o efeito com um contratado criado pelo `Contratar` (Tarefa 20) ou à mão com a marca.
-  Exemplo da linha F1:
+  Exemplos das linhas do CRM:
 
 ```ruby
-it 'F1: a fala do contratado é tratada como a do agente protegido' do
-  expect(Crm::Ai::FatosDaConversa.send(:agente_protegido?, account.id, vinculo.agent_bot_id)).to be(true)
+it 'F1: a fala do contratado conta como a de agente comum' do
+  expect(Crm::Ai::FatosDaConversa.send(:agente_protegido?, account.id, vinculo_contratado.agent_bot_id)).to be(false)
+end
+
+it 'F1: a Lia continua protegida' do
+  expect(Crm::Ai::FatosDaConversa.send(:agente_protegido?, account.id, vinculo_lia.agent_bot_id)).to be(true)
+end
+
+it 'promessa: o CRM cumpre a promessa do contratado e não a da Lia' do
+  expect(contratado.protegido_no_crm?).to be(false)
+  expect(lia.protegido_no_crm?).to be(true)
 end
 ```
 
@@ -798,13 +825,16 @@ end
   'dataSaida', 'dataRetorno', 'tipoViagem' => 1, 'tipoTarifa' => tarifa_acordo ? 2 : 1, 'produtoAvulso' => false,
   'cupom' => '', 'classificacoes' => [CLASSIFICACAO.fetch(motivo)] }`.
 - `SeguroViagem::Planos.de(resposta, idades:) -> Array<Hash>`: **lista branca** (nunca copia o produto cru).
-  `ID_DMH`, `ID_BAGAGEM`, `ID_CANCELAMENTO` = valores da Tarefa 0. Cada plano: `codigo` (`"P#{n}"`, n a partir de 1, na
+  `IDS_DMH`, `IDS_BAGAGEM`, `IDS_CANCELAMENTO` = listas da Tarefa 0a (`[2898]`, `[2595]`, `[2601]`). Cada plano: `codigo` (`"P#{n}"`, n a partir de 1, na
   ordem da Universal depois do filtro), `id_produto`, `id_produto_acordo`, `nome` (`descricao`), `descricao_adicional`,
   `preco_total` (string decimal de `tarifa.valor`), `valor_moeda`, `moeda` (`simboloMoeda`), `cambio`, `max_parcelas`,
   `idade_minima`, `idade_maxima`, `regra_cancelamento`, `faixas` (`tarifaIdade` → `[{de, ate, valor, valor_moeda}]`),
   `coberturas` (`[{id_beneficio, nome, descricao_completa, valor, moeda}]`, nome e descrição vindos de
   `resposta['beneficios']` pelo `idBeneficio`), `principais` (`{despesas_medicas, bagagem, cancelamento}` como
-  `"#{moeda} #{valor}"` ou nil). Filtro: só produtos com cobertura `ID_DMH`; e fora os que têm uma idade fora de
+  `"#{moeda} #{valor}"` ou nil). Filtro: só produtos com cobertura em `IDS_DMH` — **mas só quando o catálogo `resposta['beneficios']` traz algum id
+  de `IDS_DMH`**; se não traz nenhum (destino com ids ainda desconhecidos), não filtra e grava
+  `Rails.logger.warn('[seguro_viagem] catálogo sem id conhecido de despesas médicas', ids: <ids do catálogo>)` para a
+  Tarefa 0b achar o id novo (nunca zera a lista de planos por id desconhecido); e fora os que têm uma idade fora de
   `idade_minima..idade_maxima`. `Planos.resumo(planos) -> Array<Hash>` com `codigo, nome, preco_total` formatado
   (`'R$ 1.480,25'` por `ActiveSupport::NumberHelper.number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.')`),
   `max_parcelas`, `principais`.
@@ -882,7 +912,12 @@ let(:resposta) { JSON.parse(file_fixture('../universal/cotacao.json').read) }
 it 'só planos com despesas médicas e hospitalares, com código nosso' do
   planos = described_class.de(resposta, idades: [45])
   expect(planos.pluck('codigo')).to eq(%w[P1 P2])
-  expect(planos).to all(satisfy { |p| p['coberturas'].any? { |c| c['id_beneficio'] == described_class::ID_DMH } })
+  expect(planos).to all(satisfy { |p| p['coberturas'].any? { |c| described_class::IDS_DMH.include?(c['id_beneficio']) } })
+end
+
+it 'catálogo sem id conhecido de despesas médicas não zera os planos' do
+  sem_ids = resposta.merge('beneficios' => resposta['beneficios'].map { |b| b.merge('idBeneficio' => b['idBeneficio'] + 90_000) })
+  expect(described_class.de(sem_ids, idades: [45])).not_to be_empty
 end
 
 it 'nunca leva campo interno da tarifa' do
@@ -1542,14 +1577,18 @@ casar como `agentId`); `i18n/locale/{en,pt_BR}/agents.json` (namespace `AGENTS.C
     editáveis pela tela como em qualquer agente.
 12. Reemissão da base por cron de hora em hora (só re-embebe quem está com versão velha); custo na chave de IA da conta.
 13. `DadosIncompletos` é subclasse de `EscolhasIncompletas`, para as portas que já tratam a da Lia tratarem esta.
-14. F1 e a promessa da IA do CRM tratam o contratado como a Lia (Tarefa 8): **perguntar ao Rodrigo**.
+14. ~~F1 e a promessa da IA do CRM tratam o contratado como a Lia.~~ Rodrigo decidiu (24/11): **agente comum** no CRM;
+    predicado `protegido_no_crm?` só para a Lia (Tarefa 8).
+15. Login do teste: o **do próprio Rodrigo**, cadastrado por ele na tela de acesso do agente na conta 18 (Rodrigo,
+    24/11: "vamos fazer o processo"). Ninguém digita login/senha em chat, script ou arquivo; a Tarefa 0 vira fixture
+    da cotação real guardada no n8n + conferência depois do deploy (ver Tarefa 0).
 
 ## O que não deu para determinar pelo código
 
-- Os `idBeneficio` de despesas médicas, bagagem e cancelamento (as fontes só têm a forma, não os valores; o fluxo
-  externo filtra por texto) — Tarefa 0.
-- Se `BR` existe em `/v1/destinos` (viagem nacional) e se o `FormaPagamento: 8` vale para o emissor de teste.
-- O login da Universal para o teste (pergunta aberta do desenho).
+- Os `idBeneficio` **internacionais** de despesas médicas, bagagem e cancelamento (nacionais conhecidos: 2898, 2595,
+  2601) — Tarefa 0b, depois do deploy.
+- Se o `FormaPagamento: 8` vale para o emissor do Rodrigo — Tarefa 0b. `BR` vale (cotação real aceita).
+- ~~O login da Universal para o teste.~~ O do Rodrigo, cadastrado por ele na tela (decisão 15).
 - ~~Os nomes das chaves de `config` do PR 1.~~ Fixados (seção "Interfaces que vêm do PR 1").
 
 ---
