@@ -260,7 +260,7 @@ describe('ReenvioDaCampanha (#3101)', () => {
       true,
     ]);
     expect(wrapper.find('[data-reenvio-erro-ligacao]').text()).toBe(
-      R.FALTA.SEM_LIGACAO
+      R.LIGACAO_EM_VERMELHO
     );
   });
 

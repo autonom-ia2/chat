@@ -16,8 +16,9 @@
         "SEM_MODELO": "Choose the second message.",
         "SEM_TEXTO": "Write the second message.",
         "SEM_ASSUNTO": "Write the subject of the second e-mail.",
-        "SEM_LIGACAO": "Choose where the part marked in red comes from."
+        "SEM_LIGACAO": "Choose where each part of the second message comes from."
       },
+      "LIGACAO_EM_VERMELHO": "Choose where the part marked in red comes from.",
       "LIGAR": "Send a second message",
       "LIGAR_AJUDA": "Many people see the message and forget to reply. A reminder a few days later brings some of them back.",
       "QUEM": "To whom",

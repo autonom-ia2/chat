@@ -341,7 +341,7 @@ const classeDaPilula = escolhida =>
               class="m-0 text-xs text-n-ruby-11"
               data-reenvio-erro-ligacao
             >
-              {{ mensagemDeErro('SEM_LIGACAO') }}
+              {{ t(`${NS}.LIGACAO_EM_VERMELHO`) }}
             </p>
           </template>
           <template v-else-if="tipo === MENSAGEM.TEXTO">

@@ -16,8 +16,9 @@
         "SEM_MODELO": "Falta escolher a segunda mensagem.",
         "SEM_TEXTO": "Falta escrever a segunda mensagem.",
         "SEM_ASSUNTO": "Falta escrever o assunto do segundo e-mail.",
-        "SEM_LIGACAO": "Falta escolher de onde vem a parte marcada em vermelho."
+        "SEM_LIGACAO": "Falta escolher de onde vem uma parte da segunda mensagem."
       },
+      "LIGACAO_EM_VERMELHO": "Falta escolher de onde vem a parte marcada em vermelho.",
       "LIGAR": "Mandar uma segunda mensagem",
       "LIGAR_AJUDA": "Muita gente vê a mensagem e esquece de responder. Um lembrete, alguns dias depois, traz parte dessas pessoas de volta.",
       "QUEM": "Para quem",
