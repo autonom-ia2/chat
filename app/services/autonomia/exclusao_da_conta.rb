@@ -160,6 +160,7 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Guide::Aviso', :por_conta],
     ['Autonomia::Guide::Memoria', :por_conta],
     ['Autonomia::Guide::Execucao', :por_conta],
+    ['Autonomia::Guide::Revisao', :por_conta],
     ['Autonomia::Guide::Tarefa', :por_conta],
     ['Autonomia::Guide::Conversa', :por_conta],
     ['Autonomia::Guide::Vigia', :por_conta],

@@ -322,7 +322,7 @@ module Autonomia
 
       def unavailable(execucao = nil)
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: false, escalate: false, execucao: execucao, graficos: nil)
+                   available: false, escalate: false, execucao: execucao, graficos: nil, revisao: @contexto&.revisao)
       end
 
       # O Guia está no ar, mas o modelo não devolveu resposta (o portão não retém mais

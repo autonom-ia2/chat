@@ -1037,6 +1037,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "status"], name: "index_autonomia_guide_reviews_on_account_id_and_status"
+    t.index ["account_id", "user_id"], name: "idx_autonomia_guide_reviews_uma_andando", unique: true, where: "((status)::text = ANY (ARRAY[('na_fila'::character varying)::text, ('rodando'::character varying)::text]))"
+    t.index ["batimento_em"], name: "idx_autonomia_guide_reviews_batimento", where: "((status)::text = ANY (ARRAY[('na_fila'::character varying)::text, ('rodando'::character varying)::text]))"
     t.index ["turno_id"], name: "index_autonomia_guide_reviews_on_turno_id"
     t.index ["user_id"], name: "index_autonomia_guide_reviews_on_user_id"
   end

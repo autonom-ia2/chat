@@ -22,6 +22,8 @@ const { t } = useI18n();
 
 const ANDANDO = ['na_fila', 'rodando'];
 const INTERVALO = 3000;
+// Erro do servidor: espera o dobro a cada vez, até 30 s.
+const INTERVALO_MAXIMO = 30000;
 
 const revisao = ref(null);
 const carregando = ref(true);
@@ -30,6 +32,7 @@ const continuando = ref(false);
 const erro = ref('');
 let relogio = null;
 let desmontado = false;
+let errosSeguidos = 0;
 
 const status = computed(() => revisao.value?.status);
 const andando = computed(() => ANDANDO.includes(status.value));
@@ -122,19 +125,34 @@ const parar = () => {
   relogio = null;
 };
 
+// Erro 4xx (a revisão não existe mais, a sessão caiu) não melhora tentando:
+// para de buscar. Erro do servidor tenta de novo, cada vez mais devagar.
+const desistir = error => {
+  const codigo = error?.response?.status || 0;
+  return codigo >= 400 && codigo < 500;
+};
+
 const buscar = async () => {
+  let intervalo = INTERVALO;
   try {
     const { data } = await AutonomiaGuideAPI.revisao(props.revisaoId);
     if (desmontado) return;
     revisao.value = data;
     falhouAoCarregar.value = false;
-  } catch {
+    errosSeguidos = 0;
+  } catch (error) {
     if (!revisao.value) falhouAoCarregar.value = true;
+    if (desistir(error)) {
+      parar();
+      return;
+    }
+    errosSeguidos += 1;
+    intervalo = Math.min(INTERVALO * 2 ** errosSeguidos, INTERVALO_MAXIMO);
   } finally {
     carregando.value = false;
   }
   parar();
-  if (!desmontado && andando.value) relogio = setTimeout(buscar, INTERVALO);
+  if (!desmontado && andando.value) relogio = setTimeout(buscar, intervalo);
 };
 
 const tentarDeNovo = () => {
@@ -195,10 +213,9 @@ onBeforeUnmount(() => {
       <template v-else-if="revisao">
         <p class="mb-0 text-xs text-n-slate-11 break-words">{{ cabecalho }}</p>
         <template v-if="andando">
-          <p
-            class="flex items-center gap-2 mb-0 text-sm text-n-slate-12"
-            role="status"
-          >
+          <!-- Sem role="status": o número muda a cada 3 s, e o leitor de
+          tela anunciaria sem parar. Anuncia só o desfecho. -->
+          <p class="flex items-center gap-2 mb-0 text-sm text-n-slate-12">
             <Spinner :size="16" class="shrink-0 text-n-brand" />
             {{
               t('AUTONOMIA_GUIDE.REVISAO.LENDO', {

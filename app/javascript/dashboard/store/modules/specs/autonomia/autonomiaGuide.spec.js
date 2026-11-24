@@ -501,6 +501,30 @@ describe('autonomiaGuide store — conversa guardada', () => {
     ]);
   });
 
+  // #3158 (B8b) — repetir o turno que começou uma revisão começaria outra,
+  // paga.
+  it('falha e retida que começaram uma revisão não oferecem repetir', () => {
+    const revisao = { id: 3, status: 'rodando' };
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ pedido_id: 'p2', status: 'retido', revisao }),
+          turno({ pedido_id: 'p3', status: 'failed', revisao }),
+        ],
+      },
+      { ...avisos, fezSemResposta: 'FIZ' }
+    );
+
+    const respostas = store.messages.filter(
+      m => m.message_type === 'assistant'
+    );
+    expect(respostas.map(m => [m.repetir, m.message.content])).toEqual([
+      [null, 'FIZ'],
+      [null, 'FIZ'],
+    ]);
+  });
+
   it('"Nova conversa" esquece a conversa guardada', () => {
     store.hidratar({ id: 4, turnos: [turno()] }, avisos);
 

@@ -6,6 +6,8 @@
 # ler agora (300, mais 300 a cada "ler as que faltam"); `resultados` guarda, por conversa lida, só o id, o número,
 # o motivo e a categoria. O texto das mensagens não fica aqui.
 class CreateAutonomiaGuideReviews < ActiveRecord::Migration[7.2]
+  ANDANDO = "status IN ('na_fila', 'rodando')".freeze
+
   def change
     create_table :autonomia_guide_reviews do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }, index: false
@@ -24,5 +26,9 @@ class CreateAutonomiaGuideReviews < ActiveRecord::Migration[7.2]
       t.timestamps
     end
     add_index :autonomia_guide_reviews, [:account_id, :status]
+    # Uma revisão andando por pessoa: dois pedidos seguidos (ou o modelo chamando de novo) não começam duas.
+    add_index :autonomia_guide_reviews, [:account_id, :user_id], unique: true, where: ANDANDO, name: 'idx_autonomia_guide_reviews_uma_andando'
+    # O vigia procura, entre as que andam, a que ficou sem batimento.
+    add_index :autonomia_guide_reviews, :batimento_em, where: ANDANDO, name: 'idx_autonomia_guide_reviews_batimento'
   end
 end

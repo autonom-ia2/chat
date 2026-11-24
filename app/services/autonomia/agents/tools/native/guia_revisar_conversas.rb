@@ -27,9 +27,10 @@ class Autonomia::Agents::Tools::Native::GuiaRevisarConversas < Autonomia::Agents
     end
 
     def description
-      'Lê várias conversas da conta, uma por uma, com IA, e agrupa o que achou (motivos de notas baixas, assuntos, ' \
-        'reclamações). Até 300 por vez; o painel mostra o andamento e o resultado. Use quando a pessoa pedir para ' \
-        'revisar, ler ou analisar conversas. acao parar: quando a pessoa pedir para parar a revisão em andamento.'
+      'Lê o conteúdo de várias conversas com IA, uma por uma, e agrupa os porquês (motivos de nota baixa, ' \
+        'reclamações). Só quando pedirem o porquê ou os motivos. Para listar ou contar conversas, use ler_da_conta ' \
+        'ou relatorio_de_atendimento; para mudar registros, planejar_tarefa. Até 300 por vez; o painel mostra o ' \
+        'andamento. acao parar: quando pedirem para parar a revisão em andamento.'
     end
 
     def params
@@ -52,13 +53,16 @@ class Autonomia::Agents::Tools::Native::GuiaRevisarConversas < Autonomia::Agents
   end
 
   def call
-    return recusa_sem_contexto if @operador&.user.nil?
+    return recusa_sem_contexto if @operador.nil? || @operador.user.nil?
 
     @params['acao'].to_s == 'parar' ? parar : comecar
   rescue SELECAO::Recusado => e
     e.message
+  rescue ActiveRecord::RecordNotUnique
+    # Dois pedidos seguidos: o índice único deixa só uma revisão andando por pessoa.
+    'Já há uma revisão em andamento. Ela precisa terminar ou parar antes de outra.'
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][guide][revisao] account=#{@operador&.account&.id} #{e.class}: #{e.message}")
+    Rails.logger.warn("[autonomia][guide][revisao] account=#{@operador&.account&.id} #{e.class}")
     'Não consegui começar a revisão agora.'
   end
 
@@ -79,7 +83,12 @@ class Autonomia::Agents::Tools::Native::GuiaRevisarConversas < Autonomia::Agents
       'resultado. Diga à pessoa quantas achou e o período que você entendeu; não invente motivos agora.'
   end
 
+  # Savepoint: o índice único (uma andando por pessoa) recusando não estraga a transação de quem chamou.
   def criar(selecao, ids)
+    REVISAO.transaction(requires_new: true) { gravar(selecao, ids) }
+  end
+
+  def gravar(selecao, ids)
     REVISAO.create!(account: @operador.account, user: @operador.user, turno_id: @operador.turno_id, status: REVISAO::NA_FILA,
                     titulo: @params['titulo'].to_s.squish.first(80).presence || 'Revisão de conversas',
                     pedido: @params['pedido'].to_s.squish.first(1_000).presence || 'Por que cada conversa teve esse resultado.',
@@ -91,7 +100,7 @@ class Autonomia::Agents::Tools::Native::GuiaRevisarConversas < Autonomia::Agents
     return 'Não há revisão em andamento.' if revisao.nil?
     return "A revisão já tinha terminado: #{revisao.resumo}." unless revisao.parar!
 
-    ::Autonomia::Guide::Revisoes::Semaforo.sair(revisao)
+    # A vaga fica com o job: ele a devolve quando a conversa que está lendo agora terminar.
     "Parei a revisão: #{revisao.resumo}. Os motivos até aqui aparecem no painel."
   end
 

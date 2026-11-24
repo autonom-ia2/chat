@@ -75,9 +75,18 @@ class Autonomia::Guide::ChatJob < ApplicationJob
   # O pedido sai com a resposta do Guia quando ela existe — mesmo que o fim do turno tenha dado erro. Sair como
   # falha faria a tela oferecer "Tentar de novo" para um turno que pode já ter mexido na conta.
   def fechar(pedido_id, seguinte = {})
-    return ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte) unless @resultado
+    return ::Autonomia::Guide::Pedido.falhar(pedido_id, seguinte.merge('revisao' => revisao_do_turno(pedido_id)).compact) unless @resultado
 
     ::Autonomia::Guide::Pedido.concluir(pedido_id, @resultado.to_h.merge(seguinte))
+  end
+
+  # A revisão de conversas que o turno começou antes de cair (#3158, B8b): a tela mostra o cartão e não oferece
+  # "Tentar de novo", que começaria outra, paga.
+  def revisao_do_turno(pedido_id)
+    ::Autonomia::Guide::Turno.find_by(pedido_id: pedido_id)&.revisao_para_tela
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][guide][chat_job] revisao do turno pedido=#{pedido_id} #{e.class}")
+    nil
   end
 
   # O Guia respondeu de fato: as mensagens que ele leu no meio do trabalho foram respondidas junto.

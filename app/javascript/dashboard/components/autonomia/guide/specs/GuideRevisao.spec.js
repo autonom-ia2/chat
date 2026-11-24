@@ -214,6 +214,42 @@ describe('GuideRevisao', () => {
     expect(semChave.text()).not.toContain('LER_FALTAM');
   });
 
+  it('para de buscar quando a revisão não existe mais (4xx)', async () => {
+    AutonomiaGuideAPI.revisao.mockResolvedValueOnce({ data: revisao() });
+    AutonomiaGuideAPI.revisao.mockRejectedValueOnce({
+      response: { status: 404 },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+    vi.advanceTimersByTime(60000);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.REVISAO.LENDO');
+  });
+
+  it('com erro do servidor, tenta de novo cada vez mais devagar', async () => {
+    AutonomiaGuideAPI.revisao.mockResolvedValueOnce({ data: revisao() });
+    AutonomiaGuideAPI.revisao.mockRejectedValue({ response: { status: 500 } });
+    montar();
+    await flushPromises();
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(2);
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(2);
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(3);
+  });
+
   it('tem os textos em inglês e em português', () => {
     ['CABECALHO', 'LENDO', 'PODE_FECHAR', 'LER_FALTAM'].forEach(chave => {
       expect(en.AUTONOMIA_GUIDE.REVISAO[chave]).toBeTruthy();

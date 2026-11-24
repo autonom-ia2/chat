@@ -52,6 +52,41 @@ RSpec.describe Autonomia::Guide::Revisao do
       expect(revisao(posicao: 10).continuar!).to be(false)
       expect(revisao(status: 'rodando', ids: (1..400).to_a, posicao: 100).continuar!).to be(false)
     end
+
+    it 'recusa enquanto a pessoa tem outra revisão andando' do
+      parada = revisao(status: 'parada', ids: (1..400).to_a, posicao: 100)
+      revisao(status: 'rodando')
+
+      expect(parada.continuar!).to be(false)
+    end
+  end
+
+  it 'deixa só uma revisão andando por pessoa' do
+    revisao(status: 'na_fila')
+
+    expect { revisao(status: 'rodando') }.to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
+  describe 'avançar uma conversa' do
+    it 'soma a lida, o resultado e o custo no banco', :aggregate_failures do
+      andando = revisao(status: 'rodando', custo: 0.5)
+
+      expect(andando.avancar!(resultado('Demora', 1), custo: 0.25)).to be(true)
+      expect(andando.avancar!(nil, custo: 0)).to be(true)
+      expect(andando).to have_attributes(posicao: 2, lidas: 1, falhas: 1, resultados: [resultado('Demora', 1)])
+      expect(andando.custo.to_f).to eq(0.75)
+    end
+
+    it 'não grava depois de parada nem de uma posição que outra cadeia já passou', :aggregate_failures do
+      andando = revisao(status: 'rodando')
+      velha = described_class.find(andando.id)
+      andando.avancar!(resultado('Demora', 1), custo: 0)
+
+      expect(velha.avancar!(resultado('Demora', 1), custo: 0)).to be(false)
+      andando.parar!
+      expect(andando.avancar!(nil, custo: 0)).to be(false)
+      expect(andando.reload).to have_attributes(posicao: 1, lidas: 1, falhas: 0)
+    end
   end
 
   it 'para só o que ainda anda', :aggregate_failures do

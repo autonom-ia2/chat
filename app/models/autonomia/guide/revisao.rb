@@ -24,6 +24,8 @@ class Autonomia::Guide::Revisao < ApplicationRecord
   FALHOU = 'falhou'.freeze
   STATUS = [NA_FILA, RODANDO, CONCLUIDA, PARADA, FALHOU].freeze
   ANDANDO = [NA_FILA, RODANDO].freeze
+  AVANCO = 'posicao = posicao + 1, lidas = lidas + ?, falhas = falhas + ?, resultados = resultados || ?::jsonb, ' \
+           'custo = custo + ?, batimento_em = ?, updated_at = ?'.freeze
 
   belongs_to :account
   belongs_to :user
@@ -65,11 +67,31 @@ class Autonomia::Guide::Revisao < ApplicationRecord
     mudar!(ANDANDO, PARADA)
   end
 
-  # "Ler as que faltam": mais 300, a partir de onde parou. Só depois do fim da vez anterior.
+  # "Ler as que faltam": mais 300, a partir de onde parou. Só depois do fim da vez anterior, e só se a pessoa não
+  # tiver outra revisão andando (índice único parcial).
   def continuar!
     return false if posicao >= total
 
-    mudar!([CONCLUIDA, PARADA], NA_FILA, limite: posicao + POR_VEZ, motivo: nil, batimento_em: Time.current)
+    # Savepoint: o índice recusando não pode estragar a transação de quem chamou.
+    self.class.transaction(requires_new: true) do
+      mudar!([CONCLUIDA, PARADA], NA_FILA, limite: posicao + POR_VEZ, motivo: nil, batimento_em: Time.current)
+    end
+  rescue ActiveRecord::RecordNotUnique
+    false
+  end
+
+  # Uma conversa a mais: lida (com o resultado) ou que não abriu (nil). Em SQL e só a partir da posição em que a
+  # revisão está, rodando: uma segunda cadeia do job (trava vencida, vigia) não grava a mesma conversa duas vezes, e
+  # a conversa que terminou depois de a pessoa parar não soma. `resultados` cresce no próprio banco.
+  # -> false quando não gravou.
+  def avancar!(resultado, custo:)
+    lida = resultado ? 1 : 0
+    agora = Time.current
+    mudou = self.class.where(id: id, status: RODANDO, posicao: posicao).update_all( # rubocop:disable Rails/SkipsModelValidations
+      [AVANCO, lida, 1 - lida, (resultado ? [resultado] : []).to_json, custo.to_d, agora, agora]
+    )
+    reload
+    mudou == 1
   end
 
   # O que a ferramenta devolve ao modelo e o aviso da revisão em andamento: só números.

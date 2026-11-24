@@ -4852,7 +4852,7 @@
       "CONCLUSAO_UM": "Done. What weighed most was {primeiro}.",
       "CONCLUSAO_DOIS": "Done. What weighed most was {primeiro}, followed by {segundo}.",
       "CONCLUSAO_TRES": "Done. What weighed most was {primeiro}, followed by {segundo} and {terceiro}.",
-      "CONCLUSAO_PARCIAL": "I read {lidas}. {falhas} couldn't be opened right now.",
+      "CONCLUSAO_PARCIAL": "I read {lidas} conversations; {falhas} didn't open right now.",
       "FALTAM_PERGUNTA": "I read {lidas} of {total}. {faltam} are left. Do you want me to read the rest?",
       "LER_FALTAM": "Read the remaining {faltam}",
       "CONTINUAR_FALHOU": "I couldn't continue right now. Try again.",

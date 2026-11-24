@@ -4853,7 +4853,7 @@
       "CONCLUSAO_UM": "Pronto. O que mais pesou foi {primeiro}.",
       "CONCLUSAO_DOIS": "Pronto. O que mais pesou foi {primeiro}, seguido de {segundo}.",
       "CONCLUSAO_TRES": "Pronto. O que mais pesou foi {primeiro}, seguido de {segundo} e {terceiro}.",
-      "CONCLUSAO_PARCIAL": "Li {lidas}. {falhas} não consegui abrir agora.",
+      "CONCLUSAO_PARCIAL": "Li {lidas} conversas; {falhas} não abriram agora.",
       "FALTAM_PERGUNTA": "Li {lidas} de {total}. Faltam {faltam}. Quer que eu leia as que faltam?",
       "LER_FALTAM": "Ler as {faltam} que faltam",
       "CONTINUAR_FALHOU": "Não consegui continuar agora. Tente de novo.",

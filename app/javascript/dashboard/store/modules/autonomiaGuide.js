@@ -275,10 +275,11 @@ const definirConversa = id => {
 
 const conversaAtual = () => state.conversaId;
 
-// O turno que não trouxe resposta: se o Guia mexeu na conta, diz isso e não
-// oferece repetir; senão, o aviso de sempre com o "Tentar de novo".
+// O turno que não trouxe resposta: se o Guia mexeu na conta ou começou uma
+// revisão de conversas (#3158, paga), diz isso e não oferece repetir; senão, o
+// aviso de sempre com o "Tentar de novo".
 const semResposta = (turno, aviso, avisos, pergunta) =>
-  fezAlgo(turno.execucao)
+  fezAlgo(turno.execucao) || turno.revisao
     ? { content: avisos.fezSemResposta, repetir: null }
     : { content: aviso, repetir: pergunta };
 

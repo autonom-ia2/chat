@@ -544,7 +544,10 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
   // Aí não tem "Tentar de novo": o que ele fez está no cartão, com o desfazer,
   // e o aviso diz que fez — em vez de convidar a pedir outra vez.
   const execucao = data.execucao || null;
-  const fez = fezAlgo(execucao);
+  // #3158 (B8b) — a revisão de conversas que o turno começou também conta:
+  // repetir começaria outra, paga.
+  const revisao = data.revisao || null;
+  const fez = fezAlgo(execucao) || Boolean(revisao);
   const repetir = fez ? null : pergunta || ultimaPergunta();
   const aviso = chave => (fez ? t('AUTONOMIA_GUIDE.DONE_NO_REPLY') : t(chave));
   if (data.status !== PRONTO) {
@@ -553,6 +556,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       content: aviso('AUTONOMIA_GUIDE.ERROR'),
       repetir,
       execucao,
+      revisao,
     });
     contarOQueFez(execucao);
   } else if (data.available && data.text) {
@@ -568,7 +572,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       lembrancas: data.lembrancas || null,
       tarefa: data.tarefa || null,
       graficos: data.graficos || null,
-      revisao: data.revisao || null,
+      revisao,
       pedidoId,
     });
     contarOQueFez(execucao);
@@ -590,7 +594,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       tarefa: data.tarefa || null,
       // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
       graficos: data.graficos || null,
-      revisao: data.revisao || null,
+      revisao,
       pedidoId,
       repetir,
     });
@@ -602,6 +606,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       antesDosPedidos,
       content: aviso('AUTONOMIA_GUIDE.UNAVAILABLE'),
       execucao,
+      revisao,
       repetir,
     });
     contarOQueFez(execucao);

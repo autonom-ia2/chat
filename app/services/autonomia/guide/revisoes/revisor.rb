@@ -1,4 +1,4 @@
-# Uma chamada de IA por conversa da revisão (#3158, B8b), com a chave e o modelo da conta, como o resto do Guia.
+# Uma chamada de IA por conversa da revisão (#3158, B8b), com a chave da conta e o modelo do Guia (`ANSWERER_MODEL`).
 #
 # Uma conversa por vez, como o Copilot: uma resposta não tem como pular nem misturar conversas. As categorias que
 # as conversas anteriores ganharam vão junto, para a IA repetir o mesmo nome e a contagem por categoria valer.
@@ -7,6 +7,9 @@ class Autonomia::Guide::Revisoes::Revisor
   FEATURE = 'guia_revisao'.freeze
   MODELO = ::Autonomia::Agents::Config::ANSWERER_MODEL
   ESFORCO = 'low'.freeze
+  # Prazo da chamada inteira, novas tentativas incluídas. Uma conversa não vale mais que isso; a trava do
+  # `RevisaoJob` é calculada a partir dele.
+  PRAZO = 90
   Falhou = Class.new(StandardError)
   SemChave = Class.new(StandardError)
 
@@ -41,11 +44,12 @@ class Autonomia::Guide::Revisoes::Revisor
   # não tem chave de IA (aí nenhuma conversa vai abrir).
   def revisar(conversa)
     resposta = cliente.create(model: MODELO, instructions: INSTRUCOES, schema: SCHEMA, reasoning_effort: ESFORCO,
-                              input: entrada(conversa).to_json)
+                              input: entrada(conversa).to_json, total_timeout: PRAZO)
     @custo += Crm::Ai::UsageRecorder.cost_for(MODELO, Crm::Ai::UsageRecorder.extract_tokens(resposta[:usage])).to_f
     resultado(JSON.parse(resposta[:text].to_s))
-  rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError, TypeError => e
-    # Só a classe: a mensagem pode trazer o texto da conversa.
+  rescue Crm::Ai::ResponsesClient::Error, JSON::JSONError, EncodingError, TypeError => e
+    # Só a classe: a mensagem pode trazer o texto da conversa. `JSON::JSONError` cobre também a montagem da entrada
+    # (texto com bytes inválidos): a conversa conta como "não abriu", e a revisão segue.
     raise Falhou, e.class.name
   end
 
