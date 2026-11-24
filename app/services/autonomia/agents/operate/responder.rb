@@ -637,8 +637,18 @@ module Autonomia
           outcome.status == :replied ? enfileirar_cartoes(outcome) : descartar_cartoes(@ultimo_silencio || outcome.status)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
           @entrega = outcome # #2154: a fala que saiu, para o aviso (avisou_que_chama_alguem)
+          prever_o_fim_da_fala(result, outcome)
           handoff_if_signaled(result) unless @calou_pela_pessoa
           evento_da_pessoa
+        end
+
+        # #3211 (P1): grava quando a fala deve terminar, para a rajada seguinte esperar por ela. Só quando houve fala: a
+        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava.
+        def prever_o_fim_da_fala(result, outcome)
+          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          return unless @cadeia_agendada || outcome.message.present?
+
+          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, result.reply)
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
@@ -765,13 +775,23 @@ module Autonomia
         def query
           message = last_incoming_message
           # #1807: e-mail recebido sem o histórico citado (flag `email_autoria`); o resto, o content de sempre.
-          base = message ? email_autoria.texto(message) : ''
+          base = texto_base_da_pergunta(message)
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
           # #1775: e, com a flag da prévia, a linha da prévia do link vai embaixo.
           pergunta = equipe.aplica? ? equipe.pergunta(texto, message) : texto
           message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
+        end
+
+        # #3211 (P1): com `conversa_espera_a_fala`, o texto é a rajada inteira do cliente desde a última fala do agente;
+        # sem a opção, a última mensagem, como sempre.
+        def texto_base_da_pergunta(message)
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(current_turn_incoming) { |m| email_autoria.texto(m) }
+          end
+
+          message ? email_autoria.texto(message) : ''
         end
 
         # Própria do turno, não da moldura da equipe (HistoricoDaEquipe): o e-mail vale com ou sem a Fase 2.
@@ -847,6 +867,11 @@ module Autonomia
         # recente; se não houve saída ainda, todas as incoming da janela. É daí que a mídia é extraída
         # (cobre o caso "cliente manda a imagem e o texto em mensagens separadas" dentro do debounce).
         def current_turn_incoming
+          # #3211 (P1): com a opção, a rajada conta a fala, não o pedaço (pedaços intercalados não a fecham).
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(recent_messages)
+          end
+
           msgs = recent_messages
           last_outgoing_index = msgs.rindex { |message| !message.incoming? }
           window = last_outgoing_index ? msgs[(last_outgoing_index + 1)..] : msgs
