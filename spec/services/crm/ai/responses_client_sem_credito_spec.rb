@@ -30,6 +30,18 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(error).to be_sem_credito
   end
 
+  # A resposta real da OpenAI para chave sem crédito, vista no log de produção em 24/11 (#3202): o código é outro, e o
+  # tipo é `insufficient_quota`.
+  it 'marca sem crédito com a resposta real: code credit_balance_exhausted e type insufficient_quota' do
+    respond_with(429, { message: 'You have no credits remaining. Add credits to continue using the API.',
+                        type: 'insufficient_quota', code: 'credit_balance_exhausted' })
+
+    error = raised_error
+    expect(error.code).to eq('credit_balance_exhausted')
+    expect(error.error_type).to eq('insufficient_quota')
+    expect(error).to be_sem_credito
+  end
+
   it 'usa o tipo quando a OpenAI não manda o código' do
     respond_with(429, { message: 'You have no credits remaining.', type: 'insufficient_quota', code: nil })
 
