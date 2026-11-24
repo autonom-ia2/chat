@@ -35,6 +35,14 @@ RSpec.describe Relationships::ArrumarContatosDaProspeccaoJob do
     expect(described_class.perform_now).to eq(0)
   end
 
+  # MOTIVO: a rotina roda toda noite; depois da primeira, não pode travar contato à toa.
+  it 'depois de arrumado, a rotina só lê: não trava o contato de novo' do
+    described_class.perform_now
+    expect_any_instance_of(Contact).not_to receive(:with_lock) # rubocop:disable RSpec/AnyInstance
+
+    expect(described_class.perform_now).to eq(0)
+  end
+
   # MOTIVO: o texto que alguém escreveu no "Sobre a pessoa" nunca é apagado.
   it 'não mexe no "Sobre a pessoa" escrito por alguém' do
     contact.update!(additional_attributes: contact.additional_attributes.merge('description' => 'Atende só de manhã.'))

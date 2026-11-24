@@ -12,8 +12,10 @@
 # fornecedor, código do lugar, quem converteu, as marcas) continuam gravadas, porque a Prospecção depende delas; a tela é
 # que as esconde (Relationships::ChavesInternas). Idempotente: rodar de novo não acha mais nada para arrumar.
 #
-# Não é enfileirado por migration nem por callback: roda à mão, com OK do dono, de uma conta (account_id) ou de todas.
-# Anda pelos leads com contato (índice em contact_id), e não por uma busca no JSON de todos os contatos.
+# Roda de madrugada pela rotina (config/schedule.yml; OK do dono para arrumar os contatos que já existem), nunca por
+# migration nem por callback; à mão, aceita uma conta (account_id). Anda pelos leads com contato (índice em contact_id),
+# e não por uma busca no JSON de todos os contatos. Só trava o contato que tem algo a arrumar: depois da primeira noite,
+# a rotina só lê.
 class Relationships::ArrumarContatosDaProspeccaoJob < ApplicationJob
   queue_as :async_database_migration
 
@@ -33,6 +35,8 @@ class Relationships::ArrumarContatosDaProspeccaoJob < ApplicationJob
 
   def arrumar(lead)
     contact = lead.contact
+    return false if arrumado(lead, contact).nil?
+
     contact.with_lock { arrumar_travado(lead, contact) }
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{LOG} contact=#{contact&.id} falhou: #{e.class}")
@@ -42,14 +46,20 @@ class Relationships::ArrumarContatosDaProspeccaoJob < ApplicationJob
 
   # Dentro da trava (with_lock relê o contato): lê, calcula e grava sem perder o que alguém salvou no meio.
   def arrumar_travado(lead, contact)
-    return false unless CONVERSOR.owner_lead_id(contact) == lead.id
-
-    antes = [contact.custom_attributes.to_h, contact.additional_attributes.to_h]
-    depois = com_cargo_movido(antes.first, sem_categoria(lead, antes.last))
-    return false if depois == antes
+    depois = arrumado(lead, contact)
+    return false if depois.nil?
 
     contact.update!(custom_attributes: depois.first, additional_attributes: depois.last)
     true
+  end
+
+  # -> [custom_attributes, additional_attributes] arrumados, ou nil quando não há nada a arrumar neste contato.
+  def arrumado(lead, contact)
+    return unless CONVERSOR.owner_lead_id(contact) == lead.id
+
+    antes = [contact.custom_attributes.to_h, contact.additional_attributes.to_h]
+    depois = com_cargo_movido(antes.first, sem_categoria(lead, antes.last))
+    depois unless depois == antes
   end
 
   def sem_categoria(lead, adicionais)

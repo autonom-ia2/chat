@@ -496,6 +496,13 @@ carteira_limpeza_das_leituras_job:
   class: 'Carteira::LimpezaDasLeiturasJob'
   queue: scheduled_jobs
 
+# executed daily; arruma os contatos que a Prospecção criou antes do #3176 (cargo no lugar que as telas leem, sem a
+# categoria do Google em inglês). Idempotente: depois da primeira noite só lê, e só trava o contato que tem o que arrumar.
+relationships_arrumar_contatos_da_prospeccao_job:
+  cron: '10 8 * * *'
+  class: 'Relationships::ArrumarContatosDaProspeccaoJob'
+  queue: async_database_migration
+
 # A busca de todo dia no Agger da carteira de seguros (#2900, E7): começa, para cada conta que ligou "Buscar novos seguros
 # todo dia" e tem o Agger pronto, a busca dos últimos 7 dias, que entra sozinha na carteira. De madrugada no Brasil
 # (06:20 UTC), quando a corretora não está usando a plataforma; cada conta anda no seu job, uma chamada por vez.
