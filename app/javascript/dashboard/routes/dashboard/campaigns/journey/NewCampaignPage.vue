@@ -108,6 +108,8 @@ import AgoraVaiOTeste from 'dashboard/components-next/CampaignJourney/AgoraVaiOT
 import { useDuasVersoesNaCampanha } from 'dashboard/components-next/CampaignJourney/useDuasVersoesNaCampanha';
 // #3101: melhor horário de cada cliente na revisão (quantos já têm hora e o horário de envio da conta).
 import { useHorarioPermitido } from 'dashboard/components-next/CampaignJourney/ritmo/useHorarioPermitido';
+// #3101: "Mandar de novo" na revisão (os modelos da segunda mensagem e o que vai para o servidor).
+import { useReenvioNaCampanha } from 'dashboard/components-next/CampaignJourney/reenvio/useReenvioNaCampanha';
 
 const COVERAGE_DELAY_MS = 400;
 const SEARCH_DELAY_MS = 300;
@@ -729,6 +731,22 @@ const melhorHorario = computed(() =>
       }
 );
 
+// #3101: "Mandar de novo" (§3.1 do desenho): no WhatsApp Oficial, os outros modelos da caixa com as ligações da primeira
+// mensagem; no SMS e no WhatsApp API, um texto; no e-mail, o assunto.
+const { reenvio: reenvioNaRevisao, modeloParaEnvio: modeloDoReenvio } =
+  useReenvioNaCampanha({
+    draft,
+    ponte,
+    templates,
+    templateOptions,
+    variables,
+    sample,
+    columns,
+    placeholder: binding => `[${sourceLabel(binding)}]`,
+    pedeOferta: soModeloCompleto,
+    motivoDaOferta: t('REENVIO_HORARIO.REENVIO.MODELO_COM_OFERTA'),
+  });
+
 const cancel = () => {
   clearDraft(accountId.value);
   router.push({ name: 'campaigns_journey_index' });
@@ -770,6 +788,7 @@ const SUBMITTERS = {
           freeText: textoDaConversaAberta.value,
           medicao: medicaoDaCampanha(draft.value, {
             modelo: duasVersoes.modeloDaSegunda.value,
+            modeloDoReenvio: modeloDoReenvio(),
           }),
         })
       )
@@ -1273,6 +1292,7 @@ onBeforeUnmount(() => {
           :so-deixa-pronta="!podeDisparar"
           :montada-por="podeDisparar && prontaAberta ? prontaAberta.autor : ''"
           :melhor-horario="melhorHorario"
+          :reenvio="reenvioNaRevisao"
           @update="update"
           @go="goTo"
           @back="goTo(2)"

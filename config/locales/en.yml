@@ -416,6 +416,8 @@ en:
       phone: Phone
       email: E-mail
       company: Company
+    # #3101: o nome da campanha da segunda mensagem ("Mandar de novo").
+    segunda_mensagem: "%{nome} · second message"
   conversation_audience:
     columns:
       city: City

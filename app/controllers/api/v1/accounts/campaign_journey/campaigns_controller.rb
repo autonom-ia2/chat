@@ -15,6 +15,9 @@
 # PUT email_medicoes.
 # `campaign.melhor_horario` (#3101): true sends to each person at their best hour (Autonomia::MelhorHorario), saved in
 # the same transaction as the campaign, before any send job sees it.
+# `campaign.reenvio_quem`, `reenvio_dias`, `reenvio_mensagem` (#3101): the second message to who did not reply
+# (CampaignJourney::Reenvio), same transaction; refused with 422 and the code (reenvio_*). E-mail sets them in PUT
+# email_medicoes.
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
   CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
@@ -28,6 +31,8 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     render json: payload
   rescue ::CampaignJourney::WhatsappCampaignCreator::Error, ::CampaignJourney::CreatorError => e
     render json: { error: e.message, code: e.code, details: e.details }.compact, status: :unprocessable_entity
+  rescue ::CampaignJourney::Reenvio::Invalido => e
+    render json: { error: 'The second message cannot be used', code: e.code }, status: :unprocessable_entity
   end
 
   private
@@ -63,7 +68,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     campaign = ::CampaignJourney::WhatsappCampaignCreator.new(
       account: Current.account, campaign_import: campaign_import, channel: params[:channel], attributes: whatsapp_cloud_params
     ).perform
-    guardar_melhor_horario(campaign)
+    guardar_opcoes_de_envio(campaign)
     link = CampaignAudienceLink.for_campaign(campaign)
     {
       id: campaign.id, display_id: campaign.display_id, title: campaign.title,
@@ -76,7 +81,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     campaign = ::CampaignJourney::SmsCampaignCreator.new(
       account: Current.account, campaign_import: campaign_import, channel: params[:channel], attributes: whatsapp_cloud_params
     ).perform
-    guardar_melhor_horario(campaign)
+    guardar_opcoes_de_envio(campaign)
     link = CampaignAudienceLink.for_campaign(campaign)
     {
       id: campaign.id, display_id: campaign.display_id, title: campaign.title, channel: ::CampaignJourney::SmsCampaignCreator::CHANNEL,
@@ -90,7 +95,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     campaign = ::CampaignJourney::WhatsappApiCampaignCreator.new(
       account: Current.account, user: Current.user, campaign_import: campaign_import, params: params.require(:campaign)
     ).perform
-    guardar_melhor_horario(campaign)
+    guardar_opcoes_de_envio(campaign)
     link = CampaignAudienceLink.for_campaign(campaign)
     {
       id: campaign.id, title: campaign.title, channel: ::CampaignJourney::WhatsappApiCampaignCreator::CHANNEL,
@@ -103,7 +108,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     campaign = ::CampaignJourney::EmailCampaignCreator.new(
       account: Current.account, campaign_import: campaign_import, attributes: email_params
     ).perform.reload
-    guardar_melhor_horario(campaign)
+    guardar_opcoes_de_envio(campaign)
     ::CampaignJourney::DraftCleanup.link_email(Current.account, draft_id: params[:draft_id], email_campaign: campaign)
     {
       id: campaign.id, title: campaign.name, channel: ::CampaignJourney::EmailCampaignCreator::CHANNEL, status: campaign.status,
@@ -113,8 +118,13 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     }
   end
 
-  def guardar_melhor_horario(campaign)
+  def guardar_opcoes_de_envio(campaign)
     ::Autonomia::MelhorHorario.guardar!(campaign, ActiveModel::Type::Boolean.new.cast(params.dig(:campaign, :melhor_horario)) || false)
+    ::CampaignJourney::Reenvio.guardar!(campaign, reenvio_params) unless email_channel?
+  end
+
+  def reenvio_params
+    params.require(:campaign).permit(:reenvio_quem, :reenvio_dias, reenvio_mensagem: {}).to_h
   end
 
   def email_channel?

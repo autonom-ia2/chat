@@ -630,6 +630,75 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(create.mock.calls[0][0].campaign.melhor_horario).toBe(true);
     wrapper.unmount();
   });
+
+  it('#3101: the second message on WhatsApp Oficial is another template, with the binding of the first, sent on create', async () => {
+    const lembrete = {
+      ...TEMPLATE,
+      id: 10,
+      name: 'lembrete',
+      components: [
+        { type: 'BODY', text: 'Olá, {{1}}! Ainda quer falar sobre {{2}}?' },
+      ],
+    };
+    create.mockResolvedValue({ data: { id: 1 } });
+    saveDraft(1, {
+      title: 'Renovação',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 9,
+      bindings: {
+        1: { source: 'fixed', value: 'cliente' },
+        2: { source: 'fixed', value: 'outubro' },
+      },
+      reenvio: {
+        quem: 'nao_leu',
+        dias: 5,
+        modeloId: 10,
+        ligacoes: {
+          1: { source: 'fixed', value: 'cliente' },
+          2: { source: 'fixed', value: 'o seguro' },
+        },
+        texto: '',
+        assunto: '',
+      },
+      step: 3,
+    });
+    const wrapper = mountPage({
+      query: { draft: '1' },
+      templates: [TEMPLATE, lembrete],
+    });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    const bloco = wrapper.findComponent({ name: 'ReenvioDaCampanha' });
+    expect(bloco.props('modelos').map(modelo => modelo.value)).toEqual([10]);
+    expect(bloco.props('modelos')[0].ligacoes).toEqual({
+      1: { source: 'fixed', value: 'cliente' },
+    });
+
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    const { campaign } = create.mock.calls[0][0];
+    expect(campaign).toMatchObject({
+      reenvio_quem: 'nao_leu',
+      reenvio_dias: 5,
+      reenvio_mensagem: {
+        modelo_id: 10,
+        template_params: {
+          name: 'lembrete',
+          processed_params: { body: { 1: 'cliente', 2: 'o seguro' } },
+        },
+        ligacoes: {
+          1: { source: 'fixed', value: 'cliente' },
+          2: { source: 'fixed', value: 'o seguro' },
+        },
+      },
+    });
+    wrapper.unmount();
+  });
 });
 
 // #1093: the entry intent comes from the address. "Nova campanha" (no query) never drops the

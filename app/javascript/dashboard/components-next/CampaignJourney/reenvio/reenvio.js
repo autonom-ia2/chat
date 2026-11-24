@@ -8,6 +8,8 @@ import { allBound } from '../templateVariables';
 
 export const DIAS_DO_REENVIO = [1, 2, 3, 5, 7];
 export const DIAS_PADRAO = 3;
+// O teto do texto da segunda mensagem no SMS e no WhatsApp API (o mesmo do servidor, CampaignJourney::Reenvio).
+export const MAXIMO_DO_TEXTO = 1000;
 
 export const QUEM = { NAO_RESPONDEU: 'nao_respondeu', NAO_LEU: 'nao_leu' };
 
@@ -83,4 +85,26 @@ export const reenvioDoCanal = (reenvio, canal) => {
   return quemPodeEscolher(canal).includes(reenvio.quem)
     ? reenvio
     : { ...reenvio, quem: QUEM.NAO_RESPONDEU };
+};
+
+/**
+ * O reenvio no formato que o servidor grava (CampaignJourney::Reenvio): { reenvio_quem, reenvio_dias, reenvio_mensagem }.
+ * Desligado, ou num canal sem reenvio, nada (o servidor desliga). `modelo`: no WhatsApp Oficial, a segunda mensagem já
+ * montada pela página ({ modelo_id, template_params, ligacoes }); sem ela, nada (a revisão não deixa enviar assim).
+ */
+export const reenvioParaEnvio = (draft, { modelo = null } = {}) => {
+  const tipo = mensagemDoCanal(draft.channel);
+  const reenvio = reenvioDoCanal(draft.reenvio, draft.channel);
+  if (!tipo || !reenvio) return {};
+  const mensagem = {
+    [MENSAGEM.MODELO]: modelo,
+    [MENSAGEM.TEXTO]: { texto: String(reenvio.texto || '').trim() },
+    [MENSAGEM.ASSUNTO]: { assunto: String(reenvio.assunto || '').trim() },
+  }[tipo];
+  if (!mensagem) return {};
+  return {
+    reenvio_quem: reenvio.quem,
+    reenvio_dias: reenvio.dias,
+    reenvio_mensagem: mensagem,
+  };
 };

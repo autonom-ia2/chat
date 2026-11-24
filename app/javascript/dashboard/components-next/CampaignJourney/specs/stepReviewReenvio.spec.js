@@ -62,6 +62,23 @@ describe('StepReview with send again and best time (#3101)', () => {
     );
   });
 
+  it('holds the campaign again when the chosen template left the inbox', () => {
+    const wrapper = montar(
+      { reenvio: { ...reenvioNovo(), modeloId: 'apagado' } },
+      {
+        reenvio: {
+          canal: 'whatsapp_official',
+          modelos: [{ value: 'outro', label: 'Outro', variaveis: [] }],
+        },
+      }
+    );
+
+    expect(botaoDeEnviar(wrapper).attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-test="review-falta-reenvio"]').text()).toBe(
+      R.FALTA.SEM_MODELO
+    );
+  });
+
   it('tells about the second message in the confirmation', () => {
     const wrapper = montar(
       { reenvio: { ...reenvioNovo(), texto: 'Still there?', dias: 2 } },

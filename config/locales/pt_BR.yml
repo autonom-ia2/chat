@@ -348,6 +348,8 @@ pt_BR:
       phone: Telefone
       email: E-mail
       company: Empresa
+    # #3101: o nome da campanha da segunda mensagem ("Mandar de novo").
+    segunda_mensagem: "%{nome} · segunda mensagem"
   conversation_audience:
     columns:
       city: Cidade

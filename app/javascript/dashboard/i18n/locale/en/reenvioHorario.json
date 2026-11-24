@@ -36,6 +36,7 @@
       "MODELO_ESCOLHER": "Choose the template",
       "MODELO_LABEL": "Template of the second message",
       "SEM_MODELOS": "This inbox has no other approved template, so it can't send again. Create one in WhatsApp Templates and come back.",
+      "MODELO_COM_OFERTA": "has a coupon, offer or catalog",
       "TEXTO_AJUDA": "Write it differently from the first one: short, reminding what you offered.",
       "TEXTO_EXEMPLO": "Hi! Just a reminder about the offer I sent you. There's still time, want me to save it for you?",
       "ASSUNTO_AJUDA": "The content is the same as the first e-mail. A new subject helps the person open it.",
@@ -45,7 +46,7 @@
       "REGRAS": "People who reply before that, leave the list or are blocked don't get it. The second message also follows the account's limit and hours.",
       "NO_RESUMO": "Sends again 1 day later | Sends again {dias} days later",
       "SEGUNDO_EMAIL": "Second e-mail",
-      "PRONTO": "Done",
+      "GUARDAR_E_FECHAR": "Save and close",
       "CONFIRM": "1 day later, people who {quem} get the second message. | {dias} days later, people who {quem} get the second message."
     },
     "MELHOR_HORARIO": {

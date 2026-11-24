@@ -7,7 +7,10 @@ import {
   quemPodeEscolher,
   reenvioDoCanal,
   reenvioNovo,
+  reenvioParaEnvio,
 } from '../reenvio/reenvio';
+import { medicaoDaCampanha } from '../journeyChannelPayloads';
+import { emptyDraft } from '../campaignDraft';
 
 describe('reenvio (#3101)', () => {
   it('picks the kind of second message by channel', () => {
@@ -97,5 +100,60 @@ describe('reenvio (#3101)', () => {
     expect(reenvioDoCanal(naoLeu, 'sms').quem).toBe(QUEM.NAO_RESPONDEU);
     expect(reenvioDoCanal(naoLeu, 'whatsapp_official')).toBe(naoLeu);
     expect(reenvioDoCanal(null, 'sms')).toBeNull();
+  });
+
+  it('sends the text on SMS and WhatsApp API, and the subject on e-mail', () => {
+    const reenvio = { ...reenvioNovo(), texto: ' Ainda aí? ', assunto: 'Oi' };
+
+    expect(reenvioParaEnvio({ channel: 'sms', reenvio })).toEqual({
+      reenvio_quem: 'nao_respondeu',
+      reenvio_dias: 3,
+      reenvio_mensagem: { texto: 'Ainda aí?' },
+    });
+    expect(
+      reenvioParaEnvio({ channel: 'email', reenvio }).reenvio_mensagem
+    ).toEqual({ assunto: 'Oi' });
+  });
+
+  it('sends "did not read" only on WhatsApp Oficial, with the template the page built', () => {
+    const reenvio = { ...reenvioNovo(), quem: QUEM.NAO_LEU, modeloId: 'm2' };
+    const modelo = { modelo_id: 'm2', template_params: {}, ligacoes: {} };
+
+    expect(
+      reenvioParaEnvio({ channel: 'whatsapp_official', reenvio }, { modelo })
+    ).toEqual({
+      reenvio_quem: 'nao_leu',
+      reenvio_dias: 3,
+      reenvio_mensagem: modelo,
+    });
+    expect(
+      reenvioParaEnvio({ channel: 'whatsapp_api', reenvio }).reenvio_quem
+    ).toBe('nao_respondeu');
+  });
+
+  it('sends nothing when off, on live chat, or on WhatsApp Oficial without the template', () => {
+    const reenvio = reenvioNovo();
+
+    expect(reenvioParaEnvio({ channel: 'sms', reenvio: null })).toEqual({});
+    expect(reenvioParaEnvio({ channel: 'live_chat', reenvio })).toEqual({});
+    expect(reenvioParaEnvio({ channel: 'whatsapp_official', reenvio })).toEqual(
+      {}
+    );
+  });
+
+  it('goes in the creation together with the other review choices', () => {
+    const draft = {
+      ...emptyDraft(),
+      channel: 'sms',
+      reenvio: { ...reenvioNovo(), texto: 'Ainda aí?', dias: 5 },
+    };
+
+    expect(medicaoDaCampanha(draft)).toEqual({
+      janela_de_compra_dias: 7,
+      grupo_de_controle_pct: 0,
+      reenvio_quem: 'nao_respondeu',
+      reenvio_dias: 5,
+      reenvio_mensagem: { texto: 'Ainda aí?' },
+    });
   });
 });

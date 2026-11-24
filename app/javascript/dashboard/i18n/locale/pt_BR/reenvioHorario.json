@@ -36,6 +36,7 @@
       "MODELO_ESCOLHER": "Escolha o modelo",
       "MODELO_LABEL": "Modelo da segunda mensagem",
       "SEM_MODELOS": "Esta caixa não tem outro modelo aprovado, então não dá para mandar de novo. Crie um em Modelos do WhatsApp e volte aqui.",
+      "MODELO_COM_OFERTA": "tem cupom, oferta ou catálogo",
       "TEXTO_AJUDA": "Escreva diferente da primeira: curta, lembrando o que você ofereceu.",
       "TEXTO_EXEMPLO": "Oi! Passando para lembrar da oferta que te mandei. Ainda dá tempo, quer que eu separe para você?",
       "ASSUNTO_AJUDA": "O conteúdo é o mesmo do primeiro e-mail. Um assunto novo ajuda a pessoa a abrir.",
@@ -45,7 +46,7 @@
       "REGRAS": "Quem responder antes disso, sair da lista ou estiver bloqueado não recebe. A segunda mensagem também respeita o limite e o horário da conta.",
       "NO_RESUMO": "Manda de novo 1 dia depois | Manda de novo {dias} dias depois",
       "SEGUNDO_EMAIL": "Segundo e-mail",
-      "PRONTO": "Pronto",
+      "GUARDAR_E_FECHAR": "Guardar e fechar",
       "CONFIRM": "1 dia depois, quem {quem} recebe a segunda mensagem. | {dias} dias depois, quem {quem} recebe a segunda mensagem."
     },
     "MELHOR_HORARIO": {

@@ -19,7 +19,12 @@ import { toLocaleTag, formatNumber } from './localeTag';
 import MedirVendas from './MedirVendas.vue';
 import MelhorHorarioDaCampanha from './melhorHorario/MelhorHorarioDaCampanha.vue';
 import ReenvioDaCampanha from './reenvio/ReenvioDaCampanha.vue';
-import { faltaNoReenvio, reenvioDoCanal } from './reenvio/reenvio';
+import {
+  MENSAGEM,
+  faltaNoReenvio,
+  mensagemDoCanal,
+  reenvioDoCanal,
+} from './reenvio/reenvio';
 import { JANELA_HORAS } from './melhorHorario/melhorHorario';
 
 const props = defineProps({
@@ -171,15 +176,23 @@ const modeloDoReenvio = computed(() =>
     modelo => modelo.value === props.draft.reenvio?.modeloId
   )
 );
-const faltaReenvio = computed(() =>
-  props.reenvio
-    ? faltaNoReenvio(
-        props.draft.reenvio,
-        props.reenvio.canal,
-        modeloDoReenvio.value
-      )
-    : null
+// O modelo escolhido que sumiu da caixa (apagado ou desligado depois de escolhido) volta a faltar: sem ele, a segunda
+// mensagem não teria o que mandar.
+const modeloSumiu = computed(
+  () =>
+    mensagemDoCanal(props.reenvio?.canal) === MENSAGEM.MODELO &&
+    Boolean(props.draft.reenvio?.modeloId) &&
+    !modeloDoReenvio.value
 );
+const faltaReenvio = computed(() => {
+  if (!props.reenvio) return null;
+  if (modeloSumiu.value) return 'SEM_MODELO';
+  return faltaNoReenvio(
+    props.draft.reenvio,
+    props.reenvio.canal,
+    modeloDoReenvio.value
+  );
+});
 const isBlocked = computed(
   () => props.checks.some(check => !check.ok) || Boolean(faltaReenvio.value)
 );

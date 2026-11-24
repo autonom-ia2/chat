@@ -73,7 +73,9 @@ const opcoesDeModelo = computed(() =>
 const semModelos = computed(
   () => tipo.value === MENSAGEM.MODELO && !modelosQueVao(props.modelos).length
 );
-const variaveisDoModelo = computed(() => modeloEscolhido.value?.variaveis || []);
+const variaveisDoModelo = computed(
+  () => modeloEscolhido.value?.variaveis || []
+);
 // O que a pessoa recebe na segunda vez, no balão de exemplo.
 const exemplo = computed(() => {
   if (tipo.value === MENSAGEM.MODELO) return modeloEscolhido.value?.corpo || '';
@@ -123,8 +125,7 @@ const alternar = novo => {
     'update:modelValue',
     novo
       ? reenvioNovo({
-          texto:
-            tipo.value === MENSAGEM.TEXTO ? t(`${NS}.TEXTO_EXEMPLO`) : '',
+          texto: tipo.value === MENSAGEM.TEXTO ? t(`${NS}.TEXTO_EXEMPLO`) : '',
           assunto:
             tipo.value === MENSAGEM.ASSUNTO ? t(`${NS}.ASSUNTO_EXEMPLO`) : '',
         })
@@ -360,7 +361,7 @@ const classeDaPilula = escolhida =>
       </template>
 
       <Button
-        :label="t(`${NS}.PRONTO`)"
+        :label="t(`${NS}.GUARDAR_E_FECHAR`)"
         variant="outline"
         color="slate"
         size="sm"

@@ -3,6 +3,7 @@
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { CAMPAIGN_CHANNELS } from './campaignChannels';
 import { cleanDefaults } from './templateVariables';
+import { reenvioParaEnvio } from './reenvio/reenvio';
 
 // Journey channel → `channel` of the backend.
 export const BACKEND_CHANNEL = {
@@ -69,13 +70,18 @@ export const duasVersoesParaEnvio = (draft, { modelo = null } = {}) => {
 /**
  * #3098: "Quem comprou depois" da revisão (dias da janela e porcentagem do grupo de controle).
  * #3099: e as duas versões da mensagem, quando ligadas (duasVersoesParaEnvio).
+ * #3101: e o "Mandar de novo" (reenvioParaEnvio); `modeloDoReenvio` é a segunda mensagem do WhatsApp Oficial já montada.
  */
-export const medicaoDaCampanha = (draft, { modelo = null } = {}) => ({
+export const medicaoDaCampanha = (
+  draft,
+  { modelo = null, modeloDoReenvio = null } = {}
+) => ({
   janela_de_compra_dias: draft.janelaDeCompra || 7,
   grupo_de_controle_pct: draft.grupoDeControle || 0,
   // #3101: cada pessoa no seu melhor horário (o servidor grava nas opções de envio da campanha; sem a chave, desligado).
   ...(draft.melhorHorario ? { melhor_horario: true } : {}),
   ...duasVersoesParaEnvio(draft, { modelo }),
+  ...reenvioParaEnvio(draft, { modelo: modeloDoReenvio }),
 });
 
 // #3099: com as duas versões ligadas, o "Vão receber" volta também com o plano do teste contado pelo servidor
