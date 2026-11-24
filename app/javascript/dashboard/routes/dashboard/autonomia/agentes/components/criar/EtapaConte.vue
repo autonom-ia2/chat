@@ -207,7 +207,7 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
           {{ t(`${NS}.DEMORANDO`) }}
         </p>
         <AgenteErro
-          v-if="falhou && !pensando && semCredito"
+          v-if="falhou && !pensando && semCredito && !offline"
           data-erro-conversa
           data-sem-credito
           :titulo="t(`${NS}.SEM_CREDITO`)"
