@@ -65,11 +65,14 @@ const handleCopilotSidebarToggle = () => {
   });
 };
 
+// #3191 — abrir o copiloto fecha o Guia: os dois têm a mesma largura e não cabem juntos ao lado
+// da conversa (o Guia, ao abrir, fecha o copiloto).
 const handleAutonomiaCopilotToggle = () => {
   updateUISettings({
     is_contact_sidebar_open: false,
     is_copilot_panel_open: false,
     is_autonomia_copilot_panel_open: true,
+    is_autonomia_guide_panel_open: false,
   });
 };
 

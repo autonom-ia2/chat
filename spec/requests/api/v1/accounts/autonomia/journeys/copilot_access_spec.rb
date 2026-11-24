@@ -44,7 +44,19 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
       expect(listed.pluck('id')).to include(both_agent.id)
       entry = listed.find { |a| a['id'] == both_agent.id }
       expect(entry['actuation']).to eq('both')
-      expect(entry.keys).to match_array(%w[id name actuation description])
+      expect(entry.keys).to match_array(%w[id name actuation description avatar_url])
+    end
+
+    it 'sends an empty avatar_url when the agent has no photo (#3191)' do
+      # Arrange — sem foto, o painel mostra o ícone; a chave vem vazia, nunca nula.
+      agent = create_copilot_agent(account)
+
+      # Act
+      list_agents
+
+      # Assert
+      entry = response.parsed_body['agents'].find { |a| a['id'] == agent.id }
+      expect(entry['avatar_url']).to eq('')
     end
 
     it 'never lists agents that belong to another account' do

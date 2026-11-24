@@ -25,6 +25,12 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // #3191 — o Copiloto da equipe fala com a foto do agente no lugar do ícone
+  // do Guia. Sem foto, fica o ícone.
+  foto: {
+    type: String,
+    default: '',
+  },
 });
 
 const pedacos = computed(() =>
@@ -36,7 +42,15 @@ const formatar = texto => new MessageFormatter(texto).formattedMessage;
 
 <template>
   <div class="flex items-start gap-2 w-full" data-resposta>
+    <img
+      v-if="foto"
+      :src="foto"
+      alt=""
+      class="size-7 mt-1 shrink-0 rounded-lg object-cover"
+      data-foto
+    />
     <span
+      v-else
       class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
       aria-hidden="true"
     >
@@ -70,6 +84,8 @@ const formatar = texto => new MessageFormatter(texto).formattedMessage;
           data-trecho
         />
       </template>
+      <!-- O que se faz com a resposta (no Copiloto: "Usar esta resposta"). -->
+      <slot />
     </div>
   </div>
 </template>

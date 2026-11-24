@@ -58,6 +58,17 @@ const props = defineProps({
     type: Number,
     default: Infinity,
   },
+  // #3191 — o Copiloto da equipe usa esta mesma caixa, mas ainda não lê
+  // arquivo: sem clipe, e colar ou arrastar arquivo não faz nada.
+  anexos: {
+    type: Boolean,
+    default: true,
+  },
+  // Quem responde: "Pergunte ao Guia", "Pergunte à Clara".
+  placeholder: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits([
@@ -145,6 +156,7 @@ const handleEnterKey = event => {
 
 // Colar uma foto (print de tela) anexa a foto; colar texto continua normal.
 const colar = event => {
+  if (!props.anexos) return;
   const files = Array.from(event.clipboardData?.files || []);
   if (!files.length) return;
   event.preventDefault();
@@ -288,14 +300,14 @@ useEventListener(
 
 // Arrastar fotos e arquivos para a caixa de digitar.
 const arrastarPorCima = event => {
-  if (gravando.value || props.isBusy) return;
+  if (!props.anexos || gravando.value || props.isBusy) return;
   if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
   arrastando.value = true;
 };
 
 const soltar = event => {
   arrastando.value = false;
-  if (gravando.value || props.isBusy) return;
+  if (!props.anexos || gravando.value || props.isBusy) return;
   anexarTodos(event.dataTransfer?.files);
 };
 
@@ -414,6 +426,7 @@ onMounted(() => {
 
     <form v-else class="relative" @submit.prevent="sendMessage">
       <input
+        v-if="anexos"
         ref="fileRef"
         type="file"
         multiple
@@ -422,6 +435,7 @@ onMounted(() => {
         @change="arquivoEscolhido"
       />
       <button
+        v-if="anexos"
         type="button"
         :disabled="isBusy"
         :aria-label="$t('AUTONOMIA_GUIDE.FILE.ATTACH')"
@@ -435,8 +449,9 @@ onMounted(() => {
         v-model="message"
         :readonly="textoTravado"
         :aria-busy="isBusy ? 'true' : 'false'"
-        :placeholder="$t('AUTONOMIA_GUIDE.PLACEHOLDER')"
-        class="w-full reset-base bg-n-solid-1 ltr:pl-12 ltr:pr-14 rtl:pl-14 rtl:pr-12 py-3.5 text-[0.9375rem] leading-6 border border-n-strong rounded-[1.625rem] focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
+        :placeholder="placeholder || $t('AUTONOMIA_GUIDE.PLACEHOLDER')"
+        :class="anexos ? 'ltr:pl-12 rtl:pr-12' : 'ltr:pl-5 rtl:pr-5'"
+        class="w-full reset-base bg-n-solid-1 ltr:pr-14 rtl:pl-14 py-3.5 text-[0.9375rem] leading-6 border border-n-strong rounded-[1.625rem] focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
         rows="1"
         @input="handleInput"
         @paste="colar"
