@@ -83,6 +83,22 @@
       "MELHOR_HORARIO_AJUDA": "Waits for the hour they usually reply, 24 hours at most. If we don't know their hour yet, they get it right away.",
       "REGRAS": "Always within the account's allowed hours: {horario}. If the customer just wrote, the reply goes out right away.",
       "REGRAS_QUALQUER_HORA": "Your account allows sending at any time. If the customer just wrote, the reply goes out right away."
+    },
+    "RESULTADO": {
+      "TITULO": "Second message",
+      "AGUARDANDO_DATA": "Goes out {quando}, to people who {quem}.",
+      "AGUARDANDO_SEM_DATA": "Goes out 1 day after this campaign finishes, to people who {quem}. | Goes out {dias} days after this campaign finishes, to people who {quem}.",
+      "ENVIADA": "Went out to people who {quem}: {receberam} and {responderam}.",
+      "RECEBERAM": "{n} got it | {n} got it",
+      "RESPONDERAM": "{n} replied | {n} replied",
+      "SAINDO": "Still going out. The numbers go up until it finishes.",
+      "VER": "See the result",
+      "VER_DE": "See the result of {nome}",
+      "CRIAR": "Create campaign",
+      "APAGADA": "It went out, but the second message's campaign was deleted. Its result can't be seen.",
+      "SEM_NINGUEM": "It didn't need to go out: everyone replied or couldn't get messages.",
+      "CANCELADO": "It didn't go out: this campaign was changed or canceled before the set day. If you still want to remind people who {quem}, create a new campaign.",
+      "FALHOU": "It didn't go out: something went wrong when putting the second message together. You don't need to redo this campaign. If you still want to remind people who {quem}, create a new campaign."
     }
   }
 }

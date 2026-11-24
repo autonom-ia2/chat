@@ -36,6 +36,8 @@ import ResultCrmBand from './ResultCrmBand.vue';
 import ResultVendas from './ResultVendas.vue';
 // #3099: duas versões da mensagem, logo abaixo dos números.
 import ResultDuasVersoesDaCampanha from './ResultDuasVersoesDaCampanha.vue';
+// #3101: a segunda mensagem do "Mandar de novo", logo abaixo das duas versões.
+import ResultSegundaMensagem from './ResultSegundaMensagem.vue';
 import ResultLinkClicks from './ResultLinkClicks.vue';
 import ResultRepliedList from './ResultRepliedList.vue';
 import EmailResultActions from './EmailResultActions.vue';
@@ -463,6 +465,11 @@ watch(
         :teste="result.duas_versoes"
         @escolhida="refresh"
         @recarregar="refresh"
+      />
+
+      <ResultSegundaMensagem
+        v-if="result.segunda_mensagem"
+        :segunda="result.segunda_mensagem"
       />
 
       <RecipientImportStatus :campaign="health" :can-recover="canManage" />
