@@ -19,7 +19,29 @@ RSpec.describe 'Ritmo de envio API (#3063)', type: :request do
     get path, headers: headers, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['payload']).to include('limite' => nil, 'horario' => nil)
+    expect(response.parsed_body['payload']).to include('limite' => nil, 'intervalo' => nil, 'horario' => nil)
+  end
+
+  it 'grava e devolve o intervalo entre mensagens sem apagar o limite (#3101)' do
+    patch path, headers: headers, as: :json, params: { limite: { mensagens: 3, dias: 7 } }
+    patch path, headers: headers, as: :json, params: { intervalo: { horas: 4 } }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['payload']).to include('limite' => { 'mensagens' => 3, 'dias' => 7 }, 'intervalo' => { 'horas' => 4 })
+    expect(Autonomia::RitmoDeEnvio::Config.da(account.reload).intervalo).to eq('horas' => 4)
+
+    get path, headers: headers, as: :json
+    expect(response.parsed_body['payload']['intervalo']).to eq('horas' => 4)
+
+    patch path, headers: headers, as: :json, params: { intervalo: nil }
+    expect(response.parsed_body['payload']['intervalo']).to be_nil
+  end
+
+  it 'recusa intervalo que a tela não oferece' do
+    patch path, headers: headers, as: :json, params: { intervalo: { horas: 3 } }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to include('parameter' => 'intervalo.horas')
   end
 
   it 'grava o limite e o horário sem mexer nas outras configurações da conta' do

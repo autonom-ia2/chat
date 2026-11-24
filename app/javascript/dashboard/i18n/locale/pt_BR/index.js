@@ -28,6 +28,7 @@ import relacionamentosCompras from './relacionamentosCompras.json';
 import campanhaVendas from './campanhaVendas.json';
 import duasVersoes from './duasVersoes.json';
 import fidelidade from './fidelidade.json';
+import reenvioHorario from './reenvioHorario.json';
 import seusPosts from './seusPosts.json';
 import metaAdsComentariosIa from './metaAdsComentariosIa.json';
 import painelDoContato from './painelDoContato.json';
@@ -133,6 +134,7 @@ export default {
   ...campanhaVendas,
   ...duasVersoes,
   ...fidelidade,
+  ...reenvioHorario,
   ...seusPosts,
   ...metaAdsComentariosIa,
   ...painelDoContato,

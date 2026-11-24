@@ -3,6 +3,7 @@ import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enModelos from 'dashboard/i18n/locale/en/modelosWhatsapp.json';
+import enReenvio from 'dashboard/i18n/locale/en/reenvioHorario.json';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
   loadDraft,
@@ -29,6 +30,10 @@ const conversaAberta = vi.hoisted(() => ({
   escrever: vi.fn(),
 }));
 vi.mock('dashboard/api/conversaAberta', () => ({ default: conversaAberta }));
+
+// #3101: o horário de envio da conta, que o melhor horário da revisão mostra.
+const ritmo = vi.hoisted(() => ({ buscar: vi.fn() }));
+vi.mock('dashboard/api/ritmoDeEnvio', () => ({ default: ritmo }));
 
 const stub = name => ({ default: { name, render: () => null } });
 vi.mock(
@@ -181,7 +186,7 @@ const mountPage = ({
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: { ...enJourney, ...enModelos } },
+    messages: { en: { ...enJourney, ...enModelos, ...enReenvio } },
   });
   return mount(NewCampaignPage, {
     attachTo: document.body,
@@ -211,6 +216,8 @@ beforeEach(() => {
   conversaAberta.contagem.mockRejectedValue({ response: { status: 404 } });
   preview.mockReset();
   preview.mockResolvedValue({ data: { payload: null } });
+  ritmo.buscar.mockReset();
+  ritmo.buscar.mockResolvedValue({ data: { payload: { horario: null } } });
   push.mockClear();
   replace.mockClear();
   alert.mockClear();
@@ -571,6 +578,125 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
 
     expect(wrapper.find('[data-reason="opted_out"]').text()).toContain('−3');
     expect(wrapper.find('[data-test="receivers"]').text()).toBe('95');
+    wrapper.unmount();
+  });
+
+  it('#3101: the review offers the best time with who already has one and sends it on create', async () => {
+    preview.mockResolvedValue({
+      data: {
+        payload: {
+          total: 98,
+          receive: 98,
+          reasons: {},
+          melhor_horario: { conhecidos: 40 },
+        },
+      },
+    });
+    ritmo.buscar.mockResolvedValue({
+      data: {
+        payload: {
+          horario: { inicio: 8, fim: 20, dias_da_semana: [1, 2, 3, 4, 5] },
+        },
+      },
+    });
+    create.mockResolvedValue({ data: { id: 1 } });
+    saveDraft(1, {
+      title: 'Renovação',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 9,
+      bindings: {
+        1: { source: 'fixed', value: 'cliente' },
+        2: { source: 'fixed', value: 'outubro' },
+      },
+      melhorHorario: true,
+      step: 3,
+    });
+    const wrapper = mountPage({ query: { draft: '1' } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    const melhor = wrapper.findComponent({ name: 'MelhorHorarioDaCampanha' });
+    expect(melhor.props('conhecidos')).toBe(40);
+    expect(melhor.props('horarioPermitido')).toBe(
+      'Monday to Friday, from 8:00 to 20:00'
+    );
+
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    expect(create.mock.calls[0][0].campaign.melhor_horario).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('#3101: the second message on WhatsApp Oficial is another template, with the binding of the first, sent on create', async () => {
+    const lembrete = {
+      ...TEMPLATE,
+      id: 10,
+      name: 'lembrete',
+      components: [
+        { type: 'BODY', text: 'Olá, {{1}}! Ainda quer falar sobre {{2}}?' },
+      ],
+    };
+    create.mockResolvedValue({ data: { id: 1 } });
+    saveDraft(1, {
+      title: 'Renovação',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 9,
+      bindings: {
+        1: { source: 'fixed', value: 'cliente' },
+        2: { source: 'fixed', value: 'outubro' },
+      },
+      reenvio: {
+        quem: 'nao_leu',
+        dias: 5,
+        modeloId: 10,
+        ligacoes: {
+          1: { source: 'fixed', value: 'cliente' },
+          2: { source: 'fixed', value: 'o seguro' },
+        },
+        texto: '',
+        assunto: '',
+      },
+      step: 3,
+    });
+    const wrapper = mountPage({
+      query: { draft: '1' },
+      templates: [TEMPLATE, lembrete],
+    });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    const bloco = wrapper.findComponent({ name: 'ReenvioDaCampanha' });
+    expect(bloco.props('modelos').map(modelo => modelo.value)).toEqual([10]);
+    expect(bloco.props('modelos')[0].ligacoes).toEqual({
+      1: { source: 'fixed', value: 'cliente' },
+    });
+
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    const { campaign } = create.mock.calls[0][0];
+    expect(campaign).toMatchObject({
+      reenvio_quem: 'nao_leu',
+      reenvio_dias: 5,
+      reenvio_mensagem: {
+        modelo_id: 10,
+        template_params: {
+          name: 'lembrete',
+          processed_params: { body: { 1: 'cliente', 2: 'o seguro' } },
+        },
+        ligacoes: {
+          1: { source: 'fixed', value: 'cliente' },
+          2: { source: 'fixed', value: 'o seguro' },
+        },
+      },
+    });
     wrapper.unmount();
   });
 });

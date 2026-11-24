@@ -188,4 +188,27 @@ RSpec.describe 'Campaign journey WhatsApp API campaigns (#999)', :aggregate_fail
     expect(WhatsappApiCampaign.count).to eq(0)
     expect(CampaignAudienceLink.count).to eq(0)
   end
+
+  # #3101: a campanha, o público e as opções de envio gravam juntos; o agendador só entra na fila depois disso, com a
+  # transação do pedido já fechada (sobra só a do teste, que não junta), e vê o melhor horário.
+  it 'enqueues the scheduler only after the campaign and its sending options commit' do
+    visto = []
+    allow(WhatsappApiCampaigns::ScheduleDueCampaignsJob).to receive(:perform_later) do
+      visto << [ActiveRecord::Base.connection.current_transaction.joinable?, Autonomia::CampanhaOpcoesDeEnvio.exists?(melhor_horario: true)]
+    end
+
+    create_campaign(message_body: 'Olá {{contact.first_name}}', melhor_horario: true)
+
+    expect(response).to have_http_status(:ok)
+    expect(visto).to eq([[false, true]])
+  end
+
+  it 'enqueues nothing when the second message is refused, and the campaign is not created' do
+    create_campaign(message_body: 'Olá {{contact.first_name}}', reenvio_quem: 'nao_leu', reenvio_dias: 3, reenvio_mensagem: { texto: 'De novo' })
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('reenvio_quem_invalido')
+    expect(WhatsappApiCampaigns::ScheduleDueCampaignsJob).not_to have_received(:perform_later)
+    expect(WhatsappApiCampaign.count).to eq(0)
+  end
 end

@@ -43,6 +43,11 @@ Rails.application.config.to_prepare do
   prepend_once.call(EmailCampaigns::DeliveryEngine, CampaignJourney::DuasVersoes::AssuntoDoEmail)
   prepend_once.call(EmailCampaigns::DirectInbox::RecipientSender, CampaignJourney::DuasVersoes::AssuntoDoEmail)
 
+  # #3101: editing a campaign before its second message goes out cancels the second message.
+  [Campaign, EmailCampaign].each do |klass|
+    klass.include(CampaignJourney::Reenvio::Cancelavel) unless klass.include?(CampaignJourney::Reenvio::Cancelavel)
+  end
+
   # #1002: a reply to a campaign marks the conversation in the CRM (listener on message_created).
   # Independent of initializer order: the prepend covers a later load_listeners, ensure_subscribed!
   # a dispatcher that already loaded them. Never subscribed twice.

@@ -1,19 +1,22 @@
 # O que a conta escolheu (#3063, item 2), em accounts.settings['ritmo_de_envio']:
 #   { 'limite'  => { 'mensagens' => 3, 'dias' => 7 } | nil,
+#     'intervalo' => { 'horas' => 4 } | nil,
 #     'horario' => { 'inicio' => 8, 'fim' => 20, 'dias_da_semana' => [1, 2, 3, 4, 5] } | nil }
 # Sem a chave (o padrão), nada muda: sem limite e a qualquer hora, até alguém escolher. `fim` é a hora em que para de
-# mandar (20 = até 19h59). Dias da semana: 0 = domingo, como Date#wday.
+# mandar (20 = até 19h59). Dias da semana: 0 = domingo, como Date#wday. O intervalo (#3101) é o mínimo de horas entre duas
+# mensagens para a mesma pessoa.
 class Autonomia::RitmoDeEnvio::Config
   CHAVE = 'ritmo_de_envio'.freeze
   MENSAGENS = (1..10)
   DIAS = [1, 7, 15, 30].freeze
+  INTERVALOS = [1, 2, 4, 8, 12, 24, 48].freeze
   INICIOS = (0..22)
   FINS = (1..23)
   DIAS_DA_SEMANA = (0..6)
 
   Invalida = Class.new(StandardError)
 
-  attr_reader :limite, :horario
+  attr_reader :limite, :intervalo, :horario
 
   def self.da(account)
     new(account.settings.to_h[CHAVE])
@@ -22,7 +25,8 @@ class Autonomia::RitmoDeEnvio::Config
   # O que veio da tela vira o hash guardado, ou Invalida com o campo errado.
   def self.normalizar(valores)
     valores = valores.to_h.deep_stringify_keys
-    { 'limite' => limite_de(valores['limite']), 'horario' => horario_de(valores['horario']) }
+    { 'limite' => limite_de(valores['limite']), 'intervalo' => intervalo_de(valores['intervalo']),
+      'horario' => horario_de(valores['horario']) }
   end
 
   def self.limite_de(limite)
@@ -34,6 +38,15 @@ class Autonomia::RitmoDeEnvio::Config
     raise Invalida, 'limite.dias' unless DIAS.include?(dias)
 
     { 'mensagens' => mensagens, 'dias' => dias }
+  end
+
+  def self.intervalo_de(intervalo)
+    return nil if intervalo.blank?
+
+    horas = Integer(intervalo['horas'], exception: false)
+    raise Invalida, 'intervalo.horas' unless INTERVALOS.include?(horas)
+
+    { 'horas' => horas }
   end
 
   def self.horario_de(horario)
@@ -57,11 +70,12 @@ class Autonomia::RitmoDeEnvio::Config
   def initialize(guardado)
     guardado = guardado.is_a?(Hash) ? guardado : {}
     @limite = guardado['limite'].presence
+    @intervalo = guardado['intervalo'].presence
     @horario = guardado['horario'].presence
   end
 
   def to_h
-    { 'limite' => limite, 'horario' => horario }
+    { 'limite' => limite, 'intervalo' => intervalo, 'horario' => horario }
   end
 
   # O próximo instante em que o horário deixa mandar, a partir de `instante`, no fuso dado. Sem horário, o próprio

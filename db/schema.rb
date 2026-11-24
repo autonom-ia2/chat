@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -1838,6 +1838,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
     t.index ["campaign_type"], name: "index_campaigns_on_campaign_type"
     t.index ["inbox_id"], name: "index_campaigns_on_inbox_id"
     t.index ["scheduled_at"], name: "index_campaigns_on_scheduled_at"
+  end
+
+  create_table "campanha_opcoes_de_envio", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campanha_type", null: false
+    t.bigint "campanha_id", null: false
+    t.boolean "melhor_horario", default: false, null: false
+    t.string "reenvio_quem"
+    t.integer "reenvio_dias"
+    t.jsonb "reenvio_mensagem"
+    t.string "reenvio_status"
+    t.datetime "reenvio_em"
+    t.string "reenvio_campanha_type"
+    t.bigint "reenvio_campanha_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_campanha_opcoes_de_envio_conta"
+    t.index ["campanha_type", "campanha_id"], name: "idx_campanha_opcoes_de_envio_campanha", unique: true
+    t.index ["reenvio_status", "reenvio_em"], name: "idx_campanha_opcoes_de_envio_reenvio"
   end
 
   create_table "canned_responses", id: :serial, force: :cascade do |t|
@@ -4739,6 +4758,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "horarios_de_resposta", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "por_hora", null: false, array: true
+    t.integer "respostas", default: 0, null: false
+    t.integer "hora", limit: 2
+    t.datetime "calculado_em", null: false
+    t.index ["account_id", "contact_id"], name: "idx_horarios_de_resposta_contato", unique: true
+    t.index ["contact_id"], name: "index_horarios_de_resposta_on_contact_id"
+  end
+
   create_table "idempotency_keys", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "key", null: false
@@ -5736,6 +5766,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
   add_foreign_key "campaign_version_contacts", "accounts", on_delete: :cascade
   add_foreign_key "campaign_version_contacts", "campaign_audience_links", on_delete: :cascade
   add_foreign_key "campaign_version_contacts", "contacts", on_delete: :cascade
+  add_foreign_key "campanha_opcoes_de_envio", "accounts"
   add_foreign_key "carteira_apolice_eventos", "campaign_imports", on_delete: :nullify
   add_foreign_key "carteira_apolice_eventos", "carteira_apolices", column: "apolice_id", on_delete: :cascade
   add_foreign_key "carteira_apolice_eventos", "users", on_delete: :nullify
@@ -5988,6 +6019,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
   add_foreign_key "fidelidade_saldos", "accounts"
   add_foreign_key "fidelidade_saldos", "contacts", on_delete: :cascade
   add_foreign_key "fidelidade_saldos", "fidelidade_programas", column: "programa_id"
+  add_foreign_key "horarios_de_resposta", "accounts"
+  add_foreign_key "horarios_de_resposta", "contacts", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify

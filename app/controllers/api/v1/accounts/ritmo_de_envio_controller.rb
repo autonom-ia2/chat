@@ -2,8 +2,9 @@
 # campanhas e para as mensagens que a Automação livre inicia (Autonomia::RitmoDeEnvio). Quem define é o usuário da
 # plataforma (decisão do Rodrigo, 19/11).
 #
-#   GET   …/ritmo_de_envio  { payload: { limite, horario, fuso } }           quem vê campanhas
+#   GET   …/ritmo_de_envio  { payload: { limite, intervalo, horario, fuso } } quem vê campanhas
 #   PATCH …/ritmo_de_envio  { limite: {mensagens, dias} | null,
+#                             intervalo: {horas} | null,
 #                             horario: {inicio, fim, dias_da_semana} | null } quem cuida de campanhas
 #
 # Grava só a chave dela em accounts.settings, num UPDATE só (jsonb_set): não passa por cima de outra configuração que
@@ -27,7 +28,7 @@ class Api::V1::Accounts::RitmoDeEnvioController < Api::V1::Accounts::BaseControl
 
   # A chave que não veio no corpo fica como está: mandar só o limite não apaga o horário, e o contrário.
   def ritmo_params
-    enviado = params.permit(limite: %i[mensagens dias], horario: [:inicio, :fim, { dias_da_semana: [] }]).to_h
+    enviado = params.permit(limite: %i[mensagens dias], intervalo: [:horas], horario: [:inicio, :fim, { dias_da_semana: [] }]).to_h
     guardado = ::Autonomia::RitmoDeEnvio::Config.da(Current.account).to_h
     guardado.keys.index_with { |chave| params.key?(chave) ? enviado[chave] : guardado[chave] }
   end

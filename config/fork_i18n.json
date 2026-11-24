@@ -170,6 +170,9 @@
     },
     {
       "file": "fidelidade.json"
+    },
+    {
+      "file": "reenvioHorario.json"
     }
   ],
   "pacotes": {

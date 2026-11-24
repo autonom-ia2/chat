@@ -17,6 +17,16 @@ import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
 import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { toLocaleTag, formatNumber } from './localeTag';
 import MedirVendas from './MedirVendas.vue';
+import MelhorHorarioDaCampanha from './melhorHorario/MelhorHorarioDaCampanha.vue';
+import ReenvioDaCampanha from './reenvio/ReenvioDaCampanha.vue';
+import { CAMPAIGN_CHANNELS } from './campaignChannels';
+import {
+  MENSAGEM,
+  faltaNoReenvio,
+  mensagemDoCanal,
+  reenvioDoCanal,
+} from './reenvio/reenvio';
+import { JANELA_HORAS } from './melhorHorario/melhorHorario';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -43,6 +53,13 @@ const props = defineProps({
   soDeixaPronta: { type: Boolean, default: false },
   // #1898: quem dispara abriu uma campanha que outra pessoa deixou pronta.
   montadaPor: { type: String, default: '' },
+  // #3101: "Mandar de novo" para quem não respondeu. { canal, modelos, colunas, gruposDeCampos, maximoDoTexto }
+  // (ReenvioDaCampanha); null = a
+  // linha não aparece (o canal não tem reenvio, ou a página ainda não o oferece).
+  reenvio: { type: Object, default: null },
+  // #3101: "No melhor horário de cada cliente" em "Quando começa". { conhecidos, horarioPermitido }
+  // (MelhorHorarioDaCampanha); null = a opção não aparece.
+  melhorHorario: { type: Object, default: null },
 });
 
 const emit = defineEmits(['update', 'go', 'back', 'submit', 'testSend']);
@@ -117,12 +134,78 @@ const confirmTitle = computed(() =>
     receivers.value
   )
 );
-const confirmText = computed(() =>
-  isLater.value
-    ? t(`${NS}.CONFIRM_LATER_TEXT`, { when: whenText.value })
-    : t(`${NS}.CONFIRM_NOW_TEXT`)
+const NS_MELHOR = 'REENVIO_HORARIO.MELHOR_HORARIO';
+const comMelhorHorario = computed(
+  () => Boolean(props.melhorHorario) && Boolean(props.draft.melhorHorario)
 );
-const isBlocked = computed(() => props.checks.some(check => !check.ok));
+const NS_REENVIO = 'REENVIO_HORARIO.REENVIO';
+// #3101: o reenvio como vale no canal ("não leu" vira "não respondeu" onde a leitura não é avisada); null sem ele.
+const reenvioLigado = computed(() =>
+  props.reenvio && props.draft.reenvio
+    ? reenvioDoCanal(props.draft.reenvio, props.reenvio.canal)
+    : null
+);
+const textoDoInicio = () => {
+  if (comMelhorHorario.value)
+    return isLater.value
+      ? t(`${NS_MELHOR}.CONFIRM_LATER_TEXT`, {
+          when: whenText.value,
+          horas: JANELA_HORAS,
+        })
+      : t(`${NS_MELHOR}.CONFIRM_NOW_TEXT`, { horas: JANELA_HORAS });
+  return isLater.value
+    ? t(`${NS}.CONFIRM_LATER_TEXT`, { when: whenText.value })
+    : t(`${NS}.CONFIRM_NOW_TEXT`);
+};
+// A última chance de ver que, dias depois, sai uma segunda leva sozinha: de quando contam os dias, para quantos no
+// máximo (quem recebe a primeira) e, no WhatsApp Oficial, que cada uma é um modelo pago.
+const textoDoReenvio = () => {
+  const { dias, quem } = reenvioLigado.value;
+  return t(
+    `${NS_REENVIO}.CONFIRM`,
+    {
+      dias,
+      quem: t(`${NS_REENVIO}.QUEM_RESUMO.${quem.toUpperCase()}`),
+      total: n(receivers.value),
+    },
+    dias
+  );
+};
+// Uma ideia por linha na confirmação.
+const linhasDaConfirmacao = computed(() => {
+  if (!reenvioLigado.value) return [textoDoInicio()];
+  const pago =
+    props.reenvio.canal === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
+      ? [t(`${NS_REENVIO}.CONFIRM_PAGO`)]
+      : [];
+  return [textoDoInicio(), textoDoReenvio(), ...pago];
+});
+// #3101: com o reenvio ligado, a segunda mensagem precisa estar escrita antes de a campanha sair.
+const modeloDoReenvio = computed(() =>
+  (props.reenvio?.modelos || []).find(
+    modelo => modelo.value === props.draft.reenvio?.modeloId
+  )
+);
+// O modelo escolhido que sumiu da caixa (apagado ou desligado depois de escolhido) volta a faltar: sem ele, a segunda
+// mensagem não teria o que mandar.
+const modeloSumiu = computed(
+  () =>
+    mensagemDoCanal(props.reenvio?.canal) === MENSAGEM.MODELO &&
+    Boolean(props.draft.reenvio?.modeloId) &&
+    !modeloDoReenvio.value
+);
+const faltaReenvio = computed(() => {
+  if (!props.reenvio) return null;
+  if (modeloSumiu.value) return 'SEM_MODELO';
+  return faltaNoReenvio(
+    props.draft.reenvio,
+    props.reenvio.canal,
+    modeloDoReenvio.value
+  );
+});
+const isBlocked = computed(
+  () => props.checks.some(check => !check.ok) || Boolean(faltaReenvio.value)
+);
 
 const openConfirmation = () => {
   if (!isScheduleValid.value || isBlocked.value) return;
@@ -187,7 +270,8 @@ const submit = () => {
       <!-- The padding lives on a wrapper: a legend sits on the fieldset's top edge and
            ignores its padding, so "Quando começa" stuck to the line above (#1387). -->
       <div class="py-4">
-        <fieldset class="m-0 flex flex-col gap-3 border-0 p-0">
+        <!-- min-w-0: sem ele o fieldset cresce até a palavra mais longa e estoura a tela no celular. -->
+        <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
           <legend class="mb-2 text-xs font-semibold uppercase text-n-slate-11">
             {{ t(`${NS}.WHEN`) }}
           </legend>
@@ -200,11 +284,11 @@ const submit = () => {
               :aria-checked="draft.when === option"
               :data-when="option"
               :disabled="option === 'now' && Boolean(nowBlockedReason)"
-              class="min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+              class="min-h-11 rounded-xl border border-solid px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-50"
               :class="
                 draft.when === option
                   ? 'border-n-blue-8 bg-n-blue-2 text-n-blue-11'
-                  : 'border-n-weak text-n-slate-12 hover:bg-n-alpha-1'
+                  : 'border-n-slate-6 text-n-slate-12 hover:bg-n-alpha-1'
               "
               @click="emit('update', { when: option })"
             >
@@ -229,8 +313,29 @@ const submit = () => {
             data-test="schedule-at"
             @update:model-value="scheduledAt => emit('update', { scheduledAt })"
           />
+          <MelhorHorarioDaCampanha
+            v-if="melhorHorario"
+            :model-value="Boolean(draft.melhorHorario)"
+            :conhecidos="melhorHorario.conhecidos"
+            :total="receivers"
+            :horario-permitido="melhorHorario.horarioPermitido"
+            :quando="draft.when"
+            @update:model-value="
+              ligado => emit('update', { melhorHorario: ligado })
+            "
+          />
         </fieldset>
       </div>
+      <ReenvioDaCampanha
+        v-if="reenvio"
+        :model-value="reenvioDoCanal(draft.reenvio || null, reenvio.canal)"
+        :canal="reenvio.canal"
+        :modelos="reenvio.modelos"
+        :colunas="reenvio.colunas"
+        :grupos-de-campos="reenvio.gruposDeCampos"
+        :maximo-do-texto="reenvio.maximoDoTexto"
+        @update:model-value="valor => emit('update', { reenvio: valor })"
+      />
       <MedirVendas
         :janela="draft.janelaDeCompra || 7"
         :controle="draft.grupoDeControle || 0"
@@ -262,6 +367,28 @@ const submit = () => {
               {{ isLater ? whenText : t(`${NS}.NOW`) }}
             </slot>
           </template>
+        </p>
+        <p
+          v-if="comMelhorHorario"
+          class="m-0 mt-1 flex items-center gap-1 text-xs opacity-80"
+          data-test="review-melhor-horario"
+        >
+          <span class="i-lucide-clock-4 size-3.5" aria-hidden="true" />
+          {{ t(`${NS_MELHOR}.NO_RESUMO`, { horas: JANELA_HORAS }) }}
+        </p>
+        <p
+          v-if="draft.reenvio && reenvio"
+          class="m-0 mt-1 flex items-center gap-1 text-xs opacity-80"
+          data-test="review-reenvio"
+        >
+          <span class="i-lucide-repeat size-3.5" aria-hidden="true" />
+          {{
+            t(
+              `${NS_REENVIO}.NO_RESUMO`,
+              { dias: draft.reenvio.dias },
+              draft.reenvio.dias
+            )
+          }}
         </p>
       </div>
       <dl class="m-0 flex flex-col gap-1 text-sm" data-test="review-counts">
@@ -322,6 +449,13 @@ const submit = () => {
         data-test="test-send"
         @click="emit('testSend')"
       />
+      <p
+        v-if="faltaReenvio"
+        class="m-0 text-sm text-n-ruby-11"
+        data-test="review-falta-reenvio"
+      >
+        {{ t(`${NS_REENVIO}.FALTA.${faltaReenvio}`) }}
+      </p>
       <p v-if="errorMessage" role="alert" class="m-0 text-sm text-n-ruby-11">
         {{ errorMessage }}
       </p>
@@ -363,10 +497,21 @@ const submit = () => {
     <Dialog
       ref="confirmRef"
       :title="confirmTitle"
-      :description="confirmText"
       :confirm-button-label="actionLabel"
       :cancel-button-label="t(`${NS}.CONFIRM_BACK`)"
       @confirm="submit"
-    />
+    >
+      <template #description>
+        <div class="flex flex-col gap-2" data-test="confirm-text">
+          <p
+            v-for="linha in linhasDaConfirmacao"
+            :key="linha"
+            class="mb-0 text-sm text-n-slate-11"
+          >
+            {{ linha }}
+          </p>
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>

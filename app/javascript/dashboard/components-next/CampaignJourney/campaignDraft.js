@@ -36,6 +36,9 @@ export const emptyDraft = () => ({
   grupoDeControle: 0,
   // #3099: "Duas versões da mensagem" do passo Mensagem (desligado; a versão 2 e a regra do teste).
   duasVersoes: duasVersoesVazias(),
+  // #3101: "No melhor horário de cada cliente" e "Mandar de novo" (null = não manda; ver reenvio/reenvio.js).
+  melhorHorario: false,
+  reenvio: null,
   step: 1,
 });
 

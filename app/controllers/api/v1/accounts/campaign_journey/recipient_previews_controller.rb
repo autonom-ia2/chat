@@ -4,6 +4,7 @@
 # #3099: with `duas_versoes: { divisao }` (and `grupo_de_controle_pct`, the control group of #3098), the payload also
 # has the plan of the test counted here (`duas_versoes`: modo, teste, versao1, versao2, resto, pequeno, minimo), on the
 # "Vão receber" without the control group — the same count the send uses (CampaignJourney::DuasVersoes.plano).
+# #3101: `melhor_horario: { conhecidos }` — quantos de quem recebe já têm o melhor horário aprendido.
 # CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401.
 class Api::V1::Accounts::CampaignJourney::RecipientPreviewsController < Api::V1::Accounts::BaseController
   before_action :ensure_campaign_journey_enabled
@@ -12,11 +13,12 @@ class Api::V1::Accounts::CampaignJourney::RecipientPreviewsController < Api::V1:
   def create
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
-    preview = ::CampaignJourney::RecipientPreview.new(
+    contagem = ::CampaignJourney::RecipientPreview.new(
       campaign_import, channel: params[:channel], variable_bindings: hash_param(:variable_bindings),
                        variable_defaults: hash_param(:variable_defaults), message_body: params[:message_body]
-    ).perform
-    render json: { payload: com_plano(preview) }
+    )
+    preview = contagem.perform
+    render json: { payload: com_plano(preview).merge('melhor_horario' => melhor_horario(contagem, preview)) }
   rescue ArgumentError => e
     render json: { error: e.message, code: e.message }, status: :unprocessable_entity
   end
@@ -30,6 +32,10 @@ class Api::V1::Accounts::CampaignJourney::RecipientPreviewsController < Api::V1:
     raise ArgumentError, 'invalid_divisao' unless ::CampaignJourney::DuasVersoes::DIVISOES.include?(divisao)
 
     preview.merge('duas_versoes' => ::CampaignJourney::DuasVersoes.plano(publico_do_teste(preview['receive']), divisao))
+  end
+
+  def melhor_horario(contagem, preview)
+    { 'conhecidos' => [::Autonomia::MelhorHorario.conhecidos(Current.account, contagem.alcancaveis), preview['receive']].min }
   end
 
   # O "Vão receber" sem o grupo de controle (o mesmo arredondamento do sorteio, CampaignJourney::GrupoDeControle).

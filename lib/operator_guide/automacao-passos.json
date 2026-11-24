@@ -1731,6 +1731,12 @@
           "peca": "duas_versoes",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.VERSOES"
+        },
+        {
+          "nome": "quando",
+          "peca": "quando",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.QUANDO"
         }
       ]
     },
@@ -1757,6 +1763,12 @@
           "peca": "texto_com_valores",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
+        },
+        {
+          "nome": "quando",
+          "peca": "quando",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.QUANDO"
         }
       ]
     },
