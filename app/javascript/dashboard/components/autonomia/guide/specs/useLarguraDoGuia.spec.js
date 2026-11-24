@@ -19,6 +19,7 @@ const montar = ({
 afterEach(() => {
   menuEGuia.largura.value = 0;
   menuEGuia.devolvida.value = 0;
+  menuEGuia.recolhidoPeloGuia.value = false;
 });
 
 describe('larguraDoGuia (#3184)', () => {
@@ -80,14 +81,25 @@ describe('recolherParaOGuia (#3184)', () => {
     expect(menuEGuia.devolvida.value).toBe(200);
   });
 
-  it('menu já recolhido: nada muda e a última devolvida continua', () => {
+  it('menu que o Guia recolheu: mantém a largura devolvida', () => {
     menuEGuia.devolvida.value = 144;
+    menuEGuia.recolhidoPeloGuia.value = true;
     const sidebarWidth = ref(56);
 
     recolherParaOGuia({ sidebarWidth, recolhido: true, celular: false });
 
     expect(sidebarWidth.value).toBe(56);
     expect(menuEGuia.devolvida.value).toBe(144);
+  });
+
+  it('menu recolhido por outro motivo: nada foi devolvido', () => {
+    menuEGuia.devolvida.value = 144;
+    const sidebarWidth = ref(56);
+
+    recolherParaOGuia({ sidebarWidth, recolhido: true, celular: false });
+
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(0);
   });
 
   it('no celular o menu é gaveta: não mexe', () => {

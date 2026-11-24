@@ -1,11 +1,11 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick, ref } from 'vue';
+import { computed, defineComponent, nextTick, ref } from 'vue';
 import { menuEGuia, useMenuRecolheComOGuia } from '../menuEGuia';
 
 // #3184 — o menu recolhe quando o Guia abre, sem gravar preferência.
 const montar = ({ largura = 256, celular = false } = {}) => {
   const sidebarWidth = ref(largura);
-  const isCollapsed = ref(largura < 160);
+  const isCollapsed = computed(() => sidebarWidth.value < 160);
   const ehCelular = ref(celular);
   mount(
     defineComponent({
@@ -27,6 +27,7 @@ describe('useMenuRecolheComOGuia (#3184)', () => {
     menuEGuia.guiaAberto.value = false;
     menuEGuia.largura.value = 0;
     menuEGuia.devolvida.value = 0;
+    menuEGuia.recolhidoPeloGuia.value = false;
   });
 
   it('publica a largura do menu, e zero no celular', async () => {
@@ -69,5 +70,53 @@ describe('useMenuRecolheComOGuia (#3184)', () => {
     await nextTick();
 
     expect(sidebarWidth.value).toBe(56);
+  });
+
+  it('menu reaberto com o Guia aberto: não recolhe de novo e não devolve mais nada', async () => {
+    menuEGuia.guiaAberto.value = true;
+    const { sidebarWidth } = montar();
+    await nextTick();
+    expect(menuEGuia.devolvida.value).toBe(200);
+
+    sidebarWidth.value = 256;
+    await nextTick();
+
+    expect(sidebarWidth.value).toBe(256);
+    expect(menuEGuia.devolvida.value).toBe(0);
+    expect(menuEGuia.largura.value).toBe(256);
+  });
+
+  it('abrir, fechar e abrir o Guia: a largura devolvida continua', async () => {
+    const { sidebarWidth } = montar();
+    menuEGuia.guiaAberto.value = true;
+    await nextTick();
+    menuEGuia.guiaAberto.value = false;
+    await nextTick();
+    menuEGuia.guiaAberto.value = true;
+    await nextTick();
+
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(200);
+  });
+
+  it('menu já recolhido antes do Guia: nada devolvido, mesmo com valor antigo', () => {
+    menuEGuia.devolvida.value = 200;
+    menuEGuia.guiaAberto.value = true;
+
+    montar({ largura: 56 });
+
+    expect(menuEGuia.devolvida.value).toBe(0);
+  });
+
+  it('do celular para o computador com o Guia aberto: recolhe o menu', async () => {
+    menuEGuia.guiaAberto.value = true;
+    const { sidebarWidth, ehCelular } = montar({ celular: true });
+    expect(sidebarWidth.value).toBe(256);
+
+    ehCelular.value = false;
+    await nextTick();
+
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(200);
   });
 });
