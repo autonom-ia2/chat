@@ -50,8 +50,7 @@ class Carteira::Cotacao::DadosDoPdf
 
   def vale_ler?(faltam)
     colunas = do_segurado(Array(faltam).filter_map { |caminho| DA_ENTRADA[caminho.to_s] })
-    colunas.any? { |coluna| @apolice[coluna].nil? } && @apolice.pdf.attached? && !Carteira::Conector::LerPdf.lido?(@apolice) &&
-      Carteira::Leitor::Liberado.para?(@account)
+    colunas.any? { |coluna| @apolice[coluna].nil? } && @apolice.pdf.attached? && Carteira::Leitor::Liberado.para?(@account)
   end
 
   # Na empresa segurada, nascimento e sexo ficam de fora.
@@ -62,7 +61,8 @@ class Carteira::Cotacao::DadosDoPdf
   # A leitura desta vigência, marcada uma vez só, com o seguro travado.
   def marcar!
     @apolice.with_lock(requires_new: true) do
-      next false if Carteira::Cotacao.passo(@apolice, PASSO)
+      # Com o seguro travado: a leitura da chegada (Carteira::Conector::LerPdf) marca o passo dela com a mesma trava.
+      next false if Carteira::Cotacao.passo(@apolice, PASSO) || Carteira::Conector::LerPdf.lido?(@apolice)
 
       Carteira::Cotacao.registrar(@apolice, PASSO)
       true

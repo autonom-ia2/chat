@@ -88,7 +88,10 @@ class Carteira::Conector::PdfsPendentes
                          .where("#{CAMPO} IS NOT NULL", TENTADO).sum(SOMA_DAS_TENTATIVAS)
   end
 
+  # Sem seguro (o erro veio antes de achá-lo), o vínculo que o item já tinha fica: as tentativas seguem contando no teto.
   def marcar(item, apolice, valores)
-    item.update!(Carteira::ItemLido.new(item).com(valores.merge(TENTADO => Time.current.iso8601, APOLICE => apolice&.id)))
+    valores = valores.merge(TENTADO => Time.current.iso8601)
+    valores = valores.merge(APOLICE => apolice.id) if apolice
+    item.update!(Carteira::ItemLido.new(item).com(valores))
   end
 end

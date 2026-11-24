@@ -58,13 +58,16 @@ class Carteira::Conector::LerPdf
 
   private
 
+  # O erro na leitura ou ao completar vira `nao_deu_para_ler`. O registro do que mudou fica fora do rescue: se ele falhar
+  # depois de o seguro mudar, o erro sobe (o job tenta de novo) em vez de o passo dizer que nada mudou.
   def ler_e_completar(passo)
     resultado = Carteira::Leitor::DoSeguro.new(@apolice, cliente: @cliente).call
     mudancas = resultado.lido? ? @completar.call(resultado.campos) : []
-    passo.update!(mudancas: mudancas.presence, valores: passo.valores.merge(recusa: resultado.recusa, lido: (true if resultado.lido?)).compact)
   rescue StandardError => e
     Rails.logger.warn("[carteira][conector][pdf_lido] apolice=#{@apolice.id} falhou: #{e.class.name}")
     passo.update!(valores: passo.valores.merge(recusa: NAO_DEU))
+  else
+    passo.update!(mudancas: mudancas.presence, valores: passo.valores.merge(recusa: resultado.recusa, lido: (true if resultado.lido?)).compact)
   end
 
   def vale_ler?

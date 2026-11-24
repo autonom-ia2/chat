@@ -107,6 +107,7 @@ RSpec.describe Carteira::Conector::LerPdf, :aggregate_failures do
 
   it 'a cotação não relê o PDF que já foi lido na chegada' do
     ler
+    seguro.update!(cep: nil)
 
     expect(Carteira::Conector::LerPdf.lido?(seguro)).to be(true)
     expect(Carteira::Cotacao::DadosDoPdf.new(seguro.reload, cliente: cliente).call(['address.zipCode'])).to be(false)

@@ -97,8 +97,11 @@ RSpec.describe Carteira::Conector::BaixarPdf, :aggregate_failures do
   it 'recusa o ZIP com entradas demais antes de abrir a lista inteira' do
     baixado.replace([zip((1..60).to_h { |n| ["anexo-#{n}.txt", 'x'] })])
     item = registro
+    allow(Zip::File).to receive(:open).and_call_original
 
     baixar
+
+    expect(Zip::File).not_to have_received(:open)
 
     expect(seguro.reload.pdf).not_to be_attached
     expect(marcas(item)[pendentes::MOTIVO]).to eq('zip_cheio_demais')

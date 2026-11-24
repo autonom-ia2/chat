@@ -7,7 +7,9 @@
 # - Precisa haver exatamente UM PDF dentro: nenhum é `zip_sem_pdf`; mais de um é `zip_com_varios_pdfs` (não dá para
 #   saber qual é a apólice, e o sistema não chuta). ZIP com mais de MAXIMO_DE_ENTRADAS entradas é `zip_cheio_demais`,
 #   conferido no fim do arquivo (o registro que fecha o ZIP diz quantas entradas há) ANTES de a biblioteca montar a lista
-#   inteira na memória.
+#   inteira na memória. A biblioteca (rubyzip 2.x) acha esse registro do mesmo jeito (o último do arquivo) e monta
+#   exatamente aquele número de entradas. O registro tem de fechar no fim exato do arquivo, senão é `zip_quebrado`. ZIP64
+#   (onde a biblioteca lê o total de outro registro) é recusado como `zip_cheio_demais`: um PDF de apólice nunca precisa.
 # - Contra bomba de ZIP, o teto vale duas vezes: o tamanho que o ZIP declara (recusa antes de abrir) e os bytes que a
 #   descompressão de fato entrega, contados pedaço a pedaço (o ZIP pode mentir o tamanho). Passou: `grande_demais`.
 # - ZIP que não abre (quebrado, com senha, formato que a biblioteca não lê): `zip_quebrado`.
@@ -20,9 +22,13 @@ class Carteira::Conector::PdfDoZip
   MAXIMO_DE_ENTRADAS = 50
   PEDACO = 64.kilobytes
   FIM_DO_ZIP = "PK\x05\x06".b.freeze
-  # O registro do fim tem 22 bytes e um comentário de até 64 KB; o total de entradas fica no byte 10 dele.
-  CAUDA = 22 + 65_535
+  MARCAS_ZIP64 = ["PK\x06\x06".b, "PK\x06\x07".b].freeze
+  # O registro do fim tem 22 bytes e um comentário de até 64 KB; o total de entradas fica no byte 10 dele e o tamanho do
+  # comentário no byte 20.
+  REGISTRO_DO_FIM = 22
+  CAUDA = REGISTRO_DO_FIM + 65_535
   TOTAL_NO_FIM = 10
+  COMENTARIO_NO_FIM = 20
   Recusa = Class.new(StandardError)
 
   def self.zip?(arquivo)
@@ -45,14 +51,22 @@ class Carteira::Conector::PdfDoZip
 
   private
 
-  # Quantas entradas o ZIP diz ter, lido do registro do fim. No ZIP64 o total ali é 0xFFFF: passa do teto e é recusado.
+  # Quantas entradas o ZIP diz ter, lido do registro do fim (o mesmo que a biblioteca usa).
   def entradas_declaradas
     tamanho = File.size(@arquivo.path)
     cauda = File.binread(@arquivo.path, [tamanho, CAUDA].min, [tamanho - CAUDA, 0].max)
+    recusar('zip_cheio_demais') if MARCAS_ZIP64.any? { |marca| cauda.include?(marca) }
+
     inicio = cauda.rindex(FIM_DO_ZIP)
-    recusar('zip_quebrado') if inicio.nil? || cauda.bytesize < inicio + TOTAL_NO_FIM + 2
+    recusar('zip_quebrado') unless inicio && fecha_no_fim?(cauda, inicio)
 
     cauda.byteslice(inicio + TOTAL_NO_FIM, 2).unpack1('v')
+  end
+
+  def fecha_no_fim?(cauda, inicio)
+    return false if cauda.bytesize < inicio + REGISTRO_DO_FIM
+
+    inicio + REGISTRO_DO_FIM + cauda.byteslice(inicio + COMENTARIO_NO_FIM, 2).unpack1('v') == cauda.bytesize
   end
 
   def o_unico_pdf(zip)
