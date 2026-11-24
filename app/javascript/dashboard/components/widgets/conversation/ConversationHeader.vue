@@ -183,7 +183,7 @@ const copyConversationId = async () => {
         </div>
 
         <div
-          class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
+          class="flex items-center max-w-full gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
           <!-- #3192 — selo primeiro: quem corta com "…" é o @ do Instagram. Sem
           o "desde mm/aaaa": no celular não cabe ao lado do #número. -->
