@@ -51,6 +51,25 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
     end
   end
 
+  describe '.janela_do_settle' do
+    it 'a espera gravada na marca' do
+      expect(espera.janela_do_settle(agent: agent, marca: marca.merge('espera_ms' => 25_000))).to eq(25.seconds)
+    end
+
+    it 'marca sem espera_ms, ou sem marca: o debounce do agente', :aggregate_failures do
+      expect(espera.janela_do_settle(agent: agent, marca: marca.except('espera_ms'))).to eq(6.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: nil)).to eq(6.seconds)
+    end
+
+    it 'com_a_fila soma o teto da fila só quando o agente tem a fila ligada', :aggregate_failures do
+      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true)).to eq(1.second)
+
+      liga!('conversa_em_fila')
+      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true)).to eq(151.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: marca)).to eq(1.second)
+    end
+  end
+
   describe '.na_fila?' do
     it 'outro turno falando: fila' do
       liga!('conversa_em_fila')

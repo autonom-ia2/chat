@@ -8,6 +8,7 @@
 # - `na_fila?` (P2, `conversa_em_fila`): o turno novo deve esperar porque outro turno está falando. Só vale até o prazo
 #   da marca do debounce (`at` + `espera_ms`) mais TETO_DA_FILA: passado isso o turno segue mesmo com a marca ocupada, para
 #   uma marca presa nunca travar a conversa. Sem a marca do debounce, ou sem `at`, não há prazo, então nunca fila.
+# - `janela_do_settle`: quanto dura a janela do settle de uma rajada já marcada. Uma regra só para todos que a medem.
 module Autonomia::Agents::Operate::EsperaDaFala
   ESPERA_MINIMA = 1.second
   ESPERA_MAXIMA = 180.seconds
@@ -29,16 +30,29 @@ module Autonomia::Agents::Operate::EsperaDaFala
     return false unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent)
     return false unless ::Autonomia::Agents::Operate::FalaEmCurso.ocupada_por_outro?(conversation.id, message_id)
 
-    prazo = prazo_da_fila(conversation)
+    prazo = prazo_da_fila(agent, conversation)
     prazo.present? && agora < prazo
   end
 
-  # O instante em que a fila desiste: a marca do debounce (`at` + `espera_ms`) mais o teto da fila. nil sem prazo.
-  def prazo_da_fila(conversation)
+  # A JANELA DO SETTLE da rajada marcada: a espera que o gatilho gravou na marca do debounce (`espera_ms`) ou, na marca
+  # sem ela (gravada antes do #3211, ou sem marca), a janela de sempre do agente (Config.debounce_seconds_for).
+  # `com_a_fila`: soma TETO_DA_FILA quando o agente tem a fila ligada, porque o settle pode seguir esperando o turno em
+  # curso até lá. Quem mede a janela usa esta regra: a fila (prazo_da_fila), o turno refeito (ReenfileirarTurno), o turno
+  # em andamento (AgentInbox#turno_em_andamento?) e o silêncio do WAHA (Waha::RichNative::UnsupportedTurnJob). Com as
+  # opções desligadas e a marca gravada pelo gatilho, é a janela de sempre (6 s na marca = 6 s do debounce).
+  def janela_do_settle(agent:, marca:, com_a_fila: false)
+    espera_ms = marca.is_a?(Hash) ? marca['espera_ms'] : nil
+    janela = espera_ms.nil? ? ::Autonomia::Agents::Config.debounce_seconds_for(agent) : (espera_ms.to_i / 1000.0).seconds
+    com_a_fila && ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent) ? janela + TETO_DA_FILA : janela
+  end
+
+  # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila. nil sem
+  # prazo.
+  def prazo_da_fila(agent, conversation)
     marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
     return unless marca.is_a?(Hash) && marca['at'].present?
 
-    Time.zone.at(marca['at'].to_f + (marca['espera_ms'].to_i / 1000.0)) + TETO_DA_FILA
+    Time.zone.at(marca['at'].to_f) + janela_do_settle(agent: agent, marca: marca, com_a_fila: true)
   end
   private_class_method :prazo_da_fila
 end

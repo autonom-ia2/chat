@@ -138,12 +138,13 @@ module Autonomia
       end
 
       # O turno desta mensagem ainda está em andamento: a marca do debounce do ReplyJob (a mesma que o settle confere)
-      # aponta para ela e é recente. Também refaz o turno quando o dono muda (Operate::ReenfileirarTurno, #1606).
+      # aponta para ela e é recente. Também refaz o turno quando o dono muda (Operate::ReenfileirarTurno, #1606). #3211: a
+      # janela é a do settle gravada na marca, com o teto da fila quando o agente a tem (EsperaDaFala.janela_do_settle).
       def turno_em_andamento?(conversation, mensagem)
         stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
         return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
 
-        janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
+        janela = ::Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle(agent: agent, marca: stamp, com_a_fila: true) + FOLGA_DO_TURNO
         stamp['at'].to_f >= janela.ago.to_f
       end
 

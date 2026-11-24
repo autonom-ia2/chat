@@ -161,11 +161,16 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     fala.ocupar(conversation.id, 999_999)
     mensagem = cliente_escreve('oi')
     gatilho(mensagem)
-    allow(contrato).to receive(:decidido_ate).with(conversation.id).and_return(mensagem.id)
 
-    travel 30.seconds
+    rodar_rodada! # o settle do debounce (T+6 s): outro turno falando, volta em 2 s sem responder nem ler o assunto
+    expect(respostas).to be_empty
+    expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(2.seconds.from_now)
+
+    # Enquanto espera na fila, o assunto é decidido; a fila libera depois do teto de 20 s do assunto (T+30 s).
+    allow(contrato).to receive(:decidido_ate).with(conversation.id).and_return(mensagem.id)
+    travel 24.seconds
     fala.soltar(conversation.id, 999_999)
-    settle(mensagem)
+    rodar_turno!
 
     expect(respostas.count).to eq(1)
     expect(Autonomia::Agents::AgentEvent.skipped_assunto_atrasou.where(conversation_id: conversation.id)).to be_empty

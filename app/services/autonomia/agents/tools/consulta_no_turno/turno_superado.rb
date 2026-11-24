@@ -1,7 +1,8 @@
 # O TURNO QUE ENTREGOU A CONSULTA FOI SUPERADO? (#1430, `ConsultaNoTurno#entrega_deste_turno?`) Uma mensagem mais nova
 # do cliente o superou, e ele não vai postar: o turno novo toma a entrega, para o resultado não se perder. O critério é
-# o mesmo da hora de postar: `Responder#turno_superado?` (o stamp do debounce, com a Fase 2) e
-# `ResponderAPassagem#turno_superado?` (o cliente escreveu depois da passagem). `quem`: o `Delivery#turno` gravado.
+# o mesmo da hora de postar: `ReplyJob.turno_superado?`, que o `Responder#turno_superado?` usa (o stamp do debounce, com
+# a Fase 2 ou com a fila do agente, #3211), e `ResponderAPassagem#turno_superado?` (o cliente escreveu depois da
+# passagem). `quem`: o `Delivery#turno` gravado. O agente é o desta consulta (`@agente`, quem fala na conversa).
 module Autonomia::Agents::Tools::ConsultaNoTurno::TurnoSuperado
   private
 
@@ -18,11 +19,7 @@ module Autonomia::Agents::Tools::ConsultaNoTurno::TurnoSuperado
   end
 
   def mensagem_superada?(conversa, message_id)
-    return false unless ::Autonomia::Agents::Fase2.ligada?(conversa.account)
-
-    stamp = conversa.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-    pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
-    pendente.present? && pendente.to_s != message_id.to_s
+    ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(conversa, message_id, @agente)
   end
 
   def passagem_superada?(conversa, passagem_id)

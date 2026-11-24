@@ -596,14 +596,9 @@ module Autonomia
         # A resposta deste turno ficou velha: é descartada, e o settle do turno novo responde, uma vez. Mesmo critério do
         # ChunkedDeliveryJob#current_turn? (sem marca, segue). Chamar só com estado fresco (depois de still_eligible?, que
         # relê a conversa, dentro do lock). Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora delas
-        # posta como sempre.
+        # posta como sempre. O critério é o ReplyJob.turno_superado?, o mesmo da entrega da consulta em segundo plano.
         def turno_superado?
-          return false if @reply_to_message_id.blank?
-          return false unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account) || ::Autonomia::Agents::ParidadeDaConversa.em_fila?(@agent)
-
-          stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-          pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
-          pendente.present? && pendente != @reply_to_message_id.to_i
+          ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(@conversation, @reply_to_message_id, @agent)
         end
 
         def silencio_por_turno_superado

@@ -31,6 +31,19 @@ module Autonomia
           stamp.is_a?(Hash) && stamp['pending_message_id'] == message_id.to_i
         end
 
+        # #1606: uma mensagem mais nova do cliente abriu outro turno (a marca do debounce aponta para ela), e a resposta do
+        # turno desta mensagem ficou velha. Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora
+        # delas, nunca (posta como sempre). Sem marca, segue. Critério único da hora de postar (Responder#turno_superado?)
+        # e da entrega da consulta em segundo plano (Tools::ConsultaNoTurno::TurnoSuperado). Ler com a conversa fresca.
+        def self.turno_superado?(conversation, message_id, agent)
+          return false if message_id.blank?
+          return false unless ::Autonomia::Agents::Fase2.ligada?(conversation.account) || ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent)
+
+          stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
+          pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
+          pendente.present? && pendente.to_s != message_id.to_s
+        end
+
         # `posse` (#1606): o id do vínculo cuja posse do turno quem enfileirou já tomou (Operate::ReenfileirarTurno).
         def perform(conversation_id, message_id, phase = 'trigger', posse = nil)
           conversation = Conversation.find_by(id: conversation_id)

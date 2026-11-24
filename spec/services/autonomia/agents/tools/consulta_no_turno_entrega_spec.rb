@@ -41,9 +41,9 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno do
     { 'name' => 'consultar_pedido', 'arguments' => { numero: '42' }.to_json, 'call_id' => id }
   end
 
-  # A mensagem mais nova do cliente: o stamp do debounce que o `Responder#turno_superado?` lê.
-  def cliente_escreveu(message_id)
-    allow(Autonomia::Agents::Fase2).to receive(:ligada?).and_return(true)
+  # A mensagem mais nova do cliente: o stamp do debounce que o `ReplyJob.turno_superado?` lê.
+  def cliente_escreveu(message_id, fase2: true)
+    allow(Autonomia::Agents::Fase2).to receive(:ligada?).and_return(fase2)
     stamp = { Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => message_id } }
     conversation.update!(additional_attributes: conversation.additional_attributes.to_h.merge(stamp))
   end
@@ -93,6 +93,26 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno do
       expect(ler(segundo)).to eq('{"status":"enviado"}')
       expect(run.reload.handle[runs::ENTREGUE_POR]).to eq('mensagem:12')
       expect(eventos_disparados(run)).to be_empty
+    end
+
+    # #3211: o Responder descarta a resposta superada também sem a Fase 2 quando o agente tem a fila (`conversa_em_fila`).
+    # A entrega da consulta segue o mesmo critério, senão o turno que entregou cala e o novo lê "já informado".
+    it 'sem a Fase 2, com a fila do agente: o turno superado passa a entrega ao turno novo' do
+      agent.update!(config: agent.config.merge('conversa_em_fila' => true))
+      primeiro, segundo, run = dois_turnos_na_mesma_linha
+      cliente_escreveu(12, fase2: false)
+
+      expect(ler(primeiro)).to eq('{"status":"enviado"}')
+      expect(ler(segundo)).to eq('{"status":"enviado"}')
+      expect(run.reload.handle[runs::ENTREGUE_POR]).to eq('mensagem:12')
+    end
+
+    it 'sem a Fase 2 e sem a fila, como antes: o turno novo le que ja foi informado' do
+      primeiro, segundo, = dois_turnos_na_mesma_linha
+      cliente_escreveu(12, fase2: false)
+
+      expect(ler(primeiro)).to eq('{"status":"enviado"}')
+      expect(ler(segundo)).to eq(described_class::JA_INFORMADO)
     end
 
     it 'o CAS falho rele a linha: a desistencia gravada entre a leitura e a marca vira ja informado, sem entregar' do
