@@ -48,6 +48,12 @@ class Carteira::Conector::LerPdf
     true
   end
 
+  # Vale pôr na fila: o PDF está guardado, falta algo, a leitura está liberada e este PDF ainda não foi lido. A rotina
+  # dos PDFs sem leitura (Carteira::Conector::PdfsSemLeituraJob) pergunta aqui antes de enfileirar.
+  def pendente?
+    vale_ler? && !self.class.lido?(@apolice)
+  end
+
   # Este PDF já foi lido: há um passo `pdf_lido` depois do último `pdf_anexado` do seguro. A cotação (DadosDoPdf) também
   # olha aqui, para não pagar de novo a leitura do mesmo PDF.
   def self.lido?(apolice)
