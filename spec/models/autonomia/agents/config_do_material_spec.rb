@@ -24,8 +24,9 @@ RSpec.describe Autonomia::Agents::ConfigDoMaterial do
     expect(agent.reload.updated_at).to eq(antes)
   end
 
-  it 'recusa chave que não é do material' do
+  it 'recusa chave que não é do material, inclusive a do teste que saiu (#3200)', :aggregate_failures do
     expect { Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'voice', 'x') }.to raise_error(ArgumentError)
+    expect { Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', {}) }.to raise_error(ArgumentError)
   end
 
   describe 'a corrida com o save do agente' do

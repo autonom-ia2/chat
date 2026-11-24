@@ -76,12 +76,15 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
-  it 'fora da Fase 2: leitura vazia', :aggregate_failures do
-    material('ficha.pdf', status: :failed, error: 'empty_extraction', trechos: [])
+  it 'fora da Fase 2: leitura vazia e ação recusada', :aggregate_failures do
+    ficha = material('ficha.pdf', status: :failed, error: 'empty_extraction', trechos: [])
     Autonomia::Agents::Fase2.desligar!(account)
 
     ler
     expect(response.parsed_body).to eq('problemas' => [])
+
+    post "#{base}/material/problemas/vazio-#{ficha.id}/resolver", params: { escolha: 'qualquer' }, headers: administrator.create_new_auth_token
+    expect(response).to have_http_status(:unprocessable_entity)
   end
 
   describe 'o save do agente pela API' do

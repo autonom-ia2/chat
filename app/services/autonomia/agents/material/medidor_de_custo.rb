@@ -10,7 +10,7 @@
 class Autonomia::Agents::Material::MedidorDeCusto
   TETO_USD = 2.0
   # Estimativas iniciais, por chamada, com folga (medido no eval do #1426: ver docs/audit).
-  ESTIMATIVA_INICIAL = { perguntas: 0.15, resposta: 0.10, juiz: 0.03 }.freeze
+  ESTIMATIVA_INICIAL = { resposta: 0.10, juiz: 0.03 }.freeze
 
   attr_reader :gasto
 
