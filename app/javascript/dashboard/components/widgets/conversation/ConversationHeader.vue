@@ -13,6 +13,7 @@ import CrmConversationCardButton from './CrmConversationCardButton.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import PassarParaButton from 'dashboard/components-next/PassarPara/PassarParaButton.vue';
 import ConversationCampaignMark from 'dashboard/components-next/CampaignJourney/ConversationCampaignMark.vue';
+import GuiaNoCabecalho from 'dashboard/components/autonomia/guide/GuiaNoCabecalho.vue';
 import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
@@ -165,7 +166,13 @@ const copyConversationId = async () => {
           >
             {{ nomeNaTela }}
           </span>
-          <CustomerBadge :contact="currentContact" show-since />
+          <!-- #3192 — no celular o selo desce para a linha do #número: na
+          linha do nome mora o Guia, e o nome não pode sumir. -->
+          <CustomerBadge
+            :contact="currentContact"
+            show-since
+            class="hidden md:inline-flex"
+          />
           <fluent-icon
             v-if="!isHMACVerified"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
@@ -176,8 +183,11 @@ const copyConversationId = async () => {
         </div>
 
         <div
-          class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
+          class="flex items-center max-w-full gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
+          <!-- #3192 — selo primeiro: quem corta com "…" é o @ do Instagram. Sem
+          o "desde mm/aaaa": no celular não cabe ao lado do #número. -->
+          <CustomerBadge :contact="currentContact" class="md:hidden" />
           <span
             v-if="usuarioDoInstagram"
             class="truncate text-xs text-[#6A717A] dark:text-[#A8A8A8]"
@@ -201,6 +211,9 @@ const copyConversationId = async () => {
           <ConversationCampaignMark :attributes="chat.additional_attributes" />
         </div>
       </div>
+      <!-- #3192 — no celular o Guia mora aqui, no canto da linha do nome: a
+      bolinha some na conversa, e a linha das ações já vai cheia. -->
+      <GuiaNoCabecalho class="ms-auto ps-2" />
     </div>
     <div
       class="flex flex-row items-center justify-start xl:justify-end flex-shrink-0 gap-2 w-full xl:w-auto header-actions-wrap"

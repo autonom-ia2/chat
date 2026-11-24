@@ -1099,7 +1099,7 @@ useEventListener(document, 'keydown', event => {
 
 // Ao abrir, o foco vai para a região — que tem nome — em vez de continuar no
 // lançador, que some. Fechar devolve o foco ao lançador, e isso é feito lá,
-// quando ele reaparece.
+// quando o painel fecha (a bolinha ou o botão do cabeçalho, #3192).
 watch(showPanel, async aberto => {
   if (!aberto || props.embutido) return;
   await nextTick();

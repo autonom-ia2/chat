@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import AgentBuilderPage from '../../pages/AgentBuilderPage.vue';
 import { useJornadaAtiva } from '../composables/useJornadaAtiva';
 import { useAgenteIaPorCaixaNaEntrada } from '../composables/useAgenteIaPorCaixa';
+import { useOcuparCantoDaBolinha } from 'dashboard/components/autonomia/guide/cantoDaBolinha';
 
 // #1181 (DECISOES.md item 1) — seletor da rota autonomia_agents_builder (mesmo nome, caminho, meta e
 // guarda). Flag desligada: o Construtor antigo, importado de forma estática, então continua um pedaço
@@ -47,6 +48,11 @@ const conectando = computed(
 );
 const escolhendo = computed(() => jornadaAtiva && semEscolha(route.query));
 const veioDaEscolha = ref(false);
+
+// #3192 — a criação (nova ou o Construtor antigo) tem a caixa de envio do
+// ajudante no canto da bolinha do Guia: no celular ela some. Na escolha do
+// modelo e no conectar não há caixa, e a bolinha fica.
+useOcuparCantoDaBolinha(computed(() => !conectando.value && !escolhendo.value));
 
 const escolher = async query => {
   veioDaEscolha.value = true;
