@@ -4834,6 +4834,39 @@
     "GRAFICO": {
       "FONTE": "Same numbers as the Reports screen · {de} to {ate}"
     },
+    "REVISAO": {
+      "CABECALHO": "{titulo} · {de} to {ate}",
+      "CARREGANDO": "Loading the review…",
+      "NAO_CARREGOU": "I couldn't load this review. Check your connection and try again.",
+      "TENTAR_DE_NOVO": "Try again",
+      "LENDO": "Reading conversations: {lidas} of {limite}",
+      "PROGRESSO": "Review progress",
+      "PODE_FECHAR": "You can close the panel and keep working. To stop, just write here.",
+      "DESFECHO": {
+        "CONCLUIDA": "Review finished: {lidas} of {limite}",
+        "PARADA": "Review stopped: {lidos} of {limite}",
+        "NO_MAXIMO": "I read the most I can at once: {lidos} of {total}",
+        "FALHOU": "The review stopped because of an error. What was read so far is below.",
+        "SEM_CHAVE": "The review stopped: the account has no AI key."
+      },
+      "CONCLUSAO_UM": "Done. What weighed most was {primeiro}.",
+      "CONCLUSAO_DOIS": "Done. What weighed most was {primeiro}, followed by {segundo}.",
+      "CONCLUSAO_TRES": "Done. What weighed most was {primeiro}, followed by {segundo} and {terceiro}.",
+      "CONCLUSAO_PARCIAL": "I read {lidas}. {falhas} couldn't be opened right now.",
+      "FALTAM_PERGUNTA": "I read {lidas} of {total}. {faltam} are left. Do you want me to read the rest?",
+      "LER_FALTAM": "Read the remaining {faltam}",
+      "CONTINUAR_FALHOU": "I couldn't continue right now. Try again.",
+      "MOTIVOS": {
+        "TITULO": "Reasons found",
+        "PERIODO": "Conversations from {de} to {ate}",
+        "COMPLETA": "{lidas} read, none left",
+        "FALTAM": "{lidas} read, {faltam} left",
+        "NAO_ABRIRAM": "{lidas} read, {falhas} couldn't be opened right now",
+        "TOQUE": "Tap a reason to see its conversations.",
+        "OUTROS": "Other reasons",
+        "CONVERSA": "Conversation {numero}"
+      }
+    },
     "AVISOS": {
       "LAUNCHER_LABEL": "Ask the Guide, {count} new warning | Ask the Guide, {count} new warnings",
       "SELO": "Warning from the Guide"

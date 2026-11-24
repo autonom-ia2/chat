@@ -175,6 +175,16 @@ class AutonomiaGuideAPI extends ApiClient {
   comandarTarefa(id, comando) {
     return axios.post(`${this.baseUrl()}/autonomia/tarefas/${id}/${comando}`);
   }
+
+  // #3158 (B8b) — a revisão de conversas: o andamento e, no fim, os motivos.
+  revisao(id) {
+    return axios.get(`${this.url}/revisoes/${id}`);
+  }
+
+  // #3158 (B8b) — "ler as que faltam": mais 300. Volta a revisão atualizada.
+  continuarRevisao(id) {
+    return axios.post(`${this.url}/revisoes/${id}/continuar`);
+  }
 }
 
 export default new AutonomiaGuideAPI();

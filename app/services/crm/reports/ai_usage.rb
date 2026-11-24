@@ -14,7 +14,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia
                                  agente_prova_juiz],
     'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao], 'Anúncios da Meta' => %w[anuncios_meta],
-    'Guia da Plataforma' => %w[guia guia_midia], 'Modelos do WhatsApp' => %w[modelo_redacao modelo_fora_da_janela modelo_compativel],
+    'Guia da Plataforma' => %w[guia guia_midia guia_revisao], 'Modelos do WhatsApp' => %w[modelo_redacao modelo_fora_da_janela modelo_compativel],
     'Painel de desempenho' => %w[painel_leitura], 'Prospecção' => %w[prospeccao_frase],
     'Automações' => %w[automacao_decidir automacao_extrair automacao_escrever automacao_resumir automacao_para_cada automacao_testar],
     'Ferramentas prontas' => %w[agente_ferramenta_experimente],

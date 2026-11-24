@@ -473,6 +473,34 @@ describe('autonomiaGuide store — conversa guardada', () => {
     expect(respostas[3].graficos).toEqual([]);
   });
 
+  // #3158 (B8b) — a revisão de conversas volta ao reabrir a conversa, nos três
+  // desfechos: ela começou e gasta mesmo quando o turno não teve texto.
+  it('a revisão do turno volta na resposta pronta, retida e com falha', () => {
+    const revisao = { id: 3, status: 'rodando' };
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ revisao }),
+          turno({ pedido_id: 'p2', status: 'retido', revisao }),
+          turno({ pedido_id: 'p3', status: 'failed', revisao }),
+          turno({ pedido_id: 'p4' }),
+        ],
+      },
+      avisos
+    );
+
+    const respostas = store.messages.filter(
+      m => m.message_type === 'assistant'
+    );
+    expect(respostas.map(m => m.revisao)).toEqual([
+      revisao,
+      revisao,
+      revisao,
+      null,
+    ]);
+  });
+
   it('"Nova conversa" esquece a conversa guardada', () => {
     store.hidratar({ id: 4, turnos: [turno()] }, avisos);
 

@@ -801,6 +801,9 @@ Rails.application.routes.draw do
             get 'guide/conversas/da_automacao/:automacao_id', to: 'guide_conversas#da_automacao'
             get 'guide/conversas/:id', to: 'guide_conversas#show'
             delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #3158 (B8b) — a revisão de conversas em lote: o andamento e "ler as que faltam".
+            get 'guide/revisoes/:id', to: 'guide_revisoes#show'
+            post 'guide/revisoes/:id/continuar', to: 'guide_revisoes#continuar'
             # #933 — o que o Guia lembra: o painel "O que eu sei".
             resources :guide_memorias, only: [:index, :update, :destroy]
             # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.

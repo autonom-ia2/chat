@@ -38,6 +38,7 @@ import GuideHistorico from './GuideHistorico.vue';
 import GuideMemoria from './GuideMemoria.vue';
 import GuideAnotei from './GuideAnotei.vue';
 import GuideTarefa from './GuideTarefa.vue';
+import GuideRevisao from './GuideRevisao.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import { useAvisosDoGuia } from './useAvisosDoGuia';
 import { useFraseDaEtapa } from './useFraseDaEtapa';
@@ -567,6 +568,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       lembrancas: data.lembrancas || null,
       tarefa: data.tarefa || null,
       graficos: data.graficos || null,
+      revisao: data.revisao || null,
       pedidoId,
     });
     contarOQueFez(execucao);
@@ -588,6 +590,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       tarefa: data.tarefa || null,
       // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
       graficos: data.graficos || null,
+      revisao: data.revisao || null,
       pedidoId,
       repetir,
     });
@@ -1382,6 +1385,8 @@ const classeDoPainel = computed(() =>
               <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
               <!-- #936 — o trabalho grande planejado neste turno: amostra, andamento e relatório. -->
               <GuideTarefa v-if="item.tarefa" :tarefa-id="item.tarefa.id" />
+              <!-- #3158 (B8b) — a revisão de conversas: andamento e, no fim, os motivos. -->
+              <GuideRevisao v-if="item.revisao" :revisao-id="item.revisao.id" />
               <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
               <GuideAnotei
                 v-for="lembranca in item.lembrancas || []"

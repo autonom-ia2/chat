@@ -148,7 +148,7 @@ class Autonomia::Guide::Turno < ApplicationRecord
       'resposta' => resposta, 'navegacoes' => navegacoes, 'artigos' => artigos, 'acao' => acao,
       'acao_estado' => acao_estado, 'acao_resultado' => acao_resultado, 'execucao' => execucao_para_tela,
       'aviso_id' => aviso_id, 'tarefa' => tarefa_para_tela, 'junto_de' => junto_de, 'fora_do_ar' => fora_do_ar?,
-      'graficos' => graficos, 'criado_em' => created_at.iso8601 }
+      'graficos' => graficos, 'revisao' => revisao_para_tela, 'criado_em' => created_at.iso8601 }
   end
 
   # #3158 — os gráficos do turno, para o painel redesenhar ao reabrir a conversa. -> Array ou nil.
@@ -161,6 +161,13 @@ class Autonomia::Guide::Turno < ApplicationRecord
   def tarefa_para_tela
     tarefa = ::Autonomia::Guide::Tarefa.where(turno_id: id).order(:id).last
     tarefa && { 'id' => tarefa.id, 'status' => tarefa.status }
+  end
+
+  # #3158 (B8b) — a revisão de conversas começada neste turno: o cartão volta ao reabrir a conversa e acompanha
+  # em `GET guide/revisoes/:id`.
+  def revisao_para_tela
+    revisao = ::Autonomia::Guide::Revisao.where(turno_id: id).order(:id).last
+    revisao && { 'id' => revisao.id, 'status' => revisao.status }
   end
 
   # O desfazer vale 5 dias; a conversa fica guardada sem prazo. Enquanto a

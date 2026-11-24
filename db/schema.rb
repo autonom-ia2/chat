@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_24_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -1015,6 +1015,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
     t.index ["account_id", "user_id"], name: "index_autonomia_guide_memorias_on_account_id_and_user_id"
     t.index ["turno_id"], name: "index_autonomia_guide_memorias_on_turno_id"
     t.index ["user_id"], name: "index_autonomia_guide_memorias_on_user_id"
+  end
+
+  create_table "autonomia_guide_reviews", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "turno_id"
+    t.string "status", null: false
+    t.string "titulo", null: false
+    t.text "pedido", null: false
+    t.jsonb "selecao", default: {}, null: false
+    t.jsonb "ids", default: [], null: false
+    t.integer "limite", default: 0, null: false
+    t.integer "posicao", default: 0, null: false
+    t.integer "lidas", default: 0, null: false
+    t.integer "falhas", default: 0, null: false
+    t.jsonb "resultados", default: [], null: false
+    t.decimal "custo", precision: 12, scale: 6, default: "0.0", null: false
+    t.string "motivo"
+    t.datetime "batimento_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_autonomia_guide_reviews_on_account_id_and_status"
+    t.index ["turno_id"], name: "index_autonomia_guide_reviews_on_turno_id"
+    t.index ["user_id"], name: "index_autonomia_guide_reviews_on_user_id"
   end
 
   create_table "autonomia_guide_task_items", force: :cascade do |t|
@@ -5521,6 +5545,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_103417) do
   add_foreign_key "autonomia_guide_memorias", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_memorias", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_memorias", "users", on_delete: :cascade
+  add_foreign_key "autonomia_guide_reviews", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_reviews", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_reviews", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_task_items", "autonomia_guide_tasks", column: "task_id", on_delete: :cascade
   add_foreign_key "autonomia_guide_tasks", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_tasks", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
