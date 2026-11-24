@@ -164,6 +164,9 @@
     },
     {
       "file": "campanhaVendas.json"
+    },
+    {
+      "file": "reenvioHorario.json"
     }
   ],
   "pacotes": {

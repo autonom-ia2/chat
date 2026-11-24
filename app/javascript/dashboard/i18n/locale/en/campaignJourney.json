@@ -764,6 +764,14 @@
         "DIAS": "1 day | {n} days",
         "DIAS_LABEL": "Limit period"
       },
+      "INTERVALO": {
+        "TITLE": "Time between messages",
+        "HELP": "The least amount of time between two messages to the same person.",
+        "LABEL": "Minimum time between messages",
+        "SEM_INTERVALO": "No minimum time",
+        "HORAS": "At least 1 hour | At least {n} hours",
+        "EXEMPLO": "If someone got a message now, the next one waits at least 1 hour. | If someone got a message now, the next one waits at least {n} hours."
+      },
       "HORARIO": {
         "TITLE": "Sending hours",
         "HELP": "At what time messages can go out.",
@@ -805,7 +813,8 @@
         "SEM_LIMITE": "No message limit per customer.",
         "HORARIO": "Messages go out {dias}, from {inicio} to {fim}.",
         "QUALQUER_HORA": "Messages go out at any time.",
-        "FALTA_HORARIO": "Fix the hours to be able to save."
+        "FALTA_HORARIO": "Fix the hours to be able to save.",
+        "INTERVALO": "At least 1 hour between two messages. | At least {n} hours between two messages."
       },
       "ESPERA": "If it goes over the limit or outside the hours, the message is kept: it waits and goes out on its own later.",
       "FORA_DA_CONTA": "The limit doesn't apply to replies to someone who just wrote to you, nor to your team's conversation with the customer.",

@@ -11,12 +11,14 @@ import RitmoDeEnvioAPI from 'dashboard/api/ritmoDeEnvio';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import RitmoIntervalo from 'dashboard/components-next/CampaignJourney/ritmo/RitmoIntervalo.vue';
 import {
   DIAS,
   DIAS_DA_SEMANA,
   FINS,
   INICIOS,
   MENSAGENS,
+  SEM_INTERVALO,
   SEM_LIMITE,
   alternarDia,
   diasDoResumo,
@@ -107,6 +109,14 @@ const resumo = computed(() => {
         })
       : t(`${NS}.RESUMO.SEM_LIMITE`)
   );
+  if (formulario.value.intervalo !== SEM_INTERVALO)
+    partes.push(
+      t(
+        `${NS}.RESUMO.INTERVALO`,
+        { n: formulario.value.intervalo },
+        formulario.value.intervalo
+      )
+    );
   partes.push(textoDoHorario());
   return partes.join(' ');
 });
@@ -242,6 +252,8 @@ useOnEnter(carregar);
             </template>
           </div>
         </section>
+
+        <RitmoIntervalo v-if="podeMudar" v-model="formulario.intervalo" />
 
         <section
           v-if="podeMudar"

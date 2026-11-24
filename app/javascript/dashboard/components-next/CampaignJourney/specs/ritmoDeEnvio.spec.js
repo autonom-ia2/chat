@@ -1,4 +1,5 @@
 import {
+  SEM_INTERVALO,
   SEM_LIMITE,
   alternarDia,
   diasDoResumo,
@@ -12,6 +13,7 @@ describe('ritmoDeEnvio (#3063)', () => {
     expect(formularioDe({ limite: null, horario: null })).toEqual({
       mensagens: SEM_LIMITE,
       dias: 7,
+      intervalo: SEM_INTERVALO,
       comHorario: false,
       inicio: 8,
       fim: 20,
@@ -22,6 +24,7 @@ describe('ritmoDeEnvio (#3063)', () => {
   it('round-trips what the server saved', () => {
     const salvo = {
       limite: { mensagens: 2, dias: 15 },
+      intervalo: { horas: 4 },
       horario: { inicio: 9, fim: 18, dias_da_semana: [1, 3, 5] },
     };
 
@@ -31,7 +34,25 @@ describe('ritmoDeEnvio (#3063)', () => {
   it('sends null for no limit and for any hour', () => {
     const formulario = { ...formularioDe(), comHorario: false };
 
-    expect(pedidoDe(formulario)).toEqual({ limite: null, horario: null });
+    expect(pedidoDe(formulario)).toEqual({
+      limite: null,
+      intervalo: null,
+      horario: null,
+    });
+  });
+
+  it('keeps the minimum gap apart from the limit (#3101)', () => {
+    const formulario = {
+      ...formularioDe(),
+      mensagens: SEM_LIMITE,
+      intervalo: 12,
+    };
+
+    expect(pedidoDe(formulario)).toMatchObject({
+      limite: null,
+      intervalo: { horas: 12 },
+    });
+    expect(formularioDe({ intervalo: { horas: 48 } }).intervalo).toBe(48);
   });
 
   it('sorts the weekdays it sends', () => {

@@ -33,6 +33,9 @@ export const emptyDraft = () => ({
   // #3098: "Quem comprou depois" da revisão: dias da janela de compra e a porcentagem do grupo de controle (0 = sem).
   janelaDeCompra: 7,
   grupoDeControle: 0,
+  // #3101: "No melhor horário de cada cliente" e "Mandar de novo" (null = não manda; ver reenvio/reenvio.js).
+  melhorHorario: false,
+  reenvio: null,
   step: 1,
 });
 

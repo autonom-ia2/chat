@@ -7,6 +7,10 @@ export const FINS = Array.from({ length: 23 }, (_, hora) => hora + 1);
 // Segunda a domingo na tela; o valor é o do Date#getDay (0 = domingo).
 export const DIAS_DA_SEMANA = [1, 2, 3, 4, 5, 6, 0];
 
+// #3101: "pelo menos X horas entre duas mensagens" à mesma pessoa. 0 = sem intervalo mínimo.
+export const INTERVALOS = [1, 2, 4, 8, 12, 24, 48];
+export const SEM_INTERVALO = 0;
+
 export const SEM_LIMITE = 0;
 export const LIMITE_PADRAO = { mensagens: 3, dias: 7 };
 export const HORARIO_PADRAO = {
@@ -19,6 +23,7 @@ export const HORARIO_PADRAO = {
 export const formularioDe = (ritmo = {}) => ({
   mensagens: ritmo.limite?.mensagens ?? SEM_LIMITE,
   dias: ritmo.limite?.dias ?? LIMITE_PADRAO.dias,
+  intervalo: ritmo.intervalo?.horas ?? SEM_INTERVALO,
   comHorario: Boolean(ritmo.horario),
   inicio: ritmo.horario?.inicio ?? HORARIO_PADRAO.inicio,
   fim: ritmo.horario?.fim ?? HORARIO_PADRAO.fim,
@@ -33,6 +38,10 @@ export const pedidoDe = formulario => ({
     formulario.mensagens === SEM_LIMITE
       ? null
       : { mensagens: formulario.mensagens, dias: formulario.dias },
+  intervalo:
+    formulario.intervalo === SEM_INTERVALO
+      ? null
+      : { horas: formulario.intervalo },
   horario: formulario.comHorario
     ? {
         inicio: formulario.inicio,

@@ -6,6 +6,8 @@
 defineProps({
   label: { type: String, required: true },
   disabled: { type: Boolean, default: false },
+  // id do texto visível que explica o interruptor (por exemplo, por que está apagado); o leitor de tela o anuncia.
+  describedBy: { type: String, default: undefined },
 });
 const on = defineModel({ type: Boolean, default: false });
 </script>
@@ -20,6 +22,7 @@ const on = defineModel({ type: Boolean, default: false });
       type="checkbox"
       role="switch"
       :aria-label="label"
+      :aria-describedby="describedBy"
       :disabled="disabled"
       class="sr-only peer"
     />
