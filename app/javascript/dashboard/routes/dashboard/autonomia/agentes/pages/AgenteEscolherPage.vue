@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
-import RamoCartao from '../components/RamoCartao.vue';
+import RamosProntos from '../components/RamosProntos.vue';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import {
   ATUACAO_INTERNA_NA_QUERY,
@@ -86,40 +86,13 @@ const voltar = () => router.push({ name: 'autonomia_agents_index' });
             : t('AGENTS.JORNADA.HEROI.SO_VER')
         "
       >
-        <section
+        <RamosProntos
           v-if="comRamos"
-          data-ramos
-          aria-labelledby="ramos-titulo"
-          class="flex flex-col gap-4"
-        >
-          <div class="flex flex-col max-w-2xl gap-1">
-            <h2 id="ramos-titulo" class="m-0 text-xl font-semibold text-white">
-              {{ t(`${RAMOS}.TITULO`) }}
-            </h2>
-            <p class="m-0 text-base leading-relaxed text-white/80">
-              {{ t(`${RAMOS}.TEXTO`) }}
-            </p>
-          </div>
-          <ul
-            :aria-label="t(`${RAMOS}.TITULO`)"
-            class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-2 lg:grid-cols-3"
-          >
-            <RamoCartao
-              v-for="ramo in ramos"
-              :key="ramo.chave"
-              :ramo="ramo"
-              :pode-usar="podeGerenciar"
-              :comecando="comecando === ramo.chave"
-              :bloqueado="!!comecando && comecando !== ramo.chave"
-              @usar="usarRamo"
-            />
-          </ul>
-          <h2
-            class="pt-6 m-0 text-xl font-semibold text-white border-t border-white/15"
-          >
-            {{ t(`${RAMOS}.OUTROS_TITULO`) }}
-          </h2>
-        </section>
+          :ramos="ramos"
+          :pode-usar="podeGerenciar"
+          :comecando="comecando"
+          @usar="usarRamo"
+        />
         <ul
           :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
           class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"

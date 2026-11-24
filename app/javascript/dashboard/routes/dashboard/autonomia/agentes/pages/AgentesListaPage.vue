@@ -28,6 +28,7 @@ import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
+import RamosProntos from '../components/RamosProntos.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
@@ -35,6 +36,7 @@ import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue
 import AgentePostCartao from '../components/AgentePostCartao.vue';
 import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
 import { useAgentesDoPost } from '../composables/useAgentesDoPost';
+import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
 // T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
@@ -44,6 +46,8 @@ import { useAgentesDoPost } from '../composables/useAgentesDoPost';
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
 // #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" no herói T01, vai com ?atuacao=interno: o
 // agente ajuda a equipe dentro das conversas e nunca fala com cliente.
+// #3208 — conta de seguros com os agentes prontos por ramo liberados (#2881) vê a fileira "Prontos para o seu ramo"
+// também aqui, no herói T01, antes dos três modelos: quem ainda não tem agente não passa pela página "Criar agente".
 // #1543 — com agentes, "Criar agente" (herói e barra do celular) e "Ver modelos prontos" abrem a
 // página inteira "Criar agente" (AgenteEscolherPage, na rota do Construtor sem query), no lugar
 // da gaveta.
@@ -61,6 +65,8 @@ const semana = useNumerosDaSemana();
 // #2469 (PR 3a do #2436): o cuidado de cada post ou anúncio vira um cartão no fim da lista, com o filtro "Posts e
 // anúncios" quando há pelo menos um. Ligado conta à parte ("N cuidando de post ou anúncio"); pausado soma nos parados.
 const doPost = useAgentesDoPost();
+const { ramos } = useRamosDeSeguro();
+const comRamos = computed(() => ramos.value.length > 0);
 const filtro = ref('todos');
 const FILTROS = ['todos', 'posts'];
 const rotaDoPost = (cuidado, grupo = '') => ({
@@ -241,6 +247,7 @@ const abrirCriacao = async (chave, query) => {
 };
 
 const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
+const usarRamo = chave => abrirCriacao(chave, { ramo: chave });
 const usarCopiloto = () =>
   abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
 
@@ -402,10 +409,21 @@ onBeforeUnmount(() => {
         :titulo="t('AGENTS.JORNADA.HEROI.TITULO')"
         :texto="
           podeGerenciar
-            ? t('AGENTS.JORNADA.MODELOS.ESCOLHA')
+            ? t(
+                comRamos
+                  ? 'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
+                  : 'AGENTS.JORNADA.MODELOS.ESCOLHA'
+              )
             : t('AGENTS.JORNADA.HEROI.SO_VER')
         "
       >
+        <RamosProntos
+          v-if="comRamos"
+          :ramos="ramos"
+          :pode-usar="podeGerenciar"
+          :comecando="comecandoModelo"
+          @usar="usarRamo"
+        />
         <ul
           :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
           class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"

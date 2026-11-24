@@ -48,7 +48,11 @@ const router = vi.hoisted(() => ({
 }));
 vi.mock('vue-router', () => ({ useRouter: () => router }));
 
-const api = vi.hoisted(() => ({ semana: vi.fn(), canaisOcupados: vi.fn() }));
+const api = vi.hoisted(() => ({
+  semana: vi.fn(),
+  canaisOcupados: vi.fn(),
+  modelosDeRamo: vi.fn(),
+}));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
 // #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
 const doPost = vi.hoisted(() => ({
@@ -128,6 +132,7 @@ describe('AgentesListaPage', () => {
     estado.podeConectarCanal = true;
     estado.admin = true;
     prepararStore();
+    api.modelosDeRamo.mockResolvedValue({ data: { modelos: [] } });
     api.semana.mockResolvedValue({
       data: { payload: [{ agent_id: 3, answered: 12, handed: 3 }] },
     });
@@ -605,6 +610,53 @@ describe('AgentesListaPage', () => {
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
       expect(wrapper.find('[data-copiloto]').exists()).toBe(true);
       expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('has no ready-made insurance row when the server releases none', async () => {
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('shows the ready-made insurance row first, with the three templates below (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto', 'seguro_garantia'] },
+      });
+      const wrapper = await montar();
+      const fileira = wrapper.get('[data-heroi] [data-ramos]');
+      expect(fileira.get('h2').text()).toBe('AGENTS.JORNADA.RAMOS.TITULO');
+      expect(fileira.findAll('[data-ramo]')).toHaveLength(2);
+      expect(wrapper.get('[data-heroi]').text()).toContain(
+        'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
+      );
+      expect(wrapper.text()).not.toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
+      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+      wrapper.unmount();
+    });
+
+    it('goes to the builder with the chosen insurance line (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      const wrapper = await montar();
+      await wrapper.get('[data-usar-ramo]').trigger('click');
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { ramo: 'seguro_auto' },
+      });
+      wrapper.unmount();
+    });
+
+    it('hides the "use" button of the insurance row from who can only view', async () => {
+      estado.podeGerenciar = false;
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(true);
+      expect(wrapper.find('[data-usar-ramo]').exists()).toBe(false);
       wrapper.unmount();
     });
 
