@@ -5,6 +5,8 @@ import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 import { useGuiaDescoberta } from './useGuiaDescoberta';
+import { useTelaDeConversa } from 'dashboard/components-next/sidebar/useTelaDeConversa';
+import { cantoOcupadoPelaTela } from './cantoDaBolinha';
 import GuideDot from './GuideDot.vue';
 import { useAvisosDoGuia } from './useAvisosDoGuia';
 
@@ -35,21 +37,29 @@ const rotulo = computed(() =>
 onMounted(carregarAvisos);
 watch(accountId, carregarAvisos);
 
+// #3192 — na conversa aberta e nas telas que avisam que o canto é delas
+// (cantoDaBolinha.js: a criação de agente com caixa de envio), o canto de baixo
+// à direita é do botão de enviar: a bolinha some. Na conversa, o Guia fica no
+// cabeçalho (GuiaNoCabecalho).
+const telaDeConversa = useTelaDeConversa();
+const cantoOcupado = computed(
+  () => telaDeConversa.value || cantoOcupadoPelaTela.value
+);
+
 const showLauncher = computed(
-  () => guiaDisponivel.value && !painelAberto.value
+  () => guiaDisponivel.value && !painelAberto.value && !cantoOcupado.value
 );
 
 const launcherRef = ref(null);
 
-// O lançador some quando o painel abre e volta quando ele fecha, então
-// `false → true` é exatamente "o painel acabou de fechar": é aí que o foco
-// precisa voltar para cá, senão ele fica no nada e quem usa teclado recomeça
-// do topo da página. O watcher não roda na montagem, então carregar a página
-// com o painel fechado não rouba o foco de ninguém.
-watch(showLauncher, async visivel => {
-  if (!visivel) return;
+// O painel acabou de fechar: o foco volta para cá, senão ele fica no nada e
+// quem usa teclado recomeça do topo da página. Segue o painel, e não a
+// visibilidade da bolinha: ela também volta ao sair da conversa (#3192), e
+// trocar de tela não pode roubar o foco. Não roda na montagem.
+watch(painelAberto, async (aberto, antes) => {
+  if (aberto || !antes) return;
   await nextTick();
-  launcherRef.value?.$el?.focus();
+  if (showLauncher.value) launcherRef.value?.$el?.focus();
 });
 </script>
 

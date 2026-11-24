@@ -5,6 +5,10 @@ import { fetchContactableInboxes } from 'dashboard/components-next/NewConversati
 import { useAlert } from 'dashboard/composables';
 import ConversaVazia from '../ConversaVazia.vue';
 import { criarI18n } from '../../specs/apoio';
+// #3192 — o botão do Guia tem spec próprio (GuiaNoCabecalho.spec.js) e pede o store de verdade.
+vi.mock('dashboard/components/autonomia/guide/GuiaNoCabecalho.vue', () => ({
+  default: { name: 'GuiaNoCabecalho', render: () => null },
+}));
 
 // #2211 (revisão) — telefone novo com o useNovaConversa DE VERDADE (sem simular): o envio pelo
 // modelo do Twilio cria o contato antes, e a caixa que muda de tipo depois de criado o contato

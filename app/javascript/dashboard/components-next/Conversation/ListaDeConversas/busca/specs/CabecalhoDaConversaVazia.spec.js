@@ -2,6 +2,10 @@ import { createStore } from 'vuex';
 import { mount, enableAutoUnmount } from '@vue/test-utils';
 import CabecalhoDaConversaVazia from '../CabecalhoDaConversaVazia.vue';
 import { criarI18n } from '../../specs/apoio';
+// #3192 — o botão do Guia tem spec próprio (GuiaNoCabecalho.spec.js) e pede o store de verdade.
+vi.mock('dashboard/components/autonomia/guide/GuiaNoCabecalho.vue', () => ({
+  default: { name: 'GuiaNoCabecalho', render: () => null },
+}));
 
 // #2211 (rodada 5) — o topo da conversa vazia segue o topo da conversa de verdade: a caixa só
 // aparece quando a conta tem mais de uma; o WhatsApp pelo celular mostra o ícone do WhatsApp e
@@ -52,6 +56,14 @@ describe('CabecalhoDaConversaVazia', () => {
     await wrapper.find('[data-voltar]').trigger('click');
     expect(wrapper.emitted('trocar')).toHaveLength(1);
     expect(wrapper.emitted('voltar')).toHaveLength(1);
+  });
+
+  // #3192 — na conversa a bolinha do Guia some: o Guia fica no topo.
+  it('traz o Guia no topo', () => {
+    const wrapper = montar();
+    expect(wrapper.findComponent({ name: 'GuiaNoCabecalho' }).exists()).toBe(
+      true
+    );
   });
 
   it('sem outra caixa possível, sem "Trocar"', () => {

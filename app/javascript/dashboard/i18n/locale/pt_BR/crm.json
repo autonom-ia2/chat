@@ -5099,7 +5099,8 @@
       "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
       "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
       "TIME": "{atual} / {total}"
-    }
+    },
+    "CONVERSATION_BUTTON": "Guia"
   },
   "AUTOMACOES": {
     "MENU": "Automações",

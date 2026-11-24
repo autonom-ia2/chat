@@ -5,6 +5,7 @@ import {
   useFixedPanelPresence,
 } from 'dashboard/composables/useFixedPanelState';
 import AutonomiaGuideLauncher from '../AutonomiaGuideLauncher.vue';
+import { cantoOcupadoPelaTela } from '../cantoDaBolinha';
 
 const uiSettingsRef = ref({ is_autonomia_guide_panel_open: false });
 const updateUISettings = vi.fn(patch => {
@@ -16,11 +17,15 @@ vi.mock('dashboard/composables/useUISettings', () => ({
     updateUISettings,
   }),
 }));
-vi.mock('vue-router', () => ({ useRoute: () => ({ meta: {} }) }));
+const rota = { name: 'home', meta: {}, query: {} };
+vi.mock('vue-router', () => ({ useRoute: () => rota }));
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: getter => {
     if (getter === 'accounts/getAccount') {
       return ref(() => ({ autonomia_guide_available: true }));
+    }
+    if (getter === 'accounts/isFeatureEnabledonAccount') {
+      return ref(() => false);
     }
     return ref(1); // getCurrentAccountId
   },
@@ -37,15 +42,17 @@ const PainelFixo = {
   },
 };
 
-const mountLauncher = () =>
+const mountLauncher = (opcoes = {}) =>
   mount(AutonomiaGuideLauncher, {
     global: { mocks: { $t: key => key } },
+    ...opcoes,
   });
 
 describe('AutonomiaGuideLauncher', () => {
   beforeEach(() => {
     uiSettingsRef.value = { is_autonomia_guide_panel_open: false };
     window.sessionStorage.clear();
+    Object.assign(rota, { name: 'home', meta: {}, query: {} });
   });
 
   afterEach(() => {
@@ -139,6 +146,38 @@ describe('AutonomiaGuideLauncher', () => {
       const depois = mountLauncher();
       expect(depois.find('[data-guia-ponto]').exists()).toBe(false);
       depois.unmount();
+    });
+
+    // #3192 — no celular a bolinha cobria o botão de enviar.
+    it('some na conversa aberta', () => {
+      rota.name = 'inbox_conversation';
+      const wrapper = mountLauncher();
+      expect(wrapper.find('[data-guia-abrir]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('some enquanto uma tela avisa que o canto é dela (criação de agente)', async () => {
+      const wrapper = mountLauncher();
+      cantoOcupadoPelaTela.value = true;
+      await nextTick();
+      expect(wrapper.find('[data-guia-abrir]').exists()).toBe(false);
+
+      cantoOcupadoPelaTela.value = false;
+      await nextTick();
+      expect(wrapper.find('[data-guia-abrir]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('fechar o painel devolve o foco à bolinha', async () => {
+      uiSettingsRef.value = { is_autonomia_guide_panel_open: true };
+      const wrapper = mountLauncher({ attachTo: document.body });
+      uiSettingsRef.value = { is_autonomia_guide_panel_open: false };
+      await nextTick();
+      await nextTick();
+      expect(document.activeElement).toBe(
+        wrapper.get('[data-guia-abrir]').element
+      );
+      wrapper.unmount();
     });
 
     it('abrir o Guia grava que a pessoa já conhece', async () => {

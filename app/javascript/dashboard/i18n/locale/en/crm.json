@@ -5098,7 +5098,8 @@
       "WAITING": "Audio ready. It goes as soon as the Guide finishes answering.",
       "FINISH_FIRST": "Send or delete the recording before sending another message.",
       "TIME": "{atual} / {total}"
-    }
+    },
+    "CONVERSATION_BUTTON": "Guide"
   },
   "AUTOMACOES": {
     "MENU": "Automations",
