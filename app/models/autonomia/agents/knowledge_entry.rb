@@ -44,7 +44,7 @@ module Autonomia
       enum :status, { pending: 0, ready: 1 }
 
       # #1431 (PR 1b) — o trecho de item (CortePorSecao: item de lista, verbete, fileira de tabela) existe só para a busca
-      # achar a seção; o texto dele já está no trecho da seção. Quem lê o material (resumo, Revisor, autoteste,
+      # achar a seção; o texto dele já está no trecho da seção. Quem lê o material (resumo, Revisor,
       # contradições) lê sem ele, para não ler o texto duas vezes.
       scope :do_material, -> { where("(metadata->>'material_type') IS DISTINCT FROM 'item'") }
     end

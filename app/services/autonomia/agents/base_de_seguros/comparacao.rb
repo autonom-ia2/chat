@@ -2,7 +2,7 @@
 # (Bloco.perguntas, no idioma de quem pediu), respondidas pelo agente como ele está hoje e com a base nova.
 #
 # É o motor do Testar (Answerer, com a etiqueta de custo do Testar), sem ferramenta nenhuma (modo `prova`, como a prova do
-# ajuste e o autoteste): nada é executado nem chega a cliente. A base nova vai numa cópia do agente só na memória, só
+# ajuste): nada é executado nem chega a cliente. A base nova vai numa cópia do agente só na memória, só
 # leitura: nada é gravado, nem no agente nem no histórico. Roda num job (Crm::Ai::InteractiveJob); a tela busca o
 # resultado. Se a IA falha em qualquer resposta (ou qualquer outra coisa falha), a comparação inteira falha e o agente
 # fica livre para tentar de novo.

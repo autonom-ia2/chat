@@ -645,16 +645,14 @@ describe('GavetaOQueSabe', () => {
     });
   });
 
-  // #1426 (4b) — com as conferências (Fase 2, fora da Lia): o "um problema por vez" e o autoteste no topo.
-  describe('conferências e autoteste', () => {
-    const conferenciasCom = ({ problemas = [], autoteste = null } = {}) => ({
+  // #1426 (4b) — com as conferências (Fase 2, fora da Lia): o "um problema por vez" no topo.
+  describe('conferências', () => {
+    const conferenciasCom = ({ problemas = [] } = {}) => ({
       problemas: ref(problemas),
-      autoteste: ref(autoteste),
       lido: ref(true),
       erro: ref(false),
       ler: vi.fn(),
       resolver: vi.fn().mockResolvedValue(),
-      pedirAutoteste: vi.fn().mockResolvedValue(),
     });
     const PRONTA = fonte(4, {
       review: { status: 'accepted', reviewed_at: '2026-10-19T12:00:00Z' },
@@ -680,19 +678,14 @@ describe('GavetaOQueSabe', () => {
       preparar([PRONTA]);
       const wrapper = montar({ fase2: true });
       expect(no('[data-um-problema]')).toBeNull();
-      expect(no('[data-autoteste]')).toBeNull();
       wrapper.unmount();
     });
 
-    it('mostra o cartão e o autoteste; a linha do material da contradição segue "Pronto" (não reprova)', () => {
+    it('mostra o cartão; a linha do material da contradição segue "Pronto" (não reprova)', () => {
       preparar([PRONTA]);
-      const conferencias = conferenciasCom({
-        problemas: [CONTRADICAO],
-        autoteste: { estado: 'nunca', resultados: [] },
-      });
+      const conferencias = conferenciasCom({ problemas: [CONTRADICAO] });
       const wrapper = montar({ fase2: true, conferencias });
       expect(no('[data-um-problema]').dataset.tipo).toBe('contradicao');
-      expect(no('[data-autoteste]').dataset.estado).toBe('nunca');
       expect(no('[data-tudo-certo]')).toBeNull();
       expect(no('[data-fonte]').dataset.estado).toBe('pronto');
       wrapper.unmount();
@@ -766,37 +759,6 @@ describe('GavetaOQueSabe', () => {
         }
       );
       expect(conferencias.resolver).not.toHaveBeenCalled();
-      wrapper.unmount();
-    });
-
-    it('testar de novo além do limite: o texto do servidor ao lado, sem quebrar', async () => {
-      preparar([PRONTA]);
-      const conferencias = conferenciasCom({
-        autoteste: { estado: 'pronto', resultados: [] },
-      });
-      conferencias.pedirAutoteste.mockRejectedValue({
-        response: {
-          status: 429,
-          data: { error: 'Espere um pouco para testar de novo.' },
-        },
-      });
-      const wrapper = montar({ fase2: true, conferencias });
-      await clicar('[data-testar-de-novo]');
-      expect(no('[data-erro-conferencia]').textContent).toContain(
-        'Espere um pouco para testar de novo.'
-      );
-      expect(no('[data-testar-de-novo]')).not.toBeNull();
-      wrapper.unmount();
-    });
-
-    it('testar de novo pede o autoteste', async () => {
-      preparar([PRONTA]);
-      const conferencias = conferenciasCom({
-        autoteste: { estado: 'parado', resultados: [] },
-      });
-      const wrapper = montar({ fase2: true, conferencias });
-      await clicar('[data-testar-de-novo]');
-      expect(conferencias.pedirAutoteste).toHaveBeenCalled();
       wrapper.unmount();
     });
 

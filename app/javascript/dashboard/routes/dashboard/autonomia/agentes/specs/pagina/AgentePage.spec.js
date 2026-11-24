@@ -80,11 +80,10 @@ const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock('dashboard/api/autonomia/faqSuggestions', () => ({ default: faqApi }));
 const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
-// #1426 (4b) — conferências e autoteste do material.
+// #1426 (4b) — conferências do material.
 const materialApi = vi.hoisted(() => ({
   get: vi.fn(),
   resolver: vi.fn(),
-  pedirAutoteste: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/material', () => ({ default: materialApi }));
 // #1429 F3 — a base de seguros do agente.
@@ -196,7 +195,7 @@ describe('AgentePage', () => {
     alerta.mockReset();
     materialApi.get.mockReset();
     materialApi.get.mockResolvedValue({
-      data: { problemas: [], autoteste: null },
+      data: { problemas: [] },
     });
     preparar();
   });
@@ -682,9 +681,8 @@ describe('AgentePage', () => {
           data: {
             problemas: [
               { id: 'contradicao-a', tipo: 'contradicao', fontes: [4, 1] },
-              { id: 'autoteste-r-0', tipo: 'autoteste', fontes: [] },
+              { id: 'duplicado-8-9', tipo: 'duplicado', fontes: [8, 9] },
             ],
-            autoteste: null,
           },
         });
         const wrapper = await comMaterial(true);

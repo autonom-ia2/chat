@@ -139,7 +139,7 @@ RSpec.describe Autonomia::Agents::TrocaDaBase do
       antes = agent.retrato_para_comparar
 
       agent.update!(enabled: false)
-      Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'situacao' => 'ok' })
+      Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'conferencia_da_base', { 'hash_da_base' => 'h1' })
 
       expect(agent.reload.retrato_para_comparar).to eq(antes)
     end

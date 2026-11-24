@@ -9,7 +9,6 @@ import MaterialLinha from './MaterialLinha.vue';
 import PerguntasParaConferir from './PerguntasParaConferir.vue';
 import DialogoAcao from './DialogoAcao.vue';
 import UmProblemaPorVez from './UmProblemaPorVez.vue';
-import AutotesteDoMaterial from './AutotesteDoMaterial.vue';
 import {
   MAX_ARQUIVO,
   MAX_FOTO,
@@ -40,8 +39,8 @@ const props = defineProps({
   // #1426 — na Fase 2 cada linha mostra o estado real (Lendo → Revisando → Pronto ou Precisa de você). Fora dela, o de
   // hoje.
   fase2: { type: Boolean, default: false },
-  // #1426 (4b) — as conferências e o autoteste do material (composables/useConferenciasDoMaterial). Só na Fase 2 e fora
-  // da Lia; null: a gaveta fica sem o "um problema por vez" e sem o autoteste.
+  // #1426 (4b) — as conferências do material (composables/useConferenciasDoMaterial). Só na Fase 2 e fora da Lia;
+  // null: a gaveta fica sem o "um problema por vez".
   conferencias: { type: Object, default: null },
 });
 
@@ -66,7 +65,6 @@ const botaoArquivo = ref(null);
 
 const lista = computed(() => props.fontes || []);
 const problemas = computed(() => props.conferencias?.problemas.value || []);
-const autoteste = computed(() => props.conferencias?.autoteste.value || null);
 // O estado da linha é o da leitura e da revisão. Duplicado, contradição e páginas de fora não reprovam: o material
 // continua em uso e o que pede a pessoa fica no cartão "um problema por vez", não na linha.
 const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
@@ -297,20 +295,6 @@ const resolver = async (problemaId, escolha) => {
 const mandarOutroDoProblema = id => escolherArquivo(fontePorId(id));
 const tirarDoProblema = id => pedirTirar(fontePorId(id));
 
-const pedindoAutoteste = ref(false);
-const testarDeNovo = async () => {
-  pedindoAutoteste.value = true;
-  erroConferencia.value = '';
-  try {
-    await props.conferencias.pedirAutoteste();
-  } catch (erro) {
-    erroConferencia.value =
-      erro?.response?.data?.error || t('AGENTS.JORNADA.PAGINA.SABE.ERRO');
-  } finally {
-    pedindoAutoteste.value = false;
-  }
-};
-
 // "Tudo certo" só quando as conferências já leram, nada precisa da pessoa e nenhum material ainda está sendo lido ou
 // revisado (antes disso, "tudo certo" seria cedo).
 const tudoCerto = computed(
@@ -342,7 +326,7 @@ const tudoCerto = computed(
         @mandar-outro="mandarOutroDoProblema"
         @mandar-novo="escolherArquivo()"
         @tirar="tirarDoProblema"
-        @corrigir="emit('corrigir', $event)"
+        @corrigir="emit('corrigir')"
       />
       <p
         v-else-if="tudoCerto"
@@ -361,14 +345,6 @@ const tudoCerto = computed(
         data-erro-conferencia
         tom="ambar"
         :titulo="erroConferencia"
-      />
-      <AutotesteDoMaterial
-        v-if="autoteste"
-        :autoteste="autoteste"
-        :nome="nome"
-        :pode-gerenciar="podeGerenciar"
-        :pedindo="pedindoAutoteste"
-        @testar-de-novo="testarDeNovo"
       />
     </template>
 

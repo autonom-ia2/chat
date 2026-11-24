@@ -724,10 +724,9 @@ Rails.application.routes.draw do
                 member { post :resync }
                 resource :file, only: [:show], controller: 'agents/source_files'
               end
-              # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
+              # #1426 (tema 4b) — conferências do material (gaveta "O que sabe", Fase 2).
               get 'material', to: 'agents/material#show'
               post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
-              post 'material/autoteste', to: 'agents/material#autoteste'
               # #1429 (tema 8, F3) — a base de seguros do agente: ler, comparar (antes e depois), atualizar e desfazer.
               get 'base', to: 'agents/base_de_seguros#show'
               post 'base/comparar', to: 'agents/base_de_seguros#comparar'
