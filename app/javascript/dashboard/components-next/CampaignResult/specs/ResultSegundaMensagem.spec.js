@@ -124,8 +124,8 @@ describe('ResultSegundaMensagem', () => {
   });
 
   it.each([
-    ['cancelado', R.CANCELADO],
-    ['falhou', R.FALHOU],
+    ['cancelado', R.CANCELADO.replace('{quem}', "didn't reply")],
+    ['falhou', R.FALHOU.replace('{quem}', "didn't reply")],
   ])(
     '%s: diz por que não saiu e leva a criar outra campanha',
     (status, texto) => {
@@ -143,5 +143,12 @@ describe('ResultSegundaMensagem', () => {
   it('quem só vê campanhas não recebe o botão de criar', () => {
     const w = montar({ status: 'falhou' }, { permissions: ['campaign_view'] });
     expect(w.find('[data-criar-campanha]').exists()).toBe(false);
+  });
+
+  it('cancelada de quem nem leu: fala de quem nem leu', () => {
+    const w = montar({ status: 'cancelado', quem: 'nao_leu' });
+    expect(w.get('[data-frase]').text()).toContain(
+      "remind people who didn't even read it"
+    );
   });
 });

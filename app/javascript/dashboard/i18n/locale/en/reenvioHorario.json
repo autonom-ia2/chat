@@ -97,8 +97,8 @@
       "CRIAR": "Create campaign",
       "APAGADA": "It went out, but the second message's campaign was deleted. Its result can't be seen.",
       "SEM_NINGUEM": "It didn't need to go out: everyone replied or couldn't get messages.",
-      "CANCELADO": "It didn't go out: this campaign was changed or canceled before the set day. If you still want to remind people who didn't reply, create a new campaign.",
-      "FALHOU": "It didn't go out: something went wrong when putting the second message together. You don't need to redo this campaign. If you still want to remind people who didn't reply, create a new campaign."
+      "CANCELADO": "It didn't go out: this campaign was changed or canceled before the set day. If you still want to remind people who {quem}, create a new campaign.",
+      "FALHOU": "It didn't go out: something went wrong when putting the second message together. You don't need to redo this campaign. If you still want to remind people who {quem}, create a new campaign."
     }
   }
 }

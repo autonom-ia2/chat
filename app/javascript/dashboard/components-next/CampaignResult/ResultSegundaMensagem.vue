@@ -67,9 +67,9 @@ const frase = computed(() => {
     case 'sem_ninguem':
       return t(`${NS}.SEM_NINGUEM`);
     case 'cancelado':
-      return t(`${NS}.CANCELADO`);
+      return t(`${NS}.CANCELADO`, { quem: quem.value });
     case 'falhou':
-      return t(`${NS}.FALHOU`);
+      return t(`${NS}.FALHOU`, { quem: quem.value });
     default:
       return '';
   }
