@@ -219,6 +219,10 @@
     "controller": "api/v1/accounts/autonomia/automacoes_ia#custos_da_automacao",
     "parametros": []
   },
+  "autonomia/automacoes/:id/duas_versoes": {
+    "controller": "api/v1/accounts/autonomia/automacoes_duas_versoes#duas_versoes",
+    "parametros": []
+  },
   "autonomia/automacoes/:id/historico": {
     "controller": "api/v1/accounts/autonomia/automacoes#historico",
     "parametros": [

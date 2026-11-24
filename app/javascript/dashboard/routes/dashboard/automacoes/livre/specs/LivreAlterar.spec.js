@@ -942,4 +942,110 @@ describe('LivreAlterar, extrair no card', () => {
       false
     );
   });
+
+  // #3099: o passo "mensagem" ganha a peça das duas versões no lugar do campo
+  // `versoes` do catálogo, e só salva com a versão 2 pronta.
+  describe('duas versões da mensagem', () => {
+    const MENSAGEM = {
+      tipo: 'mensagem',
+      grupo: 'MENSAGEM',
+      frase: 'MENSAGEM',
+      campos: [
+        {
+          nome: 'texto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'TEXTO',
+        },
+        {
+          nome: 'modelo',
+          peca: 'modelo_whatsapp',
+          obrigatorio: false,
+          rotulo: 'MODELO',
+        },
+        {
+          nome: 'versoes',
+          peca: 'duas_versoes',
+          obrigatorio: false,
+          rotulo: 'VERSOES',
+        },
+      ],
+    };
+    const regra = { criterio: 'respostas', divisao: 50, espera: 4 };
+    const montarMensagem = () =>
+      mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [MENSAGEM] },
+          opcoes: {},
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: {
+            SidePanel: PainelFalso,
+            LivreTexto: true,
+            LivreModelo: true,
+            LivreDuasVersoes: {
+              name: 'LivreDuasVersoes',
+              props: ['modelValue'],
+              emits: ['update:modelValue'],
+              template: '<div data-peca-duas-versoes />',
+            },
+          },
+          mocks: { $t: chave => chave },
+        },
+      });
+
+    it('mostra a peça e segura o Salvar até a versão 2 ficar pronta', async () => {
+      const wrapper = montarMensagem();
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'p1', tipo: 'mensagem', texto: ['Oi'] },
+      });
+      await flushPromises();
+      const peca = wrapper.findComponent({ name: 'LivreDuasVersoes' });
+      expect(peca.exists()).toBe(true);
+      expect(salvarDesligado(wrapper)).toBe(false);
+
+      await peca.vm.$emit('update:modelValue', {
+        id: 'p1',
+        tipo: 'mensagem',
+        texto: ['Oi'],
+        versoes: { ...regra, texto: [], modelo: null },
+      });
+      expect(salvarDesligado(wrapper)).toBe(true);
+
+      await peca.vm.$emit('update:modelValue', {
+        id: 'p1',
+        tipo: 'mensagem',
+        texto: ['Oi'],
+        versoes: { ...regra, texto: ['Olá!'], modelo: null },
+      });
+      expect(salvarDesligado(wrapper)).toBe(false);
+    });
+
+    it('sem o modelo da versão 1, o da versão 2 sai ao salvar', async () => {
+      const wrapper = montarMensagem();
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: {
+          id: 'p1',
+          tipo: 'mensagem',
+          texto: ['Oi'],
+          versoes: {
+            ...regra,
+            texto: ['Olá!'],
+            modelo: { nome: 'ola', idioma: 'pt_BR', variaveis: [] },
+          },
+        },
+      });
+      await flushPromises();
+      await wrapper.find('[data-salvar]').trigger('click');
+      expect(wrapper.emitted('salvar')[0][0].valor.versoes).toEqual({
+        ...regra,
+        texto: ['Olá!'],
+        modelo: null,
+      });
+    });
+  });
 });

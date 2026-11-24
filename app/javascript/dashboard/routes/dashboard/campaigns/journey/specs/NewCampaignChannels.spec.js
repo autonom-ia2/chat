@@ -2,6 +2,7 @@ import { mount, flushPromises, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
+import enDuasVersoes from 'dashboard/i18n/locale/en/duasVersoes.json';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
   loadDraft,
@@ -152,7 +153,7 @@ const mountPage = ({ query = {} } = {}) => {
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: enJourney },
+    messages: { en: { ...enJourney, ...enDuasVersoes } },
   });
   return mount(NewCampaignPage, {
     attachTo: document.body,
@@ -439,6 +440,198 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
       '2027-01-10T11:00:00.000Z'
     );
     expect(emailApi.sendNow).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+});
+
+// #3099: duas versões da mensagem ligadas à Nova campanha — o plano vem do servidor, a revisão mostra o teste e o
+// envio leva a versão 2.
+describe('Nova campanha — duas versões da mensagem (#3099)', () => {
+  const PLANO = {
+    modo: 'teste',
+    teste: 200,
+    versao1: 100,
+    versao2: 100,
+    resto: 1150,
+    pequeno: false,
+    minimo: 200,
+  };
+
+  it('SMS: liga, monta a versão 2, mostra o plano do servidor e manda as duas versões', async () => {
+    journey.create.mockResolvedValue({ data: { id: 19 } });
+    journey.preview.mockResolvedValue({
+      data: {
+        payload: {
+          total: 1350,
+          receive: 1350,
+          reasons: {},
+          duas_versoes: PLANO,
+        },
+      },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+    await toMessageStep(wrapper, 'sms');
+    choice(wrapper, 'SMS inbox').vm.$emit('update:modelValue', 11);
+    await wrapper
+      .find('[data-test="sms-message"]')
+      .setValue('Olá {{contact.first_name}}');
+    await flushPromises();
+
+    await wrapper.find('[data-ligar-duas-versoes] input').setValue(true);
+    await flushPromises();
+    // Sem a versão 2, "Continuar" não anda e o cartão diz por quê.
+    expect(
+      wrapper.find('[data-test="continue-review"]').attributes('disabled')
+    ).toBeDefined();
+    expect(wrapper.find('[data-aviso-da-2]').text()).toBe(
+      enDuasVersoes.DUAS_VERSOES.MENSAGEM.VAZIA
+    );
+    await wrapper
+      .find('[data-texto-da-2]')
+      .setValue('Oi {{contact.first_name}}, seu seguro vence logo');
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    // O "Vão receber" pede também o plano do teste.
+    expect(journey.preview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        channel: 'sms',
+        duas_versoes: { divisao: 50 },
+        grupo_de_controle_pct: 0,
+      })
+    );
+    expect(wrapper.find('[data-frase-do-plano]').text()).toContain('200');
+
+    await wrapper.find('[data-test="continue-review"]').trigger('click');
+    await flushPromises();
+    const resumo = wrapper.find('[data-resumo-duas-versoes]');
+    expect(resumo.find('[data-resumo-versao="2"]').text()).toContain(
+      'seu seguro vence logo'
+    );
+    expect(wrapper.find('[data-test="receivers"]').text()).toBe('1,350');
+    // Uma frase só no subtítulo do "Vão receber", com o canal.
+    expect(wrapper.find('[data-test="receive-when"]').text()).toContain(
+      '200 now, 1,150 after 4 hours'
+    );
+    expect(wrapper.find('[data-test="receive-when"]').text()).not.toContain(
+      'Now'
+    );
+
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    expect(journey.create).toHaveBeenCalledWith({
+      campaign_import_id: 5,
+      channel: 'sms',
+      campaign: {
+        title: 'Renovação — outubro',
+        inbox_id: 11,
+        scheduled_at: null,
+        message: 'Olá {{contact.first_name}}',
+        variable_defaults: {},
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
+        duas_versoes: {
+          criterio: 'respostas',
+          divisao: 50,
+          espera_horas: 4,
+          segunda: {
+            message_body: 'Oi {{contact.first_name}}, seu seguro vence logo',
+            variable_defaults: {},
+          },
+        },
+      },
+    });
+    wrapper.unmount();
+  });
+
+  it('versão 2 recusada pelo servidor: a revisão diz o que fazer', async () => {
+    saveDraft(1, {
+      title: 'Renovação',
+      audienceId: 5,
+      channel: 'sms',
+      inboxId: 11,
+      messageBody: 'Olá',
+      duasVersoes: {
+        ligado: true,
+        texto: 'Oi',
+        templateId: null,
+        assunto: '',
+        criterio: 'respostas',
+        divisao: 50,
+        espera: 4,
+      },
+      step: 3,
+    });
+    journey.create.mockRejectedValue({
+      response: { status: 422, data: { code: 'segunda_versao_igual' } },
+    });
+    const wrapper = mountPage({ query: { draft: '1' } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').text()).toBe(
+      enDuasVersoes.DUAS_VERSOES.ERROS.SEGUNDA
+    );
+    wrapper.unmount();
+  });
+
+  it('e-mail: só o assunto muda e vai junto do "Quem comprou depois"', async () => {
+    saveDraft(1, {
+      title: 'Novidades',
+      audienceId: 5,
+      channel: 'email',
+      emailSender: 'identity:4',
+      emailCampaignId: 31,
+      duasVersoes: {
+        ligado: true,
+        texto: '',
+        templateId: null,
+        assunto: '  Chegou a coleção nova  ',
+        criterio: 'eu_escolho',
+        divisao: 70,
+        espera: 24,
+      },
+      step: 3,
+    });
+    emailApi.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 31,
+          subject: 'Três novidades',
+          send_readiness: { checks: { subject: true } },
+        },
+      },
+    });
+    emailApi.sendNow.mockResolvedValue({});
+    journey.medirEmail.mockResolvedValue({});
+    const wrapper = mountPage({ query: { email: '31' } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-resumo-duas-versoes] [data-resumo-versao="1"]').text()
+    ).toContain('Três novidades');
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+    expect(journey.medirEmail).toHaveBeenCalledWith(31, {
+      janela_de_compra_dias: 7,
+      grupo_de_controle_pct: 0,
+      duas_versoes: {
+        criterio: 'eu_escolho',
+        divisao: 70,
+        espera_horas: 24,
+        segunda: { subject: 'Chegou a coleção nova' },
+      },
+    });
+    expect(emailApi.sendNow).toHaveBeenCalledWith(31);
     wrapper.unmount();
   });
 });

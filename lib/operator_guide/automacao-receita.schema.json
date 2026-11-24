@@ -261,6 +261,19 @@
         "variaveis": { "type": "array", "items": { "$ref": "#/definitions/texto" } }
       }
     },
+    "duas_versoes": {
+      "description": "Duas versões da mensagem (#3099). A versão 1 é o próprio passo; a versão 2 é este texto e, quando o passo usa modelo para a janela fechada, este modelo (com as mesmas regras do modelo da versão 1). Cada pessoa que passa pelo passo recebe uma das duas, sorteada e sempre a mesma para o mesmo registro: divisao 50 = metade cada, 70 = 7 em 10 recebem a versão 1. Quando cada versão foi mandada 100 vezes, espera `espera` horas e escolhe a que fica para todos: criterio respostas (mais respostas em até 72 h), compras (mais compras em até 7 dias, pede o CRM) ou eu_escolho (alguém com automation_manage escolhe no Histórico). Empate ou poucas respostas: fica a versão 1. Mudar o texto ou o modelo de uma das versões recomeça o teste.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["texto", "criterio", "divisao", "espera"],
+      "properties": {
+        "texto": { "$ref": "#/definitions/texto" },
+        "modelo": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/modelo_whatsapp" }] },
+        "criterio": { "enum": ["respostas", "compras", "eu_escolho"] },
+        "divisao": { "enum": [50, 70] },
+        "espera": { "enum": [2, 4, 24] }
+      }
+    },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "para_do_retorno": {
       "description": "Quem recebe o retorno (G3): o responsável (no card, quem cuida do cliente; na conversa, o responsável dela), pessoas ou um time. Sem ele, o responsável.",
@@ -633,7 +646,8 @@
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "mensagem" },
             "texto": { "$ref": "#/definitions/texto" },
-            "modelo": { "$ref": "#/definitions/modelo_whatsapp" }
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
+            "versoes": { "$ref": "#/definitions/duas_versoes" }
           }
         },
         {

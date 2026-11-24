@@ -1246,6 +1246,46 @@ describe('os passos da renovação no histórico', () => {
     }
   );
 
+  // #3175 — o "chegou de novo" do Agger leva a busca em `valores.leitura`; o da
+  // planilha, não. O PDF lido diz se completou, se não havia o que completar ou
+  // se não deu para ler.
+  it('o Agger e o PDF lido escolhem a frase pelo que o passo traz', () => {
+    const so = chave => ({ chave, detalhe: null, valor: null });
+
+    expect(fraseDoPasso({ tipo: 'chegou_agger', valores: {} })).toEqual(
+      so('TIPOS.CHEGOU_AGGER')
+    );
+    expect(
+      fraseDoPasso({ tipo: 'chegou_de_novo', valores: { leitura: 7 } })
+    ).toEqual(so('DO_AGGER.CHEGOU_DE_NOVO'));
+    expect(
+      fraseDoPasso({ tipo: 'chegou_de_novo', valores: { arquivo: 'x' } })
+    ).toEqual(so('TIPOS.CHEGOU_DE_NOVO'));
+    expect(
+      fraseDoPasso({
+        tipo: 'pdf_lido',
+        valores: {},
+        mudancas: [{ campo: 'bem' }],
+      })
+    ).toEqual(so('TIPOS.PDF_LIDO'));
+    expect(
+      fraseDoPasso({ tipo: 'pdf_lido', valores: { lido: true }, mudancas: null })
+    ).toEqual(so('PDF_LIDO.NADA'));
+    expect(
+      fraseDoPasso({ tipo: 'pdf_lido', valores: {}, mudancas: null })
+    ).toEqual(so('PDF_LIDO.NAO_DEU'));
+    expect(
+      fraseDoPasso({ tipo: 'pdf_lido', valores: { recusa: 'nao_e_apolice' } })
+    ).toEqual(so('PDF_LIDO.NAO_E_APOLICE'));
+    expect(
+      fraseDoPasso({ tipo: 'pdf_lido', valores: { recusa: 'outra' } })
+    ).toEqual(so('PDF_LIDO.NAO_DEU'));
+    ['NADA', 'NAO_E_APOLICE', 'NAO_DEU'].forEach(chave =>
+      nosDoisIdiomas(daCarteira(`HISTORIA.PDF_LIDO.${chave}`))
+    );
+    nosDoisIdiomas(daCarteira('HISTORIA.DO_AGGER.CHEGOU_DE_NOVO'));
+  });
+
   it('os passos com frase são os do catálogo, nos dois idiomas, nem mais nem menos', () => {
     const nomes = PASSOS_COM_FRASE.map(tipo => tipo.toUpperCase()).sort();
 

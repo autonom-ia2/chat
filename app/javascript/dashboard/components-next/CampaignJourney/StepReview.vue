@@ -253,10 +253,14 @@ const submit = () => {
         >
           {{ n(receivers) }}
         </p>
-        <p class="m-0 text-sm opacity-80">
+        <p class="m-0 text-sm opacity-80" data-test="receive-when">
           {{ channelLabel }}
           <template v-if="!isLater || whenText">
-            {{ DOT }} {{ isLater ? whenText : t(`${NS}.NOW`) }}
+            {{ DOT }}
+            <!-- #3099: com duas versões, quantos recebem quando ("270 agora, 1.080 depois de 4 horas"), da Nova campanha. -->
+            <slot name="vao-receber" :quando="isLater ? whenText : ''">
+              {{ isLater ? whenText : t(`${NS}.NOW`) }}
+            </slot>
           </template>
         </p>
       </div>

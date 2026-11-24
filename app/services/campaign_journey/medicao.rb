@@ -7,6 +7,9 @@
 # O público do sorteio é o "Vão receber" do preview (CampaignJourney::RecipientPreview#receive_ids), com as mesmas
 # variáveis da campanha: quem seria pulado por falta de variável, recusa ou e-mail suprimido não entra no grupo, e o
 # número da revisão bate com o do envio. Roda dentro da transação de quem chama, com o link travado.
+#
+# #3099: as duas versões da mensagem também são gravadas aqui (CampaignJourney::DuasVersoes), no mesmo momento e sobre
+# o mesmo público, depois do grupo de controle: quem está no grupo não entra no teste.
 class CampaignJourney::Medicao
   def self.permitidos(params)
     params.to_h.with_indifferent_access.slice(:janela_de_compra_dias, :grupo_de_controle_pct).compact
@@ -27,14 +30,21 @@ class CampaignJourney::Medicao
   end
 
   # `escolhas`: { janela_de_compra_dias, grupo_de_controle_pct } (as que vierem). `publico`: os contact_ids de quem
-  # ia receber, para o sorteio, vêm do bloco (só chamado se houver grupo).
-  def aplicar!(escolhas)
+  # ia receber, para o sorteio, vêm do bloco (só chamado se houver grupo ou duas versões). `duas_versoes`: a regra das
+  # duas versões (nil = sem); `segunda`: a versão 2 já conferida (CampaignJourney::DuasVersoes::Segunda).
+  def aplicar!(escolhas, duas_versoes: nil, segunda: nil)
     escolhas = self.class.permitidos(escolhas)
     @link.lock!
     @link.update!(escolhas) if escolhas.any?
     # Antes do envio (o e-mail volta à revisão e muda a porcentagem): o sorteio antigo sai e vale o novo.
     grupo = CampaignJourney::GrupoDeControle.new(@link)
     grupo.apagar! if @link.saved_change_to_grupo_de_controle_pct?
-    grupo.sortear!(yield) if grupo.ativo?
+    versoes = CampaignJourney::DuasVersoes.new(@link)
+    versoes.configurar!(duas_versoes, segunda)
+    return unless grupo.ativo? || versoes.ativo?
+
+    publico = yield
+    grupo.sortear!(publico) if grupo.ativo?
+    versoes.sortear!(publico - grupo.ids.to_a)
   end
 end

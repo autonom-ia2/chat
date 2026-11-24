@@ -2,6 +2,8 @@ import {
   audienceColumnTokens,
   insertToken,
   normalizeKey,
+  piecesOfTokens,
+  tokensOfPieces,
 } from '../audienceTokens';
 import {
   buildEmailPayload,
@@ -73,5 +75,18 @@ describe('journey channel payloads (api-999.md §2)', () => {
         draft: { ...draft, channel: 'email' },
       })
     ).toEqual({ campaign_import_id: 5, channel: 'email' });
+  });
+});
+
+describe('pieces of the text (#3099: "[Primeiro nome]" in the box)', () => {
+  it('only known tokens become pieces and the round trip keeps the text', () => {
+    const texto = 'Oi {{contact.first_name}}, vence {{publico.data}} {{1}}';
+    const pecas = piecesOfTokens(texto, ['contact.first_name']);
+    expect(pecas).toEqual([
+      'Oi ',
+      { $valor: 'contact.first_name' },
+      ', vence {{publico.data}} {{1}}',
+    ]);
+    expect(tokensOfPieces(pecas)).toBe(texto);
   });
 });

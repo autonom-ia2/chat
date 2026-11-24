@@ -225,6 +225,7 @@
       "CAIXA_ID_EMAIL": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",
+      "VERSOES": "Duas versões da mensagem",
       "LISTA_ID": "Qual lista de e-mail",
       "TIME_ID": "Entre quem",
       "REGISTRO": "Onde fazer os passos de dentro",
@@ -583,7 +584,8 @@
         "ESPERAR": "Falta completar o passo “Esperar até algo acontecer”: escolha a condição.",
         "OUTRO_REGISTRO": "Falta completar o passo “Fazer no contato ou nos cards ligados”: escolha onde fazer e ponha pelo menos um passo dentro dele.",
         "CADA": "Falta completar o passo “{nome}”: ponha pelo menos um passo em “Em cada um da lista”.",
-        "NOVO": "Falta completar o passo “{nome}”: toque em Alterar nele e preencha o que falta."
+        "NOVO": "Falta completar o passo “{nome}”: toque em Alterar nele e preencha o que falta.",
+        "VERSAO_2": "O passo “Mandar mensagem ao cliente” está incompleto: escreva a versão 2 da mensagem, diferente da versão 1, ou desligue “Duas versões da mensagem”."
       }
     },
     "CRIADO": {

@@ -27,6 +27,7 @@ module CampaignJourney::AudienceContacts
 
   class << self
     # #3098: sem o grupo de controle da campanha (quem foi sorteado para não receber).
+    # #3099: com as duas versões, enquanto o resto espera a escolha, só quem caiu no teste.
     def contacts_for(link, channel:)
       raise ArgumentError, "unsupported channel #{channel}" unless CHANNELS.include?(channel)
       return Contact.none if link&.campaign_import.blank?
@@ -37,8 +38,8 @@ module CampaignJourney::AudienceContacts
             else
               email_matches(link.campaign_import, account: account).map(&:contact_id)
             end
-      contatos = account.contacts.where(id: ids).campaign_reachable
-      CampaignJourney::GrupoDeControle.new(link).sem_o_grupo(contatos)
+      contatos = CampaignJourney::GrupoDeControle.new(link).sem_o_grupo(account.contacts.where(id: ids).campaign_reachable)
+      CampaignJourney::DuasVersoes.new(link).so_quem_recebe_agora(contatos)
     end
 
     # Contact ids whose row had a valid mobile that the contact still has. Same rule for the

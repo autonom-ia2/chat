@@ -362,8 +362,10 @@ const resumoDaAcao = (passo, entrada, t) =>
 // O texto de "mensagem" e "avisar" (e o assunto do "email") na linha: os dados entre colchetes, pelo
 // nome do catálogo; texto longo corta, e o inteiro fica no "Alterar".
 const CABE_NA_LINHA = 60;
-const fraseDoTexto = (partes, catalogo, t) => {
-  const texto = (partes || [])
+// #3099: o texto inteiro, com os dados entre colchetes (o cartão de cada versão
+// no Histórico).
+export const textoInteiro = (partes, catalogo, t) =>
+  (partes || [])
     .map(parte =>
       typeof parte === 'string'
         ? parte
@@ -371,6 +373,8 @@ const fraseDoTexto = (partes, catalogo, t) => {
     )
     .join('')
     .trim();
+const fraseDoTexto = (partes, catalogo, t) => {
+  const texto = textoInteiro(partes, catalogo, t);
   if (!texto) return t(`${P}.FALTA_TEXTO`);
   return texto.length > CABE_NA_LINHA
     ? `${texto.slice(0, CABE_NA_LINHA).trimEnd()}…`

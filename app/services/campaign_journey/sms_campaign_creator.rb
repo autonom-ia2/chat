@@ -34,6 +34,12 @@ class CampaignJourney::SmsCampaignCreator < CampaignJourney::AudienceCampaignCre
     raise Error.new(e.message, 'The message tokens do not match the audience', e.details.presence)
   end
 
+  # #3099: o texto da versão 2, com as mesmas conferências da versão 1.
+  def segunda_versao!(dados)
+    CampaignJourney::DuasVersoes::Segunda.sms(dados, campaign_import: @campaign_import, defaults: message.defaults,
+                                                     primeiro: @attributes[:message])
+  end
+
   def message
     @message ||= CampaignJourney::SmsMessage.new(
       @attributes[:message], campaign_import: @campaign_import, defaults: @attributes[:variable_defaults]

@@ -7,6 +7,9 @@
 # Subclasses give the channel rules: #validate_inbox!, #validate_feature!, #validate_message!,
 # #campaign_attributes and #link_attributes, and #audience_available? when the channel has its own
 # audience badge (SMS: `channels.sms`; WhatsApp: `channels.whatsapp`).
+#
+# #3099: `duas_versoes` ({ criterio, divisao, espera_horas, segunda }) liga as duas versões da mensagem; cada canal
+# confere a sua versão 2 em #segunda_versao! (CampaignJourney::DuasVersoes::Segunda).
 class CampaignJourney::AudienceCampaignCreator
   class Error < StandardError
     attr_reader :code, :details
@@ -60,9 +63,27 @@ class CampaignJourney::AudienceCampaignCreator
     validate_schedule!
     validate_audience!
     validate_message!
+    validate_duas_versoes!
   end
 
   def validate_feature!; end
+
+  def duas_versoes_params
+    @attributes[:duas_versoes].to_h.with_indifferent_access.presence
+  end
+
+  def validate_duas_versoes!
+    return if duas_versoes_params.nil?
+
+    CampaignJourney::DuasVersoes.conferir!(duas_versoes_params)
+    @segunda = segunda_versao!(duas_versoes_params[:segunda].to_h.with_indifferent_access)
+  rescue CampaignJourney::DuasVersoes::Invalida => e
+    raise Error.new(e.code, 'The second version of the message cannot be used', e.details)
+  end
+
+  def segunda_versao!(_dados)
+    raise CampaignJourney::DuasVersoes::Invalida, 'duas_versoes_indisponivel'
+  end
 
   def create_campaign_and_link!
     campaign = @account.campaigns.create!(campaign_attributes.merge({ sender: @sender }.compact))
@@ -74,7 +95,9 @@ class CampaignJourney::AudienceCampaignCreator
   # #3098: a janela de compra e o grupo de controle escolhidos na revisão, com o sorteio, na mesma transação: o envio
   # nunca vê a campanha sem o grupo já separado.
   def medir!(link)
-    CampaignJourney::Medicao.new(link).aplicar!(@attributes) { CampaignJourney::Medicao.publico(link, @channel) }
+    CampaignJourney::Medicao.new(link).aplicar!(@attributes, duas_versoes: duas_versoes_params, segunda: @segunda) do
+      CampaignJourney::Medicao.publico(link, @channel)
+    end
   end
 
   def inbox

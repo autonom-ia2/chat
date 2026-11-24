@@ -74,9 +74,14 @@ const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
 // G13 (#2670): o passo que manda dados para fora pede a chave de integrações.
-const podeIntegrar = usePermissionGranted('integration_manage');
-const temChave = chave =>
-  chave === 'integration_manage' ? podeIntegrar.value : false;
+// #3100: os da fidelidade ("Dar carimbos", "Mandar cupom") pedem fidelidade_manage.
+// Mesma regra do servidor (permission_granted?): administrador ou a função com a
+// chave. Chave que não está aqui não libera o passo.
+const CHAVES_DOS_PASSOS = {
+  integration_manage: usePermissionGranted('integration_manage'),
+  fidelidade_manage: usePermissionGranted('fidelidade_manage'),
+};
+const temChave = chave => Boolean(CHAVES_DOS_PASSOS[chave]?.value);
 const { catalogo: doServidor } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
@@ -692,6 +697,8 @@ onMounted(() => {
                 :automacao-id="automacao.id"
                 :catalogo="catalogoComTextos"
                 :account-id="Number(route.params.accountId)"
+                :receita-ativa="automacao.versao?.receita || null"
+                :pode-mudar="podeMudar"
               />
             </div>
             <aside class="flex flex-col gap-3 lg:sticky lg:top-6">
