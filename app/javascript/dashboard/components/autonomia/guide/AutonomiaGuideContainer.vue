@@ -41,7 +41,7 @@ import GuideTarefa from './GuideTarefa.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import { useAvisosDoGuia } from './useAvisosDoGuia';
 import { useFraseDaEtapa } from './useFraseDaEtapa';
-import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
+import GuideResposta from './GuideResposta.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -566,6 +566,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       execucao,
       lembrancas: data.lembrancas || null,
       tarefa: data.tarefa || null,
+      graficos: data.graficos || null,
       pedidoId,
     });
     contarOQueFez(execucao);
@@ -585,6 +586,8 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       artigos: data.artigos || null,
       execucao,
       tarefa: data.tarefa || null,
+      // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
+      graficos: data.graficos || null,
       pedidoId,
       repetir,
     });
@@ -1349,8 +1352,10 @@ const classeDoPainel = computed(() =>
                     : ''
                 "
               >
-                <CopilotAssistantMessage
+                <!-- #3158 — com gráfico do relatório, cada um no lugar do marcador. -->
+                <GuideResposta
                   :message="item.message"
+                  :graficos="item.graficos || []"
                   :is-last-message="index === messages.length - 1"
                   :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
                 />

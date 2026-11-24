@@ -438,6 +438,41 @@ describe('autonomiaGuide store — conversa guardada', () => {
     expect(store.arquivosPendentes().map(item => item.id)).toEqual([esperando]);
   });
 
+  // #3158 — o gráfico do relatório volta ao reabrir a conversa, nos três
+  // desfechos: o número veio da ferramenta, não do modelo.
+  it('os gráficos do turno voltam na resposta pronta, retida e com falha', () => {
+    const graficos = [
+      {
+        id: '1',
+        modo: 'serie',
+        titulo: 'Conversas por dia',
+        barras: [{ rotulo: '01/10', valor: 3 }],
+      },
+    ];
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ graficos }),
+          turno({ pedido_id: 'p2', status: 'retido', graficos }),
+          turno({ pedido_id: 'p3', status: 'failed', graficos }),
+          turno({ pedido_id: 'p4' }),
+        ],
+      },
+      avisos
+    );
+
+    const respostas = store.messages.filter(
+      m => m.message_type === 'assistant'
+    );
+    expect(respostas.slice(0, 3).map(m => m.graficos)).toEqual([
+      graficos,
+      graficos,
+      graficos,
+    ]);
+    expect(respostas[3].graficos).toEqual([]);
+  });
+
   it('"Nova conversa" esquece a conversa guardada', () => {
     store.hidratar({ id: 4, turnos: [turno()] }, avisos);
 

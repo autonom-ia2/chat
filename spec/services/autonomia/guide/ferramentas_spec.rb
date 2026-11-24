@@ -507,7 +507,8 @@ RSpec.describe 'Ferramentas do Guia' do
      Autonomia::Agents::Tools::Native::GuiaTela,
      Autonomia::Agents::Tools::Native::GuiaCentral,
      Autonomia::Agents::Tools::Native::GuiaPagina,
-     Autonomia::Agents::Tools::Native::GuiaAnexo].each do |ferramenta|
+     Autonomia::Agents::Tools::Native::GuiaAnexo,
+     Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento].each do |ferramenta|
       it "de #{ferramenta.slug} é válido em strict mode", :aggregate_failures do
         esquema = ferramenta.openai_schema(nil)
         parametros = esquema[:parameters]
