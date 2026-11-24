@@ -223,6 +223,15 @@ RSpec.describe CustomAttributeDefinition do
       expect(definicao.reload.attribute_key).to eq('autonomia_prospecting_lead_id')
     end
 
+    # MOTIVO: uma definição comum renomeada para a chave da WAHA passaria a valer como interna sem ser a dela.
+    it 'uma definição comum não troca a chave para a de uma interna', :aggregate_failures do
+      cor = campo('cor_favorita')
+
+      expect(cor.update(attribute_key: 'waha_whatsapp_chat_id')).to be(false)
+      expect(cor.errors[:base]).to eq([recusa])
+      expect(cor.reload.attribute_key).to eq('cor_favorita')
+    end
+
     # MOTIVO: a trava é só das internas; a definição comum continua livre, mesmo com chave parecida.
     it 'as outras definições continuam livres', :aggregate_failures do
       comum = campo('waha_whatsapp_outra')

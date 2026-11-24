@@ -287,7 +287,7 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
       contact = described_class.new(lead: lead, user: user).perform.contact
 
       expect(contact.custom_attributes).not_to have_key('job_title')
-      expect(contact.custom_attributes).not_to have_key(described_class::WRITTEN_JOB_TITLE_KEY)
+      expect(contact.custom_attributes).not_to have_key(Autonomia::Prospecting::CargoEscrito::WRITTEN_KEY)
       expect(contact.additional_attributes['job_title']).to eq('Cargo antigo')
     end
   end

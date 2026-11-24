@@ -7,8 +7,9 @@
 # - Contato existente só ganha o que está vazio. O nome e o cargo só mudam quando fomos nós que os escrevemos (a marca
 #   em custom_attributes): assim "Usar como contato" troca a empresa pela pessoa, mas o nome e o cargo que o usuário
 #   deu ficam, mesmo quando o nome dele coincide com o do negócio no Google.
-# - O cargo vai em `custom_attributes.job_title`, onde o card, o Decisor e a ficha o leem (#3176; antes ia em
-#   additional_attributes, que nenhuma tela mostra; Relationships::ArrumarContatosDaProspeccaoJob move os antigos).
+# - O cargo vai em `custom_attributes.job_title`, onde o card, o Decisor e a ficha o leem (Autonomia::Prospecting::CargoEscrito,
+#   #3176; antes ia em additional_attributes, que nenhuma tela mostra; Relationships::ArrumarContatosDaProspeccaoJob move
+#   os antigos).
 # - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
 #   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
 #   dados dele.
@@ -19,8 +20,6 @@ class Autonomia::Prospecting::ContactConverter
 
   DECISION_STATUSES = %w[confirmed possible].freeze
   WRITTEN_NAME_KEY = 'autonomia_prospecting_contact_name'.freeze
-  WRITTEN_JOB_TITLE_KEY = 'autonomia_prospecting_contact_job_title'.freeze
-  JOB_TITLE_KEY = 'job_title'.freeze
   # Controle interno do vínculo com o lead (#3176, Relationships::ChavesInternas): não aparecem em tela nem vão para IA.
   LEAD_ID_KEY = 'autonomia_prospecting_lead_id'.freeze
   PROVIDER_KEY = 'autonomia_prospecting_provider'.freeze
@@ -84,7 +83,9 @@ class Autonomia::Prospecting::ContactConverter
     @account.contacts.find_by(phone_number: phones)
   end
 
-  def by_identifier = @account.contacts.find_by(identifier: prospecting_identifier)
+  def by_identifier
+    @account.contacts.find_by(identifier: prospecting_identifier)
+  end
 
   def by_email
     return if email.nil?
@@ -101,7 +102,9 @@ class Autonomia::Prospecting::ContactConverter
     contact.opt_out!(source: Autonomia::Prospecting::ContactOptOutSync::SOURCE)
   end
 
-  def build_contact = @account.contacts.new(contact_type: :lead, identifier: prospecting_identifier)
+  def build_contact
+    @account.contacts.new(contact_type: :lead, identifier: prospecting_identifier)
+  end
 
   def enrich_contact(contact)
     return if another_leads_contact?(contact)
@@ -123,8 +126,9 @@ class Autonomia::Prospecting::ContactConverter
 
   def rename(contact)
     contact.name = contact_name
-    contact.custom_attributes = contact.custom_attributes.to_h.merge(WRITTEN_NAME_KEY => contact_name)
-    write_job_title(contact)
+    attributes = contact.custom_attributes.to_h.merge(WRITTEN_NAME_KEY => contact_name)
+    role = @lead.decision_role.presence if decision_maker?
+    contact.custom_attributes = Autonomia::Prospecting::CargoEscrito.new(attributes).com(role)
   end
 
   # Só o nome que nós escrevemos (contato novo, sem nome, ou com a marca WRITTEN_NAME_KEY) é trocado. Contato que o
@@ -133,18 +137,6 @@ class Autonomia::Prospecting::ContactConverter
     return true if contact.new_record? || contact.name.blank?
 
     contact.custom_attributes.to_h[WRITTEN_NAME_KEY] == contact.name
-  end
-
-  # O cargo (custom_attributes.job_title) segue a mesma regra: só grava o do decisor quando o campo está vazio ou guarda o
-  # que nós gravamos (a marca WRITTEN_JOB_TITLE_KEY). Sem decisor, sai só o cargo que nós pusemos; o que o usuário
-  # digitou nunca é apagado.
-  def write_job_title(contact)
-    attributes = contact.custom_attributes.to_h
-    current = attributes[JOB_TITLE_KEY]
-    return if current.present? && current != attributes[WRITTEN_JOB_TITLE_KEY]
-
-    role = decision_maker? ? @lead.decision_role.presence : nil
-    contact.custom_attributes = attributes.merge(JOB_TITLE_KEY => role, WRITTEN_JOB_TITLE_KEY => role).compact
   end
 
   # Valor único por conta (telefone, e-mail, identificador): só preenche o vazio, e só se outro contato não o usa.

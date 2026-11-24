@@ -2,8 +2,8 @@
 #
 # - As da WAHA (Waha::ContactChatId::KEYS): o chat id, o jid e o lid com que a WAHA acha a conversa do contato. Sem a
 #   definição delas a busca da WAHA deixa de filtrar e pode achar o contato errado.
-# - As de controle da Prospecção (Autonomia::Prospecting::ContactConverter): o lead que gravou o contato, o fornecedor,
-#   o código do lugar, quem converteu, e as marcas do nome e do cargo que nós escrevemos. A nota e o número de
+# - As de controle da Prospecção (Autonomia::Prospecting::ContactConverter e CargoEscrito): o lead que gravou o contato,
+#   o fornecedor, o código do lugar, quem converteu, e as marcas do nome e do cargo que nós escrevemos. A nota e o número de
 #   avaliações no Google não estão aqui: servem à equipe e aparecem na ficha com nome em português.
 #
 # Quem decide o que é interno é esta lista, e só ela: o painel a recebe na resposta da conta (`chaves_internas`) e
@@ -22,7 +22,7 @@ class Relationships::ChavesInternas
     CONVERSOR::PROVIDER_PLACE_ID_KEY,
     CONVERSOR::CONVERTED_BY_ID_KEY,
     CONVERSOR::WRITTEN_NAME_KEY,
-    CONVERSOR::WRITTEN_JOB_TITLE_KEY
+    Autonomia::Prospecting::CargoEscrito::WRITTEN_KEY
   ].freeze
 
   def self.interna?(chave)

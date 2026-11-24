@@ -1054,6 +1054,12 @@ RSpec.describe Captain::Assistant::AgentRunnerService do
       )
     end
 
+    it 'tira do contato as chaves internas (#3176)' do
+      contact.update!(custom_attributes: { 'cor_favorita' => 'azul', 'waha_whatsapp_chat_id' => 'chat-ficticio' })
+
+      expect(service.send(:build_state).dig(:contact, :custom_attributes)).to eq('cor_favorita' => 'azul')
+    end
+
     it 'lets Captain verify the customer when an enabled tool needs a verified email' do
       create(:captain_custom_tool, account: account, assistant: assistant, settings: { 'requires_email_verification' => true })
 

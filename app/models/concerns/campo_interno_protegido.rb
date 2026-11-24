@@ -4,8 +4,9 @@
 # "Para que serve" continuam editáveis. Vale para toda porta (tela, Guia, MCP, API): quem recusa é o modelo, e o
 # controller devolve o motivo com 422 (RecordInvalid no update, `destroy` falso no apagar).
 #
-# Olha a chave como está no banco: trocar `attribute_key` de uma interna é recusado, e uma definição comum não vira
-# interna por aqui (criar com a chave de uma interna continua possível, como a WAHA faz).
+# Olha a chave dos dois lados: trocar `attribute_key` de uma interna é recusado, e trocar a chave de uma definição comum
+# para a de uma interna também (ela passaria a valer como interna sem ser a da WAHA ou da Prospecção). Criar com a chave
+# de uma interna continua possível, como a WAHA faz.
 #
 # A conta apagada leva as definições junto (`dependent: :destroy_async`): o job roda depois que a conta saiu do banco,
 # e aí a definição não tem mais conta para proteger.
@@ -22,8 +23,9 @@ module CampoInternoProtegido
   private
 
   def campo_interno_ao_mudar
-    return unless Relationships::ChavesInternas.interna?(attribute_key_in_database)
-    return unless MUDANCAS.any? { |campo| will_save_change_to_attribute?(campo) }
+    era_interna = Relationships::ChavesInternas.interna?(attribute_key_in_database)
+    vira_interna = will_save_change_to_attribute_key? && Relationships::ChavesInternas.interna?(attribute_key)
+    return unless vira_interna || (era_interna && MUDANCAS.any? { |campo| will_save_change_to_attribute?(campo) })
 
     errors.add(:base, I18n.t('errors.custom_attribute_definition.campo_interno'))
   end

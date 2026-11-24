@@ -104,12 +104,17 @@ export function useEscolhasDosGatilhos() {
   const { t } = useI18n();
   const funis = ref([]);
   const etapasPorFunil = ref({});
-  const definicoes = ref([]);
+  // As definições como vieram da API; a lista sem as internas acompanha o
+  // getter, que muda quando a conta chega ou troca.
+  const definicoesDaApi = ref([]);
   // G32: as páginas de agendamento, para o filtro dos gatilhos de reunião.
   const paginas = ref([]);
   const caixas = useMapGetter('inboxes/getInboxes');
   // #3176: as chaves internas (WAHA, controle da Prospecção) não viram gatilho.
   const chavesInternas = useMapGetter('attributes/getChavesInternas');
+  const definicoes = computed(() =>
+    semChavesInternas(definicoesDaApi.value, chavesInternas.value)
+  );
   const faixasDeCompra = ref({ ...FAIXAS_PADRAO });
 
   const carregarFunis = async () => {
@@ -126,7 +131,7 @@ export function useEscolhasDosGatilhos() {
 
   const carregarCampos = async () => {
     const { data } = await AttributeAPI.getAttributesByModel();
-    definicoes.value = semChavesInternas(data || [], chavesInternas.value);
+    definicoesDaApi.value = data || [];
   };
 
   const carregarPaginas = async () => {

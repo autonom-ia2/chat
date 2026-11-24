@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #3176 — o "Sobre a pessoa" que a Prospecção gravou com a categoria crua do Google sai, e o cargo que ela gravou em
+# #3176 — o "Sobre a pessoa" que a Prospecção gravou com um tipo cru do Google sai, e o cargo que ela gravou em
 # additional_attributes passa para custom_attributes; o resto fica.
 RSpec.describe Relationships::ArrumarContatosDaProspeccaoJob do
   let(:account) { create(:account) }
@@ -43,6 +43,14 @@ RSpec.describe Relationships::ArrumarContatosDaProspeccaoJob do
     expect(contact.reload.additional_attributes['description']).to eq('Atende só de manhã.')
   end
 
+  # MOTIVO: uma busca nova regrava a categoria do lead; o "Sobre a pessoa" antigo ainda é um tipo do Google daquele lugar.
+  it 'tira a categoria antiga quando ela ainda está nos tipos do Google do lugar' do
+    lead.update!(category: 'medical_clinic', raw_payload: { 'types' => %w[medical_clinic doctor] })
+
+    expect(described_class.perform_now).to eq(1)
+    expect(contact.reload.additional_attributes).not_to have_key('description')
+  end
+
   # MOTIVO: contato que outro lead gravou (mesmo telefone de outro negócio) é daquele lead; este não mexe nele.
   it 'só arruma o contato do próprio lead' do
     outro = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'lugar-ficticio-2', name: 'Outra',
@@ -54,7 +62,7 @@ RSpec.describe Relationships::ArrumarContatosDaProspeccaoJob do
   end
 
   describe 'cargo' do
-    let(:marca) { Autonomia::Prospecting::ContactConverter::WRITTEN_JOB_TITLE_KEY }
+    let(:marca) { Autonomia::Prospecting::CargoEscrito::WRITTEN_KEY }
 
     def com_cargo(adicional:, proprios: {})
       contact.update!(custom_attributes: interno.merge(marca => 'SOCIA').merge(proprios),
