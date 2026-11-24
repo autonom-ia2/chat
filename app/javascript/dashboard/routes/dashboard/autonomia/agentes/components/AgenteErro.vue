@@ -39,6 +39,7 @@ const ambar = props.tom === 'ambar';
     <div class="flex flex-col items-start gap-1 grow">
       <p class="m-0 text-sm font-semibold text-n-slate-12">{{ titulo }}</p>
       <p v-if="garantia" class="m-0 text-sm text-n-slate-11">{{ garantia }}</p>
+      <slot />
       <AgenteBotao
         v-if="acao"
         variante="contorno"

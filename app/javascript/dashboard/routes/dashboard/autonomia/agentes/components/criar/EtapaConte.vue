@@ -19,6 +19,8 @@ const props = defineProps({
   pensando: { type: Boolean, default: false },
   demorando: { type: Boolean, default: false },
   falhou: { type: Boolean, default: false },
+  // #3202 — a falha foi a chave da OpenAI da conta sem crédito: o cartão diz isso e leva à cobrança da OpenAI.
+  semCredito: { type: Boolean, default: false },
   aviso: { type: String, default: null },
   // #2489 — { nome } do arquivo que não subiu enquanto o turno esperava, ou null.
   falhaAoSubir: { type: Object, default: null },
@@ -41,6 +43,8 @@ const emit = defineEmits(['enviar', 'tentarDeNovo', 'tirar']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR.CONTE';
+const COBRANCA_DA_OPENAI =
+  'https://platform.openai.com/settings/organization/billing/overview';
 
 const intro = computed(() => {
   if (props.ajudante) return t(`${NS}.INTRO_AJUDANTE`);
@@ -203,7 +207,27 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
           {{ t(`${NS}.DEMORANDO`) }}
         </p>
         <AgenteErro
-          v-if="falhou && !pensando"
+          v-if="falhou && !pensando && semCredito && !offline"
+          data-erro-conversa
+          data-sem-credito
+          :titulo="t(`${NS}.SEM_CREDITO`)"
+          :garantia="t(`${NS}.SEM_CREDITO_GARANTIA`)"
+          :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+          @acao="emit('tentarDeNovo')"
+        >
+          <a
+            :href="COBRANCA_DA_OPENAI"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-link-credito
+            class="inline-flex items-center gap-1 text-sm font-medium text-n-blue-11 underline min-h-11"
+          >
+            {{ t(`${NS}.SEM_CREDITO_LINK`) }}
+            <span aria-hidden="true" class="i-lucide-external-link size-4" />
+          </a>
+        </AgenteErro>
+        <AgenteErro
+          v-else-if="falhou && !pensando"
           data-erro-conversa
           :tom="offline ? 'ambar' : 'rubi'"
           :titulo="offline ? t('AGENTS.JORNADA.ERRO.OFFLINE') : t(`${NS}.ERRO`)"

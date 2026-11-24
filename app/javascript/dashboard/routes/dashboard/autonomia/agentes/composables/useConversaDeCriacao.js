@@ -108,6 +108,7 @@ export function useConversaDeCriacao({
   const fase = useMapGetter('autonomiaBuildThreads/getPhase');
   const erroDaStore = useMapGetter('autonomiaBuildThreads/getError');
   const thread = useMapGetter('autonomiaBuildThreads/getThread');
+  const estadoDaThread = useMapGetter('autonomiaBuildThreads/getThreadState');
   const agenteGerado = useMapGetter('autonomiaBuildThreads/getAgent');
   const flags = useMapGetter('autonomiaBuildThreads/getUIFlags');
   const fontes = useMapGetter('autonomiaSources/getSources');
@@ -164,6 +165,12 @@ export function useConversaDeCriacao({
       esgotou.value ||
       ['send', 'failed', 'timeout'].includes(erroDaStore.value) ||
       status.value === 'failed'
+  );
+  // #3202 — a chave da OpenAI da própria conta ficou sem crédito: a tela diz isso e leva à OpenAI.
+  const semCredito = computed(
+    () =>
+      status.value === 'failed' &&
+      estadoDaThread.value?.error === 'ia_sem_credito'
   );
   const respostas = computed(
     () => (mensagensDaStore.value || []).filter(m => m.role === 'user').length
@@ -758,6 +765,7 @@ export function useConversaDeCriacao({
     pensando,
     demorando,
     falhou,
+    semCredito,
     aviso,
     respostas,
     atualizacoes,

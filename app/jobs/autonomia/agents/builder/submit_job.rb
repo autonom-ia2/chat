@@ -14,6 +14,10 @@ module Autonomia
         # #1367 — aviso à tela de quem abriu a conversa: "a thread mudou, busque de novo". Só ids, nunca
         # conteúdo; a tela continua lendo pelo `show`, que aplica o filtro de IP oculto.
         BUILD_THREAD_UPDATED = 'autonomia.build_thread.updated'.freeze
+        # #3202 — a chave da OpenAI da própria conta (integração `crm_kanban_ai`) ficou sem crédito. Código estável para
+        # a tela dizer isso ao dono, no lugar do texto em inglês da OpenAI. Com a chave da plataforma não se usa: o
+        # cliente não tem como resolver, e a falha segue como antes.
+        SEM_CREDITO = 'ia_sem_credito'.freeze
 
         def perform(thread_id, token)
           log_queue_wait(thread_id)
@@ -39,7 +43,7 @@ module Autonomia
         def build(thread, token)
           Autonomia::Agents::Builder.new(account: thread.account, build_thread: thread).run!(token)
         rescue Crm::Ai::ResponsesClient::Error => e
-          fail_build(thread, token, e.message)
+          fail_build(thread, token, motivo_da_falha_da_ia(thread, e))
         rescue ActiveRecord::ActiveRecordError => e
           # Validação/persistência falhou ao aplicar a config (ex.: RecordInvalid por campo longo): falha
           # a thread em vez de deixar o erro borbulhar p/ o Sidekiq (que reexecutaria e travaria em
@@ -88,6 +92,16 @@ module Autonomia
           return [] unless error.is_a?(ActiveRecord::RecordInvalid)
 
           Array(error.record&.errors&.attribute_names).map(&:to_s).uniq
+        end
+
+        def motivo_da_falha_da_ia(thread, error)
+          return error.message unless error.sem_credito? && chave_da_conta?(thread)
+
+          SEM_CREDITO
+        end
+
+        def chave_da_conta?(thread)
+          Crm::Ai::CredentialResolver.new(account: thread.account).resolve&.dig(:source) == :hook
         end
 
         # Só marca falha se ESTA geração ainda era a ativa (ganhou o update guardado pelo token).
