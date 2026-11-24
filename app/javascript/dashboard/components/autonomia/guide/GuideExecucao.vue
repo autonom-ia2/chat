@@ -79,9 +79,9 @@ const desfazer = async () => {
 
 <template>
   <div
-    class="rounded-lg border border-n-weak bg-n-alpha-1 p-3 flex flex-col gap-2"
+    class="rounded-xl border border-n-weak bg-n-solid-1 px-4 py-3 flex flex-col gap-2"
   >
-    <p class="mb-0 text-xs font-medium text-n-slate-11">
+    <p class="mb-0 text-sm font-medium text-n-teal-11">
       {{
         mostrarData
           ? $t('AUTONOMIA_GUIDE.DONE.TITLE_AT', {

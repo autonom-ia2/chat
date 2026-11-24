@@ -47,10 +47,10 @@ watch(painelAberto, async (aberto, antes) => {
 </script>
 
 <template>
-  <div v-if="visivel" class="relative md:hidden shrink-0" data-guia-cabecalho>
+  <div v-show="visivel" class="relative md:hidden shrink-0" data-guia-cabecalho>
     <Button
       ref="botao"
-      :label="t('AUTONOMIA_GUIDE.CONVERSATION_BUTTON')"
+      :label="t('AUTONOMIA_GUIDE.HEADER.NAME')"
       :aria-label="rotulo"
       icon="i-lucide-circle-help"
       sm

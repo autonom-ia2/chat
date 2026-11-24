@@ -3,6 +3,7 @@ import { useRelationships } from 'dashboard/composables/useRelationships';
 import { h, ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { provideSidebarContext, useSidebarResize } from './provider';
+import { useMenuRecolheComOGuia } from './menuEGuia';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
@@ -433,6 +434,10 @@ const sidebarStyle = computed(() => ({
       }
     : {}),
 }));
+
+// #3184 — o menu publica a largura para o Guia, e recolhe (sem gravar) quando o
+// Guia abre. Ver menuEGuia.js.
+useMenuRecolheComOGuia({ sidebarWidth, isCollapsed, celular: isMobile });
 
 // On mobile, sidebar is always expanded (flyout mode)
 const isEffectivelyCollapsed = computed(

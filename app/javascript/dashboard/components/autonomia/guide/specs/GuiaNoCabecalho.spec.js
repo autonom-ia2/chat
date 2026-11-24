@@ -37,7 +37,7 @@ describe('GuiaNoCabecalho (#3192)', () => {
     const wrapper = montar();
     const caixa = wrapper.get('[data-guia-cabecalho]');
     expect(caixa.classes()).toContain('md:hidden');
-    expect(caixa.text()).toContain('AUTONOMIA_GUIDE.CONVERSATION_BUTTON');
+    expect(caixa.text()).toContain('AUTONOMIA_GUIDE.HEADER.NAME');
     expect(wrapper.get('button').attributes('aria-label')).toBe(
       'AUTONOMIA_GUIDE.LAUNCHER_LABEL'
     );
@@ -62,13 +62,13 @@ describe('GuiaNoCabecalho (#3192)', () => {
   it('não aparece sem Guia na conta nem com o painel aberto', () => {
     disponivel.value = false;
     const semGuia = montar();
-    expect(semGuia.find('[data-guia-cabecalho]').exists()).toBe(false);
+    expect(semGuia.get('[data-guia-cabecalho]').isVisible()).toBe(false);
     semGuia.unmount();
 
     disponivel.value = true;
     uiSettingsRef.value = { is_autonomia_guide_panel_open: true };
     const aberto = montar();
-    expect(aberto.find('[data-guia-cabecalho]').exists()).toBe(false);
+    expect(aberto.get('[data-guia-cabecalho]').isVisible()).toBe(false);
     aberto.unmount();
   });
 
@@ -82,7 +82,7 @@ describe('GuiaNoCabecalho (#3192)', () => {
     disponivel.value = true;
     await nextTick();
     await nextTick();
-    expect(wrapper.find('[data-guia-cabecalho]').exists()).toBe(true);
+    expect(wrapper.get('[data-guia-cabecalho]').isVisible()).toBe(true);
     expect(document.activeElement).toBe(outro);
     wrapper.unmount();
     outro.remove();
