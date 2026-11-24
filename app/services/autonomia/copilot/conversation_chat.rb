@@ -106,11 +106,19 @@ module Autonomia
         end
       end
 
-      # #3198: keeps the END when it overflows — with files in it, the cap is reached sooner, and the newest messages
-      # are the ones the operator is asking about.
+      # #3198: builds from the newest message back and stops at the cap — with files in it, the cap is reached sooner,
+      # and the newest messages are the ones the operator is asking about. Whole lines only (who spoke stays on each
+      # line), and a document in a message that would not fit is never downloaded.
       def transcript
         midia.ler_pendentes(chat_messages)
-        chat_messages.map { |m| linha(m) }.join("\n").last(MAX_TRANSCRIPT)
+        linhas = []
+        chat_messages.reverse_each do |message|
+          linha = linha(message).truncate(MAX_TRANSCRIPT)
+          break if linhas.any? && linhas.sum { |l| l.length + 1 } + linha.length > MAX_TRANSCRIPT
+
+          linhas.unshift(linha)
+        end
+        linhas.join("\n")
       end
 
       def linha(message)

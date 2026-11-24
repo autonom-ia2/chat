@@ -26,10 +26,18 @@ class Autonomia::Copilot::MidiaDaConversa
     @account = account
   end
 
-  # Lê agora, pelo leitor do CRM, a mídia ainda não lida das mensagens mais novas.
+  # Lê agora, pelo leitor do CRM, a mídia ainda não lida das mensagens mais novas, com um prazo só para todas (a
+  # leitura roda dentro do job da pergunta). Sem a flag do leitor, nada é lido nem enfileirado.
   def ler_pendentes(messages)
+    return unless Crm::Ai::LeitorDeMidia.ligada?(@account)
+
+    ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now
     com_pendente = messages.select { |message| message.attachments.any? { |anexo| Crm::Ai::LeitorDeMidia.pendente?(anexo) } }
-    com_pendente.last(MAX_MENSAGENS_LIDAS_NA_HORA).each { |message| ler_em_linha(message) }
+    com_pendente.last(MAX_MENSAGENS_LIDAS_NA_HORA).reverse_each do |message|
+      break if Time.current >= ate_em
+
+      ler_em_linha(message, ate_em)
+    end
   end
 
   # -> String com uma linha por anexo da mensagem, ou vazia.
@@ -39,11 +47,13 @@ class Autonomia::Copilot::MidiaDaConversa
 
   private
 
-  def ler_em_linha(message)
-    Crm::Ai::LeitorDeMidia.ler_em_linha(message)
+  # Como na leitura em linha do assunto (Crm::Ai::LeitorDeMidia.ler_a_rajada): o erro vai ao rastreador e ao log, e a
+  # pergunta segue com o anexo marcado como não lido.
+  def ler_em_linha(message, ate_em)
+    Crm::Ai::LeitorDeMidia.ler_em_linha(message, ate_em)
     message.attachments.reload
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][copilot][midia] leitura_falhou mensagem=#{message.id} erro=#{e.class}")
+    registrar(e, "leitura_falhou mensagem=#{message.id}")
   end
 
   def linha(anexo)
@@ -68,8 +78,13 @@ class Autonomia::Copilot::MidiaDaConversa
 
     Autonomia::Guide::LeitorDeMidia.new(account: @account).ler(blob).presence || NAO_LIDO
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][copilot][midia] documento_falhou anexo=#{anexo.id} erro=#{e.class}")
+    registrar(e, "documento_falhou anexo=#{anexo.id}")
     NAO_LIDO
+  end
+
+  def registrar(erro, onde)
+    ChatwootExceptionTracker.new(erro, account: @account).capture_exception
+    Rails.logger.error("[autonomia][copilot][midia] #{onde} erro=#{erro.class}")
   end
 
   def nome(anexo)

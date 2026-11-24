@@ -21,8 +21,11 @@ RSpec.describe Autonomia::Copilot::MidiaDaConversa do
   end
 
   it 'reaproveita o texto que já está no anexo, sem pagar de novo', :aggregate_failures do
+    account.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
     audio = anexar_audio(mensagem, meta: { 'transcribed_text' => 'quero cancelar o plano' })
     foto = anexar_imagem(mensagem, meta: { 'ai_caption' => 'carteira de motorista' })
+
+    midia.ler_pendentes([audio.message, foto.message])
 
     expect(midia.texto(audio.message)).to eq('[Áudio: quero cancelar o plano]')
     expect(midia.texto(foto.message)).to eq('[Imagem: carteira de motorista]')
@@ -73,11 +76,23 @@ RSpec.describe Autonomia::Copilot::MidiaDaConversa do
     expect(midia.texto(audio.message).length).to be <= described_class::MAX_POR_ANEXO + '[Áudio: ]'.length
   end
 
-  it 'falha na leitura não derruba o copiloto' do
+  it 'sem a flag do leitor, não lê nem enfileira nada', :aggregate_failures do
     foto = anexar_imagem(mensagem)
+
+    expect { midia.ler_pendentes([foto.message]) }.not_to have_enqueued_job(Crm::Ai::LerMidiaJob)
+    expect(legendas).not_to have_received(:caption)
+    expect(midia.texto(foto.message)).to eq("[Imagem: #{described_class::NAO_LIDO}]")
+  end
+
+  it 'falha na leitura vai ao rastreador de erros e não derruba o copiloto', :aggregate_failures do
+    account.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
+    foto = anexar_imagem(mensagem)
+    rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
     allow(Crm::Ai::LeitorDeMidia).to receive(:ler_em_linha).and_raise(ActiveRecord::StatementInvalid)
 
     expect { midia.ler_pendentes([foto.message]) }.not_to raise_error
+    expect(rastreador).to have_received(:capture_exception)
     expect(midia.texto(foto.message)).to eq("[Imagem: #{described_class::NAO_LIDO}]")
   end
 end
