@@ -1080,6 +1080,7 @@ onMounted(() => {
           :pensando="conversa.pensando.value"
           :demorando="conversa.demorando.value"
           :falhou="conversa.falhou.value"
+          :sem-credito="conversa.semCredito.value"
           :aviso="conversa.aviso.value"
           :falha-ao-subir="conversa.falhaAoSubir.value"
           :fechada="conversa.fechada.value"
