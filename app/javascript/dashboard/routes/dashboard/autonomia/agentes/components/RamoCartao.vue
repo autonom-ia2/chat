@@ -2,6 +2,7 @@
 import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { TOM_DO_RAMO } from '../constants/modelosDeRamo';
+import AgenteErro from './AgenteErro.vue';
 
 // #2881 — um ramo de seguro na fileira "Prontos para o seu ramo". Mais baixo que o ModeloCartao (sem o celular): a
 // conversa de exemplo aparece ao lado, na criação. O cartão inteiro escolhe o ramo: o "Usar este" se estica sobre ele
@@ -11,6 +12,7 @@ const props = defineProps({
   podeUsar: { type: Boolean, default: false },
   comecando: { type: Boolean, default: false },
   bloqueado: { type: Boolean, default: false },
+  falhou: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['usar']);
@@ -75,5 +77,13 @@ const usar = () => {
         aria-hidden="true"
       />
     </button>
+    <AgenteErro
+      v-if="falhou"
+      class="relative z-10"
+      :titulo="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO')"
+      :garantia="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA')"
+      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+      @acao="usar"
+    />
   </li>
 </template>

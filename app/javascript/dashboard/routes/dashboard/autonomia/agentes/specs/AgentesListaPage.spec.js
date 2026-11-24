@@ -48,7 +48,11 @@ const router = vi.hoisted(() => ({
 }));
 vi.mock('vue-router', () => ({ useRouter: () => router }));
 
-const api = vi.hoisted(() => ({ semana: vi.fn(), canaisOcupados: vi.fn() }));
+const api = vi.hoisted(() => ({
+  semana: vi.fn(),
+  canaisOcupados: vi.fn(),
+  modelosDeRamo: vi.fn(),
+}));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
 // #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
 const doPost = vi.hoisted(() => ({
@@ -128,6 +132,7 @@ describe('AgentesListaPage', () => {
     estado.podeConectarCanal = true;
     estado.admin = true;
     prepararStore();
+    api.modelosDeRamo.mockResolvedValue({ data: { modelos: [] } });
     api.semana.mockResolvedValue({
       data: { payload: [{ agent_id: 3, answered: 12, handed: 3 }] },
     });
@@ -153,6 +158,15 @@ describe('AgentesListaPage', () => {
       const wrapper = await montar();
       const nomes = wrapper.findAll('[data-cartao] h2').map(n => n.text());
       expect(nomes).toEqual(['Bia', 'Leo', 'Rascunho']);
+      wrapper.unmount();
+    });
+
+    it('has no ready-made insurance row once the account has agents (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
       wrapper.unmount();
     });
 
@@ -605,6 +619,109 @@ describe('AgentesListaPage', () => {
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
       expect(wrapper.find('[data-copiloto]').exists()).toBe(true);
       expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('has no ready-made insurance row when the server releases none', async () => {
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('shows the ready-made insurance row first, with the three templates below (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto', 'seguro_garantia'] },
+      });
+      const wrapper = await montar();
+      const fileira = wrapper.get('[data-heroi] [data-ramos]');
+      expect(fileira.get('h2').text()).toBe('AGENTS.JORNADA.RAMOS.TITULO');
+      expect(fileira.findAll('[data-ramo]')).toHaveLength(2);
+      expect(wrapper.get('[data-heroi]').text()).toContain(
+        'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
+      );
+      expect(wrapper.text()).not.toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
+      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+      wrapper.unmount();
+    });
+
+    it('goes to the builder with the chosen insurance line (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      const wrapper = await montar();
+      await wrapper.get('[data-usar-ramo]').trigger('click');
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { ramo: 'seguro_auto' },
+      });
+      wrapper.unmount();
+    });
+
+    it('hides the "use" button of the insurance row from who can only view', async () => {
+      estado.podeGerenciar = false;
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(true);
+      expect(wrapper.find('[data-usar-ramo]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('shows the failure under the insurance card when it cannot start (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      router.push.mockRejectedValueOnce(new Error('falhou'));
+      const wrapper = await montar();
+      await wrapper.get('[data-usar-ramo]').trigger('click');
+      await flushPromises();
+      expect(wrapper.get('[data-ramo] [role="alert"]').text()).toContain(
+        'AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA'
+      );
+      wrapper.unmount();
+    });
+
+    it('locks the other cards, of both rows, while one insurance line is starting (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto', 'seguro_garantia'] },
+      });
+      router.push.mockReturnValueOnce(new Promise(() => {}));
+      const wrapper = await montar();
+      const ramos = wrapper.findAll('[data-usar-ramo]');
+      await ramos[0].trigger('click');
+      await nextTick();
+      expect(ramos[0].attributes('aria-busy')).toBe('true');
+      expect(ramos[1].attributes('disabled')).toBeDefined();
+      wrapper.findAll('[data-usar]').forEach(botao => {
+        expect(botao.attributes('disabled')).toBeDefined();
+      });
+      wrapper.unmount();
+    });
+
+    it('locks the insurance cards while a general template is starting (#3208)', async () => {
+      api.modelosDeRamo.mockResolvedValue({
+        data: { modelos: ['seguro_auto'] },
+      });
+      router.push.mockReturnValueOnce(new Promise(() => {}));
+      const wrapper = await montar();
+      await wrapper.findAll('[data-usar]')[0].trigger('click');
+      await nextTick();
+      expect(
+        wrapper.get('[data-usar-ramo]').attributes('disabled')
+      ).toBeDefined();
+      wrapper.unmount();
+    });
+
+    it('stays as always when the insurance reading fails', async () => {
+      const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      api.modelosDeRamo.mockRejectedValue({ response: { status: 500 } });
+      const wrapper = await montar();
+      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+      expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
+      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+      aviso.mockRestore();
       wrapper.unmount();
     });
 
