@@ -185,6 +185,7 @@ const AlterarFalso = {
 };
 const SeletorFalso = {
   name: 'LivreSeletorPasso',
+  props: { temChave: { type: Function, default: () => false } },
   setup(_, { expose }) {
     const aberto = ref(false);
     expose({
@@ -562,6 +563,17 @@ describe('LivreEditorPage', () => {
     expect(wrapper.find('[data-problemas]').text()).toContain(
       'O campo placa não existe'
     );
+  });
+
+  // #3100: sem isto, "Dar carimbos" e "Mandar cupom" nunca entravam na lista de
+  // passos, nem para o administrador (a chave só conhecia integration_manage).
+  it('libera os passos da fidelidade para quem tem fidelidade_manage, e só as chaves conhecidas', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    const temChave = wrapper.findComponent(SeletorFalso).props('temChave');
+    expect(temChave('fidelidade_manage')).toBe(true);
+    expect(temChave('integration_manage')).toBe(true);
+    expect(temChave('chave_que_nao_existe')).toBe(false);
   });
 
   it('marca o passo que o editor não conhece como ação avançada', async () => {
