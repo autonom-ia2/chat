@@ -31,7 +31,9 @@ RSpec.describe CreateHorariosDeRespostaEOpcoesDeEnvio do
 
   it 'cria as colunas do melhor horário e do reenvio, com a conta sem cascata e o contato em cascata', :aggregate_failures do
     expect(colunas('horarios_de_resposta').keys).to eq(%w[id account_id contact_id por_hora respostas hora calculado_em])
-    expect(colunas('horarios_de_resposta')['por_hora'].first).to eq('integer[]')
+    # O adaptador do Postgres devolve o tipo do elemento em sql_type ('integer') e marca o vetor em array?.
+    por_hora = connection.columns('horarios_de_resposta').find { |coluna| coluna.name == 'por_hora' }
+    expect([por_hora.sql_type, por_hora.array?]).to eq(['integer', true])
     expect(colunas('horarios_de_resposta')['hora'].first).to eq('smallint')
     expect(indices('horarios_de_resposta')['idx_horarios_de_resposta_contato']).to eq([%w[account_id contact_id], true])
     expect(chaves('horarios_de_resposta')).to eq([['accounts', nil], ['contacts', :cascade]])

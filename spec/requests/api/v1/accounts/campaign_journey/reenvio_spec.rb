@@ -35,6 +35,9 @@ RSpec.describe 'Campaign journey reenvio (#3101)', :aggregate_failures, type: :r
       expect(response).to have_http_status(:ok)
       campaign = account.campaigns.find(response.parsed_body['id'])
       expect(opcoes_de(campaign)).to have_attributes(reenvio_quem: 'nao_respondeu', reenvio_dias: 3, reenvio_status: 'aguardando')
+      # O display_id vem do banco depois do commit da transação (Campaign#set_display_id): o retorno é montado depois dele.
+      expect(response.parsed_body['display_id']).to be_present
+      expect(response.parsed_body['display_id']).to eq(campaign.display_id)
     end
 
     it 'refuses "did not read" on SMS with 422, and the campaign is not created (D2)' do

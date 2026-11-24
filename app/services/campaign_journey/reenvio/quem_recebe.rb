@@ -71,13 +71,14 @@ class CampaignJourney::Reenvio::QuemRecebe
     CampaignJourney::ResultReplies.new(@campanha.account, CampaignJourney::CampaignMarks.source_id_for(@campanha)).contact_ids
   end
 
-  # Destes contatos, quem mandou mensagem numa caixa das respostas desde o primeiro envio.
+  # Destes contatos, quem mandou mensagem numa caixa das respostas desde o primeiro envio. Sem a ordem padrão da
+  # mensagem (created_at), que o Postgres recusa num SELECT DISTINCT de outra coluna.
   def escreveram_depois(ids)
     inicio = destinatarios.minimum(:sent_at)
     caixas = caixas_das_respostas
     return [] if ids.empty? || inicio.nil? || caixas.empty?
 
-    Message.incoming.where(account_id: @campanha.account_id, inbox_id: caixas).where('messages.created_at >= ?', inicio)
+    Message.incoming.reorder(nil).where(account_id: @campanha.account_id, inbox_id: caixas).where('messages.created_at >= ?', inicio)
            .joins(:conversation).where(conversations: { contact_id: ids }).distinct.pluck('conversations.contact_id')
   end
 

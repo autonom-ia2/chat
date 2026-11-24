@@ -4483,16 +4483,27 @@
           15,
           30
         ]
-      }
+      },
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
     "modelo": "CampaignAudienceLink",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:15",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:52",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:43",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:16"
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:55",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -8725,6 +8736,12 @@
         },
         "tipo": "objeto"
       },
+      "intervalo": {
+        "campos": {
+          "horas": {}
+        },
+        "tipo": "objeto"
+      },
       "limite": {
         "campos": {
           "dias": {},
@@ -8737,8 +8754,8 @@
     "controller": "api/v1/accounts/ritmo_de_envio#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:18",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:31"
     ],
     "sem_corpo": false
   },
@@ -13481,11 +13498,20 @@
         "tipo": "inteiro"
       },
       "janela_de_compra_dias": {},
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "message": {
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
       "preheader": {},
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {},
       "reply_to_inbox_id": {},
       "scheduled_at": {
         "tipo": "data_hora"
@@ -13526,17 +13552,19 @@
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:22",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:125",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:133",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:36",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:108",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:71",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:59",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:98",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:84",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:25",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:24"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:27",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:156",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:177",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:185",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:49",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:160",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:151",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:80",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:72",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:99",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:88",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:30",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:29"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -13547,7 +13575,11 @@
       "from_name",
       "grupo_de_controle_pct",
       "janela_de_compra_dias",
+      "melhor_horario",
       "preheader",
+      "reenvio_dias",
+      "reenvio_mensagem",
+      "reenvio_quem",
       "reply_to_inbox_id",
       "sender_identity_id",
       "sender_inbox_id",
@@ -13768,13 +13800,13 @@
       "leitura crua sem tipo: channel (repassada a ::CampaignJourney::RecipientPreview.new), message_body (repassada a ::CampaignJourney::RecipientPreview.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:43",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:31",
       "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:29",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:27",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:18",
       "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:17",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:16",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:14"
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:15"
     ],
     "sem_corpo": false
   },
@@ -25394,16 +25426,27 @@
           15,
           30
         ]
-      }
+      },
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
     "modelo": "CampaignAudienceLink",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:15",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:52",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:43",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:16"
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:55",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -29493,6 +29536,12 @@
         },
         "tipo": "objeto"
       },
+      "intervalo": {
+        "campos": {
+          "horas": {}
+        },
+        "tipo": "objeto"
+      },
       "limite": {
         "campos": {
           "dias": {},
@@ -29505,8 +29554,8 @@
     "controller": "api/v1/accounts/ritmo_de_envio#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:18",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:31"
     ],
     "sem_corpo": false
   },
