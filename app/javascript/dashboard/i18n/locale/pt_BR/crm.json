@@ -4859,7 +4859,6 @@
     "LAUNCHER": "Guia da Plataforma",
     "THINKING": "Pensando…",
     "HIGHLIGHT_HERE": "é aqui",
-    "RESET": "Nova conversa",
     "KICK_OFF": "Pergunte onde fica qualquer coisa. Eu também vejo os números da sua conta. Se você pedir, eu faço a mudança, e dá para desfazer por 5 dias.",
     "GO_TO_SCREEN": "Ir para a tela",
     "GO_TO_SCREEN_NAMED": "Ir para: {rotulo}",
@@ -4918,7 +4917,7 @@
       "UNDONE": "Desfeito. Tudo voltou a ser como era.",
       "UNDONE_PARTIAL": "Desfiz só uma parte.",
       "UNDONE_NONE": "Não deu para desfazer.",
-      "UNTIL": "Vale até {quando}",
+      "UNTIL": "Dá para desfazer até {quando}",
       "CONFLICTS": "{count} mudança ficou como está porque alguém mexeu nela depois. | {count} mudanças ficaram como estão porque alguém mexeu nelas depois.",
       "PARTIAL": "Parte disto foi apagada sem cópia e não volta.",
       "UNDO_FAILED": "Não consegui desfazer agora. Tente de novo em instantes.",
@@ -5054,7 +5053,6 @@
     "A11Y": {
       "PANEL": "Guia da Plataforma",
       "LOG": "Conversa com o Guia",
-      "NEW_CONVERSATION": "Iniciar nova conversa",
       "CLOSE": "Fechar o Guia",
       "SEND": "Enviar mensagem"
     },

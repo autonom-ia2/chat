@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import GuideConversas from './GuideConversas.vue';
 import GuideFeitos from './GuideFeitos.vue';
@@ -19,7 +19,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['abrir', 'apagou']);
+const emit = defineEmits(['abrir', 'apagou', 'aba']);
 
 const { t } = useI18n();
 
@@ -29,6 +29,8 @@ const ABAS = [
 ];
 
 const ativa = ref(props.abaInicial);
+// O título do painel acompanha a aba (#3184).
+watch(ativa, aba => emit('aba', aba));
 const botoes = ref([]);
 
 // Setas trocam de aba, como o padrão de abas do WAI-ARIA.

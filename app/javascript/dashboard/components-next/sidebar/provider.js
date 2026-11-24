@@ -1,4 +1,4 @@
-import { inject, provide, ref, computed, watch } from 'vue';
+import { inject, provide, ref, computed } from 'vue';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useRouter } from 'vue-router';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -10,13 +10,6 @@ const MIN_WIDTH = 56;
 const COLLAPSED_THRESHOLD = 160;
 const MAX_WIDTH = 320;
 
-// #3184 — o Guia recolhe o menu ao abrir e usa o espaço devolvido.
-export const LARGURAS_DO_MENU = {
-  PADRAO: DEFAULT_WIDTH,
-  RECOLHIDO: MIN_WIDTH,
-  LIMITE_RECOLHIDO: COLLAPSED_THRESHOLD,
-};
-
 // Shared state for active popover (only one can be open at a time)
 const activePopover = ref(null);
 let globalCloseTimeout = null;
@@ -26,15 +19,6 @@ export function useSidebarResize() {
 
   const sidebarWidth = ref(uiSettings.value.sidebar_width || DEFAULT_WIDTH);
   const isCollapsed = computed(() => sidebarWidth.value < COLLAPSED_THRESHOLD);
-
-  // Outra parte da tela pode gravar a largura (o Guia recolhe o menu ao abrir,
-  // #3184): o menu acompanha.
-  watch(
-    () => uiSettings.value.sidebar_width,
-    largura => {
-      sidebarWidth.value = largura || DEFAULT_WIDTH;
-    }
-  );
 
   const setSidebarWidth = width => {
     sidebarWidth.value = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));

@@ -1,107 +1,100 @@
-import { nextTick, ref } from 'vue';
-import { larguraAoAbrir, useLarguraDoGuia } from '../useLarguraDoGuia';
+import { ref } from 'vue';
+import {
+  menuEGuia,
+  recolherParaOGuia,
+} from 'dashboard/components-next/sidebar/menuEGuia';
+import { larguraDoGuia, useLarguraDoGuia } from '../useLarguraDoGuia';
 
-const montar = ({ tela = 1440, menu = 200, guardada } = {}) => {
-  const aberto = ref(false);
-  const uiSettings = ref({
-    sidebar_width: menu,
-    autonomia_guide_width: guardada,
-  });
-  const updateUISettings = vi.fn(novos => {
-    uiSettings.value = { ...uiSettings.value, ...novos };
-  });
-  const largura = useLarguraDoGuia({
-    aberto,
-    embutido: false,
-    larguraDaTela: ref(tela),
-    uiSettings,
-    updateUISettings,
-  });
-  return { aberto, updateUISettings, ...largura };
+const montar = ({
+  tela = 1440,
+  menu = 56,
+  devolvida = 0,
+  embutido = false,
+}) => {
+  menuEGuia.largura.value = menu;
+  menuEGuia.devolvida.value = devolvida;
+  return useLarguraDoGuia({ embutido, larguraDaTela: ref(tela) });
 };
 
-describe('larguraAoAbrir (#3184)', () => {
-  it('soma ao painel antigo o que o menu devolve', () => {
-    expect(larguraAoAbrir({ menu: 200, tela: 1440 })).toBe(464);
+afterEach(() => {
+  menuEGuia.largura.value = 0;
+  menuEGuia.devolvida.value = 0;
+});
+
+describe('larguraDoGuia (#3184)', () => {
+  it('soma ao painel antigo o que o menu devolveu', () => {
+    // menu novo: 256 - 56 = 200 devolvidos; 320 + 200 = 520
+    expect(larguraDoGuia({ tela: 1440, menu: 56, devolvida: 200 })).toBe(520);
+    // menu de sempre: 200 - 56 = 144 devolvidos; 320 + 144 = 464
+    expect(larguraDoGuia({ tela: 1440, menu: 56, devolvida: 144 })).toBe(464);
   });
 
-  it('fica entre 400 e 520 px', () => {
-    expect(larguraAoAbrir({ menu: 56, tela: 1440 })).toBe(400);
-    expect(larguraAoAbrir({ menu: 320, tela: 1600 })).toBe(520);
+  it('com o menu recolhido desde antes, abre com 400', () => {
+    expect(larguraDoGuia({ tela: 1440, menu: 56, devolvida: 0 })).toBe(400);
+  });
+
+  it('nunca passa de 520', () => {
+    expect(larguraDoGuia({ tela: 1600, menu: 56, devolvida: 264 })).toBe(520);
+  });
+
+  it('no tablet encolhe para a tela do meio manter 320 px', () => {
+    // 768 - 56 - 320 = 392
+    expect(larguraDoGuia({ tela: 768, menu: 56, devolvida: 0 })).toBe(392);
+  });
+
+  it('com o menu reaberto no tablet, fica no piso do painel antigo', () => {
+    expect(larguraDoGuia({ tela: 768, menu: 200, devolvida: 200 })).toBe(320);
   });
 });
 
 describe('useLarguraDoGuia (#3184)', () => {
-  it('ao abrir, recolhe o menu e guarda a largura do Guia', async () => {
-    const { aberto, updateUISettings, estilo } = montar();
-
-    aberto.value = true;
-    await nextTick();
-
-    expect(updateUISettings).toHaveBeenCalledWith({
-      sidebar_width: 56,
-      autonomia_guide_width: 464,
-    });
-    expect(estilo.value).toEqual({ width: '464px' });
+  it('na coluna, a largura vem do menu', () => {
+    const { estilo } = montar({ devolvida: 200 });
+    expect(estilo.value).toEqual({ width: '520px' });
   });
 
-  it('ao fechar, não reabre o menu', async () => {
-    const { aberto, updateUISettings } = montar();
-    aberto.value = true;
-    await nextTick();
-    updateUISettings.mockClear();
+  it('acompanha o menu: reabrir o menu encolhe o Guia se não couber', () => {
+    const { estilo } = montar({ tela: 1024, devolvida: 200 });
+    // 1024 - 56 - 320 = 648 de teto; alvo 520
+    expect(estilo.value).toEqual({ width: '520px' });
 
-    aberto.value = false;
-    await nextTick();
+    menuEGuia.largura.value = 256;
 
-    expect(updateUISettings).not.toHaveBeenCalled();
+    // 1024 - 256 - 320 = 448
+    expect(estilo.value).toEqual({ width: '448px' });
   });
 
-  it('com o menu já recolhido, mantém a largura guardada', async () => {
-    const { aberto, updateUISettings, estilo } = montar({
-      menu: 56,
-      guardada: 480,
-    });
+  it('no celular e no modo embutido não dá largura', () => {
+    expect(montar({ tela: 390 }).estilo.value).toEqual({});
+    expect(montar({ embutido: true }).estilo.value).toEqual({});
+  });
+});
 
-    aberto.value = true;
-    await nextTick();
+describe('recolherParaOGuia (#3184)', () => {
+  it('recolhe o menu e guarda quanto devolveu, sem tocar nas preferências', () => {
+    const sidebarWidth = ref(256);
 
-    expect(updateUISettings).not.toHaveBeenCalled();
-    expect(estilo.value).toEqual({ width: '480px' });
+    recolherParaOGuia({ sidebarWidth, recolhido: false, celular: false });
+
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(200);
   });
 
-  it('no celular o Guia ocupa a tela: nada muda no menu', async () => {
-    const { aberto, updateUISettings, estilo } = montar({ tela: 390 });
+  it('menu já recolhido: nada muda e a última devolvida continua', () => {
+    menuEGuia.devolvida.value = 144;
+    const sidebarWidth = ref(56);
 
-    aberto.value = true;
-    await nextTick();
+    recolherParaOGuia({ sidebarWidth, recolhido: true, celular: false });
 
-    expect(updateUISettings).not.toHaveBeenCalled();
-    expect(estilo.value).toEqual({});
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(144);
   });
 
-  it('no tablet encolhe para a tela do meio manter 320 px', async () => {
-    const { aberto, estilo } = montar({ tela: 768 });
+  it('no celular o menu é gaveta: não mexe', () => {
+    const sidebarWidth = ref(256);
 
-    aberto.value = true;
-    await nextTick();
+    recolherParaOGuia({ sidebarWidth, recolhido: false, celular: true });
 
-    // 768 - 56 (menu recolhido) - 320 = 392
-    expect(estilo.value).toEqual({ width: '392px' });
-  });
-
-  it('com o menu reaberto no tablet, nunca fica menor que o painel antigo', async () => {
-    const { aberto, updateUISettings, estilo } = montar({
-      tela: 768,
-      menu: 56,
-      guardada: 520,
-    });
-    aberto.value = true;
-    await nextTick();
-
-    updateUISettings({ sidebar_width: 200 });
-    await nextTick();
-
-    expect(estilo.value).toEqual({ width: '320px' });
+    expect(sidebarWidth.value).toBe(256);
   });
 });

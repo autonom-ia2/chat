@@ -1,18 +1,20 @@
-import { computed, watch } from 'vue';
-import { LARGURAS_DO_MENU } from 'dashboard/components-next/sidebar/provider';
+import { computed } from 'vue';
+import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
 
-// #3184 — no computador, abrir o Guia recolhe o menu lateral, e o espaço que o
-// menu devolve vai para o Guia: a tela do meio não cresce nem encolhe. Fechar
-// o Guia não reabre o menu (pedido do Rodrigo).
+// #3184 — largura do Guia como coluna. Quem recolhe o menu ao abrir o Guia é o
+// próprio menu (Sidebar.vue + menuEGuia.js), sem gravar preferência. Aqui só se
+// calcula a largura; nada é gravado.
 //
-// Largura = a do painel antigo + o que o menu devolveu, entre 400 e 520 px.
-// Ela fica gravada nas preferências: recarregar com o Guia aberto (e o menu já
-// recolhido) mantém a mesma largura.
+// Alvo = painel antigo (320, ou 360 em tela muito larga) + o que o menu
+// devolveu ao recolher, entre 400 e 520 px. Com o menu recolhido desde antes,
+// o Guia abre com 400: mais largo que o antigo, que era estreito demais.
 //
-// Do tablet (768 px) para cima o Guia é uma coluna, como sempre foi. Numa
-// tela estreita a largura guardada encolhe para a tela do meio não ficar com
-// menos de 320 px; o Guia nunca fica menor que o painel antigo. Abaixo de
-// 768 px (celular) o Guia ocupa a tela e o menu fica como está.
+// Teto: a tela do meio fica com pelo menos 320 px. Piso: o Guia nunca fica
+// menor que o painel antigo (320). Quando os dois não cabem, por exemplo num
+// tablet com o menu reaberto, vale o piso: é o mesmo aperto que já existia.
+//
+// Do tablet (768 px) para cima o Guia é uma coluna, como sempre foi. Abaixo
+// disso (celular) ocupa a tela, e a largura vem do CSS.
 export const TELA_COM_COLUNA = 768;
 const TELA_MUITO_LARGA = 1536;
 export const LARGURA_DO_GUIA = { MINIMA: 400, MAXIMA: 520 };
@@ -22,57 +24,34 @@ const MEIO_MINIMO = 320;
 const entre = (valor, minimo, maximo) =>
   Math.min(maximo, Math.max(minimo, valor));
 
-export const larguraAoAbrir = ({ menu, tela }) => {
+export const larguraDoGuia = ({ tela, menu, devolvida }) => {
   const antigo =
     tela >= TELA_MUITO_LARGA ? PAINEL_ANTIGO.LARGO : PAINEL_ANTIGO.NORMAL;
-  const devolvido = Math.max(0, menu - LARGURAS_DO_MENU.RECOLHIDO);
-  return entre(
-    antigo + devolvido,
+  const alvo = entre(
+    antigo + devolvida,
     LARGURA_DO_GUIA.MINIMA,
     LARGURA_DO_GUIA.MAXIMA
   );
+  const cabe = tela - menu - MEIO_MINIMO;
+  return Math.max(PAINEL_ANTIGO.NORMAL, Math.min(alvo, cabe));
 };
 
-export const useLarguraDoGuia = ({
-  aberto,
-  embutido,
-  larguraDaTela,
-  uiSettings,
-  updateUISettings,
-}) => {
-  const telaLarga = computed(() => larguraDaTela.value >= TELA_COM_COLUNA);
-
-  // A guardada, encolhida ao que a tela comporta com o menu do jeito que está.
-  const largura = computed(() => {
-    const guardada =
-      uiSettings.value.autonomia_guide_width || LARGURA_DO_GUIA.MINIMA;
-    const menu = uiSettings.value.sidebar_width || LARGURAS_DO_MENU.PADRAO;
-    const cabe = larguraDaTela.value - menu - MEIO_MINIMO;
-    return Math.max(PAINEL_ANTIGO.NORMAL, Math.min(guardada, cabe));
-  });
-
-  watch(
-    aberto,
-    abriu => {
-      if (!abriu || embutido || !telaLarga.value) return;
-      const menu = uiSettings.value.sidebar_width || LARGURAS_DO_MENU.PADRAO;
-      // Menu já recolhido: nada a devolver, fica a largura guardada.
-      if (menu < LARGURAS_DO_MENU.LIMITE_RECOLHIDO) return;
-      updateUISettings({
-        sidebar_width: LARGURAS_DO_MENU.RECOLHIDO,
-        autonomia_guide_width: larguraAoAbrir({
-          menu,
-          tela: larguraDaTela.value,
-        }),
-      });
-    },
-    { immediate: true }
+export const useLarguraDoGuia = ({ embutido, larguraDaTela }) => {
+  const coluna = computed(
+    () => !embutido && larguraDaTela.value >= TELA_COM_COLUNA
   );
 
-  // Só a partir do tablet o Guia é uma coluna com largura própria.
+  const largura = computed(() =>
+    larguraDoGuia({
+      tela: larguraDaTela.value,
+      menu: menuEGuia.largura.value,
+      devolvida: menuEGuia.devolvida.value,
+    })
+  );
+
   const estilo = computed(() =>
-    !embutido && telaLarga.value ? { width: `${largura.value}px` } : {}
+    coluna.value ? { width: `${largura.value}px` } : {}
   );
 
-  return { telaLarga, largura, estilo };
+  return { coluna, largura, estilo };
 };

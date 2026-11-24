@@ -13,6 +13,7 @@ import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useLarguraDoGuia } from './useLarguraDoGuia';
+import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
@@ -222,14 +223,24 @@ const showPanel = computed(() => {
   return isEnabled.value && isPanelOpen.value && !telaTemGuiaEmbutido.value;
 });
 
-// #3184 — abrir recolhe o menu e o Guia fica com o espaço devolvido.
+// #3184 — abrir recolhe o menu e o Guia fica com o espaço devolvido. O Guia
+// avisa o menu (menuEGuia.js); o embutido mora dentro de outra tela e não avisa.
 const { estilo: estiloDoPainel } = useLarguraDoGuia({
-  aberto: showPanel,
   embutido: props.embutido,
   larguraDaTela: windowWidth,
-  uiSettings,
-  updateUISettings,
 });
+if (!props.embutido) {
+  watch(
+    showPanel,
+    aberto => {
+      menuEGuia.guiaAberto.value = aberto;
+    },
+    { immediate: true }
+  );
+  onBeforeUnmount(() => {
+    menuEGuia.guiaAberto.value = false;
+  });
+}
 
 const hasMessages = computed(() => messages.length > 0);
 
@@ -1262,8 +1273,8 @@ watch(
 const classeDoPainel = computed(() =>
   props.embutido
     ? 'bg-n-surface-2 h-full w-full overflow-hidden flex rounded-xl border border-n-weak'
-    : // #3184 — celular: tela cheia. Até 1280 px: por cima da tela, 400 px.
-      // Daí para cima: coluna com a largura de useLarguraDoGuia.
+    : // #3184 — celular (abaixo de 768 px): tela cheia, por cima. Do tablet
+      // para cima: coluna ao lado, com a largura de useLarguraDoGuia.
       'bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full transition-transform duration-300 ease-in-out md:static md:shrink-0 ltr:border-l rtl:border-r border-n-weak shadow-lg md:shadow-none flex focus:outline-none'
 );
 </script>
@@ -1297,6 +1308,7 @@ const classeDoPainel = computed(() =>
         <GuideHistorico
           :conversa-atual="store.conversaAtual()"
           :aba-inicial="abaDoHistorico"
+          @aba="abaDoHistorico = $event"
           @abrir="abrirDoHistorico"
           @apagou="conversaApagada"
         />
@@ -1468,7 +1480,7 @@ const classeDoPainel = computed(() =>
                      Guia faz direto, com desfazer por 5 dias). Dizer isso antes
                      do "Sim" é o que torna a decisão informada. -->
                 <p
-                  v-else-if="mostraBotoes(item.acaoEstado)"
+                  v-if="mostraBotoes(item.acaoEstado)"
                   data-sem-desfazer
                   class="mb-0 text-sm font-medium text-n-amber-12"
                 >

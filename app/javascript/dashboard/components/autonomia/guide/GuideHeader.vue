@@ -45,6 +45,8 @@ const { t } = useI18n();
 
 const menuAberto = ref(false);
 const itens = ref([]);
+const gatilho = ref(null);
+const voltar = ref(null);
 
 // Histórico ou memória abertos: o topo vira "voltar à conversa".
 const numaLista = computed(() => props.vendoHistorico || props.vendoMemoria);
@@ -77,6 +79,20 @@ const fecharMenu = () => {
   menuAberto.value = false;
 };
 
+// O foco não pode cair no vazio quando o menu some: volta ao "Mais" ou, se o
+// item abriu uma lista, ao "Voltar" dela.
+const devolverFoco = async () => {
+  await nextTick();
+  const alvo = voltar.value ?? gatilho.value;
+  alvo?.$el?.focus();
+};
+
+const fecharEDevolverFoco = () => {
+  if (!menuAberto.value) return;
+  fecharMenu();
+  devolverFoco();
+};
+
 const alternarMenu = async () => {
   menuAberto.value = !menuAberto.value;
   if (!menuAberto.value) return;
@@ -94,13 +110,15 @@ const acoes = {
 const escolher = id => {
   fecharMenu();
   acoes[id]();
+  devolverFoco();
 };
 
-// Setas andam pelos itens; Esc fecha. Padrão de menu do WAI-ARIA.
+// Setas andam pelos itens; Esc fecha e devolve o foco; Tab sai e fecha.
+// Padrão de menu do WAI-ARIA.
 const mover = (evento, indice) => {
   const total = itensDoMenu.value.length;
   const passos = { ArrowDown: 1, ArrowUp: -1 };
-  if (evento.key === 'Escape') {
+  if (evento.key === 'Tab') {
     fecharMenu();
     return;
   }
@@ -116,14 +134,18 @@ const mover = (evento, indice) => {
   >
     <template v-if="numaLista">
       <Button
+        ref="voltar"
         data-voltar-a-conversa
         :label="$t('AUTONOMIA_GUIDE.DONE.BACK')"
-        icon="i-lucide-arrow-left"
         ghost
         slate
         class="min-h-11"
         @click="voltarAConversa"
-      />
+      >
+        <template #icon>
+          <span class="i-lucide-arrow-left size-4 shrink-0 rtl:rotate-180" />
+        </template>
+      </Button>
       <h2
         class="flex-1 mb-0 min-w-0 text-base font-medium truncate text-n-slate-12"
       >
@@ -133,13 +155,16 @@ const mover = (evento, indice) => {
     <template v-else>
       <Button
         :aria-label="$t('AUTONOMIA_GUIDE.HEADER.BACK')"
-        icon="i-lucide-arrow-left"
         ghost
         slate
         lg
         class="md:hidden"
         @click="emit('close')"
-      />
+      >
+        <template #icon>
+          <span class="i-lucide-arrow-left size-5 shrink-0 rtl:rotate-180" />
+        </template>
+      </Button>
       <span
         class="grid place-content-center size-10 shrink-0 rounded-xl bg-n-blue-3 text-n-blue-11 max-md:hidden"
         aria-hidden="true"
@@ -168,8 +193,13 @@ const mover = (evento, indice) => {
         class="min-h-11 shrink-0"
         @click="emit('reset')"
       />
-      <div v-on-clickaway="fecharMenu" class="relative shrink-0">
+      <div
+        v-on-clickaway="fecharMenu"
+        class="relative shrink-0"
+        @keydown.esc="fecharEDevolverFoco"
+      >
         <Button
+          ref="gatilho"
           data-mais
           :aria-label="$t('AUTONOMIA_GUIDE.HEADER.MORE')"
           :aria-expanded="menuAberto ? 'true' : 'false'"
@@ -189,7 +219,7 @@ const mover = (evento, indice) => {
         >
           <li v-for="(item, indice) in itensDoMenu" :key="item.id" role="none">
             <button
-              ref="itens"
+              :ref="el => (itens[indice] = el)"
               type="button"
               role="menuitem"
               :data-item-do-menu="item.id"

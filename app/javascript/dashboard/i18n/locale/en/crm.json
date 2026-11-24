@@ -4858,7 +4858,6 @@
     "LAUNCHER": "Platform Guide",
     "THINKING": "Thinking…",
     "HIGHLIGHT_HERE": "it's here",
-    "RESET": "New chat",
     "KICK_OFF": "Ask me where anything is. I can also see the numbers in your account. If you ask, I make the change, and it can be undone for 5 days.",
     "GO_TO_SCREEN": "Go to screen",
     "GO_TO_SCREEN_NAMED": "Go to: {rotulo}",
@@ -4917,7 +4916,7 @@
       "UNDONE": "Undone. Everything went back to how it was.",
       "UNDONE_PARTIAL": "I undid only part of it.",
       "UNDONE_NONE": "I could not undo it.",
-      "UNTIL": "Valid until {quando}",
+      "UNTIL": "You can undo until {quando}",
       "CONFLICTS": "{count} change was kept because someone edited it afterwards. | {count} changes were kept because someone edited them afterwards.",
       "PARTIAL": "Part of this was deleted without a copy and cannot come back.",
       "UNDO_FAILED": "I could not undo this right now. Try again in a moment.",
@@ -5053,7 +5052,6 @@
     "A11Y": {
       "PANEL": "Platform Guide",
       "LOG": "Guide conversation",
-      "NEW_CONVERSATION": "Start a new chat",
       "CLOSE": "Close the Guide",
       "SEND": "Send message"
     },
