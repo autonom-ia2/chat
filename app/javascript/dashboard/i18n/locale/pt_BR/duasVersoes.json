@@ -2,11 +2,11 @@
   "DUAS_VERSOES": {
     "MENSAGEM": {
       "TITULO": "Duas versões da mensagem",
-      "LIGAR": "Testar duas versões",
-      "AJUDA_DESLIGADO": "Escreva a mesma mensagem de outro jeito. Uma parte do público recebe cada versão, e a que tiver mais respostas vai para o resto.",
+      "LIGAR": "Duas versões da mensagem",
+      "AJUDA_DESLIGADO": "Escreva a mesma mensagem de outro jeito. Uma parte do público recebe cada versão, e a que tiver mais respostas vai para as outras pessoas.",
       "AJUDA_LIGADO": "A versão 1 é a mensagem que você já escolheu acima. Agora monte a versão 2.",
       "VERSAO": "Versão {n}",
-      "VAZIA": "Falta a versão 2 para continuar.",
+      "VAZIA": "Monte a versão 2 para poder continuar.",
       "IGUAL": "A versão 2 está igual à versão 1. Mude alguma coisa para dar para comparar.",
       "AJUDA_LIGADO_EMAIL": "A versão 1 é o e-mail que você já montou. Na versão 2, só o assunto muda."
     },
@@ -24,7 +24,7 @@
       "PLACEHOLDER": "Escolha o modelo",
       "JA_E_A_1": "Já é a versão 1",
       "OUTRAS_INFORMACOES": "Pede informações diferentes da versão 1",
-      "SEM_OUTRO": "Esta caixa não tem outro modelo aprovado que sirva. Um modelo novo precisa ser aprovado pelo WhatsApp, o que pode levar algumas horas. Para mandar agora, desligue “Testar duas versões”.",
+      "SEM_OUTRO": "Esta caixa não tem outro modelo aprovado que sirva. Um modelo novo precisa ser aprovado pelo WhatsApp, o que pode levar algumas horas. Para mandar agora, desligue “Duas versões da mensagem”.",
       "CRIAR": "Criar outro modelo",
       "COMO_FICA": "Como cada versão chega",
       "AINDA_VAZIA": "A versão 2 aparece aqui quando você escolher o modelo."
@@ -43,16 +43,16 @@
       "RESPOSTAS": "A que tiver mais respostas",
       "COMPRAS": "A que tiver mais compras",
       "EU_ESCOLHO": "Eu escolho olhando o resultado",
-      "SEM_COMPRAS": "Para escolher pelas compras, a conta precisa ter compras dos clientes na ficha.",
+      "SEM_COMPRAS": "Para escolher pelas compras, a conta precisa ter os funis de venda ligados: é neles que ficam as compras dos clientes.",
       "ESPERA": "Quanto tempo esperar antes de escolher?",
       "HORAS": "{n} hora | {n} horas",
       "ESPERA_AJUDA_RESPOSTAS": "A maioria das respostas chega nas primeiras horas. Na dúvida, deixe 4 horas.",
       "ESPERA_AJUDA_COMPRAS": "Compra demora mais que resposta. Na dúvida, deixe 24 horas.",
       "DIVISAO": "Como dividir o teste?",
       "METADE": "Metade cada",
-      "METADE_DETALHE": "50% e 50%",
+      "METADE_DETALHE": "{n} de cada 10 em cada versão",
       "MAIS_NA_1": "Mais na versão 1",
-      "MAIS_NA_1_DETALHE": "70% e 30%",
+      "MAIS_NA_1_DETALHE": "{n} de cada 10 na versão 1",
       "DIVISAO_AJUDA": "Use “Mais na versão 1” quando a versão 1 já funciona e você só quer experimentar a 2 com menos gente.",
       "PRONTO": "Pronto"
     },
@@ -73,15 +73,17 @@
     },
     "RESUMO": {
       "TITULO": "Duas versões da mensagem",
-      "AGORA_VAO": "Agora vão {teste} (o teste). As outras {resto} vão depois de {horas}.",
-      "AGORA_VAO_TODOS": "Todo mundo recebe agora: cada pessoa recebe uma das duas versões."
+      "AGORA_VAO": "{teste} agora, {resto} depois de {horas}",
+      "AGORA_VAO_TODOS": "Agora, uma das duas versões para cada pessoa",
+      "DEPOIS_VAO": "{teste} em {quando}, {resto} {horas} depois",
+      "DEPOIS_VAO_TODOS": "{quando}, uma das duas versões para cada pessoa"
     },
     "RESULTADO": {
       "TITULO": "Duas versões da mensagem",
       "CARREGANDO": "Carregando o resultado das duas versões",
-      "TESTANDO": "Testando. Às {hora}, escolhemos a melhor e mandamos para as outras {resto} pessoas.",
-      "TESTANDO_EU_ESCOLHO": "Testando. Às {hora}, o teste termina e você escolhe qual vai para as outras {resto} pessoas.",
-      "TESTANDO_SEM_ENVIO": "Ninguém do teste recebeu a mensagem ainda. Se ninguém receber até {data}, a versão 1 vai para as outras {resto} pessoas.",
+      "TESTANDO": "Testando. A melhor vai para as outras {resto} pessoas {quando}.",
+      "TESTANDO_EU_ESCOLHO": "Testando. O teste termina {quando} e aí você escolhe qual vai para as outras {resto} pessoas.",
+      "TESTANDO_SEM_ENVIO": "O teste falhou: a mensagem não chegou a ninguém do teste. Se continuar assim, a versão 1 vai para as outras {resto} pessoas {quando}, sem comparar as duas.",
       "ESPERANDO_VOCE": "O teste terminou. Escolha qual versão vai para as outras {resto} pessoas.",
       "ESCOLHIDA_SISTEMA": "A versão {n} foi para as outras {resto} pessoas.",
       "ESCOLHIDA_VOCE": "Você escolheu a versão {n}. Ela foi para as outras {resto} pessoas.",
@@ -91,17 +93,17 @@
       "ATE_AGORA": "Até agora, {frase}",
       "NA_FRENTE": "Na frente",
       "GANHOU": "Ganhou",
-      "FOI_PARA_O_RESTO": "Foi para o resto",
+      "FOI_PARA_O_RESTO": "Foi para as outras pessoas",
       "RECEBERAM": "Receberam",
       "RESPONDERAM": "Responderam",
       "COMPRARAM": "Compraram",
       "DE_CADA": "{n} de cada {escala}",
       "VALOR": "{valor} em compras",
-      "ESCOLHER": "Mandar esta para os outros",
-      "CONFIRMAR": "Mandar a versão {n} para {resto} pessoas?",
+      "ESCOLHER": "Mandar esta para as outras pessoas",
+      "CONFIRMAR": "Mandar a versão {n} para as outras {resto} pessoas?",
       "CONFIRMAR_SIM": "Sim, mandar",
       "VOLTAR": "Voltar",
-      "SEM_PERMISSAO": "Quem pode disparar campanhas escolhe a versão.",
+      "SEM_PERMISSAO": "Você não pode escolher a versão. Peça a um administrador ou a quem pode enviar campanhas.",
       "FRASE": {
         "RESPOSTAS": {
           "DOBRO": "A versão {n} teve o dobro de respostas.",
@@ -126,54 +128,65 @@
         "TESTANDO": "Cada pessoa que passa recebe uma das duas. Quando {minimo} pessoas tiverem recebido cada versão, esperamos {horas} e escolhemos a melhor.",
         "TESTANDO_EU_ESCOLHO": "Cada pessoa que passa recebe uma das duas. Quando {minimo} pessoas tiverem recebido cada versão, esperamos {horas} e você escolhe qual fica.",
         "FALTAM": "Faltam {n} pessoas receberem a versão {versao} para fechar o teste. | Falta {n} pessoa receber a versão {versao} para fechar o teste. | Faltam {n} pessoas receberem a versão {versao} para fechar o teste.",
-        "ESPERANDO_VOCE": "O teste terminou. Escolha qual versão fica daqui para frente.",
+        "ESPERANDO_VOCE": "O teste terminou. Escolha qual versão fica daqui para frente. Até alguém escolher, cada pessoa continua recebendo uma das duas.",
         "ESCOLHIDA": "Desde {data}, todo mundo recebe a versão {n}.",
         "ESCOLHIDA_EMPATE": "As duas ficaram parecidas. Desde {data}, todo mundo recebe a versão 1.",
         "FICOU": "Ficou",
         "ESCOLHER": "Ficar com esta",
         "CONFIRMAR": "Daqui para frente, todo mundo recebe a versão {n}?",
         "CONFIRMAR_SIM": "Sim, ficar com ela",
-        "SEM_PERMISSAO": "Quem pode mudar automações escolhe a versão.",
-        "ESCOLHER_ARIA": "Ficar com a versão {n}",
-        "SEM_PERMISSAO_TESTANDO": "Quem pode mudar automações pode escolher antes da hora.",
+        "SEM_PERMISSAO": "Você não pode escolher a versão. Peça a um administrador ou a quem pode mudar automações.",
+        "ESCOLHER_ARIA": "Ficar com esta: versão {n}",
+        "SEM_PERMISSAO_TESTANDO": "Para escolher a versão antes da hora, peça a um administrador ou a quem pode mudar automações.",
         "RECEBEU": "Recebeu a versão {n} da mensagem",
         "PASSO": "No passo: {frase}",
         "JA_ESCOLHIDA": "Uma versão já foi escolhida para este passo. Veja qual logo abaixo.",
         "ERRO_ESCOLHER": "Não deu para ficar com a versão agora. Tente de novo."
       },
       "RECEBERAM_NO_TESTE": "Receberam no teste",
-      "ESCOLHER_ARIA": "Mandar a versão {n} para as outras {resto} pessoas",
+      "ESCOLHER_ARIA": "Mandar esta para as outras pessoas: versão {n}",
       "CONFIRMAR_AVISO": "Depois de mandar, não dá para trocar de versão.",
-      "SEM_PERMISSAO_TESTANDO": "Quem pode disparar campanhas pode escolher antes da hora.",
+      "SEM_PERMISSAO_TESTANDO": "Para escolher a versão antes da hora, peça a um administrador ou a quem pode enviar campanhas.",
       "ERRO": "Não deu para carregar o resultado das duas versões agora.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "ERRO_ESCOLHER": "Não deu para mandar a versão agora. Tente de novo.",
-      "JA_ESCOLHIDA": "Uma versão já foi escolhida para esta campanha. Veja qual logo abaixo."
+      "JA_ESCOLHIDA": "Uma versão já foi escolhida para esta campanha. Veja qual logo abaixo.",
+      "SOZINHA": "Se ninguém escolher, a versão 1 vai sozinha {quando}.",
+      "NINGUEM_RECEBEU": "Ninguém recebeu esta versão.",
+      "NINGUEM_RECEBEU_AINDA": "Ninguém recebeu esta versão ainda."
     },
     "AUTOMACAO": {
       "LIGAR": "Testar duas versões desta mensagem",
       "AJUDA_DESLIGADO": "Escreva a mesma mensagem de outro jeito. Cada pessoa recebe uma das duas e, depois do teste, todas passam a receber a melhor.",
       "TEXTO_2": "Texto da versão 2",
-      "MODELO_2": "Modelo da versão 2"
+      "MODELO_2": "Modelo da versão 2",
+      "ESPACO": "espaço {n}",
+      "O_QUE_ENTRA": "O que entra no espaço {n} do modelo",
+      "OPCAO_MODELO": "{nome} · {idioma}"
     },
     "ERROS": {
       "OUTRAS_INFORMACOES": "O modelo da versão 2 pede informações diferentes da versão 1. Escolha outro modelo no passo Mensagem.",
       "MODELO": "O modelo da versão 2 não está mais aprovado pelo WhatsApp. Escolha outro no passo Mensagem.",
       "SEGUNDA": "Não deu para usar a versão 2 da mensagem. Confira no passo Mensagem.",
-      "INDISPONIVEL": "Este canal não consegue testar duas versões da mensagem. Desligue “Testar duas versões” no passo Mensagem.",
-      "SEM_COMPRAS": "Escolher pelas compras precisa do CRM ligado na conta. Em “Qual versão é a melhor?”, escolha outra opção."
+      "INDISPONIVEL": "Este canal não consegue testar duas versões da mensagem. Desligue “Duas versões da mensagem” no passo Mensagem.",
+      "SEM_COMPRAS": "Para escolher pelas compras, a conta precisa ter os funis de venda ligados: é neles que ficam as compras dos clientes. Em “Qual versão é a melhor?”, escolha outra opção."
     },
     "AVISO_LISTA": {
       "TITULO": "Campanhas esperando você escolher a versão",
       "TITULO_ATENCAO": "Campanhas com duas versões que precisam de você",
       "TEXTO": "{nome}: o teste terminou. Escolha qual versão vai para as outras {resto} pessoas.",
-      "SOZINHA": "Se ninguém escolher até {data}, a versão 1 vai sozinha.",
-      "TEXTO_SEM_ENVIO": "{nome}: ninguém do teste recebeu a mensagem ainda. Veja no resultado o que aconteceu.",
-      "SOZINHA_SEM_ENVIO": "Se ninguém receber até {data}, a versão 1 vai para as outras {resto} pessoas.",
+      "SOZINHA": "Se ninguém escolher, a versão 1 vai sozinha {quando}.",
+      "TEXTO_SEM_ENVIO": "{nome}: o teste falhou, a mensagem não chegou a ninguém do teste. Veja no resultado o que aconteceu.",
+      "SOZINHA_SEM_ENVIO": "Se continuar assim, a versão 1 vai para as outras {resto} pessoas {quando}.",
       "VER": "Ver o resultado",
       "VER_ARIA": "Ver o resultado de {nome}",
       "ESCOLHER": "Escolher a versão",
       "ESCOLHER_ARIA": "Escolher a versão de {nome}"
+    },
+    "QUANDO": {
+      "HOJE": "hoje, às {hora}",
+      "AMANHA": "amanhã, às {hora}",
+      "DIA": "em {dia}, às {hora}"
     }
   }
 }

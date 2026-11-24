@@ -1,5 +1,5 @@
 <script setup>
-// #3099 — uma das duas versões no resultado: o selo ("Ganhou", "Na frente"), o começo da mensagem, os números em
+// #3099 — uma das duas versões no resultado: o selo ("Ganhou", "Na frente"), a mensagem inteira, os números em
 // linhas simples ("Responderam 12 · de cada 100, 12") e, enquanto dá para escolher, o botão que manda esta versão
 // para o resto, com a pergunta de confirmação no próprio cartão (sem janela por cima). O cartão "Na frente" leva o
 // botão principal (sólido); o foco vai para o "Sim, mandar" ao abrir a pergunta e volta ao botão no "Voltar".
@@ -12,6 +12,8 @@ defineProps({
   texto: { type: String, default: '' },
   // [{ chave, rotulo, valor, apoio (texto ou lista: cada item numa linha), forte }]
   linhas: { type: Array, default: () => [] },
+  // Ninguém recebeu esta versão: a frase no lugar dos números.
+  vazio: { type: String, default: '' },
   selo: { type: String, default: '' },
   // O ícone do selo da escolhida: troféu só quando ganhou; "send" no empate e na escolha à mão.
   iconeDoSelo: { type: String, default: '' },
@@ -20,6 +22,7 @@ defineProps({
   principal: { type: Boolean, default: false },
   // Os textos do botão e da confirmação; sem `botao`, o cartão não oferece escolha.
   botao: { type: String, default: '' },
+  // O nome para o leitor de tela começa pelo texto do botão (WCAG 2.5.3) e diz qual versão.
   botaoAria: { type: String, default: '' },
   pergunta: { type: String, default: '' },
   aviso: { type: String, default: '' },
@@ -79,13 +82,16 @@ const apoiosDa = linha => [].concat(linha.apoio || []).filter(Boolean);
 
     <p
       v-if="texto"
-      class="m-0 line-clamp-3 whitespace-pre-wrap break-words rounded-xl bg-n-alpha-1 px-3 py-2 text-sm text-n-slate-12"
+      class="m-0 whitespace-pre-wrap break-words rounded-xl bg-n-alpha-1 px-3 py-2 text-sm text-n-slate-12"
       data-texto-da-versao
     >
       {{ texto }}
     </p>
 
-    <dl class="m-0 flex flex-col gap-2">
+    <p v-if="vazio" class="m-0 text-sm text-n-slate-11" data-ninguem-recebeu>
+      {{ vazio }}
+    </p>
+    <dl v-else class="m-0 flex flex-col gap-2">
       <div
         v-for="linha in linhas"
         :key="linha.chave"

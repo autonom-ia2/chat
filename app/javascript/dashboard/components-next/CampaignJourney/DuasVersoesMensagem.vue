@@ -54,10 +54,14 @@ const ehEmail = computed(() => props.canal === CAMPAIGN_CHANNELS.EMAIL);
 const motivo = computed(() =>
   motivoDaSegunda(props.canal, props.versoes, props.primeira)
 );
+// Igual à versão 1 é um problema (âmbar). A caixa ainda vazia é só o próximo passo: dica neutra, sem alarme. O
+// "Continuar" fica desligado enquanto falta a versão 2, então não há tentativa de seguir para pintar de âmbar.
 const aviso = computed(() => {
-  if (motivo.value === 'IGUAL') return t(`${NS}.IGUAL`);
-  if (motivo.value === 'VAZIA' && props.mostrarFalta) return t(`${NS}.VAZIA`);
-  return '';
+  if (motivo.value === 'IGUAL')
+    return { texto: t(`${NS}.IGUAL`), problema: true };
+  if (motivo.value === 'VAZIA' && props.mostrarFalta)
+    return { texto: t(`${NS}.VAZIA`), problema: false };
+  return null;
 });
 // No e-mail, a versão 1 foi montada no editor próprio e não aparece acima: a ajuda fala do e-mail e do assunto.
 const ajuda = computed(() => {
@@ -136,11 +140,16 @@ const mudar = patch => emit('update', { ...props.versoes, ...patch });
       <p
         v-if="aviso"
         role="status"
-        class="m-0 flex items-start gap-2 rounded-xl bg-n-amber-2 px-4 py-3 text-sm text-n-amber-12"
-        data-aviso-da-2
+        class="m-0 flex items-start gap-2 rounded-xl px-4 py-3 text-sm"
+        :class="
+          aviso.problema
+            ? 'bg-n-amber-2 text-n-amber-12'
+            : 'bg-n-alpha-1 text-n-slate-11'
+        "
+        :data-aviso-da-2="aviso.problema ? 'problema' : 'dica'"
       >
         <span class="i-lucide-info mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        {{ aviso }}
+        {{ aviso.texto }}
       </p>
 
       <div class="border-t border-n-weak pt-4">

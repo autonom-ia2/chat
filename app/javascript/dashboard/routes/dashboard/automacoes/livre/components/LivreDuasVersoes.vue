@@ -106,6 +106,7 @@ const mudar = patch =>
         :rotulo="t(`${NS}.MODELO_2`)"
         :model-value="versoes.modelo"
         sem-ajuda
+        da-segunda-versao
         :catalogo="catalogo"
         :atributos-do="atributosDo"
         @update:model-value="modelo => mudar({ modelo })"

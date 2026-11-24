@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreTexto from './LivreTexto.vue';
+import { toLocaleTag } from 'dashboard/components-next/CampaignJourney/localeTag';
 import {
   chaveDoModelo,
   corpoDoModelo,
@@ -23,11 +24,14 @@ const props = defineProps({
   atributosDo: { type: Function, required: true },
   // #3099 — a versão 2 do teste de duas versões: sem a dica da janela e o aviso de custo, que já aparecem na versão 1.
   semAjuda: { type: Boolean, default: false },
+  // #3099 — a versão 2: sem os nomes técnicos ({{1}}, "Variável 1", "pt_BR"). A receita guarda as variáveis próprias
+  // da versão 2 (o servidor confere cada modelo com as dele), então os campos continuam, com rótulos simples.
+  daSegundaVersao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const idModelo = useId();
 const M = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.MODELO';
 const NENHUM = '';
@@ -35,11 +39,30 @@ const NENHUM = '';
 const caixas = useMapGetter('inboxes/getInboxes');
 const modelos = computed(() => modelosDasCaixas(caixas.value));
 
+const V2 = 'DUAS_VERSOES.AUTOMACAO';
+// "pt_BR" → "Português (Brasil)", no idioma do painel; código que o navegador não conhece fica como veio.
+const nomeDoIdioma = codigo => {
+  try {
+    const nome = new Intl.DisplayNames([toLocaleTag(locale.value)], {
+      type: 'language',
+    }).of(toLocaleTag(codigo));
+    return nome.charAt(0).toLocaleUpperCase() + nome.slice(1);
+  } catch {
+    return codigo;
+  }
+};
+const rotuloDoModelo = modelo =>
+  props.daSegundaVersao
+    ? t(`${V2}.OPCAO_MODELO`, {
+        nome: modelo.name,
+        idioma: nomeDoIdioma(modelo.language),
+      })
+    : t(`${M}.OPCAO`, { nome: modelo.name, idioma: modelo.language });
 const opcoes = computed(() => [
   { value: NENHUM, label: t(`${M}.NENHUM`) },
   ...modelos.value.map(modelo => ({
     value: chaveDoModelo(modelo),
-    label: t(`${M}.OPCAO`, { nome: modelo.name, idioma: modelo.language }),
+    label: rotuloDoModelo(modelo),
   })),
 ]);
 
@@ -49,6 +72,22 @@ const escolhido = computed(() =>
   )
 );
 const corpo = computed(() => corpoDoModelo(escolhido.value));
+// Na versão 2, "{{1}}" aparece como "(espaço 1)", o mesmo nome do campo que o preenche (troca por split, sem regex).
+// Parêntese, não colchete: na caixa de texto, colchete é dado da conversa ("[Nome do contato]").
+const corpoNaTela = computed(() => {
+  if (!props.daSegundaVersao) return corpo.value;
+  const [inicio, ...pedacos] = corpo.value.split('{{');
+  return pedacos.reduce((texto, pedaco) => {
+    const fim = pedaco.indexOf('}}');
+    if (fim === -1) return `${texto}{{${pedaco}`;
+    const espaco = t(`${V2}.ESPACO`, { n: pedaco.slice(0, fim).trim() });
+    return `${texto}(${espaco})${pedaco.slice(fim + 2)}`;
+  }, inicio);
+});
+const rotuloDaVariavel = variavel =>
+  props.daSegundaVersao
+    ? t(`${V2}.O_QUE_ENTRA`, { n: variavel })
+    : t(`${M}.VARIAVEL`, { numero: variavel });
 // Na ordem {{1}}, {{2}}...: a receita guarda um texto por posição.
 const variaveis = computed(() =>
   [...variaveisDoCorpo(corpo.value)].sort((a, b) => Number(a) - Number(b))
@@ -147,12 +186,12 @@ const mudarVariavel = (indice, partes) => {
         data-corpo-do-modelo
         class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-alpha-1 text-n-slate-12 whitespace-pre-line"
       >
-        {{ corpo }}
+        {{ corpoNaTela }}
       </p>
       <LivreTexto
         v-for="(variavel, indice) in variaveis"
         :key="variavel"
-        :rotulo="$t(`${M}.VARIAVEL`, { numero: variavel })"
+        :rotulo="rotuloDaVariavel(variavel)"
         :model-value="modelValue.variaveis?.[indice] || []"
         :catalogo="catalogo"
         :atributos-do="atributosDo"

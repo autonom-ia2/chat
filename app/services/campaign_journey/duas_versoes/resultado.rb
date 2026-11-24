@@ -2,7 +2,10 @@
 # formato que a tela lê (CampaignResult/ResultDuasVersoes.vue):
 #
 #   { estado, criterio, escolhe_em (epoch), vencedora, escolhida_por, escolhida_em (epoch), resto, sem_envio_ate (epoch),
-#     versoes: [{ numero, texto, receberam, responderam, compraram, valor: [{ currency, cents }] | nil }] }
+#     vai_sozinha_em (epoch), versoes: [{ numero, texto, receberam, responderam, compraram, valor: [{ currency, cents }] | nil }] }
+#
+# `vai_sozinha_em`: no "eu escolho" esperando alguém, a hora em que a versão 1 vai sozinha para o resto (D5,
+# CampaignJourney::DuasVersoes::Escolha). nil no resto dos casos.
 #
 # `sem_envio_ate`: testando, passou a espera e ninguém do teste recebeu (CampaignJourney::DuasVersoes::SemEnvio); a
 # hora em que a versão 1 vai para o resto. nil no resto dos casos.
@@ -22,7 +25,7 @@ class CampaignJourney::DuasVersoes::Resultado
     {
       estado: @link.teste_estado, criterio: @link.teste_criterio, escolhe_em: escolhe_em(numeros)&.to_i,
       vencedora: @link.teste_vencedora, escolhida_por: @link.teste_escolhida_por, escolhida_em: @link.teste_escolhida_em&.to_i,
-      resto: @link.teste_resto, sem_envio_ate: sem_envio_ate,
+      resto: @link.teste_resto, sem_envio_ate: sem_envio_ate, vai_sozinha_em: vai_sozinha_em,
       versoes: textos.each_with_index.map { |texto, indice| { numero: indice + 1, texto: texto, **contas[indice] } }
     }
   end
@@ -40,6 +43,12 @@ class CampaignJourney::DuasVersoes::Resultado
   def sem_envio_ate
     sem_envio = CampaignJourney::DuasVersoes::SemEnvio.new(@link)
     sem_envio.ate.to_i if sem_envio.avisar?
+  end
+
+  def vai_sozinha_em
+    return unless @link.teste_estado == 'esperando_voce' && @link.teste_escolhe_em
+
+    (@link.teste_escolhe_em + CampaignJourney::DuasVersoes::PRAZO_DO_EU_ESCOLHO).to_i
   end
 
   def agendada_para

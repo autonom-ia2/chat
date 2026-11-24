@@ -138,7 +138,7 @@ describe('ResultDuasVersoes', () => {
     expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
   });
 
-  it('testando sem ninguém do teste receber: avisa até quando, sem comparar', () => {
+  it('testando sem ninguém do teste receber: diz que falhou, o que vem depois, em âmbar e sem vencedora', () => {
     const zerado = versoes.map(versao => ({
       ...versao,
       receberam: 0,
@@ -151,10 +151,22 @@ describe('ResultDuasVersoes', () => {
       sem_envio_ate: Math.floor(Date.now() / 1000) + 3600,
       versoes: zerado,
     });
-    const situacao = wrapper.find('[data-situacao="testando"]').text();
-    expect(situacao).toContain('No one in the test has received');
-    expect(situacao).toContain('1,080');
+    const faixa = wrapper.find('[data-situacao="testando"]');
+    expect(faixa.text()).toContain('The test failed');
+    expect(faixa.text()).toContain('version 1 goes to the other 1,080 people');
+    expect(faixa.attributes('data-sem-envio')).toBe('true');
+    expect(faixa.classes()).toContain('bg-n-amber-2');
+    expect(faixa.find('.i-lucide-triangle-alert').exists()).toBe(true);
     expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
+    expect(wrapper.find('[data-selo]').exists()).toBe(false);
+    expect(wrapper.find('[data-escolher-versao="principal"]').exists()).toBe(
+      false
+    );
+    // "0 de cada 100" não diz nada: a frase no lugar dos números.
+    expect(
+      wrapper.find('[data-cartao-versao="1"] [data-ninguem-recebeu]').text()
+    ).toBe(R.NINGUEM_RECEBEU);
+    expect(wrapper.find('[data-linha]').exists()).toBe(false);
   });
 
   it('sem envio no teste, a versão 1 foi para o resto', () => {
@@ -163,8 +175,16 @@ describe('ResultDuasVersoes', () => {
       vencedora: 1,
       escolhida_por: 'sem_envio',
     });
-    expect(wrapper.find('[data-situacao]').text()).toBe(
+    const faixa = wrapper.find('[data-situacao]');
+    expect(faixa.text()).toBe(
       R.ESCOLHIDA_SEM_ENVIO.replace('{resto}', '1,080')
+    );
+    // Falha, não vitória: âmbar, sem cartão verde nem selo da versão 1.
+    expect(faixa.classes()).toContain('bg-n-amber-2');
+    expect(faixa.classes()).not.toContain('bg-n-teal-2');
+    expect(wrapper.find('[data-selo]').exists()).toBe(false);
+    expect(wrapper.find('[data-cartao-versao="1"]').classes()).not.toContain(
+      'bg-n-teal-2'
     );
     expect(wrapper.find('[data-comparacao]').exists()).toBe(false);
   });

@@ -1294,10 +1294,11 @@ onBeforeUnmount(() => {
               @alterar="goTo(2)"
             />
           </template>
-          <template v-if="duasVersoes.ligadas.value" #vao-receber>
+          <template v-if="duasVersoes.ligadas.value" #vao-receber="{ quando }">
             <AgoraVaiOTeste
               :plano="duasVersoes.plano.value"
               :espera="duasVersoes.regra.value.espera"
+              :quando="quando"
             />
           </template>
         </StepReview>

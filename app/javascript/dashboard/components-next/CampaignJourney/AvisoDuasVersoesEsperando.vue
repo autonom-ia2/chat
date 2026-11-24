@@ -11,7 +11,11 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampaignResultsAPI from 'dashboard/api/campaignResults';
 import { resultRoute } from 'dashboard/components-next/CampaignResult/resultMetrics';
-import { formatNumber, toLocaleTag } from './localeTag';
+import {
+  quandoFalado,
+  useFusoDaConta,
+} from 'dashboard/components-next/CampaignResult/quandoNaConta';
+import { formatNumber } from './localeTag';
 import { useOnEnter } from './useOnEnter';
 
 // O menor período do overview: a lista das que esperam não depende dele.
@@ -20,14 +24,10 @@ const NS = 'DUAS_VERSOES.AVISO_LISTA';
 
 const { t, locale } = useI18n();
 const campanhas = ref([]);
-
+// A hora no fuso da conta, nunca no do aparelho.
+const fuso = useFusoDaConta();
 const quando = epoch =>
-  new Intl.DateTimeFormat(toLocaleTag(locale.value), {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(epoch * 1000));
+  quandoFalado(epoch, { fuso: fuso.value, locale: locale.value, t });
 
 const linha = campanha => {
   const semEnvio = campanha.motivo === 'sem_envio';
@@ -41,7 +41,7 @@ const linha = campanha => {
     }),
     sozinha: campanha.vai_sozinha_em
       ? t(semEnvio ? `${NS}.SOZINHA_SEM_ENVIO` : `${NS}.SOZINHA`, {
-          data: quando(campanha.vai_sozinha_em),
+          quando: quando(campanha.vai_sozinha_em),
           resto,
         })
       : '',

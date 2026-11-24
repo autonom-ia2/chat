@@ -1,7 +1,9 @@
 <script setup>
 // #3099 — a versão 2 de uma mensagem de texto livre (WhatsApp API e SMS): a caixa do texto, os mesmos campos do
 // contato e do público para inserir, o atalho "Começar com o texto da versão 1" e, ao lado, as duas versões como o
-// cliente vê. No SMS, o mesmo contador de caracteres e partes da versão 1 (smsSegments.js).
+// cliente vê. No SMS, o mesmo contador de caracteres e partes da versão 1 (smsSegments.js). Na caixa, cada campo
+// aparece entre colchetes ("[Primeiro nome]"), como no editor da Automação livre (livre/texto.js); guardado, segue
+// `{{contact.first_name}}`.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -10,9 +12,15 @@ import { PLUS } from './textMarks';
 import {
   CONTACT_TOKENS,
   audienceColumnTokens,
-  insertToken,
+  piecesOfTokens,
   renderTokens,
+  tokensOfPieces,
 } from './audienceTokens';
+import {
+  comColchetes,
+  textoDaTela,
+  textoNaTela,
+} from 'dashboard/routes/dashboard/automacoes/livre/texto';
 import { smsStats } from './smsSegments';
 import { CAMPAIGN_CHANNELS } from './campaignChannels';
 
@@ -44,6 +52,21 @@ const botoes = computed(() => [
     label: item.header,
   })),
 ]);
+// Os campos como opções do editor da automação: { value: token, label }.
+const opcoes = computed(() =>
+  botoes.value.map(item => ({ value: item.token, label: item.label }))
+);
+const naCaixa = computed(() =>
+  textoNaTela(
+    piecesOfTokens(
+      props.texto,
+      opcoes.value.map(item => item.value)
+    ),
+    opcoes.value
+  )
+);
+const guardar = texto =>
+  emit('update', tokensOfPieces(textoDaTela(texto, opcoes.value)));
 const rotuloDe = token =>
   botoes.value.find(item => item.token === token)?.label || token;
 const comoChega = texto =>
@@ -66,10 +89,12 @@ const partesDiferentes = computed(() => {
   return da1 === da2 ? null : { a: n(da1), b: n(da2) };
 });
 
-const inserir = token => {
-  const atual = props.texto || '';
+const inserir = item => {
+  const atual = naCaixa.value;
   const ponto = caixa.value?.selectionStart ?? atual.length;
-  emit('update', insertToken(atual, token, ponto));
+  guardar(
+    atual.slice(0, ponto) + comColchetes(item.label) + atual.slice(ponto)
+  );
 };
 </script>
 
@@ -100,12 +125,12 @@ const inserir = token => {
       <textarea
         id="segunda-versao-texto"
         ref="caixa"
-        :value="texto"
+        :value="naCaixa"
         rows="4"
         :placeholder="t(`${NS}.PLACEHOLDER`)"
         class="m-0 w-full rounded-xl lg:min-h-40 border border-n-weak bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-brand"
         data-texto-da-2
-        @input="evento => emit('update', evento.target.value)"
+        @input="evento => guardar(evento.target.value)"
       />
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
@@ -116,7 +141,7 @@ const inserir = token => {
             type="button"
             class="min-h-11 rounded-xl border border-n-weak px-3 text-xs font-medium text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             :aria-label="t(`${API}.INSERT_ARIA`, { field: item.label })"
-            @click="inserir(item.token)"
+            @click="inserir(item)"
           >
             {{ PLUS }} {{ item.label }}
           </button>

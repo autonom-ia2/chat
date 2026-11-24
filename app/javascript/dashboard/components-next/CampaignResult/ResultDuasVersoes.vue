@@ -2,20 +2,23 @@
 // #3099 (F3 do épico #3095) — o resultado das duas versões da mensagem, em linguagem simples. Fica no Resultado da
 // campanha (abaixo dos números de envio) e no histórico da Automação livre (`naAutomacao`).
 //
-// Uma frase diz em que pé está ("Testando. Às 15:40 escolhemos a melhor…", "Escolha qual vai para o resto", "A versão
-// 2 foi para as outras 1.150 pessoas"); outra diz quem foi melhor e quanto ("A versão 2 teve o dobro de respostas",
-// vencedora.js). Cada versão num cartão (CartaoDaVersao). Enquanto o teste roda ou espera a pessoa, quem pode disparar
+// Uma frase diz em que pé está ("Testando. A melhor vai para as outras 1.080 pessoas hoje, às 15:40", "Escolha qual
+// vai para as outras 1.080 pessoas", "A versão 2 foi para as outras 1.080 pessoas"), com a hora no fuso da conta;
+// outra diz quem foi melhor e quanto ("A versão 2 teve o dobro de respostas", vencedora.js). Teste que não chegou a
+// ninguém é falha: faixa âmbar, sem vencedora. Cada versão num cartão (CartaoDaVersao). Enquanto o teste roda ou espera a pessoa, quem pode disparar
 // escolhe à mão; a confirmação fica no próprio cartão.
 //
 // `teste`: { estado: 'testando' | 'esperando_voce' | 'escolhida' | 'todos', criterio, escolhe_em (epoch),
 //   vencedora (1 | 2 | null), escolhida_por ('sistema' | 'voce' | 'empate' | 'sem_envio'), escolhida_em (epoch), resto,
 //   sem_envio_ate (epoch: ninguém do teste recebeu; a hora em que a versão 1 vai para o resto),
+//   vai_sozinha_em (epoch: "eu escolho" esperando; a hora em que a versão 1 vai sozinha para o resto),
 //   faltam e espera em horas (automação), versoes: [{ numero, texto, receberam, responderam, compraram, valor: [{ currency, cents }] | null }] }
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CartaoDaVersao from './CartaoDaVersao.vue';
 import { wonValueText } from './resultMetrics';
+import { diaFalado, quandoFalado, useFusoDaConta } from './quandoNaConta';
 import { compararVersoes, deCadaCem, fraseDoCriterio } from './vencedora';
 import {
   MINIMO_POR_VERSAO,
@@ -35,6 +38,7 @@ const emit = defineEmits(['escolher', 'recarregar']);
 const NS = 'DUAS_VERSOES.RESULTADO';
 const NS_AUTO = `${NS}.AUTOMACAO`;
 const { t, locale } = useI18n();
+const fuso = useFusoDaConta();
 const idioma = computed(() => locale.value.replace('_', '-'));
 const inteiro = numero =>
   new Intl.NumberFormat(idioma.value).format(numero ?? 0);
@@ -47,6 +51,12 @@ const escolhida = computed(() => estado.value === 'escolhida');
 const vencedora = computed(() => props.teste?.vencedora ?? 1);
 const daParaEscolher = computed(() =>
   ['testando', 'esperando_voce'].includes(estado.value)
+);
+// O teste não chegou a ninguém (passada a espera, ou a versão 1 já foi por isso): é falha, não vitória.
+const semEnvio = computed(
+  () =>
+    (estado.value === 'testando' && Boolean(props.teste?.sem_envio_ate)) ||
+    (escolhida.value && props.teste?.escolhida_por === 'sem_envio')
 );
 
 const comparacao = computed(() =>
@@ -67,40 +77,25 @@ const fraseDaComparacao = computed(() => {
 // teste, não há o que comparar.
 const mostraComparacao = computed(
   () =>
-    !(
-      escolhida.value &&
-      ['empate', 'sem_envio'].includes(props.teste?.escolhida_por)
-    ) && !(estado.value === 'testando' && props.teste?.sem_envio_ate)
+    !semEnvio.value &&
+    !(escolhida.value && props.teste?.escolhida_por === 'empate')
 );
 
-const quando = epoch => {
-  if (!epoch) return '';
-  const data = new Date(epoch * 1000);
-  const hoje = new Date().toDateString() === data.toDateString();
-  return new Intl.DateTimeFormat(idioma.value, {
-    ...(hoje ? {} : { day: 'numeric', month: 'short' }),
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(data);
-};
+const quando = epoch =>
+  quandoFalado(epoch, { fuso: fuso.value, locale: locale.value, t });
 const dia = epoch =>
-  epoch
-    ? new Intl.DateTimeFormat(idioma.value, {
-        day: 'numeric',
-        month: 'long',
-      }).format(new Date(epoch * 1000))
-    : '';
+  diaFalado(epoch, { fuso: fuso.value, locale: locale.value });
 
 const situacaoDaCampanha = () => {
   const euEscolho = criterio.value === 'eu_escolho';
   if (estado.value === 'testando' && props.teste.sem_envio_ate)
     return t(`${NS}.TESTANDO_SEM_ENVIO`, {
-      data: quando(props.teste.sem_envio_ate),
+      quando: quando(props.teste.sem_envio_ate),
       resto: resto.value,
     });
   if (estado.value === 'testando')
     return t(euEscolho ? `${NS}.TESTANDO_EU_ESCOLHO` : `${NS}.TESTANDO`, {
-      hora: quando(props.teste.escolhe_em),
+      quando: quando(props.teste.escolhe_em),
       resto: resto.value,
     });
   if (estado.value === 'esperando_voce')
@@ -139,6 +134,14 @@ const situacao = computed(() =>
   props.naAutomacao ? situacaoDaAutomacao() : situacaoDaCampanha()
 );
 const faltam = computed(() => props.teste?.faltam ?? 0);
+// Na campanha, o "eu escolho" esperando diz até quando: depois, a versão 1 vai sozinha (o servidor manda a hora).
+const sozinha = computed(() =>
+  !props.naAutomacao &&
+  estado.value === 'esperando_voce' &&
+  props.teste?.vai_sozinha_em
+    ? t(`${NS}.SOZINHA`, { quando: quando(props.teste.vai_sozinha_em) })
+    : ''
+);
 // A versão mais longe do mínimo: é por ela que o teste espera.
 const versaoQueFalta = computed(
   () =>
@@ -158,6 +161,15 @@ const FAIXAS = {
   esperando_voce: 'bg-n-amber-2 text-n-amber-12',
   escolhida: 'bg-n-teal-2 text-n-teal-12',
 };
+const FAIXA_DE_FALHA = 'bg-n-amber-2 text-n-amber-12';
+const faixa = computed(() =>
+  semEnvio.value
+    ? FAIXA_DE_FALHA
+    : FAIXAS[estado.value] || 'bg-n-alpha-1 text-n-slate-12'
+);
+const icone = computed(() =>
+  semEnvio.value ? 'i-lucide-triangle-alert' : ICONES[estado.value]
+);
 
 const respostasCem = computed(() =>
   deCadaCem(versoes.value[0], versoes.value[1], 'respostas')
@@ -179,7 +191,14 @@ const rotuloReceberam = computed(() =>
     ? t(`${NS}.RECEBERAM`)
     : t(`${NS}.RECEBERAM_NO_TESTE`)
 );
+// Ninguém recebeu esta versão: "0 de cada 100" não diz nada. Testando sem falha, ainda pode chegar.
+const ninguemRecebeu = computed(() =>
+  estado.value === 'testando' && !semEnvio.value
+    ? t(`${NS}.NINGUEM_RECEBEU_AINDA`)
+    : t(`${NS}.NINGUEM_RECEBEU`)
+);
 const linhasDa = versao => {
+  if (!versao.receberam) return [];
   const linhas = [
     {
       chave: 'receberam',
@@ -214,6 +233,7 @@ const linhasDa = versao => {
 };
 
 const seloDa = numero => {
+  if (semEnvio.value) return '';
   if (escolhida.value) {
     if (numero !== vencedora.value) return '';
     if (props.naAutomacao) return t(`${NS_AUTO}.FICOU`);
@@ -236,10 +256,15 @@ const cartoes = computed(() =>
     numero: versao.numero,
     texto: versao.texto,
     linhas: linhasDa(versao),
+    vazio: versao.receberam ? '' : ninguemRecebeu.value,
     selo: seloDa(versao.numero),
     iconeDoSelo: iconeDoSelo.value,
-    destaque: escolhida.value && versao.numero === vencedora.value,
-    principal: !escolhida.value && comparacao.value.melhor === versao.numero,
+    destaque:
+      !semEnvio.value && escolhida.value && versao.numero === vencedora.value,
+    principal:
+      !semEnvio.value &&
+      !escolhida.value &&
+      comparacao.value.melhor === versao.numero,
   }))
 );
 
@@ -248,13 +273,13 @@ const botao = computed(() => {
   const ns = props.naAutomacao ? NS_AUTO : NS;
   return {
     rotulo: t(`${ns}.ESCOLHER`),
-    aria: numero => t(`${ns}.ESCOLHER_ARIA`, { n: numero, resto: resto.value }),
+    aria: numero => t(`${ns}.ESCOLHER_ARIA`, { n: numero }),
     sim: t(`${ns}.CONFIRMAR_SIM`),
     pergunta: numero => t(`${ns}.CONFIRMAR`, { n: numero, resto: resto.value }),
     aviso: props.naAutomacao ? '' : t(`${NS}.CONFIRMAR_AVISO`),
   };
 });
-// Testando, o sistema escolhe sozinho na hora marcada: quem pode disparar só adianta a escolha.
+// Quem não pode escolher fica sabendo a quem pedir; testando, só daria para adiantar a escolha.
 const semPermissao = computed(() => {
   const ns = props.naAutomacao ? NS_AUTO : NS;
   return estado.value === 'testando'
@@ -280,8 +305,8 @@ const semPermissao = computed(() => {
       <span class="sr-only" role="status">{{ t(`${NS}.CARREGANDO`) }}</span>
       <div class="h-5 w-2/3 animate-pulse rounded-lg bg-n-alpha-2" />
       <div class="grid gap-3 sm:grid-cols-2">
-        <div class="h-56 animate-pulse rounded-2xl bg-n-alpha-1" />
-        <div class="h-56 animate-pulse rounded-2xl bg-n-alpha-1" />
+        <div class="h-56 animate-pulse rounded-2xl bg-n-alpha-2" />
+        <div class="h-56 animate-pulse rounded-2xl bg-n-alpha-2" />
       </div>
     </template>
 
@@ -290,16 +315,20 @@ const semPermissao = computed(() => {
         <p
           role="status"
           class="m-0 flex items-start gap-2 rounded-xl px-4 py-3 text-sm"
-          :class="FAIXAS[estado] || 'bg-n-alpha-1 text-n-slate-12'"
+          :class="faixa"
           :data-situacao="estado"
+          :data-sem-envio="semEnvio || null"
         >
           <span
             class="mt-0.5 size-4 shrink-0"
-            :class="ICONES[estado]"
+            :class="icone"
             aria-hidden="true"
           />
           <span class="flex flex-col gap-0.5">
             <span>{{ situacao }}</span>
+            <span v-if="sozinha" class="text-xs" data-vai-sozinha>
+              {{ sozinha }}
+            </span>
             <span
               v-if="naAutomacao && estado === 'testando' && faltam > 0"
               class="text-xs text-n-slate-11"

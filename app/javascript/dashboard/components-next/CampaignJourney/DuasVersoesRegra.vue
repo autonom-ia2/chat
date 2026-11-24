@@ -3,9 +3,12 @@
 // para quantos vai a melhor) e, no "Alterar", as três escolhas: o que conta como melhor (respostas, compras ou eu
 // escolho), a espera e a divisão. Entra fechado, como as linhas da revisão (MedirVendas): o padrão serve para quase
 // todo mundo. Serve à campanha (com o público contado) e ao passo de mensagem da Automação livre (`naAutomacao`).
-import { computed, ref } from 'vue';
+// Cada escolha é um grupo de rádio com setas (DuasVersoesPilulas). Ao abrir, o foco vai para a primeira escolha; no
+// "Pronto", volta ao "Alterar".
+import { computed, nextTick, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import DuasVersoesPilulas from './DuasVersoesPilulas.vue';
 import { DIVISOES, ESPERAS, trocarCriterio } from './duasVersoes';
 import { useFrasesDoPlano } from './useFrasesDoPlano';
 
@@ -36,6 +39,20 @@ const frases = useFrasesDoPlano(
   computed(() => props.plano)
 );
 
+const ids = { criterio: useId(), espera: useId(), divisao: useId() };
+const primeiraEscolha = ref(null);
+const botaoAlterar = ref(null);
+const abrir = async () => {
+  aberto.value = true;
+  await nextTick();
+  primeiraEscolha.value?.focar();
+};
+const fechar = async () => {
+  aberto.value = false;
+  await nextTick();
+  botaoAlterar.value?.$el?.focus();
+};
+
 const criterios = computed(() => [
   { valor: 'respostas', rotulo: t(`${NS}.RESPOSTAS`), serve: true },
   {
@@ -45,12 +62,17 @@ const criterios = computed(() => [
   },
   { valor: 'eu_escolho', rotulo: t(`${NS}.EU_ESCOLHO`), serve: true },
 ]);
+const esperas = computed(() =>
+  ESPERAS.map(espera => ({ valor: espera, rotulo: horas(espera) }))
+);
+// "7 de cada 10 na versão 1": a parte da versão 1 em dezenas, sem porcentagem.
 const divisoes = computed(() =>
   DIVISOES.map(divisao => ({
-    divisao,
+    valor: divisao,
     rotulo: t(divisao === 50 ? `${NS}.METADE` : `${NS}.MAIS_NA_1`),
     detalhe: t(
-      divisao === 50 ? `${NS}.METADE_DETALHE` : `${NS}.MAIS_NA_1_DETALHE`
+      divisao === 50 ? `${NS}.METADE_DETALHE` : `${NS}.MAIS_NA_1_DETALHE`,
+      { n: divisao / 10 }
     ),
   }))
 );
@@ -65,14 +87,6 @@ const ajudaDaEspera = computed(() =>
 const mudar = patch => emit('update', { ...props.regra, ...patch });
 const escolherCriterio = criterio =>
   emit('update', trocarCriterio(props.regra, criterio));
-
-// Contorno por anel (ring): a regra base de `button` em _base.scss zera a borda e venceria o `border`.
-const classeDaPilula = escolhida =>
-  escolhida
-    ? 'ring-n-blue-8 bg-n-blue-2 text-n-blue-11'
-    : 'ring-n-slate-7 bg-n-solid-1 text-n-slate-12 hover:bg-n-alpha-1';
-const PILULA =
-  'min-h-11 rounded-xl ring-1 ring-inset px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:text-n-slate-10';
 </script>
 
 <template>
@@ -98,6 +112,7 @@ const PILULA =
       </div>
       <Button
         v-if="!aberto"
+        ref="botaoAlterar"
         :label="t(`${NS_REVISAO}.CHANGE`)"
         :aria-label="
           t(`${NS_REVISAO}.CHANGE_ARIA`, { block: t(`${NS}.TITULO`) })
@@ -106,30 +121,26 @@ const PILULA =
         size="sm"
         class="!min-h-11 shrink-0"
         data-alterar-regra
-        @click="aberto = true"
+        @click="abrir"
       />
     </div>
 
     <div v-if="aberto" class="flex flex-col gap-4 rounded-xl bg-n-alpha-1 p-4">
-      <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-        <legend class="mb-2 text-sm font-medium text-n-slate-12">
+      <div class="flex flex-col gap-2">
+        <p
+          :id="ids.criterio"
+          class="m-0 mb-2 text-sm font-medium text-n-slate-12"
+        >
           {{ t(`${NS}.CRITERIO`) }}
-        </legend>
-        <div class="flex flex-wrap gap-2" role="radiogroup">
-          <button
-            v-for="opcao in criterios"
-            :key="opcao.valor"
-            type="button"
-            role="radio"
-            :aria-checked="regra.criterio === opcao.valor"
-            :disabled="!opcao.serve"
-            :data-criterio="opcao.valor"
-            :class="[PILULA, classeDaPilula(regra.criterio === opcao.valor)]"
-            @click="escolherCriterio(opcao.valor)"
-          >
-            {{ opcao.rotulo }}
-          </button>
-        </div>
+        </p>
+        <DuasVersoesPilulas
+          ref="primeiraEscolha"
+          :opcoes="criterios"
+          :rotulado-por="ids.criterio"
+          :model-value="regra.criterio"
+          marca="criterio"
+          @update:model-value="escolherCriterio"
+        />
         <p
           v-if="!podeMedirCompras"
           class="m-0 text-xs text-n-slate-11"
@@ -137,63 +148,50 @@ const PILULA =
         >
           {{ t(`${NS}.SEM_COMPRAS`) }}
         </p>
-      </fieldset>
+      </div>
 
-      <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-        <legend class="mb-2 text-sm font-medium text-n-slate-12">
+      <div class="flex flex-col gap-2">
+        <p
+          :id="ids.espera"
+          class="m-0 mb-2 text-sm font-medium text-n-slate-12"
+        >
           {{ t(`${NS}.ESPERA`) }}
-        </legend>
-        <div class="flex flex-wrap gap-2" role="radiogroup">
-          <button
-            v-for="espera in ESPERAS"
-            :key="espera"
-            type="button"
-            role="radio"
-            :aria-checked="regra.espera === espera"
-            :data-espera="espera"
-            class="tabular-nums"
-            :class="[PILULA, classeDaPilula(regra.espera === espera)]"
-            @click="mudar({ espera })"
-          >
-            {{ horas(espera) }}
-          </button>
-        </div>
+        </p>
+        <DuasVersoesPilulas
+          :opcoes="esperas"
+          :rotulado-por="ids.espera"
+          :model-value="regra.espera"
+          marca="espera"
+          @update:model-value="espera => mudar({ espera })"
+        />
         <p class="m-0 text-xs text-n-slate-11">{{ ajudaDaEspera }}</p>
-      </fieldset>
+      </div>
 
-      <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-        <legend class="mb-2 text-sm font-medium text-n-slate-12">
+      <div class="flex flex-col gap-2">
+        <p
+          :id="ids.divisao"
+          class="m-0 mb-2 text-sm font-medium text-n-slate-12"
+        >
           {{ t(`${NS}.DIVISAO`) }}
-        </legend>
-        <div class="flex flex-wrap gap-2" role="radiogroup">
-          <button
-            v-for="opcao in divisoes"
-            :key="opcao.divisao"
-            type="button"
-            role="radio"
-            :aria-checked="regra.divisao === opcao.divisao"
-            :data-divisao="opcao.divisao"
-            class="flex flex-col items-start justify-center py-1"
-            :class="[PILULA, classeDaPilula(regra.divisao === opcao.divisao)]"
-            @click="mudar({ divisao: opcao.divisao })"
-          >
-            <span>{{ opcao.rotulo }}</span>
-            <span class="text-xs font-normal tabular-nums text-n-slate-11">
-              {{ opcao.detalhe }}
-            </span>
-          </button>
-        </div>
+        </p>
+        <DuasVersoesPilulas
+          :opcoes="divisoes"
+          :rotulado-por="ids.divisao"
+          :model-value="regra.divisao"
+          marca="divisao"
+          @update:model-value="divisao => mudar({ divisao })"
+        />
         <p class="m-0 text-xs text-n-slate-11">
           {{ t(`${NS}.DIVISAO_AJUDA`) }}
         </p>
-      </fieldset>
+      </div>
       <Button
         :label="t(`${NS}.PRONTO`)"
         variant="ghost"
         size="sm"
         class="!min-h-11 self-end"
         data-fechar-regra
-        @click="aberto = false"
+        @click="fechar"
       />
     </div>
   </div>

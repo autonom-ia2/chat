@@ -510,8 +510,12 @@ describe('Nova campanha — duas versões da mensagem (#3099)', () => {
       'seu seguro vence logo'
     );
     expect(wrapper.find('[data-test="receivers"]').text()).toBe('1,350');
-    expect(wrapper.find('[data-agora-vai-o-teste]').text()).toBe(
-      'Now 200 people get it (the test). The other 1,150 get it after 4 hours.'
+    // Uma frase só no subtítulo do "Vão receber", com o canal.
+    expect(wrapper.find('[data-test="receive-when"]').text()).toContain(
+      '200 now, 1,150 after 4 hours'
+    );
+    expect(wrapper.find('[data-test="receive-when"]').text()).not.toContain(
+      'Now'
     );
 
     await wrapper.find('[data-test="open-confirmation"]').trigger('click');
