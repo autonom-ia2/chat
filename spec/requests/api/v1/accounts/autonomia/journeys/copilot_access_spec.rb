@@ -193,7 +193,7 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
 
       expect(response.parsed_body['result']['available']).to be(true)
       expect(documentos.size).to eq(1)
-      expect(documentos.first[:name]).to eq("apolice.txt (#{Autonomia::Copilot::ConversationChat::ANEXADO_PELA_EQUIPE})")
+      expect(documentos.first[:name]).to eq("(#{Autonomia::Copilot::ConversationChat::ANEXADO_PELA_EQUIPE}) apolice.txt")
       expect(documentos.first[:text]).to include('Apolice 123 vigente ate dezembro')
     end
   end

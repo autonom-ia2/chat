@@ -149,12 +149,15 @@ const handleClickOutside = () => {
   if (isSmallScreen.value && isPanelOpen.value) closePanel();
 };
 
-const resetConversation = () => {
+// Larga o pedido em curso (a resposta ou a transcrição que chegar depois é descartada) e o assunto.
+const largarPedido = () => {
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
   store.reset();
 };
+
+const resetConversation = largarPedido;
 
 // O Guia abriu: o copiloto fecha. Só a chave dele: reabrir o contato ao lado do Guia daria as
 // três colunas que se quer evitar (quem abre o Guia já cuida do contato).
@@ -188,10 +191,8 @@ const resolveDefaultAgent = () => {
 };
 
 const setAgent = async agent => {
-  requestSequence += 1;
-  isSending.value = false;
+  largarPedido();
   selectedAgentId.value = agent.id;
-  store.reset();
   await updateUISettings({ preferred_autonomia_copilot_agent_id: agent.id });
 };
 
@@ -230,13 +231,19 @@ const fetchAgents = async () => {
   }
 };
 
-const requestReply = async (requestConversation, message, requestId) => {
+// `arquivos`: os do assunto na hora do envio (a voz guarda os seus antes de transcrever).
+const requestReply = async (
+  requestConversation,
+  message,
+  requestId,
+  arquivos = store.arquivosProntos()
+) => {
   try {
     const { data } = await AutonomiaCopilotAPI.chat(requestConversation, {
       agentId: activeAgent.value.id,
       message,
       history: store.toHistory(),
-      arquivos: store.arquivosProntos(),
+      arquivos,
     });
     if (
       requestId !== requestSequence ||
@@ -265,16 +272,10 @@ const requestReply = async (requestConversation, message, requestId) => {
   }
 };
 
-const podeEnviar = () => {
-  if (isSending.value || !activeAgent.value || !conversationDisplayId.value) {
-    return false;
-  }
-  if (gravandoVoz.value) {
-    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
-    return false;
-  }
-  return true;
-};
+const podeEnviar = () =>
+  !isSending.value &&
+  Boolean(activeAgent.value) &&
+  Boolean(conversationDisplayId.value);
 
 // Pin the conversation this request belongs to. If the agent navigates to another conversation
 // before the response lands, the late reply must NOT be appended into the now-current
@@ -294,6 +295,12 @@ const sendMessage = message => {
   if (!temTexto && !prontos.length) return false;
   if (pendentes.value.some(item => item.estado === 'subindo')) {
     useAlert(t('AUTONOMIA_GUIDE.FILE.WAIT'));
+    return false;
+  }
+  // Com gravação no campo, o texto espera: senão o áudio se perderia sem a pessoa pedir. A voz
+  // não passa por aqui (ela sai com a gravação ainda ligada).
+  if (gravandoVoz.value) {
+    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
     return false;
   }
   if (!podeEnviar()) return false;
@@ -337,7 +344,7 @@ const anexarArquivo = async file => {
 
 // A mensagem de voz vira texto aqui, e só com o texto o agente é chamado. Falhou: o balão
 // mostra o erro e o "Tentar de novo"; nada é pedido.
-const transcreverMensagem = async (registro, conversa, pedido) => {
+const transcreverMensagem = async (registro, conversa, pedido, arquivos) => {
   const ainda = () =>
     pedido === requestSequence && conversationDisplayId.value === conversa;
   transcrevendo.value = true;
@@ -359,7 +366,7 @@ const transcreverMensagem = async (registro, conversa, pedido) => {
     return;
   }
   if (!store.marcarVoz(registro.id, 'pronta', { texto })) return;
-  requestReply(conversa, texto, pedido);
+  requestReply(conversa, texto, pedido, arquivos);
 };
 
 const enviarVoz = ({ audio, duracao }) => {
@@ -368,7 +375,7 @@ const enviarVoz = ({ audio, duracao }) => {
   const registro = store.addUserMessage('', {
     voz: { audio, url: URL.createObjectURL(audio), duracao },
   });
-  transcreverMensagem(registro, conversa, pedido);
+  transcreverMensagem(registro, conversa, pedido, store.arquivosProntos());
   return true;
 };
 
@@ -376,7 +383,7 @@ const tentarVozDeNovo = item => {
   if (item.voz?.estado !== 'erro' || !podeEnviar()) return;
   const { conversa, pedido } = abrirPedido();
   store.marcarVoz(item.id, 'transcrevendo');
-  transcreverMensagem(item, conversa, pedido);
+  transcreverMensagem(item, conversa, pedido, store.arquivosProntos());
 };
 
 watch(showPanel, opened => {
@@ -387,22 +394,16 @@ watch(showPanel, opened => {
 // conversation A never lingers — or rides as `history` — when you later open the
 // copilot on conversation B. Same-conversation close/reopen keeps its thread.
 watch(conversationDisplayId, () => {
-  requestSequence += 1;
+  largarPedido();
   agentsRequestSequence += 1;
-  isSending.value = false;
-  transcrevendo.value = false;
-  store.reset();
   agents.value = [];
   selectedAgentId.value = null;
   if (showPanel.value) fetchAgents();
 });
 
 watch(currentAccountId, () => {
-  requestSequence += 1;
+  largarPedido();
   agentsRequestSequence += 1;
-  isSending.value = false;
-  transcrevendo.value = false;
-  store.reset();
   agents.value = [];
   selectedAgentId.value = null;
   if (showPanel.value) fetchAgents();

@@ -84,12 +84,13 @@ module Autonomia
       end
 
       # The document fence (PromptParts::Documentos) says the files came from the customer; the name says who really
-      # attached them, so the agent does not put the team's file in the customer's mouth.
+      # attached them, so the agent does not put the team's file in the customer's mouth. The mark goes first: the
+      # fence cuts the name at 120 characters.
       def documentos
         return [] if @arquivos.empty?
 
         Autonomia::Guide::Arquivos.new(account: account).ler(@arquivos)
-                                  .map { |doc| doc.merge(name: "#{doc[:name]} (#{ANEXADO_PELA_EQUIPE})") }
+                                  .map { |doc| doc.merge(name: "(#{ANEXADO_PELA_EQUIPE}) #{doc[:name]}") }
       end
 
       # Only the account's own team copilots (internal/both, never a system agent nor a helper of another agent).

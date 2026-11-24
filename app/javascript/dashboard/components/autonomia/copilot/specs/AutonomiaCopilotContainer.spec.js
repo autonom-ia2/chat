@@ -4,6 +4,7 @@ import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import { useAlert } from 'dashboard/composables';
 import GuideComposer from 'dashboard/components/autonomia/guide/GuideComposer.vue';
+import CopilotHeader from '../CopilotHeader.vue';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
@@ -333,11 +334,16 @@ describe('AutonomiaCopilotContainer', () => {
       );
       await flushPromises();
     };
+    // Como no gravador de verdade: o composer avisa `gravando` antes de entregar o áudio, e a
+    // gravação continua ligada no momento da entrega.
     const gravar = async () => {
+      composer().vm.$emit('gravando', true);
+      await nextTick();
       composer().props('onEnviarVoz')({
         audio: new Blob(['x'], { type: 'audio/webm' }),
         duracao: 3,
       });
+      composer().vm.$emit('gravando', false);
       await flushPromises();
     };
 
@@ -432,6 +438,50 @@ describe('AutonomiaCopilotContainer', () => {
       expect(AutonomiaCopilotAPI.chat).not.toHaveBeenCalled();
       expect(useAutonomiaCopilotStore().messages[0].voz.estado).toBe('erro');
       expect(wrapper.find('textarea').attributes('readonly')).toBeUndefined();
+    });
+
+    it('com gravação no campo, o texto espera e avisa', async () => {
+      wrapper = await mountCopilot();
+
+      composer().vm.$emit('gravando', true);
+      await nextTick();
+      const aceitou = composer().props('onSend')('Resuma');
+
+      expect(aceitou).toBe(false);
+      expect(AutonomiaCopilotAPI.chat).not.toHaveBeenCalled();
+      expect(useAlert).toHaveBeenCalledWith(
+        'AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'
+      );
+    });
+
+    it('trocar de agente no meio da transcrição destrava o indicador', async () => {
+      let transcrever;
+      AutonomiaGuideAPI.transcrever.mockReturnValue(
+        new Promise(resolve => {
+          transcrever = resolve;
+        })
+      );
+      AutonomiaCopilotAPI.listAgents.mockResolvedValue({
+        data: {
+          agents: [
+            { id: 7, name: 'Lia' },
+            { id: 8, name: 'Bruno' },
+          ],
+        },
+      });
+      AutonomiaCopilotAPI.chat.mockReturnValue(new Promise(() => {}));
+      wrapper = await mountCopilot();
+
+      await gravar();
+      wrapper
+        .findComponent(CopilotHeader)
+        .vm.$emit('trocar', { id: 8, name: 'Bruno' });
+      await flushPromises();
+      transcrever({ data: { texto: 'atrasado' } });
+      await flushPromises();
+      await send(wrapper.find('textarea'), 'Nova pergunta');
+
+      expect(wrapper.text()).toContain('AUTONOMIA_COPILOT.THINKING');
     });
 
     it('"Novo assunto" esquece os arquivos', async () => {

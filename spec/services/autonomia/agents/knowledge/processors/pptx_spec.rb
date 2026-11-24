@@ -67,6 +67,16 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pptx do
       end
     end
 
+    context 'with slides bigger than the decompressed ceiling' do
+      let(:arquivos) { { 'ppt/slides/slide1.xml' => slide('Texto qualquer') } }
+
+      before { stub_const("#{described_class}::MAX_DECOMPRESSED_BYTES", 10) }
+
+      it 'falha antes de ler (anti zip-bomb)' do
+        expect { processor.extract }.to raise_error(Autonomia::Agents::Knowledge::Processors::Base::ExtractionError, 'pptx_too_large')
+      end
+    end
+
     context 'with a broken zip' do
       let(:pptx_bytes) { 'não é um zip' }
 

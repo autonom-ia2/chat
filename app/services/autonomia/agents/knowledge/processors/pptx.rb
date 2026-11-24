@@ -31,7 +31,9 @@ class Autonomia::Agents::Knowledge::Processors::Pptx < Autonomia::Agents::Knowle
   end
 
   # Os slides pelo número do nome (slide2 antes de slide10), não pela ordem do zip. `ppt/slides/_rels/...` e
-  # outros arquivos da pasta ficam de fora: o meio do nome tem que ser só o número.
+  # outros arquivos da pasta ficam de fora: o meio do nome tem que ser só o número. Limitação conhecida: a ordem
+  # oficial mora em ppt/presentation.xml; o PowerPoint renumera os arquivos ao salvar, mas um arquivo montado por
+  # outra ferramenta pode sair fora de ordem. Slide oculto também entra.
   def slide_entries(zip)
     zip.entries.filter_map { |entry| numero_do_slide(entry.name)&.then { |numero| [numero, entry] } }
        .sort_by(&:first).map(&:last)
