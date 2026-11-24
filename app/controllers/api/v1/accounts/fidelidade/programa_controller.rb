@@ -2,8 +2,8 @@
 # ou ligar de novo (PATCH { ligado }, PainelDoCartao). A regra de cada campo está em Fidelidade::Programa; o que muda
 # ao criar, mudar, pausar e ligar, em Fidelidade::GravarPrograma.
 class Api::V1::Accounts::Fidelidade::ProgramaController < Api::V1::Accounts::Fidelidade::BaseController
-  before_action -> { conferir(:view?) }, only: :show
-  before_action -> { conferir(:manage?) }, only: [:update, :ligar]
+  before_action -> { exigir(:view?) }, only: :show
+  before_action -> { exigir(:manage?) }, only: [:update, :ligar]
 
   def show
     render json: programa&.para_a_tela

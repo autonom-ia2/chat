@@ -70,7 +70,7 @@ class Api::V1::Accounts::Relacionamentos::FidelidadeController < Api::V1::Accoun
   end
 
   def pagina
-    numero = Integer(params[:pagina].presence || '1', 10, exception: false)
+    numero = Integer(params[:pagina].to_s.presence || '1', 10, exception: false)
     recusar("pagina inválida: #{params[:pagina]}") unless numero&.positive?
     numero
   end

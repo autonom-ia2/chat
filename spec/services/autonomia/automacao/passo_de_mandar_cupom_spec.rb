@@ -115,7 +115,9 @@ RSpec.describe Autonomia::Automacao::PassoDeMandarCupom, :automacao_motor do
       cupom.update!(ligado: false)
       expect(executar).to have_attributes(tipo: :pulado, motivo: 'cupom_pausado')
 
-      expect(executar(passo_usado: passo.merge('cupom_id' => 0))).to have_attributes(tipo: :pulado, motivo: 'sem_cupom')
+      # O cupom some depois que a receita foi salva (salvar recusa cupom que não existe): a execução é de uma receita válida.
+      salva = Autonomia::Automacao::Execucao.new(automacao: automacao_ligada(account, dona, [passo]), account: account)
+      expect(executar(salva, passo_usado: passo.merge('cupom_id' => 0))).to have_attributes(tipo: :pulado, motivo: 'sem_cupom')
       expect(mandadas).to be_empty
     end
 

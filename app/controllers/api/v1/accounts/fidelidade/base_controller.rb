@@ -3,7 +3,7 @@
 class Api::V1::Accounts::Fidelidade::BaseController < Api::V1::Accounts::BaseController
   private
 
-  def conferir(permissao)
+  def exigir(permissao)
     authorize(::Fidelidade::Programa, permissao, policy_class: ::Fidelidade::ProgramaPolicy)
   end
 

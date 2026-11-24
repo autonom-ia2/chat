@@ -6,8 +6,8 @@
 # O conferir tem limite de tentativas por pessoa (rack_attack.rb) e só diz o nome do cliente a quem pode ver o contato.
 # Marcar o código como usado mora em CupomCodigosController (quem pode mexer no contato, D1).
 class Api::V1::Accounts::Fidelidade::CuponsController < Api::V1::Accounts::Fidelidade::BaseController
-  before_action -> { conferir(:view?) }, only: [:index, :conferir]
-  before_action -> { conferir(:manage?) }, only: [:create, :update]
+  before_action -> { exigir(:view?) }, only: [:index, :conferir]
+  before_action -> { exigir(:manage?) }, only: [:create, :update]
 
   def index
     render json: relatorio.call
