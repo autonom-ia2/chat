@@ -20,6 +20,8 @@ class Autonomia::Guide::Contexto
   # pergunta com várias partes precisa na prática, e um painel estreito não
   # tem espaço para uma lista maior de botões.
   MAX_ITENS = 5
+  # #3158 — até 3 gráficos por turno: eles vão para o jsonb do turno e para o Redis do pedido.
+  MAX_GRAFICOS = 3
 
   # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
   # `turno_id` (#933): o turno onde uma anotação nasce, para o painel dizer de que conversa ela veio.
@@ -40,7 +42,39 @@ class Autonomia::Guide::Contexto
   # Também anota no pedido o que ele acabou de fazer, para a tela mostrar enquanto espera.
   def registrar_chamada(call, output, milissegundos)
     @registro&.registrar_chamada(call, output, milissegundos)
+    # O mesmo corte que o modelo recebe (Answerer): número que só existe depois do corte não tem fonte.
+    saidas << output.to_s.truncate(::Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS)
     ::Autonomia::Guide::Pedido.anotar_etapa(@pedido_id, call.to_h['name'])
+  end
+
+  # #3158 — o que as ferramentas devolveram neste turno: é contra isso que a conferência de números
+  # (`NumerosSemFonte`) olha a resposta.
+  def saidas
+    @saidas ||= []
+  end
+
+  # #3158 — os números da resposta que nenhuma ferramenta sustenta vão para o diagnóstico; a resposta não muda.
+  # `conversa` (o histórico e a pergunta) também vale como conhecida: a resposta pode repetir um número de antes.
+  def conferir_numeros(texto, conversa)
+    ::Autonomia::Guide::NumerosSemFonte.registrar(texto: texto, conhecidos: saidas + Array(conversa), registro: @registro,
+                                                  account_id: @account&.id)
+  end
+
+  # #3158 — os gráficos deste turno, na ordem em que a ferramenta os montou. Cada um ganha o id do marcador
+  # `[grafico:<id>]` que o modelo recebe. O mesmo gráfico pedido de novo (mesmo conteúdo, o que inclui período,
+  # título e barras) devolve o id que já tem e não gasta o teto. -> o id, ou nil quando o turno já tem 3.
+  def desenhar(grafico)
+    igual = graficos.find { |desenhado| desenhado.except('id') == grafico }
+    return igual['id'] if igual
+    return nil if graficos.size >= MAX_GRAFICOS
+
+    id = (graficos.size + 1).to_s
+    graficos << grafico.merge('id' => id)
+    id
+  end
+
+  def graficos
+    @graficos ||= []
   end
 
   # O que a pessoa escreveu enquanto este turno trabalhava (`Pedido.acrescentar`). O `Answerer` pergunta a cada rodada

@@ -8,6 +8,10 @@
 # `diagnostico` é o que o Guia leu, chamou e decidiu — só metadado. Nunca entra
 # instrução, catálogo, trecho da base, conteúdo do que foi lido nem valor que a
 # pessoa mandou gravar (`Registro`).
+#
+# A exceção são os gráficos (#3158), em `diagnostico['graficos']`: o jsonb já
+# existe e evita uma migration. Eles trazem só o que a resposta do turno já diz
+# (nomes e números do relatório), e é daqui que voltam ao reabrir a conversa.
 class Autonomia::Guide::Turno < ApplicationRecord
   self.table_name = 'autonomia_guide_turns'
 
@@ -56,7 +60,8 @@ class Autonomia::Guide::Turno < ApplicationRecord
     # terminar: a pergunta seguinte (`ChatJob#encerrar`) já lê esta resposta no histórico.
     def concluir(pedido_id, resultado, diagnostico)
       turno = find_by(pedido_id: pedido_id)
-      turno&.update!(desfecho(resultado.to_h.with_indifferent_access).merge(diagnostico: diagnostico))
+      dados = resultado.to_h.with_indifferent_access
+      turno&.update!(desfecho(dados).merge(diagnostico: com_graficos(diagnostico, dados[:graficos])))
     rescue StandardError => e
       Rails.logger.warn("[autonomia][guide][turno] concluir pedido=#{pedido_id} #{e.class}")
     end
@@ -87,6 +92,12 @@ class Autonomia::Guide::Turno < ApplicationRecord
       { status: status_de(resultado), resposta: resultado[:text], navegacoes: Array(resultado[:navigations]),
         artigos: Array(resultado[:artigos]), acao: resultado[:acao], execution_id: execucao[:id],
         passos: Array(execucao[:passos]) }
+    end
+
+    def com_graficos(diagnostico, graficos)
+      return diagnostico if graficos.blank?
+
+      diagnostico.to_h.merge('graficos' => Array(graficos).map { |grafico| grafico.to_h.deep_stringify_keys })
     end
 
     def status_de(resultado)
@@ -137,7 +148,12 @@ class Autonomia::Guide::Turno < ApplicationRecord
       'resposta' => resposta, 'navegacoes' => navegacoes, 'artigos' => artigos, 'acao' => acao,
       'acao_estado' => acao_estado, 'acao_resultado' => acao_resultado, 'execucao' => execucao_para_tela,
       'aviso_id' => aviso_id, 'tarefa' => tarefa_para_tela, 'junto_de' => junto_de, 'fora_do_ar' => fora_do_ar?,
-      'criado_em' => created_at.iso8601 }
+      'graficos' => graficos, 'criado_em' => created_at.iso8601 }
+  end
+
+  # #3158 — os gráficos do turno, para o painel redesenhar ao reabrir a conversa. -> Array ou nil.
+  def graficos
+    diagnostico.is_a?(Hash) ? diagnostico['graficos'].presence : nil
   end
 
   # #936 — a tarefa longa planejada neste turno: o cartão volta ao reabrir a conversa e busca o

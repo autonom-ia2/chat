@@ -494,7 +494,7 @@ module Autonomia
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           output = executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
           registrar_chamada(call, output, inicio)
-          saida = output.to_s.truncate(8_000)
+          saida = output.to_s.truncate(Tools::Bound::MAX_OUTPUT_CHARS)
           # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
           # ajudante não (pode repetir o que o cliente disse).
           (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)

@@ -54,6 +54,12 @@ vi.mock('dashboard/composables/useUISettings', () => ({
   }),
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
+// #3168 — a lista pergunta à loja se a conta tem "Este contato é" (a Relação
+// de "Por outra informação"): aqui, não tem.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return { useMapGetter: () => ref(undefined) };
+});
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: 'relationships_home' });

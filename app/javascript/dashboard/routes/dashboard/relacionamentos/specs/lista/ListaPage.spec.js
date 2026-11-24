@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { DEMO_FORA_DO_SEGMENTO, usarDemo } from '../../fonte/modoDemo';
 import { esquecerEmpresasApagadas } from '../../demo/base';
 import MarcarTodas from '../../components/lista/MarcarTodas.vue';
+import { contarFiltros } from '../../lista/filtros';
 import ListaPage from '../../pages/ListaPage.vue';
 
 // A lista de Relacionamentos inteira (#2894), com a base fictícia e o texto de
@@ -594,10 +595,10 @@ describe('ListaPage: busca, ordem e filtros', () => {
   });
 
   it('filtro sem resultado diz "Não achei ninguém com esses filtros." e limpa', async () => {
+    // #3168 — os filtros também levam `condicoes: []` e `juntar`: "algum
+    // filtro ligado" é a contagem do botão.
     trocas.listar = (base, pedido) =>
-      Object.values(pedido.filtros).some(Boolean)
-        ? NINGUEM
-        : base.listar(pedido);
+      contarFiltros(pedido.filtros) ? NINGUEM : base.listar(pedido);
     const w = await montar();
     await w.get(marca('mais-filtros')).trigger('click');
     await assentar();

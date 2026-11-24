@@ -59,7 +59,9 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaLembrar,
     Autonomia::Agents::Tools::Native::GuiaEsquecer,
     # #936 — o Guia planeja um trabalho grande: receita, amostra e o botão Começar para a pessoa.
-    Autonomia::Agents::Tools::Native::GuiaTarefa
+    Autonomia::Agents::Tools::Native::GuiaTarefa,
+    # #3158 — os números da tela Relatórios, com gráfico quando a pessoa pede.
+    Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento
   ].freeze
 
   TOOLS = (DE_ATENDIMENTO + DO_GUIA).freeze
