@@ -516,6 +516,14 @@ carteira_conector_busca_diaria_job:
   class: 'Carteira::Conector::BuscaDiariaJob'
   queue: scheduled_jobs
 
+# executed daily; o PDF do Agger que está guardado e nunca foi lido (#3175): o que chegou antes da leitura na chegada
+# existir, ou cuja leitura se perdeu. Põe na fila a leitura de cada um (Carteira::Conector::PdfsSemLeituraJob), depois da
+# busca de todo dia. A leitura é UMA por PDF: o que já foi lido, ou não tem nada vazio, fica de fora.
+carteira_conector_pdfs_sem_leitura_job:
+  cron: '50 7 * * *'
+  class: 'Carteira::Conector::PdfsSemLeituraJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; devolve ao envio os destinatários de campanha adiados pelo limite por cliente ou pelo
 # horário de envio da conta e apaga o contador velho (#3063, item 2).
 autonomia_ritmo_de_envio_varredura_job:
