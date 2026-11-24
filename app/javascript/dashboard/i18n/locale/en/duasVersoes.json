@@ -156,7 +156,7 @@
       "NINGUEM_RECEBEU_AINDA": "No one has received this version yet."
     },
     "AUTOMACAO": {
-      "LIGAR": "Test two versions of this message",
+      "LIGAR": "Two versions of the message",
       "AJUDA_DESLIGADO": "Write the same message another way. Each person gets one of the two and, after the test, everyone gets the better one.",
       "TEXTO_2": "Version 2 text",
       "MODELO_2": "Version 2 template",

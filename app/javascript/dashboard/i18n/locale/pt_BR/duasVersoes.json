@@ -156,7 +156,7 @@
       "NINGUEM_RECEBEU_AINDA": "Ninguém recebeu esta versão ainda."
     },
     "AUTOMACAO": {
-      "LIGAR": "Testar duas versões desta mensagem",
+      "LIGAR": "Duas versões da mensagem",
       "AJUDA_DESLIGADO": "Escreva a mesma mensagem de outro jeito. Cada pessoa recebe uma das duas e, depois do teste, todas passam a receber a melhor.",
       "TEXTO_2": "Texto da versão 2",
       "MODELO_2": "Modelo da versão 2",

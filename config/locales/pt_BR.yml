@@ -1640,7 +1640,7 @@ pt_BR:
         versoes_sem_modelo: "Passo %{passo}: a mensagem usa um modelo quando a janela de 24 h está fechada, então a versão 2 também precisa de um modelo."
         versoes_modelo_sobrando: "Passo %{passo}: a versão 2 tem um modelo, mas a versão 1 não. Escolha um modelo para a versão 1 ou tire o da versão 2."
         versoes_iguais: "Passo %{passo}: a versão 2 está igual à versão 1. Mude alguma coisa para dar para comparar."
-        versoes_sem_compras: "Passo %{passo}: \"mais compras\" precisa do CRM, que está desligado nesta conta. Escolha \"mais respostas\" ou \"eu escolho\"."
+        versoes_sem_compras: "Passo %{passo}: \"mais compras\" precisa dos funis de venda, que estão desligados nesta conta. Escolha \"mais respostas\" ou \"eu escolho\"."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
