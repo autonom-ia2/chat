@@ -93,6 +93,17 @@ const fecharEDevolverFoco = () => {
   devolverFoco();
 };
 
+// #3195 — com o menu aberto, o Esc é dele: para aqui, senão chega ao ouvinte
+// do painel (AutonomiaGuideContainer) e fecha o Guia inteiro. Com o menu
+// fechado, segue: Esc fecha o Guia como sempre.
+// A lista tem tabindex -1: um clique na borda dela deixa o foco no menu (e não
+// no body), e o Esc continua passando por aqui.
+const aoApertarEsc = evento => {
+  if (!menuAberto.value) return;
+  evento.stopPropagation();
+  fecharEDevolverFoco();
+};
+
 const alternarMenu = async () => {
   menuAberto.value = !menuAberto.value;
   if (!menuAberto.value) return;
@@ -196,7 +207,7 @@ const mover = (evento, indice) => {
       <div
         v-on-clickaway="fecharMenu"
         class="relative shrink-0"
-        @keydown.esc="fecharEDevolverFoco"
+        @keydown.esc="aoApertarEsc"
       >
         <Button
           ref="gatilho"
@@ -214,6 +225,7 @@ const mover = (evento, indice) => {
         <ul
           v-if="menuAberto"
           role="menu"
+          tabindex="-1"
           :aria-label="$t('AUTONOMIA_GUIDE.HEADER.MORE')"
           class="absolute top-full ltr:right-0 rtl:left-0 z-10 mt-1 mb-0 w-72 max-w-[calc(100vw-1rem)] list-none rounded-xl border border-n-weak bg-n-solid-1 p-1 shadow-lg"
         >
