@@ -422,6 +422,7 @@ onBeforeUnmount(() => {
           :ramos="ramos"
           :pode-usar="podeGerenciar"
           :comecando="comecandoModelo"
+          :falhou="modeloQueFalhou"
           @usar="usarRamo"
         />
         <ul
