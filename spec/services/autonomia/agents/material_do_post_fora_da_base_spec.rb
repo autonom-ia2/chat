@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #2487 — o material só de um post ou anúncio (fonte com `care_id`) é gravado com o `autonomia_agent_id` de um agente,
-# mas nunca pode afetar o agente: nem o mapa de temas, nem a instrução, nem as conferências, o autoteste, o Construtor
+# mas nunca pode afetar o agente: nem o mapa de temas, nem a instrução, nem as conferências, o Construtor
 # ou a resposta. Um exemplo por leitor que passou a partir de `Source.da_agente`: a fonte do cuidado (mesmo aceita,
 # pronta, servível e do tipo conhecimento) fica de fora, e a do agente entra. Nenhuma IA é chamada: tudo é dublado.
 RSpec.describe 'Material do post fora da base do agente (#2487)' do # rubocop:disable RSpec/DescribeClass
@@ -268,61 +268,6 @@ RSpec.describe 'Material do post fora da base do agente (#2487)' do # rubocop:di
       do_post('ficha-do-post.pdf', status: :failed, error: 'empty_extraction', trechos: [])
 
       expect(described_class.new(agent.reload).lista.pluck('id')).to eq(["vazio-#{vazio.id}"])
-    end
-  end
-
-  describe Autonomia::Agents::Material::Retrato do
-    it 'a caixa do autoteste só aparece com material do agente', :aggregate_failures do
-      do_post('tamanhos.txt')
-      expect(described_class.new(agent.reload).to_h[:autoteste]).to be_nil
-
-      material('horarios.txt')
-      expect(described_class.new(agent.reload).to_h[:autoteste]).to include(estado: 'nunca')
-    end
-  end
-
-  describe Autonomia::Agents::Material::PerguntasDoAutoteste do
-    let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
-
-    before do
-      credencial_de_teste
-      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
-      allow(cliente).to receive(:create).and_return(resposta_do_modelo(do_material: [], de_fora: []))
-    end
-
-    it 'só com material do post: não gera pergunta nem chama o modelo', :aggregate_failures do
-      do_post('tamanhos.txt', trechos: ['Camiseta P, M e G.'])
-
-      expect(described_class.new(agent).gerar).to be_nil
-      expect(cliente).not_to have_received(:create)
-    end
-
-    it 'as perguntas saem só do material do agente', :aggregate_failures do
-      material('cardapio.pdf', trechos: ['X-Burger R$ 25.'])
-      do_post('tamanhos.txt', trechos: ['Camiseta P, M e G.'])
-
-      described_class.new(agent).gerar
-
-      expect(cliente).to have_received(:create) do |**kwargs|
-        texto = kwargs[:input].first[:content].first[:text]
-        expect(texto).to include('X-Burger R$ 25.')
-        expect(texto).not_to include('Camiseta P, M e G.')
-      end
-    end
-  end
-
-  describe Autonomia::Agents::Material::Autoteste do
-    it 'só com material do post: não abre rodada do autoteste' do
-      do_post('tamanhos.txt')
-
-      expect { expect(described_class.pedir!(agent, quando: 'pedido')).to be_nil }
-        .not_to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
-    end
-
-    it 'com material do agente: abre a rodada' do
-      material('horarios.txt')
-
-      expect { described_class.pedir!(agent, quando: 'pedido') }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
     end
   end
 

@@ -2197,9 +2197,6 @@ pt_BR:
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
     material:
       problema_invalido: 'Isto já foi resolvido ou mudou. A página foi atualizada.'
-      autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
-      autoteste_espere: 'Espere um pouco para testar de novo.'
-      autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
     base_de_seguros:
       sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
       base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'

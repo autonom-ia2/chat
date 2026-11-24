@@ -11581,15 +11581,6 @@
     ],
     "sem_corpo": true
   },
-  "POST autonomia/agents/:agent_id/material/autoteste": {
-    "completo": true,
-    "controller": "api/v1/accounts/autonomia/agents/material#autoteste",
-    "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:37"
-    ],
-    "sem_corpo": true
-  },
   "POST autonomia/agents/:agent_id/material/problemas/:problema_id/resolver": {
     "campos": {
       "escolha": {
@@ -11602,7 +11593,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:12",
       "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:26"
     ],
     "sem_corpo": false
   },

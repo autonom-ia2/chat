@@ -1,40 +1,22 @@
 require 'rails_helper'
 
-# AVALIAÇÃO PAGA DAS CONFERÊNCIAS E DO AUTOTESTE DO MATERIAL (#1426, tema 4b), DESLIGADA POR PADRÃO. Roda só com
+# AVALIAÇÃO PAGA DAS CONFERÊNCIAS DO MATERIAL (#1426, tema 4b), DESLIGADA POR PADRÃO. Roda só com
 # `AUTONOMIA_EVAL_PAGO=1`, `CONFERENCIAS_EVAL=1` e `OPENAI_API_KEY`. Autorizada pelo Rodrigo em 19/10/2026 ("Pode, teto
 # US$ 2"): teto TOTAL de US$ 2, somado pelo consumo gravado (Crm::AiUsageEvent); a cena que não cabe no que sobra nem
-# começa, e o autoteste recebe como teto só o que sobrou.
+# começa.
 # Cenas: C1/C2 foto do cardápio (OCR local de verdade + conferência), C3/C4 planilha sem/com títulos, C5 PDF de texto
-# corrido, C6/C7/C8 contradição entre materiais (uma de verdade, duas que não são), A1 autoteste numa base limpa e A2
-# autoteste com um material reprovado no meio (o fato some: vira cartão). Opcional: `CONFERENCIAS_EVAL_SAIDA=<arquivo>`
+# corrido, C6/C7/C8 contradição entre materiais (uma de verdade, duas que não são). As cenas do autoteste saíram com ele
+# (#3200). Opcional: `CONFERENCIAS_EVAL_SAIDA=<arquivo>`
 # grava o relatório; `CONFERENCIAS_EVAL_CENA=<nome>[,<nome>...]` roda só essas cenas; `CONFERENCIAS_EVAL_TETO=<usd>`
 # baixa o teto da rodada (nunca acima de US$ 2).
 module AvaliacaoDasConferencias
   TETO_USD = [ENV.fetch('CONFERENCIAS_EVAL_TETO', '2.0').to_f, 2.0].min
   # O que cada cena deve custar, no máximo, para começar (o real é gravado no relatório).
-  ESTIMATIVA = { conferencia: 0.02, contradicao: 0.08, autoteste: 0.6 }.freeze
+  ESTIMATIVA = { conferencia: 0.02, contradicao: 0.08 }.freeze
   FOTOS = Rails.root.join('spec/fixtures/files/autonomia/foto_da_criacao')
 
   LANCHONETE = 'Você é a Bia, atendente da Lanchonete da Bia. Responda dúvidas de clientes pelo WhatsApp com simpatia e ' \
                'brevidade, usando só o que está no material. O que não estiver no material, diga que vai verificar com a equipe.'.freeze
-
-  CARDAPIO = <<~TXT.freeze
-    Cardápio da Lanchonete da Bia
-    X-Burguer: pão, hambúrguer de 150 g, queijo e salada. R$ 24,00.
-    X-Bacon: pão, hambúrguer de 150 g, queijo e bacon. R$ 28,00.
-    Misto quente: pão de forma, presunto e queijo. R$ 12,00.
-    Suco natural de laranja (500 ml): R$ 9,00. Refrigerante lata: R$ 6,00.
-  TXT
-
-  FUNCIONAMENTO = <<~TXT.freeze
-    Horário de funcionamento: de segunda a sexta, das 11h às 22h. Sábado, das 11h às 15h. Domingo fechado.
-    Endereço: Rua das Laranjeiras, 120, Centro.
-  TXT
-
-  ENTREGA = <<~TXT.freeze
-    Entrega: atendemos só o bairro Centro, com taxa fixa de R$ 5,00. Pedido mínimo para entrega: R$ 30,00.
-    Pagamento: Pix, cartão de débito e dinheiro. Não aceitamos cartão de crédito.
-  TXT
 
   PLANILHA_SEM_TITULOS = <<~TXT.freeze
     ## Planilha1
@@ -75,17 +57,14 @@ module AvaliacaoDasConferencias
                    'entrega.pdf' => 'Entregamos no Centro e na Vila Nova, com taxa de R$ 5,00.' } },
     { nome: 'C8_mesmo_fato_outras_palavras', tipo: :contradicao, contradicoes: 0,
       materiais: { 'site' => 'Aos sábados abrimos às 9h e fechamos às 13h.',
-                   'folheto.pdf' => 'Sábado: das 9 da manhã até a 1 da tarde.' } },
-    { nome: 'A1_autoteste_base_limpa', tipo: :autoteste },
-    { nome: 'A2_autoteste_material_reprovado_no_meio', tipo: :autoteste, reprovar_no_meio: true }
+                   'folheto.pdf' => 'Sábado: das 9 da manhã até a 1 da tarde.' } }
   ].freeze
 end
 
-RSpec.describe 'Avaliação paga das conferências e do autoteste do material (#1426)', :eval_pago do # rubocop:disable RSpec/DescribeClass
+RSpec.describe 'Avaliação paga das conferências do material (#1426)', :eval_pago do # rubocop:disable RSpec/DescribeClass
   let(:conta) { conta_da_fase2 }
   let(:relatorio) { [] }
   let(:saidas_da_conferencia) { [] }
-  let(:reprovadas) { [] }
 
   around do |example|
     WebMock.allow_net_connect!
@@ -107,7 +86,7 @@ RSpec.describe 'Avaliação paga das conferências e do autoteste do material (#
     )
   end
 
-  # Material lido e aprovado, um trecho por parágrafo, com o vetor de verdade (o Retriever do autoteste o encontra).
+  # Material lido e aprovado, um trecho por parágrafo, com o vetor de verdade.
   def material(agent, nome, texto, source_type: 'txt')
     fonte = Autonomia::Agents::Source.create!(account: conta, agent: agent, source_type: source_type, reference: nome,
                                               status: :ready, review_status: 'accepted', reviewed_at: Time.current,
@@ -156,67 +135,6 @@ RSpec.describe 'Avaliação paga das conferências e do autoteste do material (#
     { contradicoes: lista, aprovada: !lista.nil? && lista.size == cena[:contradicoes] }
   end
 
-  def autoteste(cena)
-    agent = criar_agente
-    materiais_da_lanchonete(agent)
-    reprovar_no_meio if cena[:reprovar_no_meio]
-    salvo = rodar_autoteste(agent)
-    itens = Array(salvo['itens'])
-    cartoes = Autonomia::Agents::Material::Problemas.new(agent).lista.select { |problema| problema['tipo'].start_with?('autoteste') }
-    { estado: salvo['estado'], motivo: salvo['motivo'], gasto_da_rodada_usd: salvo['gasto_usd'],
-      itens: itens.map { |item| item.slice('origem', 'pergunta', 'esperado', 'fonte', 'resposta', 'equipe', 'veredito') },
-      cartoes: cartoes.map { |cartao| cartao.slice('tipo', 'pergunta') }, fonte_reprovada: reprovadas.first&.id,
-      aprovada: salvo['estado'] == 'pronto' && autoteste_aprovado?(cena, itens, cartoes) }
-  end
-
-  def materiais_da_lanchonete(agent)
-    { 'cardapio.txt' => AvaliacaoDasConferencias::CARDAPIO, 'funcionamento.txt' => AvaliacaoDasConferencias::FUNCIONAMENTO,
-      'entrega.txt' => AvaliacaoDasConferencias::ENTREGA }.each { |nome, texto| material(agent, nome, texto) }
-  end
-
-  # A rodada como o job a roda, com teto = o que sobra do teto total da avaliação.
-  def rodar_autoteste(agent)
-    estado = Autonomia::Agents::Material::Autoteste.pedir!(agent, quando: 'pedido')
-    medidor = Autonomia::Agents::Material::MedidorDeCusto.new(teto: AvaliacaoDasConferencias::TETO_USD - custo_ate_agora)
-    Autonomia::Agents::Material::Autoteste.new(agent, estado['rodada'], medidor: medidor).rodar!
-    agent.reload.chave_do_material('autoteste').to_h
-  end
-
-  # Gera as perguntas com a base inteira e, antes das respostas, reprova o material da 1ª pergunta (como a pessoa que
-  # tem um material reprovado pela conferência): as perguntas dele não têm mais resposta.
-  def reprovar_no_meio
-    allow_any_instance_of(Autonomia::Agents::Material::PerguntasDoAutoteste).to receive(:gerar).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
-      original.call.tap do |geradas|
-        fonte = Autonomia::Agents::Source.find_by(id: geradas&.dig(:material, 0, 'fonte'))
-        fonte&.update!(review_status: 'needs_resend')
-        reprovadas << fonte if fonte
-      end
-    end
-  end
-
-  # Até 10 (no máximo 8 do material), as 2 de fora recusadas. Base limpa: todas certas e nenhum cartão. Com o material
-  # reprovado: as perguntas dele erradas, e cada uma vira cartão.
-  def autoteste_aprovado?(cena, itens, cartoes)
-    do_material = itens.select { |item| item['origem'] == 'material' }
-    return false unless formato_certo?(itens, do_material)
-    return base_limpa_certa?(do_material, cartoes) unless cena[:reprovar_no_meio]
-
-    reprovado_vira_cartao?(do_material.select { |item| item['fonte'] == reprovadas.first&.id }, cartoes)
-  end
-
-  def reprovado_vira_cartao?(sem_material, cartoes)
-    sem_material.any? && sem_material.all? { |item| item['veredito'] == 'errado' } && cartoes.size >= sem_material.size
-  end
-
-  def formato_certo?(itens, do_material)
-    de_fora = itens - do_material
-    itens.size.between?(3, 10) && do_material.size <= 8 && de_fora.size == 2 && de_fora.all? { |item| item['veredito'] == 'recusou' }
-  end
-
-  def base_limpa_certa?(do_material, cartoes)
-    do_material.all? { |item| item['veredito'] == 'certo' } && cartoes.empty?
-  end
-
   def rodar(cena)
     inicio = custo_ate_agora
     resultado = send(cena[:tipo], cena)
@@ -234,7 +152,7 @@ RSpec.describe 'Avaliação paga das conferências e do autoteste do material (#
     custo_ate_agora + AvaliacaoDasConferencias::ESTIMATIVA.fetch(cena[:tipo]) <= AvaliacaoDasConferencias::TETO_USD
   end
 
-  it 'confere leitura, tabela e contradição pelo sentido, e o autoteste acha o que falta sem inventar' do
+  it 'confere leitura, tabela e contradição pelo sentido' do
     ligada = ENV['AUTONOMIA_EVAL_PAGO'] == '1' && ENV['CONFERENCIAS_EVAL'] == '1' && ENV['OPENAI_API_KEY'].present?
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1, CONFERENCIAS_EVAL=1 e OPENAI_API_KEY' unless ligada
 

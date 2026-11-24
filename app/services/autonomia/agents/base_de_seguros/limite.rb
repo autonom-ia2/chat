@@ -1,4 +1,4 @@
-# F3 do tema 8 (#1429): o limite do antes e depois, como o do autoteste: no máximo 1 comparação a cada 2 minutos por
+# F3 do tema 8 (#1429): o limite do antes e depois: no máximo 1 comparação a cada 2 minutos por
 # agente e 10 por dia por conta. Cada comparação são 6 respostas do agente (3 perguntas, com cada base), pagas como no
 # Testar. Contado no Redis, atômico (SET NX e INCR): dois pedidos juntos não passam os dois.
 #

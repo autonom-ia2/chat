@@ -1105,9 +1105,6 @@ en:
       resync_not_allowed: 'Approved FAQs are added one by one from the suggestions list; there is nothing to resync.'
     material:
       problema_invalido: 'This item was already resolved or changed. The page was updated.'
-      autoteste_indisponivel: 'There is no approved material to test yet.'
-      autoteste_espere: 'Wait a little to test again.'
-      autoteste_amanha: 'This agent was already tested many times today. You can test again tomorrow.'
     base_de_seguros:
       sem_base_nova: 'There is no new insurance base for this agent. The page was updated.'
       base_mudou: 'The agent changed in the meantime. The page was updated.'

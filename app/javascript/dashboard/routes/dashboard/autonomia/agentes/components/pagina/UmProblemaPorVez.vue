@@ -1,18 +1,16 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import DeOndeTirou from './DeOndeTirou.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 
-// #1426 (tema 4b) — "um problema por vez" (mockup aprovado em 19/10): o que as conferências e o autoteste acharam no
+// #1426 (tema 4b) — "um problema por vez" (mockup aprovado em 19/10): o que as conferências acharam no
 // material, um cartão de cada vez, com "1 de N", uma explicação simples e no máximo duas saídas. Nada trava: "Pular por
 // agora" passa para o próximo, e o agente segue atendendo com o resto do material. Nada se resolve sozinho: cada saída é
 // a pessoa que escolhe. Quem só vê lê o cartão, sem as ações. "Ficar só com X" (duplicado) tira o repetido pelo
 // mesmo caminho do "Tirar" da gaveta, com a mesma confirmação.
-// Tipos (Material::Problemas): vazio, ocr (leitura ruim), sem_cabecalho (tabela sem títulos), duplicado, contradicao,
-// paginas_de_fora (o material vale com o que foi lido), autoteste (resposta errada) e autoteste_fora (inventou numa
-// pergunta de fora do material).
+// Tipos (Material::Problemas): vazio, ocr (leitura ruim), sem_cabecalho (tabela sem títulos), duplicado, contradicao e
+// paginas_de_fora (o material vale com o que foi lido).
 const props = defineProps({
   problemas: { type: Array, required: true },
   nome: { type: String, required: true },
@@ -58,8 +56,6 @@ const CHAVES = {
   duplicado: 'DUPLICADO',
   contradicao: 'CONTRADICAO',
   paginas_de_fora: 'PAGINAS',
-  autoteste: 'AUTOTESTE',
-  autoteste_fora: 'AUTOTESTE_FORA',
 };
 const chave = computed(() => CHAVES[atual.value?.tipo] || 'VAZIO');
 
@@ -140,17 +136,6 @@ const TEXTOS = {
     texto: d =>
       t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.PAGINAS.TEXTO_SEM_TOTAL', d),
   },
-  AUTOTESTE: {
-    titulo: d =>
-      t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.TITULO', d),
-    texto: d => t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.TEXTO', d),
-  },
-  AUTOTESTE_FORA: {
-    titulo: d =>
-      t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE_FORA.TITULO', d),
-    texto: d =>
-      t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE_FORA.TEXTO', d),
-  },
 };
 const textos = computed(() => TEXTOS[`${chave.value}${sufixo.value}`]);
 const titulo = computed(() => textos.value.titulo(dados.value));
@@ -162,15 +147,6 @@ const MANDAR = {
     t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.MANDAR_ARQUIVO'),
 };
 const mandar = computed(() => MANDAR[`${chave.value}${sufixo.value}`]());
-
-const ehAutoteste = computed(() =>
-  ['autoteste', 'autoteste_fora'].includes(atual.value?.tipo)
-);
-const respondeu = computed(
-  () =>
-    atual.value?.resposta ||
-    t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.PASSOU')
-);
 
 const opcoesDaContradicao = computed(() =>
   (atual.value?.opcoes || []).map(opcao => ({
@@ -185,11 +161,6 @@ const opcoesDaContradicao = computed(() =>
 const salvando = computed(() => props.resolvendo === atual.value?.id);
 const resolver = valor => emit('resolver', atual.value.id, valor);
 const fonte = computed(() => atual.value?.fontes?.[0]);
-const corrigirResposta = () =>
-  emit('corrigir', {
-    pergunta: atual.value.pergunta,
-    resposta: respondeu.value,
-  });
 </script>
 
 <template>
@@ -237,50 +208,6 @@ const corrigirResposta = () =>
         </li>
       </ul>
 
-      <dl
-        v-if="ehAutoteste"
-        data-autoteste
-        class="flex flex-col gap-1 p-3 m-0 text-sm rounded-xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
-      >
-        <dt class="font-semibold text-n-slate-11">
-          {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.PERGUNTA') }}
-        </dt>
-        <dd class="m-0 text-n-slate-12">{{ atual.pergunta }}</dd>
-        <dt class="font-semibold text-n-slate-11">
-          {{
-            t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.RESPONDEU', {
-              agente: nome,
-            })
-          }}
-        </dt>
-        <dd class="m-0 text-n-slate-12">{{ respondeu }}</dd>
-        <template v-if="atual.tipo === 'autoteste' && atual.esperado">
-          <dt class="font-semibold text-n-slate-11">
-            {{
-              t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.MATERIAL')
-            }}
-          </dt>
-          <dd class="m-0 text-n-slate-12">
-            {{
-              atual.onde
-                ? t(
-                    'AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.MATERIAL_DIZ',
-                    {
-                      onde: atual.onde,
-                      texto: atual.esperado,
-                    }
-                  )
-                : atual.esperado
-            }}
-          </dd>
-        </template>
-        <DeOndeTirou
-          v-if="atual.trechos"
-          :trechos="atual.trechos"
-          :nome="nome"
-        />
-      </dl>
-
       <EscolhaRadio
         v-if="atual.tipo === 'contradicao' && podeGerenciar"
         v-model="escolha"
@@ -308,7 +235,7 @@ const corrigirResposta = () =>
             v-else
             data-acao="escrever"
             variante="contorno"
-            @click="emit('corrigir', null)"
+            @click="emit('corrigir')"
           >
             {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.ESCREVER') }}
           </AgenteBotao>
@@ -343,7 +270,7 @@ const corrigirResposta = () =>
           <AgenteBotao
             data-acao="explicar"
             variante="contorno"
-            @click="emit('corrigir', null)"
+            @click="emit('corrigir')"
           >
             {{
               t(
@@ -368,21 +295,6 @@ const corrigirResposta = () =>
         >
           {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTRADICAO.USAR') }}
         </AgenteBotao>
-        <template v-else-if="ehAutoteste">
-          <AgenteBotao data-acao="corrigir" @click="corrigirResposta">
-            {{
-              t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.CORRIGIR')
-            }}
-          </AgenteBotao>
-          <AgenteBotao
-            data-acao="certa"
-            variante="contorno"
-            :carregando="salvando"
-            @click="resolver('certa')"
-          >
-            {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.AUTOTESTE.CERTA') }}
-          </AgenteBotao>
-        </template>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-2">

@@ -1,4 +1,4 @@
-# #1426 (tema 4b) — o custo REAL de uma rodada do autoteste, com teto. Toda chamada de IA grava o consumo
+# #1426 (tema 4b) — o custo REAL de uma rodada paga (hoje, o placar da resposta), com teto. Toda chamada de IA grava o consumo
 # (Crm::Ai::UsageRecorder) e avisa pelo evento `crm.ai_usage`, com o custo estimado pela tabela de preços. O medidor
 # ouve esse evento enquanto a rodada roda, só na thread dela (o aviso é síncrono, na thread de quem chamou a IA), e soma.
 # Cada medição tem o próprio ouvinte, preso à thread que a abriu: duas rodadas ao mesmo tempo (duas threads do Sidekiq)
@@ -10,7 +10,7 @@
 class Autonomia::Agents::Material::MedidorDeCusto
   TETO_USD = 2.0
   # Estimativas iniciais, por chamada, com folga (medido no eval do #1426: ver docs/audit).
-  ESTIMATIVA_INICIAL = { perguntas: 0.15, resposta: 0.10, juiz: 0.03 }.freeze
+  ESTIMATIVA_INICIAL = { resposta: 0.10, juiz: 0.03 }.freeze
 
   attr_reader :gasto
 

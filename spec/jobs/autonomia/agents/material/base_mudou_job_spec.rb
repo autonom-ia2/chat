@@ -1,8 +1,7 @@
 require 'rails_helper'
 
-# #1426 (tema 4b) — a base mudou: espera 2 min depois da ÚLTIMA mudança, confere contradições se a base mudou desde a
-# última conferência e pede o autoteste automático só quando ele é permitido (30 min e base mudada). Fora da Fase 2 e na
-# Lia, nada.
+# #1426 (tema 4b) — a base mudou: espera 2 min depois da ÚLTIMA mudança e confere contradições se a base mudou desde a
+# última conferência. Fora da Fase 2 e na Lia, nada. #3200: nenhum teste do material roda sozinho.
 RSpec.describe Autonomia::Agents::Material::BaseMudouJob do
   include_context 'with material do agente'
 
@@ -22,12 +21,18 @@ RSpec.describe Autonomia::Agents::Material::BaseMudouJob do
     primeira = marca
     described_class.agendar(agent)
 
-    expect { described_class.perform_now(agent.id, primeira) }.not_to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    described_class.perform_now(agent.id, primeira)
     expect(contradicoes).not_to have_received(:conferir!)
 
-    expect { described_class.perform_now(agent.id, marca) }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    described_class.perform_now(agent.id, marca)
     expect(contradicoes).to have_received(:conferir!).once
-    expect(agent.reload.config.dig('autoteste', 'quando')).to eq('base_mudou')
+  end
+
+  it 'não enfileira mais nada depois de conferir (#3200: sem teste automático do material)' do
+    described_class.agendar(agent)
+    ultima = marca
+
+    expect { described_class.perform_now(agent.id, ultima) }.not_to have_enqueued_job
   end
 
   it 'com a base igual à da última conferência, não confere contradições de novo' do
@@ -38,35 +43,6 @@ RSpec.describe Autonomia::Agents::Material::BaseMudouJob do
     described_class.perform_now(agent.id, marca)
 
     expect(contradicoes).not_to have_received(:conferir!)
-  end
-
-  it 'autoteste automático: não repete com a mesma base nem antes de 30 min' do
-    described_class.agendar(agent)
-    described_class.perform_now(agent.id, marca)
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
-                                                       agent.reload.config['autoteste'].merge('estado' => 'pronto'))
-    described_class.agendar(agent)
-
-    expect { described_class.perform_now(agent.id, marca) }.not_to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
-  end
-
-  it 'base mudada dentro dos 30 min: o aviso volta quando a rodada automática pode rodar, e então roda', :aggregate_failures do
-    described_class.agendar(agent)
-    described_class.perform_now(agent.id, marca)
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
-                                                       agent.reload.config['autoteste'].merge('estado' => 'pronto'))
-    ultima = Time.zone.parse(agent.reload.config.dig('autoteste', 'ultima_automatica'))
-    material('horarios.pdf')
-    described_class.agendar(agent)
-    nova = marca
-
-    expect { described_class.perform_now(agent.id, nova) }
-      .to have_enqueued_job(described_class).with(agent.id, nova).at(a_value_within(1.second).of(ultima + 30.minutes))
-    expect(agent.reload.config.dig('autoteste', 'estado')).to eq('pronto')
-
-    travel_to(ultima + 31.minutes) do
-      expect { described_class.perform_now(agent.id, nova) }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
-    end
   end
 
   it 'fora da Fase 2 e na Lia: não agenda', :aggregate_failures do

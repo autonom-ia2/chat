@@ -2,10 +2,8 @@ import { nextTick, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import UmProblemaPorVez from '../../components/pagina/UmProblemaPorVez.vue';
-import AutotesteDoMaterial from '../../components/pagina/AutotesteDoMaterial.vue';
 import {
   RELEITURA_DEPOIS_DA_BASE_MS,
-  RELEITURA_DO_AUTOTESTE_MS,
   useConferenciasDoMaterial,
 } from '../../composables/useConferenciasDoMaterial';
 import {
@@ -15,7 +13,7 @@ import {
 } from '../../utils/estadoDoMaterial';
 
 // #1426 (tema 4b, mockup aprovado em 19/10) — "um problema por vez" (sempre com "Pular por agora", nada trava, a pessoa
-// decide), o autoteste 8 + 2 e a releitura que traz o resultado sem recarregar.
+// decide) e a releitura depois que a base muda. #3200: o teste automático do material saiu.
 withFullI18n('pt_BR');
 
 const no = (wrapper, seletor) => wrapper.find(seletor);
@@ -214,89 +212,6 @@ describe('UmProblemaPorVez', () => {
     );
   });
 
-  it('autoteste: resposta errada com o que o material diz; corrigir leva pergunta e resposta', async () => {
-    const wrapper = montarProblemas([
-      {
-        id: 'autoteste-r-0',
-        tipo: 'autoteste',
-        fontes: [],
-        pergunta: 'Entregam no Centro?',
-        resposta: 'Não entregamos.',
-        esperado: 'Entregamos no Centro.',
-        onde: 'cardapio.pdf',
-      },
-    ]);
-
-    expect(no(wrapper, '[data-autoteste]').text()).toContain(
-      'cardapio.pdf diz: "Entregamos no Centro."'
-    );
-    await no(wrapper, '[data-acao="corrigir"]').trigger('click');
-    expect(wrapper.emitted('corrigir')).toEqual([
-      [{ pergunta: 'Entregam no Centro?', resposta: 'Não entregamos.' }],
-    ]);
-    await no(wrapper, '[data-acao="certa"]').trigger('click');
-    expect(wrapper.emitted('resolver')).toEqual([['autoteste-r-0', 'certa']]);
-  });
-
-  // #1426 (t4d): "De onde o agente tirou" — os trechos usados na resposta, com o arquivo e as páginas.
-  it('autoteste: mostra de onde o agente tirou a resposta, ou que não usou trecho nenhum', () => {
-    const ERRADA = {
-      id: 'autoteste-r-0',
-      tipo: 'autoteste',
-      fontes: [],
-      pergunta: 'Tem carro reserva?',
-      resposta: 'Não tem.',
-    };
-    const comTrechos = montarProblemas([
-      {
-        ...ERRADA,
-        trechos: [
-          {
-            onde: 'condicoes.pdf',
-            paginas: [226, 250],
-            texto: 'Carro reserva por 7 dias.',
-          },
-          { onde: 'tabela.xlsx', texto: 'Plano básico: sem carro reserva.' },
-        ],
-      },
-    ]);
-
-    expect(comTrechos.text()).toContain('De onde Bia tirou');
-    expect(comTrechos.findAll('[data-onde]').map(o => o.text())).toEqual([
-      'condicoes.pdf, páginas 226 a 250',
-      'tabela.xlsx',
-    ]);
-    expect(no(comTrechos, '[data-trechos]').text()).toContain(
-      'Carro reserva por 7 dias.'
-    );
-
-    const semTrecho = montarProblemas([{ ...ERRADA, trechos: [] }]);
-    expect(no(semTrecho, '[data-sem-trecho]').text()).toBe(
-      'Bia não usou nenhum trecho do material para responder.'
-    );
-
-    const rodadaAntiga = montarProblemas([ERRADA]);
-    expect(rodadaAntiga.text()).not.toContain('De onde Bia tirou');
-  });
-
-  it('autoteste de fora: a resposta inventada vira cartão com as mesmas saídas', () => {
-    const wrapper = montarProblemas([
-      {
-        id: 'autoteste-r-9',
-        tipo: 'autoteste_fora',
-        fontes: [],
-        pergunta: 'Vende bolo?',
-        resposta: 'Sim, R$ 90.',
-      },
-    ]);
-
-    expect(no(wrapper, '[data-titulo]').text()).toBe(
-      'No teste automático, Bia inventou uma resposta'
-    );
-    expect(no(wrapper, '[data-acao="corrigir"]').exists()).toBe(true);
-    expect(no(wrapper, '[data-acao="certa"]').exists()).toBe(true);
-  });
-
   it('quem só vê lê o cartão, sem as ações', () => {
     const wrapper = montarProblemas([CONTRADICAO], { podeGerenciar: false });
 
@@ -305,203 +220,36 @@ describe('UmProblemaPorVez', () => {
   });
 });
 
-const autoteste = extra => ({
-  estado: 'pronto',
-  quando: 'pedido',
-  feitas: 10,
-  total: 10,
-  doMaterial: 8,
-  deFora: 2,
-  certasDoMaterial: 7,
-  certasDeFora: 2,
-  resultados: [{ pergunta: 'Abre sábado?', origem: 'material', ok: true }],
-  ...extra,
-});
-
-describe('AutotesteDoMaterial', () => {
-  const montar = (dados, props = {}) =>
-    mount(AutotesteDoMaterial, {
-      props: { autoteste: dados, nome: 'Bia', podeGerenciar: true, ...props },
-    });
-
-  it('pronto: quantas acertou, em palavras, e a recusa nas de fora', () => {
-    const wrapper = montar(autoteste());
-
-    expect(no(wrapper, '[data-resultado]').text()).toBe(
-      'Bia acertou 7 de 8 perguntas sobre o seu material.'
-    );
-    expect(no(wrapper, '[data-fora]').text()).toContain(
-      'não inventou resposta'
-    );
-    expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar de novo');
-    expect(no(wrapper, '[data-aviso-amostra]').text()).toBe(
-      'O teste é uma amostra; confira as respostas.'
-    );
-  });
-
-  it('singular quando há uma pergunta só: sem "Nas 1 perguntas"', () => {
-    const wrapper = montar(autoteste({ deFora: 1, certasDeFora: 1 }));
-
-    expect(no(wrapper, '[data-fora]').text()).toBe(
-      'Na pergunta que não está no material, Bia não inventou resposta.'
-    );
-    expect(no(wrapper, '[data-perguntas] summary').text()).toBe(
-      'Ver a pergunta'
-    );
-  });
-
-  it('item que o juiz não conseguiu julgar: diz quantos ficaram de fora da conta', () => {
-    const wrapper = montar(
-      autoteste({ doMaterial: 7, certasDoMaterial: 7, naoJulgadas: 1 })
-    );
-
-    expect(no(wrapper, '[data-resultado]').text()).toBe(
-      'Bia acertou 7 de 7 perguntas sobre o seu material.'
-    );
-    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
-      '1 pergunta do teste não deu para julgar e ficou de fora da conta.'
-    );
-  });
-
-  it('nenhuma pergunta do material deu para julgar: texto próprio, nunca "0 de 0"', () => {
-    const wrapper = montar(
-      autoteste({
-        doMaterial: 0,
-        certasDoMaterial: 0,
-        naoJulgadas: 8,
-        resultados: [],
-      })
-    );
-
-    expect(no(wrapper, '[data-resultado]').text()).toBe(
-      'Neste teste, nenhuma pergunta sobre o seu material deu para julgar. Teste de novo.'
-    );
-    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
-      '8 perguntas do teste não deram para julgar e ficaram de fora da conta.'
-    );
-  });
-
-  it('sem item fora da conta, não fala disso', () => {
-    expect(no(montar(autoteste()), '[data-nao-julgadas]').exists()).toBe(false);
-  });
-
-  it('inventou numa de fora: aviso âmbar', () => {
-    const wrapper = montar(autoteste({ certasDeFora: 1 }));
-
-    expect(no(wrapper, '[data-fora]').text()).toBe(
-      'Em perguntas que não estão no material, Bia inventou resposta.'
-    );
-  });
-
-  it('rodando: progresso, sem botão', () => {
-    const wrapper = montar(
-      autoteste({ estado: 'rodando', feitas: 3, quando: 'base_mudou' })
-    );
-
-    expect(no(wrapper, '[data-rodando]').text()).toBe(
-      'Testando Bia com 10 perguntas… 3 de 10'
-    );
-    expect(wrapper.text()).toContain(
-      'O material mudou, então Bia está sendo testado de novo.'
-    );
-    expect(no(wrapper, '[data-testar-de-novo]').exists()).toBe(false);
-  });
-
-  it('parado (teto ou falha): "Não consegui terminar o teste agora" e tentar de novo', async () => {
-    const wrapper = montar(autoteste({ estado: 'parado' }));
-
-    expect(no(wrapper, '[data-parado]').text()).toBe(
-      'Não consegui terminar o teste agora.'
-    );
-    expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Tentar de novo');
-    await no(wrapper, '[data-testar-de-novo]').trigger('click');
-    expect(wrapper.emitted('testarDeNovo')).toHaveLength(1);
-  });
-
-  it('nunca rodou: convida a testar', () => {
-    const wrapper = montar(
-      autoteste({ estado: 'nunca', resultados: [], doMaterial: 0, deFora: 0 })
-    );
-
-    expect(no(wrapper, '[data-nunca]').text()).toBe(
-      'Bia ainda não foi testado com o seu material.'
-    );
-    expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar agora');
-    expect(no(wrapper, '[data-perguntas]').exists()).toBe(false);
-    expect(no(wrapper, '[data-aviso-amostra]').exists()).toBe(false);
-  });
-});
-
 describe('useConferenciasDoMaterial', () => {
-  const resposta = (problemas, salvo) => ({
-    data: { problemas, autoteste: salvo },
-  });
+  const resposta = problemas => ({ data: { problemas } });
 
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('lê problemas e autoteste e se relê enquanto o autoteste roda; para quando termina', async () => {
-    const api = {
-      get: vi
-        .fn()
-        .mockResolvedValueOnce(
-          resposta([], { estado: 'rodando', feitas: 2, total: 10 })
-        )
-        .mockResolvedValueOnce(
-          resposta([VAZIO], {
-            estado: 'pronto',
-            do_material: 8,
-            nao_julgadas: 1,
-            de_fora: 2,
-            certas_do_material: 8,
-            certas_de_fora: 2,
-            resultados: [],
-          })
-        ),
-    };
+  it('lê os problemas, sem se reler sozinho', async () => {
+    const api = { get: vi.fn().mockResolvedValue(resposta([VAZIO])) };
     const conferencias = useConferenciasDoMaterial({ agentId: () => 7, api });
 
     await conferencias.ler();
-    expect(conferencias.autoteste.value).toMatchObject({
-      estado: 'rodando',
-      feitas: 2,
-    });
-
-    await vi.advanceTimersByTimeAsync(RELEITURA_DO_AUTOTESTE_MS);
-    expect(api.get).toHaveBeenCalledTimes(2);
     expect(conferencias.problemas.value).toEqual([VAZIO]);
-    expect(conferencias.autoteste.value).toMatchObject({
-      estado: 'pronto',
-      doMaterial: 8,
-      certasDeFora: 2,
-      naoJulgadas: 1,
-    });
+    expect(conferencias.lido.value).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(RELEITURA_DO_AUTOTESTE_MS * 3);
-    expect(api.get).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(RELEITURA_DEPOIS_DA_BASE_MS * 2);
+    expect(api.get).toHaveBeenCalledTimes(1);
   });
 
-  it('resolver e pedir o autoteste vão à API e aplicam a resposta', async () => {
-    const api = {
-      resolver: vi.fn().mockResolvedValue(resposta([], null)),
-      pedirAutoteste: vi
-        .fn()
-        .mockResolvedValue(resposta([], { estado: 'rodando' })),
-      get: vi.fn().mockResolvedValue(resposta([], { estado: 'pronto' })),
-    };
+  it('resolver vai à API e aplica a resposta', async () => {
+    const api = { resolver: vi.fn().mockResolvedValue(resposta([VAZIO])) };
     const conferencias = useConferenciasDoMaterial({ agentId: () => 7, api });
 
     await conferencias.resolver('contradicao-a', 4);
-    expect(api.resolver).toHaveBeenCalledWith(7, 'contradicao-a', 4);
 
-    await conferencias.pedirAutoteste();
-    expect(api.pedirAutoteste).toHaveBeenCalledWith(7);
-    expect(conferencias.autoteste.value.estado).toBe('rodando');
-    conferencias.parar();
+    expect(api.resolver).toHaveBeenCalledWith(7, 'contradicao-a', 4);
+    expect(conferencias.problemas.value).toEqual([VAZIO]);
   });
 
   it('a base mudou: lê agora e mais uma vez depois da espera das conferências (uma só, mesmo em rajada)', async () => {
-    const api = { get: vi.fn().mockResolvedValue(resposta([], null)) };
+    const api = { get: vi.fn().mockResolvedValue(resposta([])) };
     const conferencias = useConferenciasDoMaterial({ agentId: () => 7, api });
 
     conferencias.lerDepoisDaMudanca();
@@ -522,7 +270,7 @@ describe('useConferenciasDoMaterial', () => {
     const api = {
       get: vi
         .fn()
-        .mockResolvedValueOnce(resposta([VAZIO], null))
+        .mockResolvedValueOnce(resposta([VAZIO]))
         .mockRejectedValueOnce(new Error('rede')),
     };
     const conferencias = useConferenciasDoMaterial({ agentId: () => 7, api });

@@ -1,5 +1,5 @@
 # #1426 (tema 4b) — o material do agente depois da leitura e da revisão: as conferências (vazio, leitura ruim,
-# duplicado, tabela sem cabeçalho, contradição, páginas de fora) e o autoteste. Só na Fase 2 (piloto), nunca na Lia
+# duplicado, tabela sem cabeçalho, contradição, páginas de fora). Só na Fase 2 (piloto), nunca na Lia
 # (instrução mantida pela Autonom.ia) nem num agente de sistema (o Guia). Fora disso, nada roda e a API devolve vazio.
 module Autonomia::Agents::Material
   # Trecho menor que isto não vale a pena mandar ao modelo.
