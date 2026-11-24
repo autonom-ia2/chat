@@ -13,9 +13,9 @@ RSpec.describe CampaignJourney::DuasVersoes::SemEnvio, :aggregate_failures do
     "Nome,Celular\n#{linhas.join("\n")}\n"
   end
   let!(:audience) { saved_audience(account: account, user: user, content: content) }
-  let!(:sent) { stub_twilio_sms }
 
   before do
+    stub_twilio_sms
     stub_const('CampaignJourney::DuasVersoes::MINIMO_POR_VERSAO', 2)
     stub_const('CampaignJourney::DuasVersoes::MINIMO_NO_RESTO', 2)
   end

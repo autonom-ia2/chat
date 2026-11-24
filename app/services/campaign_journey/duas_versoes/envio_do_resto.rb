@@ -32,11 +32,16 @@ class CampaignJourney::DuasVersoes::EnvioDoResto
   # Escolhida antes de a campanha sair (`active`): o disparo normal já manda todo mundo, cada um com a sua versão. Ainda
   # saindo (o teste) ou parada: tenta de novo depois.
   def chatwoot(campaign)
-    servico = CampaignJourney::RetomarAdiadosJob::SERVICOS[campaign.inbox&.inbox_type]&.constantize&.new(campaign: campaign)
+    servico = servico_de(campaign)
     return if campaign.active? || !servico.respond_to?(:enviar_resto)
     return de_novo(ESPERA_SE_PARADA) if campaign.processing? || parada?(campaign)
 
     de_novo(ESPERA_SE_OCUPADA) unless CampaignJourney::EnvioSozinho.sozinho(campaign) { servico.enviar_resto }
+  end
+
+  # O serviço de envio do canal da caixa, o mesmo da retomada dos adiados; nil se o canal não manda campanha.
+  def servico_de(campaign)
+    CampaignJourney::RetomarAdiadosJob::SERVICOS[campaign.inbox&.inbox_type]&.constantize&.new(campaign: campaign)
   end
 
   def de_novo(espera)
@@ -50,18 +55,25 @@ class CampaignJourney::DuasVersoes::EnvioDoResto
   # Na trava da campanha, a mesma do fim da corrente (DeliveryEngine#finish_campaign!): ou a corrente terminou antes
   # (a campanha está `completed` e volta a andar aqui), ou ela termina depois e vê o resto pendente.
   def whatsapp_api(campaign)
-    andar = campaign.with_lock do
-      next false if campaign.scheduled? || campaign.cancelled? || campaign.failed?
-
-      corrente_parada = !mandando_agora?(campaign)
-      WhatsappApiCampaigns::AudienceResolver.new(campaign).perform
-      next false unless mandando_agora?(campaign)
-      next campaign.running? && corrente_parada unless campaign.completed? || campaign.completed_with_failures?
-
-      campaign.update!(status: :running, completed_at: nil)
-    end
+    andar = campaign.with_lock { andar_de_novo?(campaign) }
     WhatsappApiCampaigns::DeliveryJob.perform_later(campaign.id) if andar
   end
+
+  # Dentro da trava: põe o resto na fila e diz se a corrente precisa de um job novo para andar.
+  def andar_de_novo?(campaign)
+    return false if fora_do_envio?(campaign)
+
+    corrente_parada = !mandando_agora?(campaign)
+    WhatsappApiCampaigns::AudienceResolver.new(campaign).perform
+    return false unless mandando_agora?(campaign)
+    return campaign.running? && corrente_parada unless terminada?(campaign)
+
+    campaign.update!(status: :running, completed_at: nil)
+  end
+
+  def fora_do_envio?(campaign) = campaign.scheduled? || campaign.cancelled? || campaign.failed?
+
+  def terminada?(campaign) = campaign.completed? || campaign.completed_with_failures?
 
   # Alguém saindo ou pendente para agora: a corrente está viva (ou, sem ela, há o que mandar).
   def mandando_agora?(campaign)

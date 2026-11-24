@@ -13,7 +13,9 @@ class Autonomia::Automacao::VersaoVencedora < ApplicationRecord
   belongs_to :automacao, class_name: 'Autonomia::Automacao::Definicao'
   belongs_to :escolhida_por_user, class_name: 'User', optional: true
 
-  validates :passo, presence: true, uniqueness: { scope: :automacao_id }
+  # Uma linha por automação e passo, garantida pelo índice único: sem `uniqueness` aqui, que barraria o
+  # `create_or_find_by!` de DuasVersoes.teste_de antes do INSERT (ele conta com o RecordNotUnique do índice).
+  validates :passo, presence: true
   validates :teste_desde, presence: true
   validates :vencedora, inclusion: { in: CampaignJourney::DuasVersoes::VERSOES }, allow_nil: true
   validates :escolhida_por, inclusion: { in: CampaignJourney::DuasVersoes::ESCOLHIDA_POR }, allow_nil: true

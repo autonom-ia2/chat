@@ -45,10 +45,16 @@ module Autonomia::Automacao::DuasVersoes
   end
 
   # A linha do teste do passo. Sem ela (o primeiro envio de um passo salvo antes da linha existir), o teste começa agora.
+  # Quase sempre ela já existe (nasce ao salvar a automação): primeiro a busca; o `create_or_find_by!` fica para a falta,
+  # e a corrida entre dois envios cai no índice único.
   def teste_de(automacao, passo_id)
-    ::Autonomia::Automacao::VersaoVencedora.create_or_find_by!(automacao_id: automacao.id, passo: passo_id) do |linha|
-      linha.account_id = automacao.account_id
-      linha.teste_desde = Time.current
+    chave = { automacao_id: automacao.id, passo: passo_id }
+    linha = ::Autonomia::Automacao::VersaoVencedora.find_by(chave)
+    return linha if linha
+
+    ::Autonomia::Automacao::VersaoVencedora.create_or_find_by!(chave) do |nova|
+      nova.account_id = automacao.account_id
+      nova.teste_desde = Time.current
     end
   end
 
@@ -89,10 +95,12 @@ module Autonomia::Automacao::DuasVersoes
   def resultado(automacao, user:, account_user:)
     linhas = ::Autonomia::Automacao::VersaoVencedora.where(automacao_id: automacao.id).index_by(&:passo)
     passos_com_versoes(automacao.versao_ativa&.receita).map do |id, passo|
-      linha = linhas[id] || ::Autonomia::Automacao::VersaoVencedora.new(automacao: automacao, account_id: automacao.account_id, passo: id,
-                                                                         teste_desde: Time.current)
-      Teste.new(linha, passo).payload(user: user, account_user: account_user)
+      Teste.new(linhas[id] || linha_vazia(automacao, id), passo).payload(user: user, account_user: account_user)
     end
+  end
+
+  def linha_vazia(automacao, passo_id)
+    ::Autonomia::Automacao::VersaoVencedora.new(automacao: automacao, account_id: automacao.account_id, passo: passo_id, teste_desde: Time.current)
   end
 
   # As frases do que o esquema não sabe dizer (Receita::Mensagens): o modelo da versão 2 acompanha o da versão 1, as duas
@@ -100,13 +108,19 @@ module Autonomia::Automacao::DuasVersoes
   def problemas_ao_salvar(passo)
     return [] unless do_passo?(passo)
 
-    id = passo['id']
-    segunda = passo['versoes']
-    [(:versoes_sem_modelo if passo['modelo'] && segunda['modelo'].blank?),
-     (:versoes_modelo_sobrando if segunda['modelo'].present? && passo['modelo'].blank?),
+    [*problemas_do_modelo(passo),
      (:versoes_iguais if iguais?(passo)),
-     (:versoes_sem_compras if segunda['criterio'] == 'compras' && !Crm::Config.enabled?)]
-      .compact.map { |chave| I18n.t("autonomia.automacao.receita.#{chave}", passo: id) }
+     (:versoes_sem_compras if passo['versoes']['criterio'] == 'compras' && !Crm::Config.enabled?)]
+      .compact.map { |chave| I18n.t("autonomia.automacao.receita.#{chave}", passo: passo['id']) }
+  end
+
+  # O modelo da versão 2 acompanha o da versão 1: os dois têm modelo, ou nenhum tem.
+  def problemas_do_modelo(passo)
+    segunda = passo['versoes']['modelo']
+    return [:versoes_sem_modelo] if passo['modelo'] && segunda.blank?
+    return [:versoes_modelo_sobrando] if segunda.present? && passo['modelo'].blank?
+
+    []
   end
 
   # O texto e o modelo das duas versões. `modelo: null` (passo sem modelo) e a chave ausente contam igual, dos dois lados.

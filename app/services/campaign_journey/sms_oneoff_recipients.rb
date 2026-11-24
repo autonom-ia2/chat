@@ -90,11 +90,12 @@ module CampaignJourney::SmsOneoffRecipients
   # #3099: the text of this person's version (version 2 keeps its own default texts).
   def sms_message_for(contact)
     duas_versoes = @sms_duas_versoes ||= CampaignJourney::DuasVersoes.new(sms_audience_link)
-    return sms_message unless duas_versoes.versao_2?(contact.id)
+    duas_versoes.versao_2?(contact.id) ? sms_message_segunda(duas_versoes.segunda) : sms_message
+  end
 
+  def sms_message_segunda(segunda)
     @sms_message_segunda ||= CampaignJourney::SmsMessage.new(
-      duas_versoes.segunda['message_body'], campaign_import: sms_audience_link.campaign_import,
-                                            defaults: duas_versoes.segunda['variable_defaults']
+      segunda['message_body'], campaign_import: sms_audience_link.campaign_import, defaults: segunda['variable_defaults']
     )
   end
 

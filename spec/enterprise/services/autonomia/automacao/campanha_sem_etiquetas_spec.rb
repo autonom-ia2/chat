@@ -114,7 +114,9 @@ RSpec.describe Autonomia::Automacao::CampanhaSemEtiquetas do
   # conta: a regra de quem entra pela planilha é do spec da jornada.
   describe 'campanha ligada a um público importado' do
     before do
-      link = instance_double(CampaignAudienceLink, campaign_import: nil, variable_bindings: {}, variable_defaults: {})
+      # Sem duas versões (#3099): `teste_criterio` nil, como no link real que não testa.
+      link = instance_double(CampaignAudienceLink, campaign_import: nil, variable_bindings: {}, variable_defaults: {},
+                                                   teste_criterio: nil)
       allow(CampaignAudienceLink).to receive(:for_campaign).and_return(link)
       allow(CampaignJourney::AudienceContacts).to receive(:contacts_for) { account.contacts }
       allow(CampaignJourney::AudienceContacts).to receive(:whatsapp_enabled?).and_return(true)

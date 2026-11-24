@@ -24,6 +24,15 @@
 # aqui (blue/green): a escolha da vencedora roda pelo cron (CampaignJourney::EscolherVencedoraJob).
 class AddDuasVersoesToCampaignAudienceLinks < ActiveRecord::Migration[7.2]
   def change
+    add_colunas_da_campanha
+    create_campaign_version_contacts
+    create_versoes_envios
+    create_versoes_vencedoras
+  end
+
+  private
+
+  def add_colunas_da_campanha
     add_column :campaign_audience_links, :teste_criterio, :string
     add_column :campaign_audience_links, :teste_divisao, :integer, null: false, default: 50
     add_column :campaign_audience_links, :teste_espera_horas, :integer, null: false, default: 4
@@ -35,7 +44,9 @@ class AddDuasVersoesToCampaignAudienceLinks < ActiveRecord::Migration[7.2]
     add_column :campaign_audience_links, :teste_escolhida_por_user_id, :bigint
     add_column :campaign_audience_links, :teste_escolhida_em, :datetime
     add_column :campaign_audience_links, :segunda_versao, :jsonb, null: false, default: {}
+  end
 
+  def create_campaign_version_contacts
     create_table :campaign_version_contacts do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }
       t.references :campaign_audience_link, null: false, foreign_key: { on_delete: :cascade }, index: false
@@ -46,7 +57,9 @@ class AddDuasVersoesToCampaignAudienceLinks < ActiveRecord::Migration[7.2]
       t.index %i[campaign_audience_link_id contact_id], unique: true, name: 'idx_campaign_version_contacts_link_contact'
       t.index %i[campaign_audience_link_id versao fase], name: 'idx_campaign_version_contacts_link_versao'
     end
+  end
 
+  def create_versoes_envios
     create_table :autonomia_automacao_versoes_envios do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }
       t.references :automacao, null: false, foreign_key: { to_table: :autonomia_automacoes, on_delete: :cascade }, index: false
@@ -59,7 +72,9 @@ class AddDuasVersoesToCampaignAudienceLinks < ActiveRecord::Migration[7.2]
       t.datetime :created_at, null: false
       t.index %i[automacao_id passo versao], name: 'idx_autonomia_automacao_versoes_envios_passo'
     end
+  end
 
+  def create_versoes_vencedoras
     create_table :autonomia_automacao_versoes_vencedoras do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }
       t.references :automacao, null: false, foreign_key: { to_table: :autonomia_automacoes, on_delete: :cascade }, index: false

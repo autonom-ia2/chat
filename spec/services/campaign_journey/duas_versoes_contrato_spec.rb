@@ -2,13 +2,13 @@ require 'rails_helper'
 
 # #3099: a tela promete o que o servidor faz. As regras das duas versões existem nos dois lados (duasVersoes.js e
 # vencedora.js na tela; CampaignJourney::DuasVersoes no servidor) e precisam ser as mesmas.
-RSpec.describe 'Duas versões: regras da tela e do servidor (#3099)', :aggregate_failures do
+RSpec.describe CampaignJourney::DuasVersoes, :aggregate_failures do
   let(:regras) { Rails.root.join('app/javascript/dashboard/components-next/CampaignJourney/duasVersoes.js').read }
   let(:vencedora) { Rails.root.join('app/javascript/dashboard/components-next/CampaignResult/vencedora.js').read }
   let(:regua) { Rails.root.join('app/javascript/dashboard/components-next/CampaignResult/comparacaoComControle.js').read }
 
   it 'usa as mesmas constantes do plano do teste' do
-    servidor = CampaignJourney::DuasVersoes
+    servidor = described_class
     criterios = servidor::CRITERIOS.map { |criterio| "'#{criterio}'" }.join(', ')
     expect(regras).to include("export const CRITERIOS = [#{criterios}];")
     expect(regras).to include("export const DIVISOES = [#{servidor::DIVISOES.join(', ')}];")

@@ -38,6 +38,8 @@ RSpec.describe CampaignJourney::DuasVersoes, :aggregate_failures do
     end
     let!(:audience) { saved_audience(account: account, user: user, content: content) }
 
+    let(:segunda) { { message_body: 'Oi {{contact.first_name}}, versão 2' } }
+
     # Com mínimos pequenos, 10 pessoas já dão teste e resto: 4 no teste (2 + 2) e 6 depois.
     before do
       stub_const('CampaignJourney::DuasVersoes::MINIMO_POR_VERSAO', 2)
@@ -51,8 +53,6 @@ RSpec.describe CampaignJourney::DuasVersoes, :aggregate_failures do
                       **outros }
       ).perform
     end
-
-    let(:segunda) { { message_body: 'Oi {{contact.first_name}}, versão 2' } }
 
     it 'sorteia o teste sempre igual, sem o grupo de controle' do
       campaign = criar({ criterio: 'respostas', segunda: segunda }, grupo_de_controle_pct: 20)
