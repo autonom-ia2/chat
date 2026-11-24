@@ -94,9 +94,9 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
   end
 
   describe 'POST copilot/chat' do
-    def chat(conversation_id:, agent_id:, message: 'Resuma a conversa')
+    def chat(conversation_id:, agent_id:, message: 'Resuma a conversa', arquivos: nil)
       post "/api/v1/accounts/#{account.id}/autonomia/conversations/#{conversation_id}/copilot/chat",
-           params: { agent_id: agent_id, message: message },
+           params: { agent_id: agent_id, message: message, arquivos: arquivos }.compact,
            headers: administrator.create_new_auth_token, as: :json
       return unless response.status == 202
 
@@ -167,6 +167,34 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
       expect(body['text']).to eq('Resumo: cliente pediu troca.')
       expect(body['grounded']).to be(false)
       expect(body['reply_suggestion']).to be(true)
+    end
+
+    # #3198 — o arquivo que a equipe anexou no copiloto sobe pelo endpoint do Guia e volta como signed_id.
+    it 'reads the files attached in the copilot, only the ones of this account', :aggregate_failures do
+      agent = create_copilot_agent(account)
+      subir = lambda do |dono, texto, nome|
+        blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(texto), filename: nome, content_type: 'text/plain',
+                                                      metadata: Autonomia::Guide::Arquivos.metadata(dono))
+        Autonomia::Guide::Arquivos.assinar(blob)
+      end
+      nosso = subir.call(account, 'Apolice 123 vigente ate dezembro', 'apolice.txt')
+      de_outra_conta = subir.call(other_account, 'segredo da outra conta', 'outro.txt')
+      result = Autonomia::Agents::AnswerResult.new(reply: 'ok', confidence: 0.9, handoff: { should: false, reason: nil },
+                                                   answered_from_knowledge: false, raw_reply: 'ok')
+      documentos = nil
+      allow(Autonomia::Agents::Copilot).to receive(:new) do |kwargs|
+        documentos = kwargs[:documents]
+        instance_double(Autonomia::Agents::Copilot, suggest: result)
+      end
+
+      with_modified_env CRM_AI_ENABLED: 'true' do
+        chat(conversation_id: conversation.display_id, agent_id: agent.id, arquivos: [nosso, de_outra_conta])
+      end
+
+      expect(response.parsed_body['result']['available']).to be(true)
+      expect(documentos.size).to eq(1)
+      expect(documentos.first[:name]).to eq("apolice.txt (#{Autonomia::Copilot::ConversationChat::ANEXADO_PELA_EQUIPE})")
+      expect(documentos.first[:text]).to include('Apolice 123 vigente ate dezembro')
     end
   end
 end

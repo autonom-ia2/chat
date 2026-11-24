@@ -4843,7 +4843,9 @@
       "SUMMARY": "Summarize this conversation",
       "NEXT_STEP": "What is the next step?",
       "DRAFT": "Write a reply to the customer"
-    }
+    },
+    "FILE_LIMIT": "The copilot reads up to {max} files per topic. Tap New topic to send others.",
+    "VOICE_WAITING": "Audio ready. It goes as soon as the agent finishes answering."
   },
   "AUTONOMIA_GUIDE": {
     "GRAFICO": {

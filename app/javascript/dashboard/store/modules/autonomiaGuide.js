@@ -35,7 +35,7 @@ let nextArquivoId = 1;
 export const MAX_ANEXOS_POR_CONVERSA = 5;
 // O que o Guia lê: o campo do chat e o campo da tela de Automações aceitam o mesmo.
 export const TIPOS_DE_ANEXO =
-  '.pdf,.docx,.xlsx,.csv,.txt,.md,.json,image/png,image/jpeg,image/webp,image/gif';
+  '.pdf,.docx,.xlsx,.pptx,.csv,.txt,.md,.json,image/png,image/jpeg,image/webp,image/gif';
 
 let nextId = 1;
 

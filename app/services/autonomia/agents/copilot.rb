@@ -6,11 +6,14 @@ module Autonomia
     # cai no `raw_reply` — o melhor esforço do modelo antes do portão (conteúdo gerado, não é IP).
     # NUNCA expõe instruction/scaffold/prompt; o jbuilder /suggest filtra a fronteira de segurança.
     class Copilot
-      def initialize(agent:, message:, history: [], retrieval_query: nil)
+      # documents: [{ name:, text: }] dos arquivos que a equipe anexou ao copiloto (#3198), lidos dentro da cerca de
+      # documento do PromptBuilder: dado para ler, nunca ordem.
+      def initialize(agent:, message:, history: [], retrieval_query: nil, documents: [])
         @agent = agent
         @message = message
         @history = history
         @retrieval_query = retrieval_query
+        @documents = documents
       end
 
       # -> Autonomia::Agents::AnswerResult (com reply garantido p/ o atendente revisar)
@@ -21,7 +24,7 @@ module Autonomia
         # A regra anti-"material" universal do v2 já vale p/ :customer, então o copiloto interno também
         # não cita "material" (decisão do PO). :attendant fica reservado p/ um copiloto analítico futuro.
         # Tema 14 (#1434) e #2918: as mesmas rodadas da produção (ajudante, pronta), pela régua do Testar.
-        Answerer.new(agent: @agent, query: @message, history: @history, audience: :customer,
+        Answerer.new(agent: @agent, query: @message, history: @history, audience: :customer, documents: @documents,
                      retrieval_query: @retrieval_query, **Playground.rodadas(@agent)).answer
       end
     end

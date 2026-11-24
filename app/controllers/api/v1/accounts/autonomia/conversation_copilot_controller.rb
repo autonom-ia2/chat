@@ -37,7 +37,8 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   def chat
     defer_interactive_ai('copilot_chat', {
                            conversation_id: @conversation.id, agent_id: params[:agent_id],
-                           message: params[:message], history: params.permit(history: [:role, :content])[:history] || []
+                           message: params[:message], history: params.permit(history: [:role, :content])[:history] || [],
+                           arquivos: params.permit(arquivos: [])[:arquivos] || []
                          })
   end
 
