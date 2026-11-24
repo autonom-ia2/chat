@@ -94,6 +94,27 @@ RSpec.describe Carteira::Conector::BaixarPdf, :aggregate_failures do
     end
   end
 
+  it 'recusa o ZIP com entradas demais antes de abrir a lista inteira' do
+    baixado.replace([zip((1..60).to_h { |n| ["anexo-#{n}.txt", 'x'] })])
+    item = registro
+
+    baixar
+
+    expect(seguro.reload.pdf).not_to be_attached
+    expect(marcas(item)[pendentes::MOTIVO]).to eq('zip_cheio_demais')
+  end
+
+  it 'um erro antes de achar o seguro não é desistência: o registro volta depois' do
+    igual = registro(estado: 'igual', apolice: nil)
+    allow_any_instance_of(Carteira::Conector::PessoaDoRegistro) # rubocop:disable RSpec/AnyInstance
+      .to receive(:seguro_da_referencia).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+    expect(baixar).to eq(:mais_tarde)
+
+    expect(marcas(igual)).to include(pendentes::TENTATIVAS => 1, pendentes::MOTIVO => 'ActiveRecord::ConnectionTimeoutError')
+    expect(marcas(igual)[pendentes::FIM]).to be_nil
+  end
+
   it 'recusa o arquivo que não é PDF nem ZIP' do
     baixado.replace(['<html>não é PDF</html>'.b])
     item = registro

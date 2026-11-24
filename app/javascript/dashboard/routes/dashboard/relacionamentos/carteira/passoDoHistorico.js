@@ -90,7 +90,9 @@ const semDetalhe = chave => ({ chave, detalhe: null, valor: null });
 const fraseDoPdfLido = ({ valores, mudancas }) => {
   if (valores?.recusa === NAO_E_APOLICE) return 'PDF_LIDO.NAO_E_APOLICE';
   if (valores?.recusa) return 'PDF_LIDO.NAO_DEU';
-  return mudancas?.length ? 'TIPOS.PDF_LIDO' : 'PDF_LIDO.NADA';
+  if (mudancas?.length) return 'TIPOS.PDF_LIDO';
+  // "Nada em branco" só quando a leitura terminou; o passo sem desfecho não diz isso.
+  return valores?.lido ? 'PDF_LIDO.NADA' : 'PDF_LIDO.NAO_DEU';
 };
 
 export const fraseDoPasso = ({ tipo, valores, mudancas }) => {

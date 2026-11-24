@@ -65,10 +65,12 @@ class Carteira::Conector::PdfsPendentes
     marcar(item, apolice, FIM => fim, TENTATIVAS => Carteira::ItemLido.new(item).valor(TENTATIVAS).to_i)
   end
 
-  # A falha conta uma tentativa; no teto do seguro, o registro sai da fila.
+  # A falha conta uma tentativa; no teto do seguro, o registro sai da fila. Sem seguro (o erro veio antes de achá-lo),
+  # conta só o registro: um erro de passagem não é desistência.
   def falhou(item, apolice, motivo)
     tentativas = Carteira::ItemLido.new(item).valor(TENTATIVAS).to_i + 1
-    no_teto = apolice.nil? || tentativas_do_seguro(apolice, sem: item) + tentativas >= TETO_DE_TENTATIVAS
+    do_seguro = apolice ? tentativas_do_seguro(apolice, sem: item) : 0
+    no_teto = do_seguro + tentativas >= TETO_DE_TENTATIVAS
     marcar(item, apolice, { TENTATIVAS => tentativas, MOTIVO => motivo, FIM => (DESISTIU if no_teto) })
   end
 

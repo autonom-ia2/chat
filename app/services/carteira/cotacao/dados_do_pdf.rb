@@ -14,7 +14,11 @@
 #
 # O que grava: só as colunas dos cinco que estão vazias, relidas com o seguro travado (o que alguém escreveu no meio
 # fica; #3175: o que foi corrigido à mão também). Nunca sobrescreve e nunca toca nas outras colunas do seguro. Só o que
-# o leitor deu como certo (`campos`): o que ele deixa "a confirmar" não entra por aqui. A história ganha só o passo da leitura, com a vigência: nenhum valor lido.
+# o leitor deu como certo (`campos`): o que ele deixa "a confirmar" não entra por aqui. A história ganha só o passo da
+# leitura, com a vigência: nenhum valor lido.
+#
+# #3175: o PDF que a busca no conector já leu na chegada (Carteira::Conector::LerPdf) não é lido de novo aqui: a resposta
+# seria a mesma, e a leitura seria paga duas vezes.
 #
 # Nada do PDF vai para log nem para argumento de job: quem chama roda no job da cotação, com o id do seguro.
 class Carteira::Cotacao::DadosDoPdf
@@ -46,7 +50,8 @@ class Carteira::Cotacao::DadosDoPdf
 
   def vale_ler?(faltam)
     colunas = do_segurado(Array(faltam).filter_map { |caminho| DA_ENTRADA[caminho.to_s] })
-    colunas.any? { |coluna| @apolice[coluna].nil? } && @apolice.pdf.attached? && Carteira::Leitor::Liberado.para?(@account)
+    colunas.any? { |coluna| @apolice[coluna].nil? } && @apolice.pdf.attached? && !Carteira::Conector::LerPdf.lido?(@apolice) &&
+      Carteira::Leitor::Liberado.para?(@account)
   end
 
   # Na empresa segurada, nascimento e sexo ficam de fora.

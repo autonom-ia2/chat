@@ -921,7 +921,8 @@ describe('o histórico com a renovação e o "Exportar"', () => {
   it.each([
     [{ recusa: 'nao_e_apolice' }, null, 'não parece ser uma apólice'],
     [{ recusa: 'nao_deu_para_ler' }, null, 'Não deu para ler o PDF guardado.'],
-    [{}, null, 'Não tinha nada em branco para completar.'],
+    [{ lido: true }, null, 'Não tinha nada em branco para completar.'],
+    [{}, null, 'Não deu para ler o PDF guardado.'],
   ])(
     'o PDF lido sem completar nada (%j) diz por quê',
     (valores, mudancas, frase) => {

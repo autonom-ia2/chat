@@ -5,7 +5,9 @@
 # - O PDF é reconhecido pelo CONTEÚDO (começa com `%PDF-`), nunca pelo nome da entrada: o nome vem do portal e pode
 #   trazer o nome do cliente. Nenhum nome de entrada é lido para decidir nem vai para log.
 # - Precisa haver exatamente UM PDF dentro: nenhum é `zip_sem_pdf`; mais de um é `zip_com_varios_pdfs` (não dá para
-#   saber qual é a apólice, e o sistema não chuta). ZIP com mais de MAXIMO_DE_ENTRADAS arquivos é `zip_cheio_demais`.
+#   saber qual é a apólice, e o sistema não chuta). ZIP com mais de MAXIMO_DE_ENTRADAS entradas é `zip_cheio_demais`,
+#   conferido no fim do arquivo (o registro que fecha o ZIP diz quantas entradas há) ANTES de a biblioteca montar a lista
+#   inteira na memória.
 # - Contra bomba de ZIP, o teto vale duas vezes: o tamanho que o ZIP declara (recusa antes de abrir) e os bytes que a
 #   descompressão de fato entrega, contados pedaço a pedaço (o ZIP pode mentir o tamanho). Passou: `grande_demais`.
 # - ZIP que não abre (quebrado, com senha, formato que a biblioteca não lê): `zip_quebrado`.
@@ -17,6 +19,10 @@ class Carteira::Conector::PdfDoZip
   ASSINATURA_PDF = '%PDF-'.b.freeze
   MAXIMO_DE_ENTRADAS = 50
   PEDACO = 64.kilobytes
+  FIM_DO_ZIP = "PK\x05\x06".b.freeze
+  # O registro do fim tem 22 bytes e um comentário de até 64 KB; o total de entradas fica no byte 10 dele.
+  CAUDA = 22 + 65_535
+  TOTAL_NO_FIM = 10
   Recusa = Class.new(StandardError)
 
   def self.zip?(arquivo)
@@ -31,12 +37,23 @@ class Carteira::Conector::PdfDoZip
   end
 
   def call
+    recusar('zip_cheio_demais') if entradas_declaradas > MAXIMO_DE_ENTRADAS
     Zip::File.open(@arquivo.path) { |zip| extrair(o_unico_pdf(zip)) }
   rescue Zip::Error, Zlib::Error
     recusar('zip_quebrado')
   end
 
   private
+
+  # Quantas entradas o ZIP diz ter, lido do registro do fim. No ZIP64 o total ali é 0xFFFF: passa do teto e é recusado.
+  def entradas_declaradas
+    tamanho = File.size(@arquivo.path)
+    cauda = File.binread(@arquivo.path, [tamanho, CAUDA].min, [tamanho - CAUDA, 0].max)
+    inicio = cauda.rindex(FIM_DO_ZIP)
+    recusar('zip_quebrado') if inicio.nil? || cauda.bytesize < inicio + TOTAL_NO_FIM + 2
+
+    cauda.byteslice(inicio + TOTAL_NO_FIM, 2).unpack1('v')
+  end
 
   def o_unico_pdf(zip)
     arquivos = zip.entries.select(&:file?)

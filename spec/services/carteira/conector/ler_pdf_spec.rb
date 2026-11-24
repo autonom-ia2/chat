@@ -50,7 +50,7 @@ RSpec.describe Carteira::Conector::LerPdf, :aggregate_failures do
                                              placa: 'EXM0A00', bonus_classe: 2)
     expect(seguro.bem).to include('EXM0A00')
     expect(seguro).to have_attributes(seguradora: 'Seguradora Exemplo', numero: 'EX-2026.001234', origem: 'conector')
-    expect(passo).to have_attributes(user_id: nil, valores: { 'leitura' => leitura.id })
+    expect(passo).to have_attributes(user_id: nil, valores: { 'leitura' => leitura.id, 'lido' => true })
     expect(passo.mudancas).to include({ 'campo' => 'valor', 'antes' => nil, 'depois' => 225_498 },
                                       { 'campo' => 'tipo', 'antes' => 'outro', 'depois' => 'auto' },
                                       { 'campo' => 'cep', 'antes_vazio' => true })
@@ -94,6 +94,23 @@ RSpec.describe Carteira::Conector::LerPdf, :aggregate_failures do
     expect(cliente).to have_received(:create).once
     expect(passo).to have_attributes(mudancas: nil, valores: { 'leitura' => leitura.id, 'recusa' => 'nao_deu_para_ler' })
     expect(seguro.reload.valor_centavos).to be_nil
+  end
+
+  it 'um erro depois da marca diz que não deu para ler, nunca que não havia nada em branco' do
+    allow_any_instance_of(Carteira::Pdf::Completar).to receive(:call).and_raise(ActiveRecord::RecordNotSaved) # rubocop:disable RSpec/AnyInstance
+
+    expect(ler).to be(true)
+
+    expect(passo).to have_attributes(mudancas: nil, valores: { 'leitura' => leitura.id, 'recusa' => 'nao_deu_para_ler' })
+    expect(ler).to be(false)
+  end
+
+  it 'a cotação não relê o PDF que já foi lido na chegada' do
+    ler
+
+    expect(Carteira::Conector::LerPdf.lido?(seguro)).to be(true)
+    expect(Carteira::Cotacao::DadosDoPdf.new(seguro.reload, cliente: cliente).call(['address.zipCode'])).to be(false)
+    expect(cliente).to have_received(:create).once
   end
 
   context 'quando o arquivo não é uma apólice' do

@@ -1269,8 +1269,11 @@ describe('os passos da renovação no histórico', () => {
       })
     ).toEqual(so('TIPOS.PDF_LIDO'));
     expect(
-      fraseDoPasso({ tipo: 'pdf_lido', valores: {}, mudancas: null })
+      fraseDoPasso({ tipo: 'pdf_lido', valores: { lido: true }, mudancas: null })
     ).toEqual(so('PDF_LIDO.NADA'));
+    expect(
+      fraseDoPasso({ tipo: 'pdf_lido', valores: {}, mudancas: null })
+    ).toEqual(so('PDF_LIDO.NAO_DEU'));
     expect(
       fraseDoPasso({ tipo: 'pdf_lido', valores: { recusa: 'nao_e_apolice' } })
     ).toEqual(so('PDF_LIDO.NAO_E_APOLICE'));

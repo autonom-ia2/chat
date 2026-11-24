@@ -18,10 +18,13 @@
 #   não é tentada de novo.
 #
 # O passo `pdf_lido` é do sistema (sem nome de pessoa) e leva a busca em `valores.leitura` (o Desfazer da busca devolve o
-# que ele completou, como o resto da busca), o que mudou em `mudancas` (do dado pessoal, só que estava vazio) e, quando
-# não deu para ler, o código da recusa em `valores.recusa`. Nenhum valor lido vai para log.
+# que ele completou, como o resto da busca), o que mudou em `mudancas` (de nascimento, sexo e CEP, só que estavam vazios;
+# os outros campos como na história do resto do seguro), `valores.lido` quando a leitura terminou e, quando não deu para
+# ler, o código da recusa em `valores.recusa`. Um erro depois da marca vira `nao_deu_para_ler` no passo (nunca "nada em
+# branco") e não é relido. Nenhum valor lido vai para log.
 class Carteira::Conector::LerPdf
   PASSO = 'pdf_lido'.freeze
+  NAO_DEU = Carteira::Leitor::Resultado::NAO_DEU
   CAMPOS = %w[tipo valor bem nascimento sexo cep placa bonus].freeze
   DA_PESSOA = %w[nascimento sexo].freeze
 
@@ -41,13 +44,28 @@ class Carteira::Conector::LerPdf
     passo = marcar!
     return false unless passo
 
-    resultado = Carteira::Leitor::DoSeguro.new(@apolice, cliente: @cliente).call
-    mudancas = resultado.lido? ? @completar.call(resultado.campos) : []
-    passo.update!(mudancas: mudancas.presence, valores: passo.valores.merge(recusa: resultado.recusa).compact)
+    ler_e_completar(passo)
     true
   end
 
+  # Este PDF já foi lido: há um passo `pdf_lido` depois do último `pdf_anexado` do seguro. A cotação (DadosDoPdf) também
+  # olha aqui, para não pagar de novo a leitura do mesmo PDF.
+  def self.lido?(apolice)
+    lido = apolice.eventos.where(tipo: PASSO).maximum(:id)
+    pdf = apolice.eventos.where(tipo: Carteira::Pdf::ANEXADO).maximum(:id)
+    lido.present? && (pdf.nil? || lido > pdf)
+  end
+
   private
+
+  def ler_e_completar(passo)
+    resultado = Carteira::Leitor::DoSeguro.new(@apolice, cliente: @cliente).call
+    mudancas = resultado.lido? ? @completar.call(resultado.campos) : []
+    passo.update!(mudancas: mudancas.presence, valores: passo.valores.merge(recusa: resultado.recusa, lido: (true if resultado.lido?)).compact)
+  rescue StandardError => e
+    Rails.logger.warn("[carteira][conector][pdf_lido] apolice=#{@apolice.id} falhou: #{e.class.name}")
+    passo.update!(valores: passo.valores.merge(recusa: NAO_DEU))
+  end
 
   def vale_ler?
     @apolice.pdf.attached? && @apolice.cancelado_em.nil? && @completar.falta? && Carteira::Leitor::Liberado.para?(@apolice.account)
@@ -56,15 +74,9 @@ class Carteira::Conector::LerPdf
   # O passo da leitura deste PDF, criado uma vez só, com o seguro travado; nil quando ele já foi lido.
   def marcar!
     @apolice.with_lock(requires_new: true) do
-      next if ja_lido?
+      next if self.class.lido?(@apolice)
 
       @apolice.eventos.create!(tipo: PASSO, quando: Time.current, user: nil, valores: @leitura ? { leitura: @leitura.id } : {})
     end
-  end
-
-  def ja_lido?
-    lido = @apolice.eventos.where(tipo: PASSO).maximum(:id)
-    pdf = @apolice.eventos.where(tipo: Carteira::Pdf::ANEXADO).maximum(:id)
-    lido.present? && (pdf.nil? || lido > pdf)
   end
 end
