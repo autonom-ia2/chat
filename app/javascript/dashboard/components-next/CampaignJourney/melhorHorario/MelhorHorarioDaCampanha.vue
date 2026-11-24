@@ -70,7 +70,7 @@ const horario = computed(() =>
       <ToggleSwitch
         :model-value="modelValue"
         :label="t(`${NS}.TITULO`)"
-        :disabled="ninguem"
+        :disabled="ninguem && !modelValue"
         described-by="melhor-horario-ajuda"
         @update:model-value="ligado => emit('update:modelValue', ligado)"
       />

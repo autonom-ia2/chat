@@ -19,6 +19,7 @@ import { toLocaleTag, formatNumber } from './localeTag';
 import MedirVendas from './MedirVendas.vue';
 import MelhorHorarioDaCampanha from './melhorHorario/MelhorHorarioDaCampanha.vue';
 import ReenvioDaCampanha from './reenvio/ReenvioDaCampanha.vue';
+import { CAMPAIGN_CHANNELS } from './campaignChannels';
 import {
   MENSAGEM,
   faltaNoReenvio,
@@ -156,20 +157,29 @@ const textoDoInicio = () => {
     ? t(`${NS}.CONFIRM_LATER_TEXT`, { when: whenText.value })
     : t(`${NS}.CONFIRM_NOW_TEXT`);
 };
-// A última chance de ver que, dias depois, sai uma segunda leva sozinha (no WhatsApp Oficial, outro modelo pago).
+// A última chance de ver que, dias depois, sai uma segunda leva sozinha: de quando contam os dias, para quantos no
+// máximo (quem recebe a primeira) e, no WhatsApp Oficial, que cada uma é um modelo pago.
 const textoDoReenvio = () => {
   const { dias, quem } = reenvioLigado.value;
   return t(
     `${NS_REENVIO}.CONFIRM`,
-    { dias, quem: t(`${NS_REENVIO}.QUEM_RESUMO.${quem.toUpperCase()}`) },
+    {
+      dias,
+      quem: t(`${NS_REENVIO}.QUEM_RESUMO.${quem.toUpperCase()}`),
+      total: n(receivers.value),
+    },
     dias
   );
 };
-const confirmText = computed(() =>
-  reenvioLigado.value
-    ? `${textoDoInicio()} ${textoDoReenvio()}`
-    : textoDoInicio()
-);
+// Uma ideia por linha na confirmação.
+const linhasDaConfirmacao = computed(() => {
+  if (!reenvioLigado.value) return [textoDoInicio()];
+  const pago =
+    props.reenvio.canal === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
+      ? [t(`${NS_REENVIO}.CONFIRM_PAGO`)]
+      : [];
+  return [textoDoInicio(), textoDoReenvio(), ...pago];
+});
 // #3101: com o reenvio ligado, a segunda mensagem precisa estar escrita antes de a campanha sair.
 const modeloDoReenvio = computed(() =>
   (props.reenvio?.modelos || []).find(
@@ -260,7 +270,8 @@ const submit = () => {
       <!-- The padding lives on a wrapper: a legend sits on the fieldset's top edge and
            ignores its padding, so "Quando começa" stuck to the line above (#1387). -->
       <div class="py-4">
-        <fieldset class="m-0 flex flex-col gap-3 border-0 p-0">
+        <!-- min-w-0: sem ele o fieldset cresce até a palavra mais longa e estoura a tela no celular. -->
+        <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
           <legend class="mb-2 text-xs font-semibold uppercase text-n-slate-11">
             {{ t(`${NS}.WHEN`) }}
           </legend>
@@ -486,10 +497,21 @@ const submit = () => {
     <Dialog
       ref="confirmRef"
       :title="confirmTitle"
-      :description="confirmText"
       :confirm-button-label="actionLabel"
       :cancel-button-label="t(`${NS}.CONFIRM_BACK`)"
       @confirm="submit"
-    />
+    >
+      <template #description>
+        <div class="flex flex-col gap-2" data-test="confirm-text">
+          <p
+            v-for="linha in linhasDaConfirmacao"
+            :key="linha"
+            class="mb-0 text-sm text-n-slate-11"
+          >
+            {{ linha }}
+          </p>
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>

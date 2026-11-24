@@ -5,7 +5,7 @@
 //
 // A segunda mensagem passa pelo limite e pelo horário da conta, como qualquer mensagem de campanha. Quem respondeu,
 // saiu da lista ou ficou bloqueado nesse meio-tempo não recebe.
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ToggleSwitch from 'dashboard/components-next/toggle-switch/ToggleSwitch.vue';
@@ -13,6 +13,8 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TemplateVariableBindings from '../TemplateVariableBindings.vue';
+import ContadorSms from '../ContadorSms.vue';
+import { CAMPAIGN_CHANNELS } from '../campaignChannels';
 import {
   DIAS_DO_REENVIO,
   MENSAGEM,
@@ -47,8 +49,12 @@ const NS = 'REENVIO_HORARIO.REENVIO';
 const NS_REVISAO = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW';
 const { t } = useI18n();
 const aberto = ref(false);
-// O vermelho do modelo só depois de a pessoa passar pela escolha (não antes de ela mexer em nada).
+// O vermelho do que falta só depois de a pessoa passar pelo campo, fechar o bloco ou voltar a ele com o reenvio já
+// ligado (não antes de ela mexer em nada). Ligar de novo começa sem vermelho.
 const tocou = ref(false);
+// O foco vai ao primeiro campo ao abrir e volta ao "Alterar" ao fechar.
+const bloco = ref(null);
+const alterar = ref(null);
 // Para ler o começo do modelo no resumo fechado.
 const INICIO_DO_MODELO = 60;
 
@@ -73,6 +79,12 @@ const opcoesDeModelo = computed(() =>
 const semModelos = computed(
   () => tipo.value === MENSAGEM.MODELO && !modelosQueVao(props.modelos).length
 );
+// Sem outro modelo e desligado, não há nada a guardar: o botão só fecha.
+const nadaAGuardar = computed(() => semModelos.value && !ligado.value);
+const ehSms = computed(() => props.canal === CAMPAIGN_CHANNELS.SMS);
+const erroDe = chave => (tocou.value && falta.value === chave ? chave : '');
+const mensagemDeErro = chave =>
+  erroDe(chave) ? t(`${NS}.FALTA.${chave}`) : '';
 const variaveisDoModelo = computed(
   () => modeloEscolhido.value?.variaveis || []
 );
@@ -132,6 +144,21 @@ const alternar = novo => {
       : null
   );
 };
+const PRIMEIRO_CAMPO =
+  'button:not([disabled]), input:not([disabled]), textarea';
+const abrir = async () => {
+  if (ligado.value) tocou.value = true;
+  aberto.value = true;
+  await nextTick();
+  bloco.value?.querySelector(PRIMEIRO_CAMPO)?.focus();
+};
+const fechar = async () => {
+  tocou.value = true;
+  aberto.value = false;
+  await nextTick();
+  alterar.value?.$el?.focus();
+};
+
 // Trocar de modelo traz as ligações que já vêm prontas para ele.
 const escolherModelo = modeloId => {
   const modelo = props.modelos.find(item => item.value === modeloId);
@@ -173,6 +200,7 @@ const classeDaPilula = escolhida =>
         </p>
       </div>
       <Button
+        ref="alterar"
         :label="t(`${NS_REVISAO}.CHANGE`)"
         :aria-label="
           t(`${NS_REVISAO}.CHANGE_ARIA`, { block: t(`${NS}.TITULO`) })
@@ -181,11 +209,16 @@ const classeDaPilula = escolhida =>
         size="sm"
         class="!min-h-11 shrink-0"
         data-alterar
-        @click="aberto = true"
+        @click="abrir"
       />
     </div>
 
-    <fieldset v-else class="m-0 flex flex-col gap-4 border-0 p-0">
+    <!-- min-w-0: o fieldset cresce até a palavra mais longa e, no celular, estourava a tela. -->
+    <fieldset
+      v-else
+      ref="bloco"
+      class="m-0 flex min-w-0 flex-col gap-4 border-0 p-0"
+    >
       <legend class="mb-2 text-xs font-semibold uppercase text-n-slate-11">
         {{ t(`${NS}.TITULO`) }}
       </legend>
@@ -299,9 +332,17 @@ const classeDaPilula = escolhida =>
               :bindings="modelValue.ligacoes || {}"
               :columns="colunas"
               :extra-groups="gruposDeCampos"
+              :invalid="Boolean(erroDe('SEM_LIGACAO'))"
               data-reenvio-ligacoes
               @bind="ligar"
             />
+            <p
+              v-if="erroDe('SEM_LIGACAO')"
+              class="m-0 text-xs text-n-ruby-11"
+              data-reenvio-erro-ligacao
+            >
+              {{ mensagemDeErro('SEM_LIGACAO') }}
+            </p>
           </template>
           <template v-else-if="tipo === MENSAGEM.TEXTO">
             <p class="m-0 text-xs text-n-slate-11">
@@ -309,13 +350,21 @@ const classeDaPilula = escolhida =>
             </p>
             <TextArea
               :model-value="modelValue.texto"
-              :placeholder="t(`${NS}.TEXTO_EXEMPLO`)"
+              :placeholder="t(`${NS}.TEXTO_PLACEHOLDER`)"
               :max-length="maximoDoTexto"
-              show-character-count
+              :show-character-count="!ehSms"
+              :message="mensagemDeErro('SEM_TEXTO')"
+              :message-type="erroDe('SEM_TEXTO') ? 'error' : 'info'"
               auto-height
               min-height="5rem"
               data-reenvio-texto
               @update:model-value="texto => mudar({ texto })"
+              @blur="tocou = true"
+            />
+            <ContadorSms
+              v-if="ehSms"
+              :texto="modelValue.texto || ''"
+              data-reenvio-contador
             />
           </template>
           <template v-else-if="tipo === MENSAGEM.ASSUNTO">
@@ -325,10 +374,14 @@ const classeDaPilula = escolhida =>
             <Input
               :model-value="modelValue.assunto"
               :label="t(`${NS}.ASSUNTO_LABEL`)"
-              :placeholder="t(`${NS}.ASSUNTO_EXEMPLO`)"
+              :placeholder="t(`${NS}.ASSUNTO_PLACEHOLDER`)"
+              :message="mensagemDeErro('SEM_ASSUNTO')"
+              :message-type="erroDe('SEM_ASSUNTO') ? 'error' : 'info'"
+              wrap-message
               custom-input-class="!h-11"
               data-reenvio-assunto
               @update:model-value="assunto => mudar({ assunto })"
+              @blur="tocou = true"
             />
           </template>
 
@@ -361,13 +414,13 @@ const classeDaPilula = escolhida =>
       </template>
 
       <Button
-        :label="t(`${NS}.GUARDAR_E_FECHAR`)"
+        :label="nadaAGuardar ? t(`${NS}.FECHAR`) : t(`${NS}.PRONTO`)"
         variant="outline"
         color="slate"
         size="sm"
         class="!min-h-11 self-start"
         data-reenvio-pronto
-        @click="aberto = false"
+        @click="fechar"
       />
     </fieldset>
   </div>

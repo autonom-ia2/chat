@@ -59,6 +59,12 @@ describe('MelhorHorarioDaCampanha (#3101)', () => {
     );
   });
 
+  it('can still be turned off when it was on and nobody has a known hour anymore', () => {
+    const wrapper = montar({ modelValue: true, conhecidos: 0 });
+
+    expect(wrapper.find('input[role="switch"]').element.disabled).toBe(false);
+  });
+
   it('says any time works when the account has no allowed hours', () => {
     const wrapper = montar({ modelValue: true, conhecidos: 10 });
 

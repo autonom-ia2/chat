@@ -29,11 +29,7 @@ const OPCOES = [
     <legend class="mb-1.5 text-sm font-medium text-n-slate-12">
       {{ rotulo }}
     </legend>
-    <div
-      class="grid gap-2 sm:grid-cols-2"
-      role="radiogroup"
-      :aria-label="rotulo"
-    >
+    <div class="grid gap-2" role="radiogroup" :aria-label="rotulo">
       <button
         v-for="opcao in OPCOES"
         :key="opcao.valor"

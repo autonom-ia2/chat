@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ContadorSms from './ContadorSms.vue';
 import { formatNumber } from './localeTag';
 import { PLUS } from './textMarks';
 import {
@@ -36,7 +37,6 @@ const emit = defineEmits(['update']);
 
 const NS = 'DUAS_VERSOES.TEXTO';
 const API = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.API';
-const SMS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.SMS';
 const { t, locale } = useI18n();
 const n = value => formatNumber(value, locale.value);
 const caixa = ref(null);
@@ -80,12 +80,11 @@ const versoes = computed(() => [
   { numero: 1, texto: props.primeira },
   { numero: 2, texto: props.texto },
 ]);
-const contagem = computed(() => smsStats(props.texto));
 // No SMS, cada parte é cobrada: quando as duas versões usam quantidades diferentes, a pessoa precisa saber.
 const partesDiferentes = computed(() => {
   if (!ehSms.value || !props.texto || !props.primeira) return null;
   const da1 = smsStats(props.primeira).segments;
-  const da2 = contagem.value.segments;
+  const da2 = smsStats(props.texto).segments;
   return da1 === da2 ? null : { a: n(da1), b: n(da2) };
 });
 
@@ -146,23 +145,7 @@ const inserir = item => {
             {{ PLUS }} {{ item.label }}
           </button>
         </div>
-        <p
-          v-if="ehSms"
-          class="m-0 text-xs text-n-slate-11"
-          aria-live="polite"
-          data-contador-da-2
-        >
-          {{
-            t(
-              `${SMS}.COUNTER`,
-              {
-                characters: n(contagem.characters),
-                segments: n(contagem.segments),
-              },
-              contagem.segments
-            )
-          }}
-        </p>
+        <ContadorSms v-if="ehSms" :texto="texto" data-contador-da-2 />
       </div>
       <p
         v-if="partesDiferentes"

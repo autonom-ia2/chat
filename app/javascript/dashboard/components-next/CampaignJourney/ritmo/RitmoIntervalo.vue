@@ -29,7 +29,7 @@ const opcoes = computed(() => [
       {{ t(`${NS}.TITLE`) }}
     </h2>
     <p class="mb-4 text-sm text-n-slate-11">{{ t(`${NS}.HELP`) }}</p>
-    <div class="w-full sm:w-80">
+    <div class="w-full sm:w-72">
       <ChoiceSelect
         v-model="horas"
         :options="opcoes"

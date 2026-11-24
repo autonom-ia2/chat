@@ -23,7 +23,13 @@ const montar = (draft, extra = {}) =>
     },
     global: {
       plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
-      stubs: { Dialog: true },
+      // A confirmação de verdade é um <dialog>; aqui só o que ela diz.
+      stubs: {
+        Dialog: {
+          template: '<div data-dialog><slot name="description" /></div>',
+          methods: { open() {}, close() {} },
+        },
+      },
     },
   });
 
@@ -79,17 +85,34 @@ describe('StepReview with send again and best time (#3101)', () => {
     );
   });
 
-  it('tells about the second message in the confirmation', () => {
+  it('tells in the confirmation when the days count from and for how many, one idea per line', () => {
     const wrapper = montar(
       { reenvio: { ...reenvioNovo(), texto: 'Still there?', dias: 2 } },
       { reenvio: { canal: 'sms', modelos: [] } }
     );
 
-    expect(
-      wrapper.findComponent({ name: 'Dialog' }).attributes('description')
-    ).toContain(
-      "2 days later, people who didn't reply get the second message."
+    const linhas = wrapper.findAll('[data-test="confirm-text"] p');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[1].text()).toBe(
+      "2 days after the first one finishes going out, people who didn't reply get the second message: up to 30 people."
     );
+    expect(wrapper.text()).not.toContain(R.CONFIRM_PAGO);
+  });
+
+  it('says on WhatsApp Oficial that each second message is a paid template', () => {
+    const wrapper = montar(
+      { reenvio: { ...reenvioNovo(), modeloId: 'lembrete' } },
+      {
+        reenvio: {
+          canal: 'whatsapp_official',
+          modelos: [{ value: 'lembrete', label: 'Lembrete', variaveis: [] }],
+        },
+      }
+    );
+
+    const linhas = wrapper.findAll('[data-test="confirm-text"] p');
+    expect(linhas).toHaveLength(3);
+    expect(linhas[2].text()).toBe(R.CONFIRM_PAGO);
   });
 
   it('says the best time beside the count only when it is on', async () => {

@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import campaignJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
@@ -28,12 +29,13 @@ const MODELOS = [
   },
 ];
 
-const montar = props =>
+const montar = (props, opcoes = {}) =>
   mount(ReenvioDaCampanha, {
     props: { canal: 'whatsapp_official', modelos: MODELOS, ...props },
     global: {
       plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
     },
+    ...opcoes,
   });
 
 const abrir = async wrapper => {
@@ -171,8 +173,95 @@ describe('ReenvioDaCampanha (#3101)', () => {
     const wrapper = montar({ modelValue: null });
     await abrir(wrapper);
 
+    expect(wrapper.find('[data-reenvio-pronto]').text()).toBe(R.PRONTO);
     await wrapper.find('[data-reenvio-pronto]').trigger('click');
     expect(wrapper.find('[data-resumo]').exists()).toBe(true);
+  });
+
+  it('only says "Close" when there is nothing to save', async () => {
+    const wrapper = montar({ modelValue: null, modelos: [] });
+    await abrir(wrapper);
+
+    expect(wrapper.find('[data-reenvio-pronto]').text()).toBe(R.FECHAR);
+  });
+
+  it('moves the focus to the first field on open and back to "Change" on close', async () => {
+    const wrapper = montar({ modelValue: null }, { attachTo: document.body });
+    await abrir(wrapper);
+    await nextTick();
+    expect(document.activeElement).toBe(
+      wrapper.find('input[role="switch"]').element
+    );
+
+    await wrapper.find('[data-reenvio-pronto]').trigger('click');
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.find('[data-alterar]').element);
+    wrapper.unmount();
+  });
+
+  it('shows the SMS parts of the second message instead of the plain count', async () => {
+    const wrapper = montar({
+      modelValue: { ...reenvioNovo(), texto: 'a'.repeat(161) },
+      canal: 'sms',
+    });
+    await abrir(wrapper);
+
+    expect(wrapper.find('[data-reenvio-contador]').text()).toContain('2 SMS');
+    expect(wrapper.find('[data-reenvio-texto]').text()).not.toContain('/');
+  });
+
+  it('marks the empty text in red only after the person leaves the box', async () => {
+    const wrapper = montar({ modelValue: null, canal: 'sms' });
+    await abrir(wrapper);
+    await wrapper.setProps({ modelValue: reenvioNovo({ texto: '' }) });
+
+    const caixa = wrapper.find('[data-reenvio-texto] textarea');
+    expect(caixa.attributes('placeholder')).toBe(R.TEXTO_PLACEHOLDER);
+    expect(wrapper.find('[data-reenvio-texto]').text()).not.toContain(
+      R.FALTA.SEM_TEXTO
+    );
+
+    await caixa.trigger('blur');
+    expect(wrapper.find('[data-reenvio-texto]').text()).toContain(
+      R.FALTA.SEM_TEXTO
+    );
+  });
+
+  it('marks the empty subject right away when coming back to a block already on', async () => {
+    const wrapper = montar({
+      modelValue: reenvioNovo({ assunto: '' }),
+      canal: 'email',
+    });
+    await abrir(wrapper);
+
+    expect(
+      wrapper.find('[data-reenvio-assunto] input').attributes('placeholder')
+    ).toBe(R.ASSUNTO_PLACEHOLDER);
+    expect(wrapper.find('[data-reenvio-assunto]').text()).toContain(
+      R.FALTA.SEM_ASSUNTO
+    );
+  });
+
+  it('marks in red the part of the template that still has no source', async () => {
+    const wrapper = montar({
+      modelValue: {
+        ...reenvioNovo(),
+        modeloId: 'longo',
+        ligacoes: { 1: { source: 'contact', value: 'first_name' } },
+      },
+    });
+    await abrir(wrapper);
+
+    const escolhas = wrapper
+      .find('[data-reenvio-ligacoes]')
+      .findAllComponents({ name: 'ChoiceSelect' });
+    expect(escolhas.map(escolha => escolha.props('invalid'))).toEqual([
+      false,
+      true,
+    ]);
+    expect(wrapper.find('[data-reenvio-erro-ligacao]').text()).toBe(
+      R.FALTA.SEM_LIGACAO
+    );
   });
 
   it('asks only for a new subject on e-mail', async () => {

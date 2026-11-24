@@ -16,7 +16,7 @@
         "SEM_MODELO": "Choose the second message.",
         "SEM_TEXTO": "Write the second message.",
         "SEM_ASSUNTO": "Write the subject of the second e-mail.",
-        "SEM_LIGACAO": "Say where each part of the second message comes from."
+        "SEM_LIGACAO": "Choose where the part marked in red comes from."
       },
       "LIGAR": "Send a second message",
       "LIGAR_AJUDA": "Many people see the message and forget to reply. A reminder a few days later brings some of them back.",
@@ -26,10 +26,10 @@
         "NAO_LEU": "People who didn't read it"
       },
       "QUEM_AJUDA": {
-        "NAO_RESPONDEU": "Read it or not, but wrote nothing.",
+        "NAO_RESPONDEU": "They may have read it, but didn't reply.",
         "NAO_LEU": "The message arrived, but the person didn't open it."
       },
-      "DEPOIS_DE": "How many days later",
+      "DEPOIS_DE": "How many days after the first message",
       "DIAS": "1 day later | {n} days later",
       "SEGUNDA_MENSAGEM": "Second message",
       "MODELO_AJUDA": "Choose another template approved by WhatsApp. Days later, only an approved template can be sent.",
@@ -39,25 +39,29 @@
       "MODELO_COM_OFERTA": "has a coupon, offer or catalog",
       "TEXTO_AJUDA": "Write it differently from the first one: short, reminding what you offered.",
       "TEXTO_EXEMPLO": "Hi! Just a reminder about the offer I sent you. There's still time, want me to save it for you?",
+      "TEXTO_PLACEHOLDER": "Write the second message here",
       "ASSUNTO_AJUDA": "The content is the same as the first e-mail. A new subject helps the person open it.",
       "ASSUNTO_LABEL": "Subject of the second e-mail",
       "ASSUNTO_EXEMPLO": "There's still time: your offer still stands",
+      "ASSUNTO_PLACEHOLDER": "Write the subject here",
       "COMO_CHEGA": "How the customer sees it",
       "REGRAS": "People who reply before that, leave the list or are blocked don't get it. The second message also follows the account's limit and hours.",
       "NO_RESUMO": "Sends again 1 day later | Sends again {dias} days later",
       "SEGUNDO_EMAIL": "Second e-mail",
-      "GUARDAR_E_FECHAR": "Save and close",
-      "CONFIRM": "1 day later, people who {quem} get the second message. | {dias} days later, people who {quem} get the second message."
+      "PRONTO": "Done",
+      "FECHAR": "Close",
+      "CONFIRM": "1 day after the first one finishes going out, people who {quem} get the second message: up to {total} people. | {dias} days after the first one finishes going out, people who {quem} get the second message: up to {total} people.",
+      "CONFIRM_PAGO": "Each second message is a template charged by Meta."
     },
     "MELHOR_HORARIO": {
       "TITULO": "At each customer's best time",
       "AJUDA": "Each person gets it at the hour they usually reply, within {horas} hours after the start.",
-      "NINGUEM": "Nobody in this audience has replied before, so we don't know the best time yet. Everyone gets it {inicio}.",
+      "NINGUEM": "We don't know the best time of anyone in this audience yet. Everyone gets it {inicio}.",
       "CONTANDO": "Counting who has replied before…",
       "COM_HORA": "Get it at their best time",
-      "COM_HORA_AJUDA": "They have replied before: we know each one's hour.",
+      "COM_HORA_AJUDA": "We know the hour each one usually replies.",
       "SEM_HORA": "Get it at the start",
-      "SEM_HORA_AJUDA": "They never replied: they get it {inicio}.",
+      "SEM_HORA_AJUDA": "We don't know their hour yet: they get it {inicio}.",
       "PESSOAS": "1 person | {n} people",
       "INICIO": {
         "NOW": "now",
@@ -66,7 +70,7 @@
       "HORARIO_PERMITIDO": "{dias}, from {inicio} to {fim}",
       "HORARIO_DA_CONTA": "Always within the account's allowed hours: {horario}.",
       "QUALQUER_HORA": "Your account allows sending at any time.",
-      "NO_RESUMO": "Each one at their best time, within {horas} hours",
+      "NO_RESUMO": "People who replied before get it at their best time, within {horas} hours",
       "CONFIRM_NOW_TEXT": "Sending starts now. People who replied before get it at their best time, within {horas} hours. The others get it now.",
       "CONFIRM_LATER_TEXT": "Sending starts on {when}. People who replied before get it at their best time, over the following {horas} hours. The others get it at the start. Until then you can edit or cancel the campaign."
     },
@@ -74,8 +78,8 @@
       "ROTULO": "When to send",
       "NA_HORA": "As soon as it reaches this step",
       "NA_HORA_AJUDA": "The message goes out right away.",
-      "MELHOR_HORARIO": "At the customer's best time",
-      "MELHOR_HORARIO_AJUDA": "Waits for the hour they usually reply, 24 hours at most. People who never replied get it right away.",
+      "MELHOR_HORARIO": "At each customer's best time",
+      "MELHOR_HORARIO_AJUDA": "Waits for the hour they usually reply, 24 hours at most. If we don't know their hour yet, they get it right away.",
       "REGRAS": "Always within the account's allowed hours: {horario}. If the customer just wrote, the reply goes out right away.",
       "REGRAS_QUALQUER_HORA": "Your account allows sending at any time. If the customer just wrote, the reply goes out right away."
     }

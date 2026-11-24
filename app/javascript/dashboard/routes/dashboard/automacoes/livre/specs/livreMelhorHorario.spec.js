@@ -25,6 +25,14 @@ describe('LivreMelhorHorario (#3101)', () => {
     expect(wrapper.emitted('update:modelValue')[0]).toEqual(['melhor_horario']);
   });
 
+  it('names the best time as the campaign does', () => {
+    const wrapper = montar({});
+
+    expect(wrapper.find('[data-quando="melhor_horario"]').text()).toContain(
+      en.REENVIO_HORARIO.MELHOR_HORARIO.TITULO
+    );
+  });
+
   it('says the account hours when waiting for the best time', () => {
     const wrapper = montar({
       modelValue: 'melhor_horario',
