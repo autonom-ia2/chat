@@ -105,6 +105,9 @@ module Autonomia
         # Quem abriu a marca (ReplyJob#settle) só a solta quando não segue.
         def turno_segue? = @turno_segue == true
 
+        # #3211: a entrega em pedaços foi agendada neste turno. A cadeia fica com a fala (FalaEmCurso) e a solta no fim.
+        def cadeia_agendada? = @cadeia_agendada == true
+
         # #2154: o turno desta mensagem já tem resposta do robô (a consulta de idempotência, already_replied?). O
         # ReplyJob#settle pergunta quando a posse do turno já foi tomada.
         def respondida? = already_replied?
@@ -592,9 +595,11 @@ module Autonomia
         # #1606: uma mensagem mais nova do cliente abriu outro turno durante a IA (a marca do debounce aponta para ela).
         # A resposta deste turno ficou velha: é descartada, e o settle do turno novo responde, uma vez. Mesmo critério do
         # ChunkedDeliveryJob#current_turn? (sem marca, segue). Chamar só com estado fresco (depois de still_eligible?, que
-        # relê a conversa, dentro do lock). Só com a Fase 2; fora dela posta como sempre.
+        # relê a conversa, dentro do lock). Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora delas
+        # posta como sempre.
         def turno_superado?
-          return false if @reply_to_message_id.blank? || !::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+          return false if @reply_to_message_id.blank?
+          return false unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account) || ::Autonomia::Agents::ParidadeDaConversa.em_fila?(@agent)
 
           stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
           pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
