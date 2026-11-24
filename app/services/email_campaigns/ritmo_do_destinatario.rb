@@ -6,6 +6,9 @@
 # The person is the recipient's contact or, for a spreadsheet recipient without one, the contact of the account with
 # that e-mail (the same match the refusal check uses). Nobody with that e-mail: only the sending hours apply, in the
 # account's time zone, and the e-mail does not count for the limit.
+#
+# #3101: with "melhor horário" on, the recipient's first pass also waits for the contact's best hour
+# (Autonomia::MelhorHorario.na_campanha).
 module EmailCampaigns::RitmoDoDestinatario
   ORIGEM = 'campanha_email'.freeze
 
@@ -20,7 +23,7 @@ module EmailCampaigns::RitmoDoDestinatario
 
   # `contato`: o de #contato, buscado uma vez por destinatário pelo motor e passado aos dois.
   def adiado?(campaign, recipient, contato)
-    ate = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campaign.account, contact: contato)
+    ate = Autonomia::MelhorHorario.na_campanha(campanha: campaign, contact: contato, adiado_ate: recipient.adiado_ate)
     return false unless ate
 
     recipient.update_columns(adiado_ate: ate, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

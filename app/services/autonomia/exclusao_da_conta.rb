@@ -37,6 +37,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Shopify::CustomApp', :por_conta],
     # Contador do limite de mensagens por cliente (#3063): ninguém aponta para ele.
     ['Autonomia::EnvioAoCliente', :por_conta],
+    # Melhor horário e opções de envio da campanha (#3101): ninguém aponta para elas.
+    ['Autonomia::HorarioDeResposta', :por_conta],
+    ['Autonomia::CampanhaOpcoesDeEnvio', :por_conta],
     # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.
     ['Relacionamentos::Compra', :por_conta],
     # Cartão fidelidade e cupons (#3100): movimentos e saldos apontam para o cartão; os códigos, para o cupom.

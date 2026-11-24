@@ -24,6 +24,16 @@ describe('duasVersoesParaEnvio', () => {
     });
   });
 
+  it('#3101: com o melhor horário ligado, a criação leva melhor_horario', () => {
+    expect(medicaoDaCampanha({ ...emptyDraft(), melhorHorario: true })).toEqual(
+      {
+        janela_de_compra_dias: 7,
+        grupo_de_controle_pct: 0,
+        melhor_horario: true,
+      }
+    );
+  });
+
   it('WhatsApp Oficial: a versão 2 é o nome e o idioma do outro modelo (D3)', () => {
     const draft = {
       ...emptyDraft(),

@@ -40,6 +40,17 @@ class CampaignJourney::RecipientPreview
     @channel == 'email' ? email_receive_ids : whatsapp_receive_ids
   end
 
+  # #3101: quem pode receber, sem conferir as variáveis, para contar quem tem melhor horário (Autonomia::MelhorHorario).
+  # No WhatsApp e no SMS, a consulta (não a lista); no e-mail, os ids.
+  def alcancaveis
+    raise ArgumentError, 'unsupported_channel' unless CHANNELS.include?(@channel)
+    return email_receive_ids if @channel == 'email'
+    return [] unless phone_channel_enabled?
+
+    ids = CampaignJourney::AudienceContacts.whatsapp_contact_ids(@campaign_import, account: @account)
+    @account.contacts.where(id: ids).campaign_reachable.select(:id)
+  end
+
   private
 
   def whatsapp_receive_ids

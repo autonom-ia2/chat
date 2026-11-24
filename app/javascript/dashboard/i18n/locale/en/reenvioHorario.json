@@ -62,6 +62,7 @@
         "NOW": "now",
         "LATER": "at the chosen date and time"
       },
+      "HORARIO_PERMITIDO": "{dias}, from {inicio} to {fim}",
       "HORARIO_DA_CONTA": "Always within the account's allowed hours: {horario}.",
       "QUALQUER_HORA": "Your account allows sending at any time.",
       "NO_RESUMO": "Each one at their best time, within {horas} hours",

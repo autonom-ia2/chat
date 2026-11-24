@@ -2,10 +2,12 @@
 # e-mail nasce no Passo 2, antes da revisão, e o envio final vai pela tela de e-mail (send_now/schedule); por isso a
 # revisão grava as escolhas aqui, logo antes de agendar ou enviar, e o grupo é sorteado na hora.
 #
-#   PUT …/campaign_journey/email_medicoes/:id  { janela_de_compra_dias, grupo_de_controle_pct, duas_versoes }
+#   PUT …/campaign_journey/email_medicoes/:id  { janela_de_compra_dias, grupo_de_controle_pct, duas_versoes, melhor_horario }
 #
 # #3099: `duas_versoes` ({ criterio, divisao, espera_horas, segunda: { subject } }) liga as duas versões do e-mail (D2:
 # só o assunto muda). Sem a chave, a campanha fica sem duas versões (a revisão manda o estado inteiro a cada vez).
+#
+# #3101: `melhor_horario` (true/false) liga ou desliga o envio no melhor horário de cada pessoa (Autonomia::MelhorHorario).
 #
 # Quem pode enviar a campanha de e-mail (EmailCampaignPolicy#send_now?). Só antes do envio (draft ou agendada sem
 # ninguém enviado): depois disso o público já recebeu e o grupo não muda. CAMPAIGN_JOURNEY_ENABLED off → 404.
@@ -44,6 +46,7 @@ class Api::V1::Accounts::CampaignJourney::EmailMedicoesController < Api::V1::Acc
       ::CampaignJourney::Medicao.new(link).aplicar!(escolhas, duas_versoes: duas_versoes, segunda: segunda(campaign)) do
         ::CampaignJourney::Medicao.publico(link, 'email')
       end
+      ::Autonomia::MelhorHorario.guardar!(campaign, ActiveModel::Type::Boolean.new.cast(params[:melhor_horario]) || false)
       true
     end
   end

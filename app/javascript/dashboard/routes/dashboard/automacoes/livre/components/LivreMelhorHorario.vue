@@ -7,8 +7,8 @@ import { useI18n } from 'vue-i18n';
 
 defineProps({
   rotulo: { type: String, required: true },
-  // O horário permitido da conta em palavras; vazio = a qualquer hora.
-  horarioPermitido: { type: String, default: '' },
+  // O horário permitido da conta em palavras; vazio = a qualquer hora; null = ainda não se sabe (a regra não aparece).
+  horarioPermitido: { type: String, default: null },
 });
 const quando = defineModel({ type: String, default: 'na_hora' });
 
@@ -75,7 +75,7 @@ const OPCOES = [
       </button>
     </div>
     <p
-      v-if="quando === MELHOR_HORARIO"
+      v-if="quando === MELHOR_HORARIO && horarioPermitido !== null"
       class="m-0 flex items-start gap-2 text-xs text-n-slate-11"
       data-quando-regras
     >

@@ -531,6 +531,13 @@ autonomia_ritmo_de_envio_varredura_job:
   class: 'Autonomia::RitmoDeEnvio::VarreduraJob'
   queue: scheduled_jobs
 
+# executed every day at 05:35 UTC (2h35 no Brasil); o melhor horário de cada cliente (#3101): recalcula a hora em que
+# costuma escrever quem escreveu nas últimas 24 h. De madrugada, longe das campanhas e das outras rotinas.
+autonomia_melhor_horario_aprender_job:
+  cron: '35 5 * * *'
+  class: 'Autonomia::MelhorHorario::AprenderJob'
+  queue: scheduled_jobs
+
 # executed every day at 12:45 UTC (9h45 no Brasil); os grupos de compra de Relacionamentos (#3097): refaz o resumo de
 # compras de cada conta com venda, e quem passou de grupo com o tempo dispara "entrou no grupo de compra". De dia, para
 # a mensagem da automação não sair de madrugada; fora do minuto :00 de 12h UTC, que já tem quatro rotinas pesadas.

@@ -73,6 +73,8 @@ export const duasVersoesParaEnvio = (draft, { modelo = null } = {}) => {
 export const medicaoDaCampanha = (draft, { modelo = null } = {}) => ({
   janela_de_compra_dias: draft.janelaDeCompra || 7,
   grupo_de_controle_pct: draft.grupoDeControle || 0,
+  // #3101: cada pessoa no seu melhor horário (o servidor grava nas opções de envio da campanha; sem a chave, desligado).
+  ...(draft.melhorHorario ? { melhor_horario: true } : {}),
   ...duasVersoesParaEnvio(draft, { modelo }),
 });
 

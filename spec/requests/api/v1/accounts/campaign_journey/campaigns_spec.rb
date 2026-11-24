@@ -124,4 +124,15 @@ RSpec.describe 'Campaign journey campaigns API (#1005)', :aggregate_failures, ty
     expect(response).to have_http_status(:not_found)
     expect(response.parsed_body['code']).to eq('campaign_journey_disabled')
   end
+
+  # #3101: o melhor horário escolhido na revisão fica nas opções de envio da campanha; sem ele, nada é gravado.
+  it 'guarda o melhor horário da campanha' do
+    create_campaign(melhor_horario: true)
+
+    campaign = account.campaigns.find(response.parsed_body['id'])
+    expect(Autonomia::MelhorHorario.ligado?(campaign)).to be(true)
+
+    create_campaign(title: 'Sem melhor horário')
+    expect(Autonomia::CampanhaOpcoesDeEnvio.count).to eq(1)
+  end
 end

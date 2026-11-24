@@ -106,6 +106,8 @@ import DuasVersoesMensagem from 'dashboard/components-next/CampaignJourney/DuasV
 import ResumoDuasVersoes from 'dashboard/components-next/CampaignJourney/ResumoDuasVersoes.vue';
 import AgoraVaiOTeste from 'dashboard/components-next/CampaignJourney/AgoraVaiOTeste.vue';
 import { useDuasVersoesNaCampanha } from 'dashboard/components-next/CampaignJourney/useDuasVersoesNaCampanha';
+// #3101: melhor horário de cada cliente na revisão (quantos já têm hora e o horário de envio da conta).
+import { useHorarioPermitido } from 'dashboard/components-next/CampaignJourney/ritmo/useHorarioPermitido';
 
 const COVERAGE_DELAY_MS = 400;
 const SEARCH_DELAY_MS = 300;
@@ -716,6 +718,17 @@ watch(nowBlockedReason, reason => {
   if (reason && draft.value.when === 'now') update({ when: 'later' });
 });
 
+// #3101: sem o horário da conta (ainda lendo, ou sem acesso), a opção não aparece: a tela não promete o que não sabe.
+const horarioPermitido = useHorarioPermitido();
+const melhorHorario = computed(() =>
+  horarioPermitido.value === null
+    ? null
+    : {
+        conhecidos: forms.preview.value?.melhor_horario?.conhecidos ?? null,
+        horarioPermitido: horarioPermitido.value,
+      }
+);
+
 const cancel = () => {
   clearDraft(accountId.value);
   router.push({ name: 'campaigns_journey_index' });
@@ -1259,6 +1272,7 @@ onBeforeUnmount(() => {
           :now-blocked-reason="nowBlockedReason"
           :so-deixa-pronta="!podeDisparar"
           :montada-por="podeDisparar && prontaAberta ? prontaAberta.autor : ''"
+          :melhor-horario="melhorHorario"
           @update="update"
           @go="goTo"
           @back="goTo(2)"

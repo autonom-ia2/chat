@@ -274,6 +274,10 @@
         "espera": { "enum": [2, 4, 24] }
       }
     },
+    "quando_mandar": {
+      "description": "Quando a mensagem sai (#3101): na_hora (o padrão, ao chegar no passo) ou melhor_horario (espera a hora em que o cliente costuma escrever, aprendida das mensagens dele nos últimos 180 dias, no máximo 24 horas e dentro do horário de envio da conta). Quem ainda não tem hora recebe na hora. A resposta a quem acabou de escrever sai na hora.",
+      "enum": ["na_hora", "melhor_horario"]
+    },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "para_do_retorno": {
       "description": "Quem recebe o retorno (G3): o responsável (no card, quem cuida do cliente; na conversa, o responsável dela), pessoas ou um time. Sem ele, o responsável.",
@@ -647,7 +651,8 @@
             "tipo": { "const": "mensagem" },
             "texto": { "$ref": "#/definitions/texto" },
             "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
-            "versoes": { "$ref": "#/definitions/duas_versoes" }
+            "versoes": { "$ref": "#/definitions/duas_versoes" },
+            "quando": { "$ref": "#/definitions/quando_mandar" }
           }
         },
         {
@@ -659,7 +664,8 @@
             "tipo": { "const": "email" },
             "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa de e-mail da conta por onde o e-mail sai. Abre uma conversa nova nela, com o assunto." },
             "assunto": { "$ref": "#/definitions/linha" },
-            "texto": { "$ref": "#/definitions/texto" }
+            "texto": { "$ref": "#/definitions/texto" },
+            "quando": { "$ref": "#/definitions/quando_mandar" }
           }
         },
         {

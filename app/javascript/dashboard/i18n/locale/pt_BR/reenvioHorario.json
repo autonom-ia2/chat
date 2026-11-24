@@ -62,6 +62,7 @@
         "NOW": "agora",
         "LATER": "na data e hora escolhidas"
       },
+      "HORARIO_PERMITIDO": "{dias}, das {inicio} às {fim}",
       "HORARIO_DA_CONTA": "Sempre dentro do horário permitido da conta: {horario}.",
       "QUALQUER_HORA": "Sua conta deixa mandar a qualquer hora.",
       "NO_RESUMO": "Cada um no seu melhor horário, em até {horas} horas",

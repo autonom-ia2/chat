@@ -116,7 +116,8 @@ module WhatsappApiCampaigns
 
     # Back to `pending` until it may go; the attempt taken by the lock does not count.
     def postponed?(recipient)
-      until_time = Autonomia::RitmoDeEnvio::Porteiro.quando(account: @campaign.account, contact: recipient.contact)
+      # #3101: on the first pass, also the contact's best hour when the campaign asked for it.
+      until_time = Autonomia::MelhorHorario.na_campanha(campanha: @campaign, contact: recipient.contact, adiado_ate: recipient.adiado_ate)
       return false unless until_time
 
       recipient.update!(status: :pending, adiado_ate: until_time, attempts: [recipient.attempts - 1, 0].max)
