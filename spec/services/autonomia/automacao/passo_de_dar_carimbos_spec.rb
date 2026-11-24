@@ -30,8 +30,7 @@ RSpec.describe Autonomia::Automacao::PassoDeDarCarimbos, :automacao_motor do
     Autonomia::Automacao::Receita.new(receita, conta: account, account_user: AccountUser.find_by(account: account, user: quem)).problemas
   end
 
-  def executar(alvo = conversa, por: dona)
-    automacao = automacao_ligada(account, por, [passo])
+  def executar(alvo = conversa, por: dona, automacao: automacao_ligada(account, por, [passo]))
     execucao = Autonomia::Automacao::Execucao.new(automacao: automacao, account: account)
     described_class.new(execucao: execucao, passo: passo, acesso: Autonomia::Automacao::Acesso.new(automacao), alvo: alvo).executar
   end
@@ -91,12 +90,14 @@ RSpec.describe Autonomia::Automacao::PassoDeDarCarimbos, :automacao_motor do
       expect(Fidelidade::CartaoCompleto).to have_received(:avisar).with(account, [[contato, an_instance_of(Fidelidade::Movimento)]])
     end
 
+    # A automação foi salva com o cartão ligado; ele é pausado e depois apagado com ela já salva (salvar recusa sem cartão).
     it 'cartão pausado ou apagado: pula com o motivo, e ninguém recebe', :aggregate_failures do
+      salva = automacao_ligada(account, dona, [passo])
       programa.update!(ligado: false)
-      expect(executar).to have_attributes(tipo: :pulado, motivo: 'cartao_fidelidade_pausado')
+      expect(executar(automacao: salva)).to have_attributes(tipo: :pulado, motivo: 'cartao_fidelidade_pausado')
 
       programa.destroy!
-      expect(executar).to have_attributes(tipo: :pulado, motivo: 'sem_cartao_fidelidade')
+      expect(executar(automacao: salva)).to have_attributes(tipo: :pulado, motivo: 'sem_cartao_fidelidade')
       expect(Fidelidade::Movimento.count).to eq(0)
     end
 
