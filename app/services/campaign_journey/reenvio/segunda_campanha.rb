@@ -2,7 +2,8 @@
 # público só de quem vai receber (CampaignJourney::Reenvio::Publico), o nome "<nome> · segunda mensagem", a mesma caixa
 # e o mesmo remetente, e o melhor horário se a primeira tinha. Ela sai como qualquer campanha: agora, passando pelo
 # limite, pelo intervalo e pelo horário da conta (o Porteiro).
-# - WhatsApp Oficial: o modelo e as ligações guardados na criação da primeira (o template_params da tela, §3.1);
+# - WhatsApp Oficial: o modelo e as ligações guardados na criação da primeira (o template_params da tela, §3.1), com os
+#   textos padrão da primeira para as variáveis de mesmo nome;
 # - SMS e WhatsApp API: o texto, com os textos padrão da primeira dos campos que ele usa;
 # - E-mail (D3): o mesmo conteúdo com o assunto novo. O e-mail nasce rascunho; aqui ele já fica agendado, e o agendador
 #   do e-mail confere tudo de novo antes de mandar (EmailCampaigns::Scheduler). Agenda com uma folga para a conferência
@@ -55,7 +56,8 @@ class CampaignJourney::Reenvio::SegundaCampanha
     CampaignJourney::WhatsappCampaignCreator.new(
       account: conta, campaign_import: @publico, channel: CampaignJourney::WhatsappCampaignCreator::CHANNEL, sender: @campanha.sender,
       attributes: { title: titulo, inbox_id: @campanha.inbox_id, template_params: @mensagem['template_params'],
-                    variable_bindings: @mensagem['ligacoes'], variable_defaults: {} }
+                    variable_bindings: @mensagem['ligacoes'],
+                    variable_defaults: CampaignJourney::Reenvio.padroes_das_chaves(@link, @mensagem['ligacoes'].to_h.keys) }
     ).perform
   end
 

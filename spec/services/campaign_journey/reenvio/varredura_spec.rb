@@ -122,6 +122,13 @@ RSpec.describe CampaignJourney::Reenvio::Varredura, :aggregate_failures do
       expect(opcoes_de(campaign).reenvio_status).to eq('cancelado')
     end
 
+    it 'does not cancel when only the name of the first one changes' do
+      campaign = primeira
+      campaign.update!(title: 'Parcela de novembro')
+
+      expect(opcoes_de(campaign).reenvio_status).to eq('aguardando')
+    end
+
     it 'cancels, without error, when the first one no longer exists' do
       campaign = primeira
       campaign.destroy!
@@ -140,6 +147,37 @@ RSpec.describe CampaignJourney::Reenvio::Varredura, :aggregate_failures do
 
       expect(account.campaigns.count).to eq(2)
     end
+
+    it 'logs an unexpected error and keeps waiting, until 7 days past the time of the second, then is falhou' do
+      campaign = primeira
+      enviar(campaign)
+      described_class.rodar
+      hora = opcoes_de(campaign).reenvio_em
+      allow(Rails.logger).to receive(:error)
+      allow(Rails.logger).to receive(:warn)
+      allow(CampaignJourney::Reenvio::SegundaCampanha).to receive(:new).and_raise(RuntimeError, 'quebrou')
+
+      described_class.rodar(agora: hora + 1.hour)
+      expect(opcoes_de(campaign).reenvio_status).to eq('aguardando')
+      expect(Rails.logger).to have_received(:error).with(include("opcoes=#{opcoes_de(campaign).id} erro inesperado RuntimeError: quebrou"))
+
+      described_class.rodar(agora: hora + described_class::PRAZO_DEPOIS_DA_HORA + 1.minute)
+      expect(opcoes_de(campaign).reenvio_status).to eq('falhou')
+      expect(Rails.logger).to have_received(:warn).with(include('falhou: passou_da_hora'))
+      expect(account.campaigns.count).to eq(1)
+    end
+
+    it 'is falhou when the first one does not finish in 30 days' do
+      campaign = primeira
+      allow(Rails.logger).to receive(:warn)
+
+      described_class.rodar(agora: 29.days.from_now)
+      expect(opcoes_de(campaign)).to have_attributes(reenvio_status: 'aguardando', reenvio_em: nil)
+
+      described_class.rodar(agora: described_class::PRAZO_DA_PRIMEIRA.from_now + 1.hour)
+      expect(opcoes_de(campaign).reenvio_status).to eq('falhou')
+      expect(Rails.logger).to have_received(:warn).with(include('falhou: primeira_nao_terminou'))
+    end
   end
 
   context 'with WhatsApp Oficial' do
@@ -157,12 +195,13 @@ RSpec.describe CampaignJourney::Reenvio::Varredura, :aggregate_failures do
     end
     let(:primeira_ligacao) { { '1' => { 'source' => 'contact', 'value' => 'first_name' } } }
 
-    def primeira(quem)
+    def primeira(quem, padroes: {})
       campaign = CampaignJourney::WhatsappCampaignCreator.new(
         account: account, campaign_import: audience, channel: 'whatsapp_cloud',
         attributes: { title: 'Renovação', inbox_id: channel.inbox.id, template_params: journey_template_params,
                       variable_bindings: { '1' => { source: 'contact', value: 'first_name' }, '2' => { source: 'fixed', value: 'outubro' },
-                                           '3' => { source: 'fixed', value: 'Equipe' } } }
+                                           '3' => { source: 'fixed', value: 'Equipe' } },
+                      variable_defaults: padroes }
       ).perform
       CampaignJourney::Reenvio.guardar!(campaign, reenvio_quem: quem, reenvio_dias: 1, reenvio_mensagem: {
                                           modelo_id: 'lembrete', ligacoes: primeira_ligacao,
@@ -193,6 +232,18 @@ RSpec.describe CampaignJourney::Reenvio::Varredura, :aggregate_failures do
       link = CampaignAudienceLink.for_campaign(nova)
       expect(link.variable_bindings).to eq(primeira_ligacao)
       expect(link.campaign_import.campaign_import_rows.pluck(:contact_id)).to eq([pessoa('Bia').id])
+    end
+
+    it 'keeps the default texts of the first one for the variables of the same name' do
+      campaign = primeira('nao_respondeu', padroes: { '1' => 'cliente', '2' => 'em breve' })
+      recebeu(campaign, 'Bia', status: :delivered)
+      campaign.update!(campaign_status: :completed)
+
+      travel 1.day do
+        described_class.rodar
+      end
+
+      expect(CampaignAudienceLink.for_campaign(opcoes_de(campaign).reenvio_campanha).variable_defaults).to eq('1' => 'cliente')
     end
 
     it '"did not reply" also sends to who read and did not reply' do

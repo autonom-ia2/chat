@@ -4,6 +4,8 @@ module WhatsappApiCampaigns
   # someone waits, but only holds the inbox when it has someone to send now; with only later recipients the chain stops
   # and Autonomia::RitmoDeEnvio::Varredura restarts it when the time comes.
   class DeliveryEngine
+    include Autonomia::MelhorHorario::DoMotor
+
     ORIGEM_DO_RITMO = 'campanha_whatsapp_api'.freeze
 
     def initialize(campaign)
@@ -117,7 +119,8 @@ module WhatsappApiCampaigns
     # Back to `pending` until it may go; the attempt taken by the lock does not count.
     def postponed?(recipient)
       # #3101: on the first pass, also the contact's best hour when the campaign asked for it.
-      until_time = Autonomia::MelhorHorario.na_campanha(campanha: @campaign, contact: recipient.contact, adiado_ate: recipient.adiado_ate)
+      until_time = Autonomia::MelhorHorario.na_campanha(campanha: @campaign, contact: recipient.contact, adiado_ate: recipient.adiado_ate,
+                                                        ligado: melhor_horario_ligado?(@campaign))
       return false unless until_time
 
       recipient.update!(status: :pending, adiado_ate: until_time, attempts: [recipient.attempts - 1, 0].max)

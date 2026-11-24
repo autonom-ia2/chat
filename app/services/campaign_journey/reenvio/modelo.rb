@@ -2,14 +2,17 @@
 # mandar modelo). Conferido na criação da primeira, para a campanha nova não ser recusada dias depois:
 # - aprovado na caixa e diferente do modelo da primeira;
 # - sem cupom, oferta com prazo ou carrossel (pedem dados que a revisão do reenvio não tem);
+# - o template_params normalizado como o da primeira (topo com arquivo, botões: CampaignJourney::WhatsappCampaignCreator
+#   .normalized_template_params), recusado já aqui com reenvio_<código> e guardado normalizado;
 # - cada variável com de onde vem, pelas colunas do público (CampaignJourney::VariableBindings, a mesma conferência da
-#   primeira).
+#   primeira), com os textos padrão da primeira para as variáveis de mesmo nome.
 # Guarda { modelo_id, template_params, ligacoes } (CampaignJourney::Reenvio).
 class CampaignJourney::Reenvio::Modelo
   Invalido = CampaignJourney::Reenvio::Invalido
 
   def initialize(campanha)
     @campanha = campanha
+    @link = CampaignAudienceLink.for_campaign(campanha)
   end
 
   def conferir(dados)
@@ -21,7 +24,7 @@ class CampaignJourney::Reenvio::Modelo
 
     ligacoes = dados['ligacoes'].to_h.deep_stringify_keys
     conferir_ligacoes!(ligacoes, modelo)
-    { 'modelo_id' => dados['modelo_id'].to_s, 'template_params' => params, 'ligacoes' => ligacoes }
+    { 'modelo_id' => dados['modelo_id'].to_s, 'template_params' => normalizado(params, modelo), 'ligacoes' => ligacoes }
   end
 
   private
@@ -37,9 +40,16 @@ class CampaignJourney::Reenvio::Modelo
     primeira['name'] == modelo['name'] && primeira['language'].to_s.casecmp?(modelo['language'].to_s)
   end
 
+  def normalizado(params, modelo)
+    CampaignJourney::WhatsappCampaignCreator.normalized_template_params(params, template: modelo, inbox: @campanha.inbox)
+  rescue Whatsapp::Templates::HeaderMedia::Invalid => e
+    raise Invalido, "reenvio_#{e.code}"
+  end
+
   def conferir_ligacoes!(ligacoes, modelo)
-    publico = CampaignAudienceLink.for_campaign(@campanha)&.campaign_import
-    CampaignJourney::VariableBindings.new(ligacoes, {}).validate!(publico, template_keys: CampaignJourney::TemplateVariableKeys.keys(modelo))
+    padroes = CampaignJourney::Reenvio.padroes_das_chaves(@link, ligacoes.keys)
+    CampaignJourney::VariableBindings.new(ligacoes, padroes)
+                                     .validate!(@link&.campaign_import, template_keys: CampaignJourney::TemplateVariableKeys.keys(modelo))
   rescue CampaignJourney::VariableBindings::Error => e
     raise Invalido, "reenvio_#{e.message}"
   end

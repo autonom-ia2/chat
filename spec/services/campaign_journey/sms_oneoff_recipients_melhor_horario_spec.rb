@@ -38,8 +38,12 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
   it 'ligado, adia quem tem hora para a hora dele e manda na hora a quem não tem' do
     Autonomia::MelhorHorario.guardar!(campaign, true)
     sent = stub_twilio_sms
+    allow(Autonomia::MelhorHorario).to receive(:ligado?).and_call_original
 
     travel_to(agora) { service.perform }
+
+    # Uma consulta da opção por rodada da campanha, não uma por destinatário (Autonomia::MelhorHorario::DoMotor).
+    expect(Autonomia::MelhorHorario).to have_received(:ligado?).once
 
     expect(sent.pluck('To')).to eq(['+5531987654321'])
     adiada = recipient_of(ana)

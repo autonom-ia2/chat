@@ -10,6 +10,19 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
     phone_available?(campaign_import)
   end
 
+  # #3101: the second message's template goes through the same checks when it is chosen (CampaignJourney::Reenvio::Modelo).
+  # Raises Whatsapp::Templates::HeaderMedia::Invalid (SendParams::Invalid is the same class).
+  def self.normalized_template_params(raw, template:, inbox:)
+    params = raw.to_h.deep_stringify_keys
+    processed = params['processed_params']
+    return params unless processed.is_a?(Hash)
+
+    if Whatsapp::Templates::HeaderMedia.media_type(template)
+      processed = processed.merge('header' => Whatsapp::Templates::HeaderMedia.normalize!(processed['header'], template: template, inbox: inbox))
+    end
+    params.merge('processed_params' => Whatsapp::Templates::SendParams.normalize!(processed, template: template, inbox: inbox))
+  end
+
   private
 
   def link_attributes
@@ -91,18 +104,7 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   # #1382: a media header without a link uses the template's saved file at send time; a typed link is checked here.
   # #1334: coupon, offer expiration, carousel cards and catalog button (Whatsapp::Templates::SendParams).
   def template_params
-    @template_params ||= begin
-      params = @attributes[:template_params].to_h.deep_stringify_keys
-      processed = params['processed_params']
-      processed.is_a?(Hash) ? params.merge('processed_params' => normalized_processed(processed)) : params
-    end
-  end
-
-  def normalized_processed(processed)
-    if Whatsapp::Templates::HeaderMedia.media_type(template)
-      processed = processed.merge('header' => Whatsapp::Templates::HeaderMedia.normalize!(processed['header'], template: template, inbox: inbox))
-    end
-    Whatsapp::Templates::SendParams.normalize!(processed, template: template, inbox: inbox)
+    @template_params ||= self.class.normalized_template_params(@attributes[:template_params], template: template, inbox: inbox)
   end
 
   def variables

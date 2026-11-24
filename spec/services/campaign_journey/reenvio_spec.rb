@@ -67,9 +67,13 @@ RSpec.describe CampaignJourney::Reenvio, :aggregate_failures do
         'components' => [{ 'type' => 'BODY', 'text' => 'Seu cupom' },
                          { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'COPY_CODE', 'example' => 'X' }] }] }
     end
+    let(:com_foto) do
+      { 'name' => 'com_foto', 'status' => 'APPROVED', 'category' => 'MARKETING', 'language' => 'pt_BR',
+        'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' }, { 'type' => 'BODY', 'text' => 'Oi {{1}}, olha a novidade' }] }
+    end
     let(:channel) do
       journey_cloud_channel(account).tap do |canal|
-        canal.update!(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE, lembrete, cupom])
+        canal.update!(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE, lembrete, cupom, com_foto])
       end
     end
     let(:audience) { saved_audience(account: account, user: user, content: "Nome,Celular\nAna,11987654321\n") }
@@ -82,10 +86,10 @@ RSpec.describe CampaignJourney::Reenvio, :aggregate_failures do
       ).perform
     end
 
-    def modelo(nome, ligacoes = { '1' => { source: 'contact', value: 'first_name' } })
+    def modelo(nome, ligacoes = { '1' => { source: 'contact', value: 'first_name' } }, processed: { body: { '1' => '' } })
       { reenvio_quem: 'nao_leu', reenvio_dias: 1,
         reenvio_mensagem: { modelo_id: "id-#{nome}", ligacoes: ligacoes,
-                            template_params: { name: nome, language: 'pt_BR', processed_params: { body: { '1' => '' } } } } }
+                            template_params: { name: nome, language: 'pt_BR', processed_params: processed } } }
     end
 
     it 'saves "did not read" with another approved template and its bindings' do
@@ -103,6 +107,19 @@ RSpec.describe CampaignJourney::Reenvio, :aggregate_failures do
       expect(recusa(campaign, modelo('nao_existe'))).to eq('reenvio_modelo_nao_aprovado')
       expect(recusa(campaign, modelo('cupom', {}))).to eq('reenvio_modelo_com_oferta')
       expect(recusa(campaign, modelo('lembrete', {}))).to eq('reenvio_invalid_variable_bindings')
+    end
+
+    it 'checks the template params like the first message, refusing on creation and keeping them normalized' do
+      expect(recusa(campaign, modelo('com_foto'))).to eq('reenvio_header_media_required')
+      expect(recusa(campaign, modelo('com_foto', processed: { body: { '1' => '' }, header: { media_url: 'javascript:alert(1)' } })))
+        .to eq('reenvio_header_media_url_invalid')
+      expect(opcoes_de(campaign)).to be_nil
+
+      foto = { body: { '1' => '' }, header: { media_url: 'https://exemplo.com.br/foto.jpg' } }
+      described_class.guardar!(campaign, modelo('com_foto', processed: foto))
+
+      expect(opcoes_de(campaign).reenvio_mensagem.dig('template_params', 'processed_params', 'header'))
+        .to eq('media_url' => 'https://exemplo.com.br/foto.jpg', 'media_type' => 'image')
     end
   end
 

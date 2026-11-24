@@ -66,9 +66,16 @@ class CampaignJourney::Reenvio
                                     .update_all(reenvio_status: CANCELADO, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
-  # Os textos padrão da primeira mensagem, só dos campos que a segunda usa.
+  # Os textos padrão da primeira mensagem, só dos campos que a segunda usa (SMS e WhatsApp API).
   def self.padroes(link, texto)
-    link&.variable_defaults.to_h.transform_keys(&:to_s).slice(*WhatsappApiCampaigns::TemplateRenderer.variables_in(texto))
+    padroes_das_chaves(link, WhatsappApiCampaigns::TemplateRenderer.variables_in(texto))
+  end
+
+  # Os textos padrão da primeira mensagem para as variáveis de mesmo nome da segunda (no WhatsApp Oficial, as chaves do
+  # modelo, como '1'): guardados no link da primeira (CampaignJourney::WhatsappCampaignCreator#link_attributes) e usados
+  # quando a pessoa não tem o valor (CampaignJourney::VariableBindings#resolve).
+  def self.padroes_das_chaves(link, chaves)
+    link&.variable_defaults.to_h.transform_keys(&:to_s).slice(*chaves.map(&:to_s))
   end
 
   def initialize(campanha)

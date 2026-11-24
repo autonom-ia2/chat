@@ -70,23 +70,31 @@ RSpec.describe Autonomia::MelhorHorario do
   describe '.na_campanha' do
     let(:campanha) { create(:campaign, account: account) }
 
-    def na_campanha(adiado_ate: nil) = described_class.na_campanha(campanha: campanha, contact: contact, adiado_ate: adiado_ate, agora: agora)
+    # `ligado`: o ligado? da campanha, que o motor lê uma vez (Autonomia::MelhorHorario::DoMotor).
+    def na_campanha(adiado_ate: nil, ligado: true)
+      described_class.na_campanha(campanha: campanha, contact: contact, adiado_ate: adiado_ate, ligado: ligado, agora: agora)
+    end
 
     before { aprendido(14) }
 
     it 'sem a opção ligada, fica só o Porteiro' do
-      expect(na_campanha).to be_nil
+      expect(na_campanha(ligado: false)).to be_nil
     end
 
     it 'com a opção ligada, espera a hora do contato só na primeira passada' do
-      described_class.guardar!(campanha, true)
-
       expect(na_campanha).to eq(Time.utc(2026, 11, 19, 17, minuto, 0))
       expect(na_campanha(adiado_ate: agora - 1.minute)).to be_nil
     end
 
+    it 'não consulta a campanha: quem decide é o ligado que o motor passa' do
+      allow(described_class).to receive(:ligado?)
+
+      na_campanha
+
+      expect(described_class).not_to have_received(:ligado?)
+    end
+
     it 'fica com a espera mais longa entre o Porteiro e o melhor horário' do
-      described_class.guardar!(campanha, true)
       account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => { 'intervalo' => { 'horas' => 12 } })) # rubocop:disable Rails/SkipsModelValidations
       account.reload
       Autonomia::EnvioAoCliente.create!(account: account, contact: contact, origem: 'campanha_sms', enviado_em: agora - 1.hour)

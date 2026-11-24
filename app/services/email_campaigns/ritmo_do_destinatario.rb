@@ -8,7 +8,8 @@
 # account's time zone, and the e-mail does not count for the limit.
 #
 # #3101: with "melhor horário" on, the recipient's first pass also waits for the contact's best hour
-# (Autonomia::MelhorHorario.na_campanha).
+# (Autonomia::MelhorHorario.na_campanha). `melhor_horario`: the campaign's choice, read once by the engine
+# (Autonomia::MelhorHorario::DoMotor).
 module EmailCampaigns::RitmoDoDestinatario
   ORIGEM = 'campanha_email'.freeze
 
@@ -22,8 +23,8 @@ module EmailCampaigns::RitmoDoDestinatario
   end
 
   # `contato`: o de #contato, buscado uma vez por destinatário pelo motor e passado aos dois.
-  def adiado?(campaign, recipient, contato)
-    ate = Autonomia::MelhorHorario.na_campanha(campanha: campaign, contact: contato, adiado_ate: recipient.adiado_ate)
+  def adiado?(campaign, recipient, contato, melhor_horario:)
+    ate = Autonomia::MelhorHorario.na_campanha(campanha: campaign, contact: contato, adiado_ate: recipient.adiado_ate, ligado: melhor_horario)
     return false unless ate
 
     recipient.update_columns(adiado_ate: ate, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

@@ -5,7 +5,9 @@
 #   da conta vira a hora permitida em que ele mais escreveu; o dia da semana e o limite continuam com o Porteiro.
 # - `na_campanha`: o ponto dos quatro motores de campanha, no lugar do Porteiro. Na primeira passada do destinatário
 #   (ainda sem `adiado_ate`), com a opção ligada na campanha, espera o melhor horário; depois o Porteiro decide na saída,
-#   como sempre. O destinatário volta pela varredura do ritmo de envio (Autonomia::RitmoDeEnvio::Varredura).
+#   como sempre. O destinatário volta pela varredura do ritmo de envio (Autonomia::RitmoDeEnvio::Varredura). `ligado`
+#   é o `ligado?` da campanha, que o motor consulta uma vez e guarda (Autonomia::MelhorHorario::DoMotor), não uma vez
+#   por destinatário.
 # - `conhecidos`: quantos destes contatos têm hora, para a revisão da campanha.
 class Autonomia::MelhorHorario
   JANELA = 24.hours
@@ -26,9 +28,9 @@ class Autonomia::MelhorHorario
   end
 
   # nil: pode mandar agora. Time: o primeiro instante em que pode (o mais tarde entre o Porteiro e o melhor horário).
-  def self.na_campanha(campanha:, contact:, adiado_ate:, agora: Time.current)
+  def self.na_campanha(campanha:, contact:, adiado_ate:, ligado:, agora: Time.current)
     ritmo = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campanha.account, contact: contact, agora: agora)
-    return ritmo unless adiado_ate.nil? && ligado?(campanha)
+    return ritmo unless adiado_ate.nil? && ligado
 
     [ritmo, proximo(account: campanha.account, contact: contact, a_partir_de: agora)].compact.max
   end

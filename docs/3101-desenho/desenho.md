@@ -102,10 +102,11 @@ Prints: harness em `tmp-prints/` (porta 6193); cenas em `cenas3101.json` (19 tel
 
 ### 4.3 Reenvio (na mesma migration de `campanha_opcoes_de_envio`)
 
-- Colunas: `reenvio_quem` (`nao_respondeu` | `nao_leu`, nula = sem reenvio), `reenvio_dias` (1, 2, 3, 5, 7), `reenvio_mensagem` (jsonb: `modelo_id` + ligações das variáveis, ou `texto`, ou `assunto`), `reenvio_status` (`aguardando` | `enviado` | `sem_ninguem` | `cancelado`), `reenvio_em` (datetime: fim do envio da primeira + dias), `reenvio_campanha_type`/`reenvio_campanha_id` (a campanha que nasceu). Índice `(reenvio_status, reenvio_em)`.
+- Colunas: `reenvio_quem` (`nao_respondeu` | `nao_leu`, nula = sem reenvio), `reenvio_dias` (1, 2, 3, 5, 7), `reenvio_mensagem` (jsonb: `modelo_id` + ligações das variáveis, ou `texto`, ou `assunto`), `reenvio_status` (`aguardando` | `enviado` | `sem_ninguem` | `cancelado` | `falhou`), `reenvio_em` (datetime: fim do envio da primeira + dias), `reenvio_campanha_type`/`reenvio_campanha_id` (a campanha que nasceu). Índice `(reenvio_status, reenvio_em)`.
 - **Job `CampaignJourney::ReenvioVarreduraJob`** (cron a cada 15 min): pega os vencidos e, para cada um, monta quem recebe = destinatários que receberam (status enviado/entregue/lido), menos quem respondeu (mesma regra do `ReplyMarker`), menos quem leu (se `nao_leu`), menos quem saiu da lista ou foi bloqueado; o grupo de controle da F2 nunca recebeu e fica fora. Se ninguém sobra, `sem_ninguem`.
 - **Como a segunda mensagem sai**: decisão D1. Recomendado: uma campanha nova do mesmo canal, criada sozinha, com um público derivado só com essas pessoas, nome "<campanha> · segunda mensagem", herdando caixa, remetente e o melhor horário. Passa pelo Porteiro como qualquer campanha.
-- **Cancelar**: editar/cancelar a campanha antes do reenvio cancela o reenvio (`cancelado`).
+- **Cancelar**: editar (mensagem, modelo, caixa ou data; no e-mail, assunto ou conteúdo), cancelar ou apagar a campanha antes do reenvio cancela o reenvio (`cancelado`); só renomear não cancela.
+- **Prazo**: a campanha nova recusada pelo criador do canal vira `falhou`. Um erro inesperado repete a cada varredura até 7 dias depois do `reenvio_em`; a primeira que não termina em 30 dias também vira `falhou` (`CampaignJourney::Reenvio::Varredura`, com o motivo no log).
 - **Resultado** (PR seguinte ou mesmo PR, decidir pelo tamanho): a página de resultado da primeira campanha mostra "Segunda mensagem: N receberam, M responderam" com link para a campanha nova.
 
 ### 4.4 Permissões e flag
@@ -121,7 +122,7 @@ Um PR para a fase (regra do épico), em três commits na ordem: (1) intervalo m�
 
 - `lib/operator_guide/porques.md`:
   - `limite_de_mensagens_por_cliente`: passo novo do intervalo; gotchas: o intervalo soma ao limite; vale também para o reenvio e para o melhor horário; fora do intervalo a mensagem espera.
-  - bloco novo `mandar_de_novo_para_quem_nao_respondeu` (rota `campaigns_journey_new`): onde fica (Revisar > Mandar de novo > Alterar), passos, gotchas (só quem recebeu; quem respondeu em qualquer momento antes não recebe; "não leu" só no WhatsApp Oficial; no WhatsApp Oficial precisa de outro modelo aprovado; no e-mail muda só o assunto; aparece na lista como campanha própria; cancelar a primeira cancela a segunda; passa pelo limite).
+  - bloco novo `mandar_de_novo_para_quem_nao_respondeu` (rota `campaigns_journey_new`): onde fica (Revisar > Mandar de novo > Alterar), passos, gotchas (só quem recebeu; quem escreveu na caixa da campanha desde o primeiro envio da campanha conta como respondeu e não recebe; "não leu" só no WhatsApp Oficial; no WhatsApp Oficial precisa de outro modelo aprovado; no e-mail muda só o assunto; aparece na lista como campanha própria; cancelar a primeira cancela a segunda; passa pelo limite).
   - bloco novo `mandar_no_melhor_horario_de_cada_cliente` (rota `campaigns_journey_new`): como a hora é aprendida (mensagens dos últimos 180 dias, no fuso do cliente), quem não tem hora recebe no início, janela de 24 h, horário permitido manda, a campanha fica enviando até o fim da janela.
   - `montar_automacao_no_editor` (ou bloco próprio): a peça **Quando mandar**, a espera de até 24 h e a resposta a quem escreveu que sai na hora.
   - Rodar `pnpm guia:build` e `pnpm guia:check`; formatos regenerados (4.1).
