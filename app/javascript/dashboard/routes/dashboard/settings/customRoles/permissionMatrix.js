@@ -232,6 +232,13 @@ export const MODULE_GROUPS = [
         icon: 'i-lucide-layout-grid',
         levels: { view: 'posts_view', manage: 'posts_manage' },
       },
+      {
+        // Fidelidade (#3100): ver o painel do cartão; editar cria e muda o cartão, pausa, dá ou tira carimbos à mão e
+        // põe o passo "Dar carimbos" nas automações. Dar o prêmio pela ficha é de quem edita o contato (D1).
+        key: 'LOYALTY',
+        icon: 'i-lucide-gift',
+        levels: { view: 'fidelidade_view', manage: 'fidelidade_manage' },
+      },
     ],
   },
   {

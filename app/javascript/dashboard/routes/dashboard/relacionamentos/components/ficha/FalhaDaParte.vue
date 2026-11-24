@@ -4,7 +4,11 @@ import Button from 'dashboard/components-next/button/Button.vue';
 
 // #2895 — uma parte da ficha (conversas, cards, notas...) que não carregou: uma
 // frase e "Tentar de novo", dentro do cartão da própria parte. O resto da ficha
-// segue na tela. Quem usa relê a parte ao ouvir `tentar`.
+// segue na tela. Quem usa relê a parte ao ouvir `tentar`. `mensagem` (opcional,
+// #3100) diz qual parte falhou; sem ela, fica a frase de sempre.
+const props = defineProps({
+  mensagem: { type: String, default: '' },
+});
 const emit = defineEmits(['tentar']);
 
 const { t } = useI18n();
@@ -17,7 +21,7 @@ const { t } = useI18n();
     class="flex flex-col items-start gap-3"
   >
     <p class="m-0 text-base text-n-slate-11">
-      {{ t('RELACIONAMENTOS_FICHA.ESTADOS.ERRO_DA_PARTE') }}
+      {{ props.mensagem || t('RELACIONAMENTOS_FICHA.ESTADOS.ERRO_DA_PARTE') }}
     </p>
     <Button
       slate

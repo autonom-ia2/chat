@@ -332,5 +332,16 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
       )
       expect(response.parsed_body['empresas']).to be_an(Array)
     end
+
+    # #3100 — o filtro do cartão fidelidade aparece para quem vê a lista, só com o cartão na conta.
+    it 'diz se a conta tem cartão fidelidade' do
+      ler('opcoes_de_filtro')
+      expect(response.parsed_body['fidelidade']).to be(false)
+
+      Fidelidade::Programa.create!(account: account, tipo: 'carimbos', a_cada_centavos: 5_000, ganha: 1, meta: 10,
+                                   premio: 'Uma lavagem grátis', ligado: true, ligado_em: 1.day.ago)
+      ler('opcoes_de_filtro')
+      expect(response.parsed_body['fidelidade']).to be(true)
+    end
   end
 end

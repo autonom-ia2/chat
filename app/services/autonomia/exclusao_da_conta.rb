@@ -39,6 +39,12 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::EnvioAoCliente', :por_conta],
     # Resumo de compras de Relacionamentos (#3097): ninguém aponta para ele.
     ['Relacionamentos::Compra', :por_conta],
+    # Cartão fidelidade e cupons (#3100): movimentos e saldos apontam para o cartão; os códigos, para o cupom.
+    ['Fidelidade::Movimento', :por_conta],
+    ['Fidelidade::Saldo', :por_conta],
+    ['Fidelidade::Programa', :por_conta],
+    ['Fidelidade::CupomCodigo', :por_conta],
+    ['Fidelidade::Cupom', :por_conta],
     # Decisões, passagens e memória apontam para card, funil e conversa.
     ['Autonomia::DecisorDecisao', :por_conta],
     ['Autonomia::Decisor', :por_conta],

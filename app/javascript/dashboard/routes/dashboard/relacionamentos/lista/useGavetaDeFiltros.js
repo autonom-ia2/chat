@@ -16,6 +16,7 @@ export const OPCOES_VAZIAS = Object.freeze({
   etiquetas: [],
   cidades: [],
   cidades_das_empresas: [],
+  fidelidade: false,
 });
 
 export const useGavetaDeFiltros = ({

@@ -74,6 +74,7 @@ import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
+import { fidelidadeValida } from '../lista/filtros';
 import { useMarcados } from '../lista/useMarcados';
 import {
   CAMPOS_DE_ORDEM_DAS_EMPRESAS,
@@ -219,6 +220,7 @@ const lista = useLista({
   aba,
   aoMudarConsulta: marcados.limpar,
   ordemPadrao: ordemGuardada.ordemDaAba,
+  filtrosIniciais: { fidelidade: fidelidadeValida(route.query.fidelidade) },
 });
 const mudarOrdem = nova => {
   ordemGuardada.guardar(nova, aba.value);
@@ -542,6 +544,14 @@ const maisFiltros = useGavetaDeFiltros({
   fraseSemAcesso: () => fraseSemAcesso.value,
   erroGenerico: () => t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'),
 });
+// #3100 — o filtro do cartão fidelidade aparece para quem vê a lista, com o
+// cartão na conta (as opções da gaveta dizem) ou quando a lista já chegou
+// filtrada por ele. O cartão da pessoa segue o contato (D1).
+const comFidelidade = computed(
+  () =>
+    Boolean(maisFiltros.opcoes.value.fidelidade) ||
+    Boolean(lista.filtros.value.fidelidade)
+);
 
 // Com gente marcada a barra de ação fica colada no rodapé: a lista ganha folga
 // do tamanho dela, e abaixo de `md` a barra deixa livre o canto do botão ☰.
@@ -941,6 +951,7 @@ watch(naAbaDeSeguros, estaNela => {
       :aberta="maisFiltros.aberta.value"
       :de-empresas="ehEmpresas"
       :ve-valores="faixasDeCompra.veValores.value"
+      :com-fidelidade="comFidelidade"
       :filtros="lista.filtros.value"
       :opcoes="maisFiltros.opcoes.value"
       :com-condicoes="comCondicoes"

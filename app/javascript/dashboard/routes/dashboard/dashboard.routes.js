@@ -8,6 +8,7 @@ import { routes as contactRoutes } from './contacts/routes';
 import { routes as crmRoutes } from './crm/crm.routes';
 import { routes as financialRoutes } from './financial/financial.routes';
 import { routes as seusPostsRoutes } from './seusPosts/seusPosts.routes';
+import { routes as fidelidadeRoutes } from './fidelidade/fidelidade.routes';
 import { routes as autonomiaRoutes } from './autonomia/autonomia.routes';
 import { routes as automacoesRoutes } from './automacoes/automacoes.routes';
 import { routes as modelosWhatsappRoutes } from './campaigns/modelos/modelos.routes';
@@ -50,6 +51,7 @@ export default {
         ...crmRoutes,
         ...financialRoutes,
         ...seusPostsRoutes,
+        ...fidelidadeRoutes,
         ...autonomiaRoutes,
         ...automacoesRoutes,
         ...modelosWhatsappRoutes,

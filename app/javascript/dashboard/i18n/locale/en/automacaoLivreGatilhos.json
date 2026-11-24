@@ -31,7 +31,8 @@
       "CONVERSA_ETIQUETA_TIRADA": "When a label is removed from the conversation",
       "CONTATO_ETIQUETA_POSTA": "When a label is added to the contact",
       "CONTATO_ETIQUETA_TIRADA": "When a label is removed from the contact",
-      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "When the person joins a purchase group"
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "When the person joins a purchase group",
+      "CONTATO_COMPLETOU_CARTAO_FIDELIDADE": "When the person completes the loyalty card"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",

@@ -28,6 +28,9 @@ const props = defineProps({
   rotuloDoDado: { type: String, default: '' },
   // #2414 G16 — o campo de uma linha de uma ação (nome, descrição).
   curto: { type: Boolean, default: false },
+  // #3100 — a frase embaixo da caixa, quando o passo tem dado que nunca fica
+  // vazio (o código do cupom): sem ela, vale a dica de sempre.
+  dica: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -113,7 +116,7 @@ const porDado = caminho => {
       @blur="lembrarCursor"
     />
     <p class="-mt-1 mb-0 text-sm text-n-slate-11">
-      {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TEXTO_DICA') }}
+      {{ dica || $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TEXTO_DICA') }}
     </p>
     <p
       v-if="temApagado"

@@ -45,6 +45,14 @@ export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 export const META_ADS_MANAGE_PERMISSION = 'meta_ads_manage';
 // #2302 — Seus posts: ver os posts e os números das caixas que vê (posts_manage também vê).
 export const POSTS_PERMISSIONS = ['posts_view', 'posts_manage'];
+// #3100 — Fidelidade (cartão fidelidade e cupons): ver o painel e os números; mudar cria, muda, pausa e liga o
+// cartão e dá ou tira carimbos à mão (fidelidade_manage também vê). Dar o prêmio pela ficha segue quem mexe no contato.
+export const FIDELIDADE_VIEW_PERMISSION = 'fidelidade_view';
+export const FIDELIDADE_MANAGE_PERMISSION = 'fidelidade_manage';
+export const FIDELIDADE_PERMISSIONS = [
+  FIDELIDADE_VIEW_PERMISSION,
+  FIDELIDADE_MANAGE_PERMISSION,
+];
 
 // Pessoas (#1931): agentes e times, montar funções, entregar acesso acima do próprio.
 export const PEOPLE_MANAGE_PERMISSION = 'people_manage';
