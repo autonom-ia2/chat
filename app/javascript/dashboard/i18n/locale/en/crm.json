@@ -4859,14 +4859,14 @@
     "THINKING": "Thinking…",
     "HIGHLIGHT_HERE": "it's here",
     "RESET": "New chat",
-    "KICK_OFF": "I explain where things are, look up your account data and, for admins, do what you ask — anything I change can be undone for 5 days.",
+    "KICK_OFF": "Ask me where anything is. I can also see the numbers in your account. If you ask, I make the change, and it can be undone for 5 days.",
     "GO_TO_SCREEN": "Go to screen",
     "GO_TO_SCREEN_NAMED": "Go to: {rotulo}",
     "GO_TO_SCREEN_NUMBERED": "Go to screen {numero}",
     "READ_ARTICLE": "Read the full article",
     "READ_ARTICLE_NAMED": "Read: {titulo}",
     "READ_SECTION": "To read later",
-    "UNAVAILABLE": "I am offline right now. Try again in a few minutes.",
+    "UNAVAILABLE": "I couldn't answer right now. Wait a minute and tap Try again.",
     "WITHHELD": "I could not put an answer together right now. Try again or ask another way.",
     "ERROR": "I could not answer right now.",
     "SENDING": "I'm still answering your previous question.",
@@ -4886,7 +4886,8 @@
       "PROPOSE": "Preparing the action…",
       "PLAN_TASK": "Planning the task…",
       "REMEMBER": "Taking a note…",
-      "FORGET": "Deleting the note…"
+      "FORGET": "Deleting the note…",
+      "READ_REPORTS": "Reading the account reports…"
     },
     "SUGGESTIONS": {
       "KANBAN": "Create a pipeline called Sales",
@@ -4894,8 +4895,8 @@
       "REPORTS": "What pipelines do I have right now?"
     },
     "ACTION": {
-      "CONFIRM": "Confirm",
-      "CANCEL": "Cancel",
+      "CONFIRM": "Yes, go ahead",
+      "CANCEL": "No, leave it as is",
       "CANCELLED": "Cancelled. Nothing was changed.",
       "RUNNING": "Doing it now…",
       "FAILED": "I couldn't do that. You can do it from the screen.",
@@ -4916,7 +4917,7 @@
       "UNDONE": "Undone. Everything went back to how it was.",
       "UNDONE_PARTIAL": "I undid only part of it.",
       "UNDONE_NONE": "I could not undo it.",
-      "UNTIL": "You can undo until {quando}",
+      "UNTIL": "Valid until {quando}",
       "CONFLICTS": "{count} change was kept because someone edited it afterwards. | {count} changes were kept because someone edited them afterwards.",
       "PARTIAL": "Part of this was deleted without a copy and cannot come back.",
       "UNDO_FAILED": "I could not undo this right now. Try again in a moment.",
@@ -4927,7 +4928,7 @@
       "EMPTY": "Nothing done by the Guide in the last 5 days."
     },
     "HISTORY": {
-      "TITLE": "History",
+      "TITLE": "Earlier conversations",
       "TAB_CONVERSAS": "Conversations",
       "LOADING": "Loading your conversations…",
       "LOAD_FAILED": "Couldn't load your conversations. Try again in a moment.",
@@ -4950,7 +4951,7 @@
       "START_NEW": "Start a new conversation"
     },
     "MEMORY": {
-      "TITLE": "What I know",
+      "TITLE": "What the Guide noted",
       "KEPT": "This is what I remember to help you. You can fix it or delete it.",
       "LOADING": "Loading what I know…",
       "LOAD_FAILED": "I couldn't load what I know. Check your internet and try again.",
@@ -5098,7 +5099,21 @@
       "WAITING": "Audio ready. It goes as soon as the Guide finishes answering.",
       "FINISH_FIRST": "Send or delete the recording before sending another message.",
       "TIME": "{atual} / {total}"
-    }
+    },
+    "HEADER": {
+      "NAME": "Guide",
+      "SUBTITLE": "Only you can see this",
+      "NEW_TOPIC": "New topic",
+      "MORE": "More options",
+      "BACK": "Back to the platform",
+      "CHANGES": "Changes the Guide made"
+    },
+    "PLACEHOLDER": "Ask the Guide",
+    "ACTION_CARD": {
+      "TITLE": "What will change in your account:",
+      "NO_UNDO": "This can't be undone afterwards."
+    },
+    "WELCOME_TITLE": "Hi! I'm the Guide."
   },
   "AUTOMACOES": {
     "MENU": "Automations",

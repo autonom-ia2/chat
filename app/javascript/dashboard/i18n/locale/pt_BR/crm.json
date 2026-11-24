@@ -4860,14 +4860,14 @@
     "THINKING": "Pensando…",
     "HIGHLIGHT_HERE": "é aqui",
     "RESET": "Nova conversa",
-    "KICK_OFF": "Eu explico onde fica cada coisa, consulto os dados da sua conta e, para quem administra, faço o que você pedir — tudo o que eu mudar pode ser desfeito por 5 dias.",
+    "KICK_OFF": "Pergunte onde fica qualquer coisa. Eu também vejo os números da sua conta. Se você pedir, eu faço a mudança, e dá para desfazer por 5 dias.",
     "GO_TO_SCREEN": "Ir para a tela",
     "GO_TO_SCREEN_NAMED": "Ir para: {rotulo}",
     "GO_TO_SCREEN_NUMBERED": "Ir para a tela {numero}",
     "READ_ARTICLE": "Ler o artigo completo",
     "READ_ARTICLE_NAMED": "Ler: {titulo}",
     "READ_SECTION": "Para ler com calma",
-    "UNAVAILABLE": "Estou fora do ar agora. Tente de novo daqui a alguns minutos.",
+    "UNAVAILABLE": "Não consegui responder agora. Espere um minuto e toque em Tentar de novo.",
     "WITHHELD": "Não consegui montar a resposta agora. Tente de novo ou pergunte de outro jeito.",
     "ERROR": "Não consegui responder agora.",
     "SENDING": "Ainda estou respondendo a pergunta anterior.",
@@ -4887,7 +4887,8 @@
       "PROPOSE": "Preparando a ação…",
       "PLAN_TASK": "Planejando a tarefa…",
       "REMEMBER": "Anotando…",
-      "FORGET": "Apagando a anotação…"
+      "FORGET": "Apagando a anotação…",
+      "READ_REPORTS": "Lendo os relatórios da conta…"
     },
     "SUGGESTIONS": {
       "KANBAN": "Crie um funil chamado Comercial",
@@ -4895,8 +4896,8 @@
       "REPORTS": "Quais funis eu tenho hoje?"
     },
     "ACTION": {
-      "CONFIRM": "Confirmar",
-      "CANCEL": "Cancelar",
+      "CONFIRM": "Sim, pode fazer",
+      "CANCEL": "Não, deixa como está",
       "CANCELLED": "Cancelado. Nada foi alterado.",
       "RUNNING": "Fazendo agora…",
       "FAILED": "Não consegui fazer isso. Você pode fazer direto na tela.",
@@ -4917,7 +4918,7 @@
       "UNDONE": "Desfeito. Tudo voltou a ser como era.",
       "UNDONE_PARTIAL": "Desfiz só uma parte.",
       "UNDONE_NONE": "Não deu para desfazer.",
-      "UNTIL": "Dá para desfazer até {quando}",
+      "UNTIL": "Vale até {quando}",
       "CONFLICTS": "{count} mudança ficou como está porque alguém mexeu nela depois. | {count} mudanças ficaram como estão porque alguém mexeu nelas depois.",
       "PARTIAL": "Parte disto foi apagada sem cópia e não volta.",
       "UNDO_FAILED": "Não consegui desfazer agora. Tente de novo em instantes.",
@@ -4928,7 +4929,7 @@
       "EMPTY": "Nada feito pelo Guia nos últimos 5 dias."
     },
     "HISTORY": {
-      "TITLE": "Histórico",
+      "TITLE": "Conversas anteriores",
       "TAB_CONVERSAS": "Conversas",
       "LOADING": "Carregando suas conversas…",
       "LOAD_FAILED": "Não consegui carregar suas conversas. Tente de novo em instantes.",
@@ -4951,7 +4952,7 @@
       "START_NEW": "Começar outra conversa"
     },
     "MEMORY": {
-      "TITLE": "O que eu sei",
+      "TITLE": "O que o Guia anotou",
       "KEPT": "Isto é o que eu lembro para te ajudar. Você pode corrigir ou apagar.",
       "LOADING": "Carregando o que eu sei…",
       "LOAD_FAILED": "Não consegui carregar o que eu sei. Confira a internet e tente de novo.",
@@ -5099,7 +5100,21 @@
       "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
       "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
       "TIME": "{atual} / {total}"
-    }
+    },
+    "HEADER": {
+      "NAME": "Guia",
+      "SUBTITLE": "Só você vê",
+      "NEW_TOPIC": "Novo assunto",
+      "MORE": "Mais opções",
+      "BACK": "Voltar para a plataforma",
+      "CHANGES": "Mudanças que o Guia fez"
+    },
+    "PLACEHOLDER": "Pergunte ao Guia",
+    "ACTION_CARD": {
+      "TITLE": "O que vai mudar na sua conta:",
+      "NO_UNDO": "Isto não tem como desfazer depois."
+    },
+    "WELCOME_TITLE": "Oi! Eu sou o Guia."
   },
   "AUTOMACOES": {
     "MENU": "Automações",
