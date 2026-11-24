@@ -445,7 +445,9 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
 
       const bloco = wrapper.get('[data-segunda-mensagem="enviado"]');
       expect(bloco.text()).toContain('Second message');
-      expect(bloco.get('[data-frase]').text()).toBe('12 got it, 1 replied');
+      expect(bloco.get('[data-frase]').text()).toBe(
+        "Went out to people who didn't reply: 12 got it and 1 replied."
+      );
       expect(
         JSON.parse(bloco.get('[data-ver-segunda]').attributes('data-to'))
       ).toEqual({

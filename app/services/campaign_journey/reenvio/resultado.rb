@@ -5,7 +5,7 @@
 # - previsto_em: quando ela sai (`reenvio_em`, epoch), nulo até a primeira terminar de sair;
 # - campanha: a campanha que ela gerou (só no enviado), com o endereço do resultado dela e os números pela mesma régua do
 #   resultado: receberam = Enviadas (no e-mail, Entregues); responderam = Responderam (a marca da campanha,
-#   CampaignJourney::ReplyMarker). Nula quando a campanha nova foi apagada.
+#   CampaignJourney::ReplyMarker). Nula quando a campanha nova foi apagada (ou não é desta conta: vai para o log).
 class CampaignJourney::Reenvio::Resultado
   def initialize(campanha, account:)
     @campanha = campanha
@@ -13,7 +13,7 @@ class CampaignJourney::Reenvio::Resultado
   end
 
   def payload
-    opcoes = Autonomia::CampanhaOpcoesDeEnvio.find_by(campanha: @campanha)
+    opcoes = Autonomia::CampanhaOpcoesDeEnvio.find_by(account_id: @account.id, campanha: @campanha)
     return if opcoes&.reenvio_status.blank?
 
     { status: opcoes.reenvio_status, dias: opcoes.reenvio_dias, quem: opcoes.reenvio_quem, previsto_em: opcoes.reenvio_em&.to_i,
@@ -45,6 +45,7 @@ class CampaignJourney::Reenvio::Resultado
     else finder.find!(CampaignJourney::ResultFinder.channel_of(nova).to_s, nova.display_id)
     end
   rescue ActiveRecord::RecordNotFound
+    Rails.logger.warn("[CampaignJourney::Reenvio] resultado sem a campanha nova #{nova.class.name}##{nova.id} na conta #{@account.id}")
     nil
   end
 end

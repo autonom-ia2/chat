@@ -5,6 +5,7 @@ import enResult from 'dashboard/i18n/locale/en/resultJourney.json';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enProtection from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
 import enCrm from 'dashboard/i18n/locale/en/crm.json';
+import enReenvio from 'dashboard/i18n/locale/en/reenvioHorario.json';
 
 const api = vi.hoisted(() => ({
   results: {
@@ -79,6 +80,7 @@ const mountView = ({
   customRole,
   reportsOn = true,
   campaign = {},
+  segundaMensagem = null,
 } = {}) => {
   api.results.getResult.mockResolvedValue({
     data: {
@@ -103,6 +105,7 @@ const mountView = ({
         },
         filters: ['replied'],
         crm: { source_id: 'campaign:email:9', enabled: true },
+        segunda_mensagem: segundaMensagem,
       },
     },
   });
@@ -155,7 +158,15 @@ const mountView = ({
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: { ...enJourney, ...enResult, ...enProtection, ...enCrm } },
+    messages: {
+      en: {
+        ...enJourney,
+        ...enResult,
+        ...enProtection,
+        ...enCrm,
+        ...enReenvio,
+      },
+    },
     missingWarn: false,
     fallbackWarn: false,
   });
@@ -349,5 +360,59 @@ describe('e-mail campaign result (#1007, O1, L8)', () => {
 
     expect(wrapper.find('[data-paywall]').exists()).toBe(true);
     expect(api.results.getResult).not.toHaveBeenCalled();
+  });
+
+  // #3101: a segunda mensagem do "Mandar de novo" também aparece no resultado do e-mail.
+  it('shows the second e-mail: who got it, who replied and the way to its result', async () => {
+    const { wrapper } = mountView({
+      segundaMensagem: {
+        status: 'enviado',
+        dias: 2,
+        quem: 'nao_respondeu',
+        previsto_em: 1764000000,
+        campanha: {
+          channel: 'email',
+          id: 10,
+          name: 'Novidades de outubro · second message',
+          processing: false,
+          receberam: 900,
+          responderam: 7,
+        },
+      },
+    });
+    await flushPromises();
+
+    const bloco = wrapper.get('[data-segunda-mensagem="enviado"]');
+    expect(bloco.get('[data-frase]').text()).toBe(
+      "Went out to people who didn't reply: 900 got it and 7 replied."
+    );
+    expect(
+      JSON.parse(bloco.get('[data-ver-segunda]').attributes('data-to'))
+    ).toEqual({
+      name: 'campaigns_journey_result',
+      params: { channel: 'email', campaignId: '10' },
+    });
+  });
+
+  it('says when the second e-mail is still waiting, and hides the block without it', async () => {
+    const { wrapper } = mountView({
+      segundaMensagem: {
+        status: 'aguardando',
+        dias: 2,
+        quem: 'nao_respondeu',
+        previsto_em: null,
+        campanha: null,
+      },
+    });
+    await flushPromises();
+    expect(
+      wrapper.get('[data-segunda-mensagem="aguardando"] [data-frase]').text()
+    ).toBe(
+      "Goes out 2 days after this campaign finishes, to people who didn't reply."
+    );
+
+    const { wrapper: sem } = mountView();
+    await flushPromises();
+    expect(sem.find('[data-segunda-mensagem]').exists()).toBe(false);
   });
 });

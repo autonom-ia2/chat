@@ -88,6 +88,15 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
       expect(segunda_mensagem('whatsapp_official', primeira.display_id)).to include('status' => 'enviado', 'campanha' => nil)
     end
 
+    it 'never shows a campaign of another account as the second message' do
+      outra_conta = create(:account)
+      outra_caixa = create(:channel_whatsapp, account: outra_conta, sync_templates: false, validate_provider_config: false).inbox
+      alheia = create(:campaign, account: outra_conta, inbox: outra_caixa, title: 'Alheia', campaign_type: :one_off)
+      reenvio!(primeira, 'enviado', reenvio_campanha: alheia)
+
+      expect(segunda_mensagem('whatsapp_official', primeira.display_id)).to include('status' => 'enviado', 'campanha' => nil)
+    end
+
     it 'tells sem_ninguem, cancelado and falhou apart, with no campaign' do
       %w[sem_ninguem cancelado falhou].each do |status|
         campanha = campanha_oficial("Oferta #{status}")

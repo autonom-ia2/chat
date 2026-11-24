@@ -1,27 +1,40 @@
-import { mount } from '@vue/test-utils';
+import { mount, config } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
+import { createStore } from 'vuex';
+import enReenvio from 'dashboard/i18n/locale/en/reenvioHorario.json';
+import enDuasVersoes from 'dashboard/i18n/locale/en/duasVersoes.json';
 import ResultSegundaMensagem from '../ResultSegundaMensagem.vue';
 
 // #3101 — a segunda mensagem do "Mandar de novo" no resultado da primeira campanha.
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({
-    t: (chave, valores, n) => {
-      const partes = [chave];
-      if (valores) partes.push(JSON.stringify(valores));
-      if (n !== undefined) partes.push(`#${n}`);
-      return partes.join(' ');
-    },
-    locale: { value: 'pt_BR' },
-  }),
-}));
+const R = enReenvio.REENVIO_HORARIO.RESULTADO;
 
-const NS = 'REENVIO_HORARIO.RESULTADO';
+const defaultPlugins = config.global.plugins;
+beforeAll(() => {
+  config.global.plugins = [];
+});
+afterAll(() => {
+  config.global.plugins = defaultPlugins;
+});
+
 const RouterLinkStub = {
   props: ['to'],
   template: '<a :data-to="JSON.stringify(to)"><slot /></a>',
 };
 
-const montar = segunda =>
-  mount(ResultSegundaMensagem, {
+const montar = (segunda, { permissions = ['administrator'] } = {}) => {
+  const store = createStore({
+    getters: {
+      getCurrentUser: () => ({ accounts: [{ id: 1, permissions }] }),
+      getCurrentAccountId: () => 1,
+      'accounts/getAccount': () => () => ({ timezone: 'America/Sao_Paulo' }),
+    },
+  });
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'en',
+    messages: { en: { ...enReenvio, ...enDuasVersoes } },
+  });
+  return mount(ResultSegundaMensagem, {
     props: {
       segunda: {
         dias: 3,
@@ -31,88 +44,104 @@ const montar = segunda =>
         ...segunda,
       },
     },
-    global: { stubs: { 'router-link': RouterLinkStub } },
+    global: {
+      plugins: [store, i18n],
+      stubs: { 'router-link': RouterLinkStub },
+    },
   });
+};
+
+const enviada = extra => ({
+  status: 'enviado',
+  campanha: {
+    channel: 'sms',
+    id: 42,
+    name: 'Parcela · second message',
+    processing: false,
+    receberam: 12,
+    responderam: 1,
+    ...extra,
+  },
+});
 
 describe('ResultSegundaMensagem', () => {
-  it('enviada: quantos receberam e responderam, com o caminho para a campanha nova', () => {
-    const w = montar({
-      status: 'enviado',
-      campanha: {
-        channel: 'sms',
-        id: 42,
-        name: 'Parcela · segunda mensagem',
-        processing: false,
-        receberam: 12,
-        responderam: 1,
-      },
-    });
+  it('enviada: para quem saiu, quantos receberam e responderam, e o caminho para o resultado dela', () => {
+    const w = montar(enviada());
 
-    const frase = w.get('[data-frase]').text();
-    expect(frase).toContain(`${NS}.ENVIADA`);
-    expect(frase).toContain(`${NS}.RECEBERAM {\\"n\\":\\"12\\"} #12`);
-    expect(frase).toContain(`${NS}.RESPONDERAM {\\"n\\":\\"1\\"} #1`);
+    expect(w.get('[data-frase]').text()).toBe(
+      "Went out to people who didn't reply: 12 got it and 1 replied."
+    );
+    expect(w.get('[data-receberam]').text()).toBe('12 got it');
+    expect(w.get('[data-responderam]').text()).toBe('1 replied');
     const link = w.get('[data-ver-segunda]');
-    expect(link.text()).toBe('Parcela · segunda mensagem');
+    expect(link.text()).toBe(R.VER);
+    expect(link.attributes('aria-label')).toBe(
+      'See the result of Parcela · second message'
+    );
     expect(JSON.parse(link.attributes('data-to'))).toEqual({
       name: 'campaigns_journey_result',
       params: { channel: 'sms', campaignId: '42' },
     });
     expect(w.find('[data-saindo]').exists()).toBe(false);
+    expect(w.find('[data-criar-campanha]').exists()).toBe(false);
   });
 
-  it('enviada e ainda saindo: avisa que os números crescem', () => {
-    const w = montar({
-      status: 'enviado',
-      campanha: {
-        channel: 'whatsapp_api',
-        id: 7,
-        name: 'X · segunda mensagem',
-        processing: true,
-        receberam: 0,
-        responderam: 0,
-      },
-    });
-    expect(w.get('[data-saindo]').text()).toBe(`${NS}.SAINDO`);
+  it('enviada e ainda saindo: avisa que os números sobem', () => {
+    const w = montar(enviada({ processing: true, receberam: 0 }));
+    expect(w.get('[data-receberam]').text()).toBe('0 got it');
+    expect(w.get('[data-saindo]').text()).toBe(R.SAINDO);
   });
 
   it('enviada, mas a campanha nova foi apagada: diz isso, sem caminho', () => {
     const w = montar({ status: 'enviado' });
-    expect(w.get('[data-frase]').text()).toBe(`${NS}.APAGADA`);
+    expect(w.get('[data-frase]').text()).toBe(R.APAGADA);
     expect(w.find('[data-ver-segunda]').exists()).toBe(false);
   });
 
   it('aguardando sem data: sai N dias depois que a primeira terminar', () => {
     const w = montar({ status: 'aguardando' });
-    const frase = w.get('[data-frase]').text();
-    expect(frase).toContain(`${NS}.AGUARDANDO_SEM_DATA`);
-    expect(frase).toContain('"dias":3');
-    expect(frase).toContain(
-      'REENVIO_HORARIO.REENVIO.QUEM_RESUMO.NAO_RESPONDEU'
+    expect(w.get('[data-frase]').text()).toBe(
+      "Goes out 3 days after this campaign finishes, to people who didn't reply."
     );
-    expect(frase).toContain('#3');
   });
 
-  it('aguardando com data: diz quando sai, para quem nem leu', () => {
+  it('aguardando com data: diz o dia e a hora no fuso da conta, para quem nem leu', () => {
     const w = montar({
       status: 'aguardando',
       quem: 'nao_leu',
       previsto_em: Math.floor(Date.UTC(2030, 0, 15, 15, 0) / 1000),
     });
-    const frase = w.get('[data-frase]').text();
-    expect(frase).toContain(`${NS}.AGUARDANDO_DATA`);
-    expect(frase).toContain('DUAS_VERSOES.QUANDO.DIA');
-    expect(frase).toContain('REENVIO_HORARIO.REENVIO.QUEM_RESUMO.NAO_LEU');
+    expect(w.get('[data-frase]').text()).toBe(
+      "Goes out on January 15 at 12:00 PM, to people who didn't even read it."
+    );
+  });
+
+  it('sem ninguém: não precisou sair, sem botão', () => {
+    const w = montar({ status: 'sem_ninguem' });
+    expect(w.get('[data-frase]').text()).toBe(R.SEM_NINGUEM);
+    expect(w.find('[data-criar-campanha]').exists()).toBe(false);
+    expect(w.find('[data-ver-segunda]').exists()).toBe(false);
   });
 
   it.each([
-    ['sem_ninguem', 'SEM_NINGUEM'],
-    ['cancelado', 'CANCELADO'],
-    ['falhou', 'FALHOU'],
-  ])('%s: diz por que não saiu, sem caminho', (status, chave) => {
-    const w = montar({ status });
-    expect(w.attributes('data-segunda-mensagem')).toBe(status);
-    expect(w.get('[data-frase]').text()).toBe(`${NS}.${chave}`);
-    expect(w.find('[data-ver-segunda]').exists()).toBe(false);
+    ['cancelado', R.CANCELADO],
+    ['falhou', R.FALHOU],
+  ])(
+    '%s: diz por que não saiu e leva a criar outra campanha',
+    (status, texto) => {
+      const w = montar({ status });
+      expect(w.attributes('data-segunda-mensagem')).toBe(status);
+      expect(w.get('[data-frase]').text()).toBe(texto);
+      const criar = w.get('[data-criar-campanha]');
+      expect(criar.text()).toBe(R.CRIAR);
+      expect(JSON.parse(criar.attributes('data-to'))).toEqual({
+        name: 'campaigns_journey_new',
+      });
+    }
+  );
+
+  it('quem só vê campanhas não recebe o botão de criar', () => {
+    const w = montar({ status: 'falhou' }, { permissions: ['campaign_view'] });
+    expect(w.find('[data-criar-campanha]').exists()).toBe(false);
   });
 });

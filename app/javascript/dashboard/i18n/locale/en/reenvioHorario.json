@@ -88,14 +88,17 @@
       "TITULO": "Second message",
       "AGUARDANDO_DATA": "Goes out {quando}, to people who {quem}.",
       "AGUARDANDO_SEM_DATA": "Goes out 1 day after this campaign finishes, to people who {quem}. | Goes out {dias} days after this campaign finishes, to people who {quem}.",
-      "ENVIADA": "{receberam}, {responderam}",
+      "ENVIADA": "Went out to people who {quem}: {receberam} and {responderam}.",
       "RECEBERAM": "{n} got it | {n} got it",
       "RESPONDERAM": "{n} replied | {n} replied",
-      "SAINDO": "Still going out. The numbers grow as it goes.",
-      "APAGADA": "It went out, but its campaign was deleted.",
-      "SEM_NINGUEM": "It didn't go out: nobody was left to get it. Everyone replied or couldn't get messages.",
-      "CANCELADO": "Canceled: this campaign was edited or canceled before the second message went out.",
-      "FALHOU": "It didn't go out: something went wrong when creating it. Create a new campaign for the people who didn't reply."
+      "SAINDO": "Still going out. The numbers go up until it finishes.",
+      "VER": "See the result",
+      "VER_DE": "See the result of {nome}",
+      "CRIAR": "Create campaign",
+      "APAGADA": "It went out, but the second message's campaign was deleted. Its result can't be seen.",
+      "SEM_NINGUEM": "It didn't need to go out: everyone replied or couldn't get messages.",
+      "CANCELADO": "It didn't go out: this campaign was changed or canceled before the set day. If you still want to remind people who didn't reply, create a new campaign.",
+      "FALHOU": "It didn't go out: something went wrong when putting the second message together. You don't need to redo this campaign. If you still want to remind people who didn't reply, create a new campaign."
     }
   }
 }
