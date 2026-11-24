@@ -72,6 +72,22 @@ describe('GuiaNoCabecalho (#3192)', () => {
     aberto.unmount();
   });
 
+  it('voltar a aparecer sem o painel fechar não rouba o foco', async () => {
+    disponivel.value = false;
+    const outro = document.createElement('button');
+    document.body.appendChild(outro);
+    const wrapper = montar({ attachTo: document.body });
+    outro.focus();
+
+    disponivel.value = true;
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find('[data-guia-cabecalho]').exists()).toBe(true);
+    expect(document.activeElement).toBe(outro);
+    wrapper.unmount();
+    outro.remove();
+  });
+
   it('fechar o painel devolve o foco ao botão', async () => {
     uiSettingsRef.value = { is_autonomia_guide_panel_open: true };
     const wrapper = montar({ attachTo: document.body });

@@ -5,7 +5,7 @@ import {
   useFixedPanelPresence,
 } from 'dashboard/composables/useFixedPanelState';
 import AutonomiaGuideLauncher from '../AutonomiaGuideLauncher.vue';
-import { cantoOcupadoPelaTela } from '../cantoDaBolinha';
+import { useOcuparCantoDaBolinha } from '../cantoDaBolinha';
 
 const uiSettingsRef = ref({ is_autonomia_guide_panel_open: false });
 const updateUISettings = vi.fn(patch => {
@@ -38,6 +38,14 @@ const PainelFixo = {
   props: { aberto: { type: Boolean, default: false } },
   setup(props) {
     useFixedPanelPresence(computed(() => props.aberto));
+    return () => null;
+  },
+};
+
+const TelaComEnviar = {
+  props: { ocupado: { type: Object, required: true } },
+  setup(props) {
+    useOcuparCantoDaBolinha(props.ocupado);
     return () => null;
   },
 };
@@ -158,14 +166,33 @@ describe('AutonomiaGuideLauncher', () => {
 
     it('some enquanto uma tela avisa que o canto é dela (criação de agente)', async () => {
       const wrapper = mountLauncher();
-      cantoOcupadoPelaTela.value = true;
+      const ocupado = ref(true);
+      const tela = mount(TelaComEnviar, { props: { ocupado } });
       await nextTick();
       expect(wrapper.find('[data-guia-abrir]').exists()).toBe(false);
 
-      cantoOcupadoPelaTela.value = false;
+      tela.unmount();
       await nextTick();
       expect(wrapper.find('[data-guia-abrir]').exists()).toBe(true);
       wrapper.unmount();
+    });
+
+    // A bolinha volta ao sair da tela, com o painel fechado: o foco fica onde
+    // a pessoa estava.
+    it('voltar a aparecer por troca de tela não rouba o foco', async () => {
+      const outro = document.createElement('button');
+      document.body.appendChild(outro);
+      const tela = mount(TelaComEnviar, { props: { ocupado: ref(true) } });
+      const wrapper = mountLauncher({ attachTo: document.body });
+      outro.focus();
+
+      tela.unmount();
+      await nextTick();
+      await nextTick();
+      expect(wrapper.find('[data-guia-abrir]').exists()).toBe(true);
+      expect(document.activeElement).toBe(outro);
+      wrapper.unmount();
+      outro.remove();
     });
 
     it('fechar o painel devolve o foco à bolinha', async () => {

@@ -17,10 +17,6 @@ const montar = ocupado =>
   );
 
 describe('useOcuparCantoDaBolinha (#3192)', () => {
-  afterEach(() => {
-    cantoOcupadoPelaTela.value = false;
-  });
-
   it('segue a tela enquanto ela está montada', async () => {
     const ocupado = ref(false);
     const wrapper = montar(ocupado);
@@ -30,6 +26,17 @@ describe('useOcuparCantoDaBolinha (#3192)', () => {
     await nextTick();
     expect(cantoOcupadoPelaTela.value).toBe(true);
     wrapper.unmount();
+  });
+
+  it('uma tela que sai depois de outra entrar não solta o canto da outra', () => {
+    const primeira = montar(ref(true));
+    const segunda = montar(ref(true));
+
+    primeira.unmount();
+    expect(cantoOcupadoPelaTela.value).toBe(true);
+
+    segunda.unmount();
+    expect(cantoOcupadoPelaTela.value).toBe(false);
   });
 
   it('sair da tela devolve o canto à bolinha', () => {
