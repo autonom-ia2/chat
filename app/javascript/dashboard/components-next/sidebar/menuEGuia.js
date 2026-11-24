@@ -21,6 +21,10 @@ export const MENU_RECOLHIDO = 56;
 export const menuEGuia = {
   // O painel do Guia está aberto como coluna (o Guia avisa; o embutido não).
   guiaAberto: ref(false),
+  // #3191 — o Copiloto da equipe tem o mesmo desenho e a mesma largura do
+  // Guia: aberto, ele também recolhe o menu. Um não abre junto com o outro
+  // (AutonomiaCopilotContainer.vue), mas cada um avisa o seu.
+  copilotoAberto: ref(false),
   // Largura do menu agora, em px. Zero no celular (o menu é gaveta por cima).
   largura: ref(0),
   // Quanto o menu devolveu ao Guia. Vale enquanto o menu continuar recolhido
@@ -67,13 +71,16 @@ export const useMenuRecolheComOGuia = ({
   );
 
   const recolherSeOGuiaAbriu = () => {
-    if (!menuEGuia.guiaAberto.value) return;
+    if (!menuEGuia.guiaAberto.value && !menuEGuia.copilotoAberto.value) return;
     recolherParaOGuia({
       sidebarWidth,
       recolhido: isCollapsed.value,
       celular: celular.value,
     });
   };
-  watch([menuEGuia.guiaAberto, celular], recolherSeOGuiaAbriu);
+  watch(
+    [menuEGuia.guiaAberto, menuEGuia.copilotoAberto, celular],
+    recolherSeOGuiaAbriu
+  );
   onMounted(recolherSeOGuiaAbriu);
 };

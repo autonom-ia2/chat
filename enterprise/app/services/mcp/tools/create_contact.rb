@@ -17,6 +17,9 @@ class Mcp::Tools::CreateContact < Mcp::Tools::Base
 
   def self.perform(name:, **attributes)
     authorize(Contact, :create?)
+    error = internal_keys_error(attributes[:custom_attributes])
+    return error if error
+
     contact = Current.account.contacts.create!(attributes.slice(:email, :phone_number, :identifier, :custom_attributes).merge(name: name))
 
     respond(contact_summary(contact))

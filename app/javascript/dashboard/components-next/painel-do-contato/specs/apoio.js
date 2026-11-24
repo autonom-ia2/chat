@@ -47,6 +47,12 @@ export const criarStore = (estado = {}, maisGetters = {}, modulos = {}) => {
     etiquetas: {},
     anexos: [],
     definicoes: [],
+    // #3176: a lista do servidor, que chega na resposta da conta.
+    chavesInternas: [
+      'waha_whatsapp_chat_id',
+      'waha_whatsapp_jid',
+      'waha_whatsapp_lid',
+    ],
     uiContatos: { isFetchingItem: false },
     papel: 'agent',
     funcao: null,
@@ -110,9 +116,12 @@ export const criarStore = (estado = {}, maisGetters = {}, modulos = {}) => {
       'inboxAssignableAgents/getAssignableAgents': () => () => r.agentes,
       'contacts/getUIFlags': () => r.uiContatos,
       getSelectedChatAttachments: () => r.anexos,
-      // O getter de verdade: é ele que esconde os campos internos da WAHA.
+      // O getter de verdade: é ele que esconde as chaves internas (#2138, #3176).
       'attributes/getAttributesByModel': () =>
-        gettersDosCampos.getAttributesByModel({ records: r.definicoes }),
+        gettersDosCampos.getAttributesByModel(
+          { records: r.definicoes },
+          { getChavesInternas: r.chavesInternas }
+        ),
       'globalConfig/get': () => ({ crmKanbanEnabled: true }),
       ...maisGetters,
     }),

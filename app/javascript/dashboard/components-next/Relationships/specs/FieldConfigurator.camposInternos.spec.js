@@ -13,7 +13,14 @@ vi.mock('dashboard/composables/store', () => ({
   useStore: () => ({
     commit: vi.fn(),
     subscribe: vi.fn(),
-    getters: { getCurrentUserID: 1 },
+    // #3176: a lista do servidor, que o useRelationships usa para esconder.
+    getters: {
+      getCurrentUserID: 1,
+      'attributes/getChavesInternas': [
+        'waha_whatsapp_chat_id',
+        'waha_whatsapp_lid',
+      ],
+    },
   }),
 }));
 vi.mock('dashboard/composables/useAccount', () => ({

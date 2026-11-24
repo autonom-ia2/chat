@@ -27,9 +27,10 @@ module Crm::Memoria::Catalogo
   end
 
   # Só escreve quando os campos personalizados da conta mudaram (contagem e última alteração) ou o catálogo ainda não
-  # tem as chaves do sistema: a leitura quente (Leitor, avaliação) não grava a cada chamada.
+  # tem as chaves do sistema: a leitura quente (Leitor, avaliação) não grava a cada chamada. A marca conta só as
+  # definições visíveis (#3176): a conta com chave interna no catálogo antigo muda de marca e sincroniza de novo.
   def sincronizar_se_mudou!(account)
-    definicoes = account.custom_attribute_definitions.where(attribute_model: MODELOS)
+    definicoes = account.custom_attribute_definitions.visiveis.where(attribute_model: MODELOS)
     marca = [definicoes.count, definicoes.maximum(:updated_at)&.to_f, Crm::MemoriaChave.where(account_id: account.id).count]
     Rails.cache.fetch(['crm_memoria_catalogo', account.id, *marca], expires_in: 1.day) do
       sincronizar!(account)
@@ -45,14 +46,15 @@ module Crm::Memoria::Catalogo
   end
 
   # O campo personalizado apagado sai do catálogo: a IA deixa de poder gravar fato nele (os fatos que existem ficam).
-  # O do tipo contato também sai (decisão 16): quem é o contato ligado a equipe escolhe, a IA não grava.
+  # O do tipo contato também sai (decisão 16): quem é o contato ligado a equipe escolhe, a IA não grava. E o de chave
+  # interna (#3176, Relationships::ChavesInternas: WAHA e controle da Prospecção), que é do sistema.
   def sem_campo!(account)
     existentes = definicoes(account).pluck(:attribute_model, :attribute_key)
     Crm::MemoriaChave.where(account_id: account.id, attribute_model: MODELOS)
                      .reject { |linha| existentes.include?([linha.attribute_model, linha.chave]) }.each(&:destroy!)
   end
 
-  def definicoes(account) = account.custom_attribute_definitions.where(attribute_model: MODELOS).where.not(attribute_display_type: :contato)
+  def definicoes(account) = account.custom_attribute_definitions.visiveis.where(attribute_model: MODELOS).where.not(attribute_display_type: :contato)
 
   def dos_campos(account)
     definicoes(account).map do |definicao|

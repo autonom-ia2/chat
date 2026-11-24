@@ -5,7 +5,8 @@ import { useRelationships } from 'dashboard/composables/useRelationships';
 
 // #2138 — as telas do Relacionamentos (painel da conversa, configurador de campos,
 // CRM) recebem as definições sem os campos internos da WAHA; o store recebe a
-// lista inteira, e os getters dele é que os escondem.
+// lista inteira, e os getters dele é que os escondem. #3176 — a lista das
+// chaves internas é a do servidor, pelo getter attributes/getChavesInternas.
 const context = vi.hoisted(() => ({ store: null }));
 vi.mock('dashboard/api/relationships', () => ({
   default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
@@ -33,7 +34,15 @@ beforeEach(() => {
   context.store = {
     commit: vi.fn(),
     subscribe: vi.fn(),
-    getters: { getCurrentUserID: 1, 'attributes/getRevision': 0 },
+    getters: {
+      getCurrentUserID: 1,
+      'attributes/getRevision': 0,
+      'attributes/getChavesInternas': [
+        'waha_whatsapp_chat_id',
+        'waha_whatsapp_jid',
+        'waha_whatsapp_lid',
+      ],
+    },
   };
   axios.get.mockResolvedValue({
     data: {

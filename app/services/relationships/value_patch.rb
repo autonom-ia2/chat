@@ -25,8 +25,9 @@ class Relationships::ValuePatch
   private
 
   def validate_payload!(payload)
-    return if payload.is_a?(Hash) && payload.keys.sort == %w[key previous value] && payload['key'].is_a?(String)
-
-    raise Relationships::Configuration::Invalid, 'Expected key, value and previous'
+    valid = payload.is_a?(Hash) && payload.keys.sort == %w[key previous value] && payload['key'].is_a?(String)
+    raise Relationships::Configuration::Invalid, 'Expected key, value and previous' unless valid
+    # Chave interna (WAHA, controle da Prospecção) é do sistema: ninguém edita pela ficha (#3176).
+    raise Relationships::Configuration::Invalid, 'Internal field cannot be edited' if Relationships::ChavesInternas.interna?(payload['key'])
   end
 end

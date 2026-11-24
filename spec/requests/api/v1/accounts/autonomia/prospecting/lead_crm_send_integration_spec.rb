@@ -86,7 +86,8 @@ RSpec.describe 'Autonomia prospecting send to CRM, integration of #680', type: :
     it 'o contato é o decisor quando há um e a empresa quando não há, cada um ligado à sua empresa' do
       person = owner_lead.reload.contact
       expect(person).to have_attributes(name: 'ANA SOUZA', email: 'ana@alpha.example.com', phone_number: '+551133331111', company: alpha)
-      expect(person.additional_attributes).to include('job_title' => 'SOCIO ADMINISTRADOR', 'company_name' => 'Alpha Gastronomia')
+      expect(person.additional_attributes).to include('company_name' => 'Alpha Gastronomia')
+      expect(person.custom_attributes).to include('job_title' => 'SOCIO ADMINISTRADOR')
       expect(domain_lead.reload.contact).to have_attributes(name: 'Beta Café', phone_number: '+551133332222', company: beta)
       expect(branch_lead.reload.contact).to have_attributes(name: 'Alpha Gastronomia', phone_number: '+551133333333', company: alpha)
       expect(account.contacts.count).to eq(3)

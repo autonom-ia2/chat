@@ -148,6 +148,7 @@ const abrirArquivo = anexo =>
     <InformacoesDoContato
       v-else-if="tipo === 'informacoes'"
       :definicoes="listas.informacoes"
+      :conhecidas="listas.conhecidas"
       :contact="contact"
       :pode-editar="podeEditar"
     />

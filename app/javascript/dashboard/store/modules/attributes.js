@@ -2,11 +2,17 @@ import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import types from '../mutation-types';
 import AttributeAPI from '../../api/attributes';
 import camelcaseKeys from 'camelcase-keys';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
+import {
+  chavesInternasDaConta,
+  semChavesInternas,
+} from 'dashboard/helper/chavesInternas';
 
-// Fork (#2138): os campos internos da WAHA não saem para nenhuma tela. Ficam em
-// records (e no servidor), só os getters os deixam de fora.
-const visiveis = records => semAtributosInternosDoWhatsapp(records);
+// Fork (#2138, #3176): as definições das chaves internas (WAHA e controle da
+// Prospecção; a lista vem do servidor, na resposta da conta) não saem para
+// nenhuma tela. Ficam em records (e no servidor), só os getters as deixam de
+// fora. Sem a lista (getters chamados sem os outros getters), nada a mais sai.
+const visiveis = (records, moduleGetters) =>
+  semChavesInternas(records, moduleGetters?.getChavesInternas);
 
 export const state = {
   records: [],
@@ -27,31 +33,36 @@ export const getters = {
   getUIFlags(_state) {
     return _state.uiFlags;
   },
-  getAttributes: _state => {
-    return visiveis(_state.records);
+  // As chaves internas da conta aberta (helper/chavesInternas.js).
+  getChavesInternas: (_state, _getters, _rootState, rootGetters) =>
+    chavesInternasDaConta(
+      rootGetters?.['accounts/getAccount']?.(rootGetters?.getCurrentAccountId)
+    ),
+  getAttributes: (_state, _getters) => {
+    return visiveis(_state.records, _getters);
   },
-  getConversationAttributes: _state => {
-    return visiveis(_state.records)
+  getConversationAttributes: (_state, _getters) => {
+    return visiveis(_state.records, _getters)
       .filter(record => record.attribute_model === 'conversation_attribute')
       .map(camelcaseKeys);
   },
-  getContactAttributes: _state => {
-    return visiveis(_state.records)
+  getContactAttributes: (_state, _getters) => {
+    return visiveis(_state.records, _getters)
       .filter(record => record.attribute_model === 'contact_attribute')
       .map(camelcaseKeys);
   },
-  getCompanyAttributes: _state => {
-    return visiveis(_state.records)
+  getCompanyAttributes: (_state, _getters) => {
+    return visiveis(_state.records, _getters)
       .filter(record => record.attribute_model === 'company_attribute')
       .map(camelcaseKeys);
   },
-  getCardAttributes: _state => {
-    return visiveis(_state.records)
+  getCardAttributes: (_state, _getters) => {
+    return visiveis(_state.records, _getters)
       .filter(record => record.attribute_model === 'card_attribute')
       .map(camelcaseKeys);
   },
-  getAttributesByModel: _state => attributeModel => {
-    return visiveis(_state.records).filter(
+  getAttributesByModel: (_state, _getters) => attributeModel => {
+    return visiveis(_state.records, _getters).filter(
       record => record.attribute_model === attributeModel
     );
   },

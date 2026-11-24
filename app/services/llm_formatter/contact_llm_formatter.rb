@@ -27,7 +27,8 @@ class LlmFormatter::ContactLlmFormatter < LlmFormatter::DefaultLlmFormatter
     attributes << "Phone: #{@record.phone_number}"
     attributes << "Location: #{@record.location}"
     attributes << "Country Code: #{@record.country_code}"
-    @record.account.custom_attribute_definitions.with_attribute_model('contact_attribute').each do |attribute|
+    # #3176: as chaves internas (ids da WAHA, controle da Prospecção) não vão para a IA.
+    @record.account.custom_attribute_definitions.visiveis.with_attribute_model('contact_attribute').each do |attribute|
       attributes << "#{rotulo(attribute)}: #{@record.custom_attributes[attribute.attribute_key]}"
     end
     attributes.join("\n")

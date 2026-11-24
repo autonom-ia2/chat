@@ -7,6 +7,9 @@
 # - Contato existente só ganha o que está vazio. O nome e o cargo só mudam quando fomos nós que os escrevemos (a marca
 #   em custom_attributes): assim "Usar como contato" troca a empresa pela pessoa, mas o nome e o cargo que o usuário
 #   deu ficam, mesmo quando o nome dele coincide com o do negócio no Google.
+# - O cargo vai em `custom_attributes.job_title`, onde o card, o Decisor e a ficha o leem (Autonomia::Prospecting::CargoEscrito,
+#   #3176; antes ia em additional_attributes, que nenhuma tela mostra; Relationships::ArrumarContatosDaProspeccaoJob move
+#   os antigos).
 # - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
 #   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
 #   dados dele.
@@ -17,7 +20,11 @@ class Autonomia::Prospecting::ContactConverter
 
   DECISION_STATUSES = %w[confirmed possible].freeze
   WRITTEN_NAME_KEY = 'autonomia_prospecting_contact_name'.freeze
-  WRITTEN_JOB_TITLE_KEY = 'autonomia_prospecting_contact_job_title'.freeze
+  # Controle interno do vínculo com o lead (#3176, Relationships::ChavesInternas): não aparecem em tela nem vão para IA.
+  LEAD_ID_KEY = 'autonomia_prospecting_lead_id'.freeze
+  PROVIDER_KEY = 'autonomia_prospecting_provider'.freeze
+  PROVIDER_PLACE_ID_KEY = 'autonomia_prospecting_provider_place_id'.freeze
+  CONVERTED_BY_ID_KEY = 'autonomia_prospecting_converted_by_id'.freeze
 
   # consent_veto: quem converte vários leads passa um só, para não reler as recusas da conta a cada lead.
   def initialize(lead:, user:, company: nil, consent_veto: nil)
@@ -32,7 +39,7 @@ class Autonomia::Prospecting::ContactConverter
   def self.owner_lead_id(contact)
     return if contact.nil? || contact.new_record?
 
-    contact.custom_attributes.to_h['autonomia_prospecting_lead_id'].presence&.to_i
+    contact.custom_attributes.to_h[LEAD_ID_KEY].presence&.to_i
   end
 
   def perform
@@ -119,8 +126,9 @@ class Autonomia::Prospecting::ContactConverter
 
   def rename(contact)
     contact.name = contact_name
-    contact.custom_attributes = contact.custom_attributes.to_h.merge(WRITTEN_NAME_KEY => contact_name)
-    write_job_title(contact)
+    attributes = contact.custom_attributes.to_h.merge(WRITTEN_NAME_KEY => contact_name)
+    role = @lead.decision_role.presence if decision_maker?
+    contact.custom_attributes = Autonomia::Prospecting::CargoEscrito.new(attributes).com(role)
   end
 
   # Só o nome que nós escrevemos (contato novo, sem nome, ou com a marca WRITTEN_NAME_KEY) é trocado. Contato que o
@@ -129,19 +137,6 @@ class Autonomia::Prospecting::ContactConverter
     return true if contact.new_record? || contact.name.blank?
 
     contact.custom_attributes.to_h[WRITTEN_NAME_KEY] == contact.name
-  end
-
-  # O cargo segue a mesma regra: só grava o do decisor quando o campo está vazio ou guarda o que nós gravamos. Sem
-  # decisor, sai só o cargo que nós pusemos; o que o usuário digitou nunca é apagado.
-  def write_job_title(contact)
-    attributes = contact.additional_attributes.to_h
-    current = attributes['job_title']
-    written = contact.custom_attributes.to_h[WRITTEN_JOB_TITLE_KEY]
-    return if current.present? && current != written
-
-    role = decision_maker? ? @lead.decision_role.presence : nil
-    contact.additional_attributes = attributes.merge('job_title' => role).compact
-    contact.custom_attributes = contact.custom_attributes.to_h.merge(WRITTEN_JOB_TITLE_KEY => role).compact
   end
 
   # Valor único por conta (telefone, e-mail, identificador): só preenche o vazio, e só se outro contato não o usa.
@@ -207,13 +202,15 @@ class Autonomia::Prospecting::ContactConverter
     [@lead.address, @lead.city, @lead.state, @lead.country].compact_blank.join(', ')
   end
 
+  # "Sobre a pessoa" (description) fica vazio (#3176): a categoria do Google vem em inglês ("doctor") e a plataforma
+  # não tem o nome dela em português. Os contatos que já a receberam são arrumados por
+  # Relationships::ArrumarContatosDaProspeccaoJob.
   def additional_attributes
     {
       'company_name' => @company.name,
       'city' => @lead.city,
       'state' => @lead.state,
       'country' => @lead.country,
-      'description' => @lead.category,
       'website' => @lead.website,
       'source' => 'autonomia_prospecting'
     }.compact_blank
@@ -240,12 +237,12 @@ class Autonomia::Prospecting::ContactConverter
 
   def custom_attributes
     {
-      'autonomia_prospecting_lead_id' => @lead.id,
-      'autonomia_prospecting_provider' => @lead.provider,
-      'autonomia_prospecting_provider_place_id' => @lead.provider_place_id,
+      LEAD_ID_KEY => @lead.id,
+      PROVIDER_KEY => @lead.provider,
+      PROVIDER_PLACE_ID_KEY => @lead.provider_place_id,
       'autonomia_prospecting_rating' => @lead.rating&.to_f,
       'autonomia_prospecting_reviews_count' => @lead.reviews_count,
-      'autonomia_prospecting_converted_by_id' => @user&.id
+      CONVERTED_BY_ID_KEY => @user&.id
     }
   end
 end

@@ -488,3 +488,35 @@ describe('GuideComposer — gravação nunca se perde sozinha', () => {
     ).toBeUndefined();
   });
 });
+
+describe('GuideComposer — sem anexos (#3191)', () => {
+  it('sem clipe e com o texto de quem responde', () => {
+    const wrapper = montar({
+      anexos: false,
+      placeholder: 'Pergunte para Clara',
+    });
+
+    expect(wrapper.find('input[type="file"]').exists()).toBe(false);
+    expect(botao(wrapper, 'AUTONOMIA_GUIDE.FILE.ATTACH').exists()).toBe(false);
+    expect(wrapper.get('textarea').attributes('placeholder')).toBe(
+      'Pergunte para Clara'
+    );
+  });
+
+  it('colar um arquivo não anexa nada', async () => {
+    const wrapper = montar({ anexos: false });
+    const arquivo = new File(['x'], 'print.png', { type: 'image/png' });
+
+    await wrapper.get('textarea').trigger('paste', {
+      clipboardData: { files: [arquivo] },
+    });
+
+    expect(wrapper.emitted('anexar')).toBeUndefined();
+  });
+
+  it('sem texto próprio, continua "Pergunte ao Guia"', () => {
+    expect(montar().get('textarea').attributes('placeholder')).toBe(
+      'AUTONOMIA_GUIDE.PLACEHOLDER'
+    );
+  });
+});

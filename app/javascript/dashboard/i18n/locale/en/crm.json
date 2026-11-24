@@ -4823,12 +4823,27 @@
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
-    "RESET": "New chat",
-    "KICK_OFF": "Ask the copilot about this conversation: summary, next steps, a reply draft.",
-    "NO_AGENTS": "No internal copilot agent is available yet. Create one in the Agents hub.",
+    "KICK_OFF": "Ask me about this conversation: a summary, the next step or a reply draft.",
+    "NO_AGENTS": "No team copilot is available yet. Create one in AI Agents.",
     "UNAVAILABLE": "The copilot is unavailable right now.",
     "ERROR": "Could not reach the copilot. Try again.",
-    "INSERTED": "Inserted into the reply."
+    "INSERTED": "Inserted into the reply.",
+    "SUBTITLE": "Only you can see this",
+    "NEW_TOPIC": "New topic",
+    "CHANGE_AGENT": "Change agent. Now talking to {nome}",
+    "AGENTS_MENU": "Which agent do you want to talk to?",
+    "CLOSE": "Close the copilot",
+    "BACK": "Back to the conversation",
+    "PANEL": "Team copilot",
+    "LOG": "Conversation with {nome}",
+    "PLACEHOLDER": "Ask {nome}",
+    "THINKING": "Thinking…",
+    "USE": "Use this reply",
+    "SUGGESTIONS": {
+      "SUMMARY": "Summarize this conversation",
+      "NEXT_STEP": "What is the next step?",
+      "DRAFT": "Write a reply to the customer"
+    }
   },
   "AUTONOMIA_GUIDE": {
     "GRAFICO": {

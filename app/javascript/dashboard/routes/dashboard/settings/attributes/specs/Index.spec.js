@@ -26,6 +26,11 @@ const globalConfigRef = { value: { crmKanbanEnabled: true } };
 // #2138: a lista vem do getter de verdade, que é quem esconde os internos da WAHA.
 vi.mock('dashboard/composables/store', async () => {
   const { getters } = await import('dashboard/store/modules/attributes');
+  const internas = [
+    'waha_whatsapp_chat_id',
+    'waha_whatsapp_jid',
+    'waha_whatsapp_lid',
+  ];
   return {
     useStore: () => ({
       dispatch: vi.fn(),
@@ -45,41 +50,41 @@ vi.mock('dashboard/composables/store', async () => {
       },
       'attributes/getAttributesByModel': {
         value: model =>
-          getters.getAttributesByModel({
-            records: [
-              {
-                id: 1,
-                attribute_model: 'conversation_attribute',
-                attribute_display_name: 'Conversation field',
-              },
-              {
-                id: 2,
-                attribute_model: 'contact_attribute',
-                attribute_display_name: 'Contact field',
-              },
-              // #2138: os internos da WAHA existem, mas a lista não os mostra.
-              ...[
-                'waha_whatsapp_chat_id',
-                'waha_whatsapp_jid',
-                'waha_whatsapp_lid',
-              ].map((key, index) => ({
-                id: 10 + index,
-                attribute_model: 'contact_attribute',
-                attribute_key: key,
-                attribute_display_name: key,
-              })),
-              {
-                id: 3,
-                attribute_model: 'company_attribute',
-                attribute_display_name: 'Company field',
-              },
-              {
-                id: 4,
-                attribute_model: 'card_attribute',
-                attribute_display_name: 'Card field',
-              },
-            ],
-          })(model),
+          getters.getAttributesByModel(
+            {
+              records: [
+                {
+                  id: 1,
+                  attribute_model: 'conversation_attribute',
+                  attribute_display_name: 'Conversation field',
+                },
+                {
+                  id: 2,
+                  attribute_model: 'contact_attribute',
+                  attribute_display_name: 'Contact field',
+                },
+                // #2138: os internos da WAHA existem, mas a lista não os mostra.
+                ...internas.map((key, index) => ({
+                  id: 10 + index,
+                  attribute_model: 'contact_attribute',
+                  attribute_key: key,
+                  attribute_display_name: key,
+                })),
+                {
+                  id: 3,
+                  attribute_model: 'company_attribute',
+                  attribute_display_name: 'Company field',
+                },
+                {
+                  id: 4,
+                  attribute_model: 'card_attribute',
+                  attribute_display_name: 'Card field',
+                },
+              ],
+            },
+            // #3176: a lista do servidor, que o getter usa para esconder.
+            { getChavesInternas: internas }
+          )(model),
       },
     }),
   };

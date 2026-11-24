@@ -25,6 +25,7 @@ const montar = ({ largura = 256, celular = false } = {}) => {
 describe('useMenuRecolheComOGuia (#3184)', () => {
   afterEach(() => {
     menuEGuia.guiaAberto.value = false;
+    menuEGuia.copilotoAberto.value = false;
     menuEGuia.largura.value = 0;
     menuEGuia.devolvida.value = 0;
     menuEGuia.recolhidoPeloGuia.value = false;
@@ -114,6 +115,16 @@ describe('useMenuRecolheComOGuia (#3184)', () => {
     expect(sidebarWidth.value).toBe(256);
 
     ehCelular.value = false;
+    await nextTick();
+
+    expect(sidebarWidth.value).toBe(56);
+    expect(menuEGuia.devolvida.value).toBe(200);
+  });
+
+  it('abrir o Copiloto da equipe também recolhe o menu (#3191)', async () => {
+    const { sidebarWidth } = montar();
+
+    menuEGuia.copilotoAberto.value = true;
     await nextTick();
 
     expect(sidebarWidth.value).toBe(56);

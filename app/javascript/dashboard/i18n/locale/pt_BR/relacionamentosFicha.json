@@ -256,7 +256,12 @@
       "ESCOLHER": "Escolher campos da ficha",
       "NENHUM_NA_FICHA": "Nenhum campo aparece nesta ficha ainda.",
       "SEM_CAMPOS_PESSOA": "Crie campos para anotar o que importa no seu negócio, como o aniversário ou quem indicou.",
-      "SEM_CAMPOS_EMPRESA": "Crie campos para anotar o que importa no seu negócio, como o número de funcionários."
+      "SEM_CAMPOS_EMPRESA": "Crie campos para anotar o que importa no seu negócio, como o número de funcionários.",
+      "CONHECIDOS": {
+        "CARGO": "Cargo",
+        "NOTA_NO_GOOGLE": "Nota no Google",
+        "AVALIACOES_NO_GOOGLE": "Avaliações no Google"
+      }
     },
     "ORIGEM": {
       "TITULO": "De onde veio",

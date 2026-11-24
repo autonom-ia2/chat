@@ -132,6 +132,13 @@ class Mcp::Tools::Base < MCP::Tool
       error_response("Unknown labels: #{unknown.join(', ')}. Labels of the account: #{account_labels.join(', ')}") if unknown.any?
     end
 
+    # #3176: as chaves internas do contato (Relationships::ChavesInternas: ids da WAHA, controle da Prospecção) são do
+    # sistema. O app conectado não as recebe nem as grava; gravar é recusado com o nome delas, para o modelo não insistir.
+    def internal_keys_error(custom_attributes)
+      internal = custom_attributes.to_h.keys.map(&:to_s).select { |key| Relationships::ChavesInternas.interna?(key) }
+      error_response("These attributes belong to the system and cannot be set: #{internal.join(', ')}.") if internal.any?
+    end
+
     def conversation_summary(conversation)
       {
         id: conversation.display_id,

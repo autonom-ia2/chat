@@ -20,7 +20,7 @@ class Mcp::Tools::UpdateContact < Mcp::Tools::Base
   def self.perform(contact_id:, labels: nil, custom_attributes: nil, **attributes)
     contact = find_contact(contact_id)
     authorize(contact, :update?)
-    error = labels && unknown_labels_error(labels)
+    error = (labels && unknown_labels_error(labels)) || internal_keys_error(custom_attributes)
     return error if error
 
     contact.with_lock do
@@ -30,6 +30,8 @@ class Mcp::Tools::UpdateContact < Mcp::Tools::Base
     end
     contact.update_labels(labels) if labels
 
-    respond(contact_summary(contact.reload).merge(labels: contact.label_list, custom_attributes: contact.custom_attributes))
+    contact.reload
+    custom = Relationships::ChavesInternas.sem_internas(contact.custom_attributes)
+    respond(contact_summary(contact).merge(labels: contact.label_list, custom_attributes: custom))
   end
 end

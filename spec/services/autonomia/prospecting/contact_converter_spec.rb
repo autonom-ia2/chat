@@ -30,6 +30,18 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
     expect(result.lead.contact_id).to eq(result.contact.id)
   end
 
+  # MOTIVO (#3176): a categoria do Google vem em inglês e não tem nome em português; "Sobre a pessoa" fica vazio. As
+  # chaves de controle saem das constantes que a lista de chaves internas usa.
+  it 'não grava a categoria crua em "Sobre a pessoa" e grava o controle pelas constantes', :aggregate_failures do
+    contact = described_class.new(lead: lead, user: user).perform.contact
+
+    expect(contact.additional_attributes).not_to have_key('description')
+    expect(contact.custom_attributes).to include(
+      described_class::LEAD_ID_KEY => lead.id, described_class::PROVIDER_KEY => 'mock',
+      described_class::PROVIDER_PLACE_ID_KEY => 'mock-place-1', described_class::CONVERTED_BY_ID_KEY => user.id
+    )
+  end
+
   it 'WhatsApp verificado gravado como veio vira E.164 no contato, sem quebrar a gravação' do
     lead.update!(metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+55 11 99999-7777' } })
 
@@ -90,9 +102,12 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
       expect(contact.email).to eq('contato@alpha.example.com')
       expect(contact.phone_number).to eq('+5511999998888')
       expect(contact.additional_attributes).to include(
-        'job_title' => 'SOCIO ADMINISTRADOR', 'company_name' => 'Alpha Gastronomia',
+        'company_name' => 'Alpha Gastronomia',
         'social_profiles' => include('linkedin' => 'in/anasouza', 'instagram' => 'alpharest', 'facebook' => 'alpharest')
       )
+      # #3176: o cargo vai onde o card, o Decisor e a ficha o leem.
+      expect(contact.custom_attributes['job_title']).to eq('SOCIO ADMINISTRADOR')
+      expect(contact.additional_attributes).not_to have_key('job_title')
     end
 
     it 'decisor possível também é a pessoa; decisor antigo, de antes da pesquisa, também' do
@@ -102,7 +117,7 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
       old = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/old', name: 'Beta Bar',
                                                  decision_name: 'Carlos Lima', decision_role: 'Dono')
       expect(convert(old).contact).to have_attributes(name: 'Carlos Lima')
-      expect(convert(old).contact.additional_attributes['job_title']).to eq('Dono')
+      expect(convert(old).contact.custom_attributes['job_title']).to eq('Dono')
     end
 
     it 'sem decisor (pesquisa sem resultado), o contato é a própria empresa, vinculado a ela' do
@@ -112,7 +127,7 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
 
       expect(result.contact.name).to eq('Alpha Gastronomia')
       expect(result.contact.company).to eq(result.company)
-      expect(result.contact.additional_attributes).not_to have_key('job_title')
+      expect(result.contact.custom_attributes).not_to have_key('job_title')
     end
 
     it 'reenvio não duplica contato nem empresa' do
@@ -139,14 +154,14 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
       lead.update!(researched)
       user_company = Company.create!(account: account, name: 'Empresa que o usuário escolheu')
       existing = create(:contact, account: account, name: 'Ana (cliente antiga)', phone_number: '+5511999998888',
-                                  company: user_company, additional_attributes: { 'job_title' => 'Diretora' })
+                                  company: user_company, custom_attributes: { 'job_title' => 'Diretora' })
 
       contact = convert.contact.reload
 
       expect(contact).to eq(existing)
       expect(contact.name).to eq('Ana (cliente antiga)')
       expect(contact.company).to eq(user_company)
-      expect(contact.additional_attributes['job_title']).to eq('Diretora')
+      expect(contact.custom_attributes['job_title']).to eq('Diretora')
       expect(contact.email).to eq('contato@alpha.example.com')
     end
 
@@ -221,7 +236,7 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
   describe 'contato do usuário com o mesmo nome do negócio (#680)' do
     it 'decisor não renomeia o contato nem apaga o cargo que o usuário digitou' do
       existing = create(:contact, account: account, name: 'Padaria Alpha', phone_number: '+5531999990001',
-                                  additional_attributes: { 'job_title' => 'Atendimento loja centro' })
+                                  custom_attributes: { 'job_title' => 'Atendimento loja centro' })
       padaria = Autonomia::Prospecting::Lead.create!(
         account: account, provider: 'mock', provider_place_id: 'places/padaria', name: 'Padaria Alpha', phone: '+5531999990001',
         country: 'BR', decision_name: 'Joao da Silva', decision_role: 'Dono', decision_research_status: 'not_researched'
@@ -231,34 +246,49 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
 
       expect(contact).to eq(existing)
       expect(contact.name).to eq('Padaria Alpha')
-      expect(contact.additional_attributes['job_title']).to eq('Atendimento loja centro')
+      expect(contact.custom_attributes['job_title']).to eq('Atendimento loja centro')
     end
 
     it 'sem decisor, o cargo do contato do usuário fica' do
       create(:contact, account: account, name: 'Oficina Beta', phone_number: '+5531999990002',
-                       additional_attributes: { 'job_title' => 'Gerente' })
+                       custom_attributes: { 'job_title' => 'Gerente' })
       oficina = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/oficina',
                                                      name: 'Oficina Beta', phone: '+5531999990002', country: 'BR')
 
       contact = described_class.new(lead: oficina, user: user).perform.contact.reload
 
       expect(contact.name).to eq('Oficina Beta')
-      expect(contact.additional_attributes['job_title']).to eq('Gerente')
+      expect(contact.custom_attributes['job_title']).to eq('Gerente')
     end
 
     it 'cargo que nós gravamos troca com o decisor; cargo que o usuário mudou depois fica' do
       lead.update!(decision_name: 'ANA SOUZA', decision_role: 'SOCIA', decision_research_status: 'not_researched')
       contact = described_class.new(lead: lead, user: user).perform.contact
-      expect(contact.additional_attributes['job_title']).to eq('SOCIA')
+      expect(contact.custom_attributes['job_title']).to eq('SOCIA')
 
       lead.update!(decision_name: 'BRUNO LIMA', decision_role: 'SOCIO')
-      expect(described_class.new(lead: lead, user: user).perform.contact.additional_attributes['job_title']).to eq('SOCIO')
+      expect(described_class.new(lead: lead, user: user).perform.contact.custom_attributes['job_title']).to eq('SOCIO')
 
-      contact.reload.update!(additional_attributes: contact.additional_attributes.merge('job_title' => 'Diretor comercial'))
+      contact.reload.update!(custom_attributes: contact.custom_attributes.merge('job_title' => 'Diretor comercial'))
       lead.update!(decision_name: 'CARLA DIAS', decision_role: 'SOCIA')
       renamed = described_class.new(lead: lead, user: user).perform.contact
       expect(renamed.name).to eq('CARLA DIAS')
-      expect(renamed.additional_attributes['job_title']).to eq('Diretor comercial')
+      expect(renamed.custom_attributes['job_title']).to eq('Diretor comercial')
+    end
+
+    # MOTIVO (#3176): sem decisor, sai só o cargo que nós pusemos; o cargo que o usuário deixou em additional_attributes
+    # (onde a Prospecção gravava antes) não é tocado.
+    it 'sem decisor, sai o cargo que nós gravamos; o de additional_attributes fica' do
+      lead.update!(decision_name: 'ANA SOUZA', decision_role: 'SOCIA', decision_research_status: 'not_researched')
+      contact = described_class.new(lead: lead, user: user).perform.contact
+      contact.update!(additional_attributes: contact.additional_attributes.merge('job_title' => 'Cargo antigo'))
+
+      lead.update!(decision_name: nil, decision_role: nil)
+      contact = described_class.new(lead: lead, user: user).perform.contact
+
+      expect(contact.custom_attributes).not_to have_key('job_title')
+      expect(contact.custom_attributes).not_to have_key(Autonomia::Prospecting::CargoEscrito::WRITTEN_KEY)
+      expect(contact.additional_attributes['job_title']).to eq('Cargo antigo')
     end
   end
 

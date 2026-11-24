@@ -25,6 +25,14 @@ RSpec.describe Relationships::ValuePatch do
       .to raise_error(Relationships::Configuration::Conflict)
   end
 
+  it 'recusa chave interna antes de procurar a definição (#3176)' do
+    contact.update!(custom_attributes: { 'waha_whatsapp_chat_id' => 'chat-ficticio' })
+    payload = { 'key' => 'waha_whatsapp_chat_id', 'value' => nil, 'previous' => 'chat-ficticio' }
+    expect { described_class.new(contact, 'contact_attribute').update!(payload) }
+      .to raise_error(Relationships::Configuration::Invalid, 'Internal field cannot be edited')
+    expect(contact.reload.custom_attributes['waha_whatsapp_chat_id']).to eq('chat-ficticio')
+  end
+
   context 'with checkbox' do
     let(:type) { 'checkbox' }
 

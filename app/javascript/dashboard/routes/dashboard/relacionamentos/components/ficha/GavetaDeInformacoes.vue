@@ -39,6 +39,8 @@ const props = defineProps({
   escolhidos: { type: Array, default: () => [] },
   // #3082: chaves dos campos apagados, que não viram campo solto.
   guardadas: { type: Array, default: () => [] },
+  // #3176: chaves internas (WAHA, controle da Prospecção), que não aparecem.
+  chavesInternas: { type: Array, default: () => [] },
   empresaCadastrada: { type: Object, default: null },
 });
 const emit = defineEmits(['fechar', 'salvar']);
@@ -75,6 +77,8 @@ const campos = computed(() =>
         definicoes: props.definicoes,
         escolhidos: props.escolhidos,
         guardadas: props.guardadas,
+        chavesInternas: props.chavesInternas,
+        traduzir: t,
         valores: inicial.value.atributos,
       })
     : []

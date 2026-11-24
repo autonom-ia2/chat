@@ -195,10 +195,11 @@ class Autonomia::Decisor < ApplicationRecord
     @atributos_de_card ||= account.custom_attribute_definitions.where(attribute_model: 'card_attribute').pluck(:attribute_key)
   end
 
+  # #3176: as chaves internas (ids da WAHA, controle da Prospecção) não são destino de decisor: o valor sai de uma IA.
   def atributos_de_contato
     return [] if account.blank?
 
-    @atributos_de_contato ||= account.custom_attribute_definitions.where(attribute_model: 'contact_attribute').pluck(:attribute_key)
+    @atributos_de_contato ||= account.custom_attribute_definitions.visiveis.where(attribute_model: 'contact_attribute').pluck(:attribute_key)
   end
 
   def item_completo?(item, chaves_obrigatorias)
