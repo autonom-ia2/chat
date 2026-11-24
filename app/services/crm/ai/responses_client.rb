@@ -303,7 +303,8 @@ module Crm
       end
 
       # Até duas novas tentativas só do HTTP; nunca repete o executor de ferramentas.
-      # Erros permanentes (400/401/403/404/422) seguem direto ao tratamento existente.
+      # Erros permanentes (400/401/403/404/422) seguem direto ao tratamento existente. A 429 de chave sem crédito
+      # também (#3202): ela não passa sozinha em segundos, e repetir só atrasava a resposta à pessoa.
       # Timeout e erro HTTP (aqui e no parse_raw) não gravam consumo: sem `usage` no payload não há
       # número a gravar, e não se inventa um (#1656).
       def with_timeout_guard(operation: nil, model: nil, response_id: nil, started_at: nil)
@@ -311,7 +312,7 @@ module Crm
         loop do
           begin
             response = yield
-            return response unless RETRYABLE_STATUS_CODES.include?(response.code.to_i) && retries < @max_retries
+            return response unless repetir?(response, retries)
           rescue *NETWORK_ERRORS => e
             if retries >= @max_retries
               log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
@@ -323,6 +324,14 @@ module Crm
           retries += 1
           sleep(retries)
         end
+      end
+
+      def repetir?(response, retries)
+        RETRYABLE_STATUS_CODES.include?(response.code.to_i) && retries < @max_retries && !sem_credito_na_resposta?(response)
+      end
+
+      def sem_credito_na_resposta?(response)
+        Error.new(code: extract_error_code(response), error_type: extract_error_type(response)).sem_credito?
       end
 
       def parse_raw(response, operation: 'openai.request', model: nil, response_id: nil, started_at: nil)
