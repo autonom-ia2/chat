@@ -1,18 +1,25 @@
 import { nextTick, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
 import { useAutonomiaCopilotStore } from 'dashboard/store/modules/autonomiaCopilot';
 import AutonomiaCopilotContainer from '../AutonomiaCopilotContainer.vue';
 
 const currentAccountId = ref(1);
 const uiSettings = ref({ is_autonomia_copilot_panel_open: true });
+const updateUISettings = vi.fn();
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
-vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables', () => ({
+  useAlert: vi.fn(),
+  useTrack: vi.fn(),
+}));
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
     uiSettings,
-    updateUISettings: vi.fn(),
+    updateUISettings,
   }),
 }));
 vi.mock('dashboard/composables/store', () => ({
@@ -34,7 +41,7 @@ const mountCopilot = async () => {
     attachTo: document.body,
     global: {
       mocks: { $t: key => key },
-      directives: { onClickOutside: {}, dompurifyHtml: {} },
+      directives: { onClickOutside: {}, onClickaway: {}, dompurifyHtml: {} },
     },
   });
   await flushPromises();
@@ -161,5 +168,101 @@ describe('AutonomiaCopilotContainer', () => {
 
     expect(useAutonomiaCopilotStore().messages).toHaveLength(2);
     expect(wrapper.text()).not.toContain('CAPTAIN.COPILOT.LOADER');
+  });
+
+  describe('desenho do Guia (#3191)', () => {
+    it('assina com o nome do agente, nunca com o do Captain', async () => {
+      AutonomiaCopilotAPI.chat.mockResolvedValue({
+        data: { available: true, text: 'Resumo.' },
+      });
+      wrapper = await mountCopilot();
+
+      await send(wrapper.find('textarea'), 'Resuma a conversa');
+
+      expect(wrapper.get('h2').text()).toBe('Lia');
+      expect(wrapper.text()).not.toContain('CAPTAIN.NAME');
+      expect(wrapper.find('[data-resposta]').text()).toContain('Lia');
+    });
+
+    it('o campo diz a quem se pergunta e não tem clipe', async () => {
+      wrapper = await mountCopilot();
+
+      expect(wrapper.get('textarea').attributes('placeholder')).toBe(
+        'AUTONOMIA_COPILOT.PLACEHOLDER'
+      );
+      expect(
+        wrapper
+          .find('button[aria-label="AUTONOMIA_GUIDE.FILE.ATTACH"]')
+          .exists()
+      ).toBe(false);
+    });
+
+    it('uma sugestão manda o pedido num toque', async () => {
+      AutonomiaCopilotAPI.chat.mockReturnValue(new Promise(() => {}));
+      wrapper = await mountCopilot();
+
+      await wrapper.findAll('[data-sugestao]')[0].trigger('click');
+      await flushPromises();
+
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({
+          message: 'AUTONOMIA_COPILOT.SUGGESTIONS.SUMMARY',
+        })
+      );
+    });
+
+    it('"Usar esta resposta" leva a última resposta para a caixa de resposta', async () => {
+      const emit = vi.spyOn(emitter, 'emit');
+      AutonomiaCopilotAPI.chat.mockResolvedValue({
+        data: { available: true, text: 'Olá, Ana!', reply_suggestion: true },
+      });
+      wrapper = await mountCopilot();
+      await send(wrapper.find('textarea'), 'Escreva uma resposta');
+
+      const usar = wrapper.get('[data-usar-resposta]');
+      expect(usar.classes()).toContain('min-h-11');
+      await usar.trigger('click');
+
+      expect(emit).toHaveBeenCalledWith(
+        BUS_EVENTS.INSERT_INTO_RICH_EDITOR,
+        'Olá, Ana!'
+      );
+      emit.mockRestore();
+    });
+
+    it('sem resposta pronta para o cliente, não oferece usar', async () => {
+      AutonomiaCopilotAPI.chat.mockResolvedValue({
+        data: { available: true, text: 'O cliente quer desconto.' },
+      });
+      wrapper = await mountCopilot();
+      await send(wrapper.find('textarea'), 'Resuma a conversa');
+
+      expect(wrapper.find('[data-usar-resposta]').exists()).toBe(false);
+    });
+
+    it('aberto, avisa o menu para recolher; fechado, deixa de avisar', async () => {
+      wrapper = await mountCopilot();
+      expect(menuEGuia.copilotoAberto.value).toBe(true);
+
+      wrapper.unmount();
+      wrapper = null;
+      expect(menuEGuia.copilotoAberto.value).toBe(false);
+    });
+
+    it('o Guia abrir fecha o copiloto e devolve o painel do contato', async () => {
+      wrapper = await mountCopilot();
+
+      uiSettings.value = {
+        is_autonomia_copilot_panel_open: true,
+        is_autonomia_guide_panel_open: true,
+      };
+      await nextTick();
+
+      expect(updateUISettings).toHaveBeenCalledWith({
+        is_autonomia_copilot_panel_open: false,
+        is_contact_sidebar_open: true,
+      });
+    });
   });
 });

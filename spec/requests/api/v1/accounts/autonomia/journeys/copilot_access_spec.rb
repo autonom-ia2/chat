@@ -44,7 +44,7 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
       expect(listed.pluck('id')).to include(both_agent.id)
       entry = listed.find { |a| a['id'] == both_agent.id }
       expect(entry['actuation']).to eq('both')
-      expect(entry.keys).to match_array(%w[id name actuation description])
+      expect(entry.keys).to match_array(%w[id name actuation description avatar_url])
     end
 
     it 'never lists agents that belong to another account' do

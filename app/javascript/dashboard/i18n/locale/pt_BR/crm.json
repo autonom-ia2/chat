@@ -4824,12 +4824,27 @@
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Copiloto Autonom.ia",
-    "RESET": "Nova conversa",
-    "KICK_OFF": "Pergunte ao copiloto sobre esta conversa: resumo, próximos passos, rascunho de resposta.",
-    "NO_AGENTS": "Nenhum copiloto da equipe disponível ainda. Crie um em Agentes de IA.",
+    "KICK_OFF": "Pergunte sobre esta conversa: um resumo, o próximo passo ou um rascunho de resposta.",
+    "NO_AGENTS": "Ainda não há copiloto da equipe. Crie um em Agentes de IA.",
     "UNAVAILABLE": "O copiloto está indisponível no momento.",
     "ERROR": "Não foi possível falar com o copiloto. Tente novamente.",
-    "INSERTED": "Inserido na resposta."
+    "INSERTED": "Inserido na resposta.",
+    "SUBTITLE": "Só você vê",
+    "NEW_TOPIC": "Novo assunto",
+    "CHANGE_AGENT": "Trocar de agente. Agora: {nome}",
+    "AGENTS_MENU": "Com qual agente você quer falar?",
+    "CLOSE": "Fechar o copiloto",
+    "BACK": "Voltar para a conversa",
+    "PANEL": "Copiloto da equipe",
+    "LOG": "Conversa com {nome}",
+    "PLACEHOLDER": "Pergunte para {nome}",
+    "THINKING": "Pensando…",
+    "USE": "Usar esta resposta",
+    "SUGGESTIONS": {
+      "SUMMARY": "Resuma esta conversa",
+      "NEXT_STEP": "Qual é o próximo passo?",
+      "DRAFT": "Escreva uma resposta para o cliente"
+    }
   },
   "AUTONOMIA_GUIDE": {
     "GRAFICO": {
