@@ -108,7 +108,7 @@ module Autonomia
 
       # #3198: builds from the newest message back and stops at the cap — with files in it, the cap is reached sooner,
       # and the newest messages are the ones the operator is asking about. Whole lines only (who spoke stays on each
-      # line), and a document in a message that would not fit is never downloaded.
+      # line). Messages older than the first one that does not fit are never read, so their documents are not downloaded.
       def transcript
         midia.ler_pendentes(chat_messages)
         linhas = []
