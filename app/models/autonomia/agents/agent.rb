@@ -55,7 +55,7 @@ module Autonomia
       include Autonomia::Agents::DesfazerAjuste
       # #1429 (F3) — "Atualizar com a nova base" e o Desfazer dela, pelo mesmo histórico de versões (Fase 2).
       include Autonomia::Agents::TrocaDaBase
-      # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências e autoteste), protegidas do save.
+      # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências), protegidas do save.
       include Autonomia::Agents::ConfigDoMaterial
       # #1479 / #2723 — "Endereço e telefone" do agente (`config['atendimento']`), validado em todo caminho que grava.
       include Autonomia::Agents::DadosDoAtendimento

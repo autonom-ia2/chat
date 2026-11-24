@@ -265,7 +265,7 @@ module Autonomia
           # (rescue interno + kill-switch). Cobre add (ProcessJob) e remove (RecomputeOverallJob) — ambos
           # passam por aqui.
           RefreshInstructionJob.enqueue(agent, reason: :kb_changed)
-          # #1426 (tema 4b) — a base mudou: contradições e autoteste, agrupados numa espera (só Fase 2, fora da Lia).
+          # #1426 (tema 4b) — a base mudou: contradições, agrupadas numa espera (só Fase 2, fora da Lia).
           Autonomia::Agents::Material::BaseMudouJob.agendar(agent)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][reviewer] recompute_overall degraded agent=#{agent&.id} #{e.class}")

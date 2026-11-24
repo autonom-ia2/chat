@@ -83,7 +83,7 @@ module Autonomia
       scope :accepted, -> { where(review_status: 'accepted') }
 
       # #2487 — o material do próprio agente, sem o de um post ou anúncio (care_id). Todo leitor do material do agente
-      # fora do Retriever (painel, conferências, placar, autoteste, recompute) parte daqui.
+      # fora do Retriever (painel, conferências, placar, recompute) parte daqui.
       scope :da_agente, -> { where(care_id: nil) }
 
       # G6 — fontes SERVÍVEIS: aceitas E com geração de entries vigente — `ready` (caminho normal)

@@ -1,9 +1,9 @@
 # #1426 (tema 4b) — as chaves do `config` do agente que o SISTEMA escreve para o material: as conferências entre
-# materiais (`conferencia_da_base`: contradições, duplicados mantidos) e o autoteste (`autoteste`). Ninguém as escreve
+# materiais (`conferencia_da_base`: contradições, duplicados mantidos). Ninguém as escreve
 # pela API (o controller as tira do que chega, RESERVED_CONFIG_KEYS).
 #
 # A CORRIDA: um save do agente (painel, API, Construtor, voltar versão) grava o jsonb `config` inteiro com o que leu no
-# começo. Um resultado do autoteste gravado no meio seria apagado pela versão velha. Por isso:
+# começo. Uma conferência gravada no meio seria apagada pela versão velha. Por isso:
 # - toda escrita destas chaves é atômica, no próprio UPDATE (jsonb_set), e a que depende do valor atual lê sob a trava
 #   da linha (`alterar_chave_do_material!`);
 # - todo save que muda o `config` relê, sob a mesma trava (SELECT … FOR UPDATE, dentro da transação do save), o valor
@@ -11,23 +11,20 @@
 module Autonomia::Agents::ConfigDoMaterial
   extend ActiveSupport::Concern
 
-  CHAVES = %w[conferencia_da_base autoteste].freeze
+  CHAVES = %w[conferencia_da_base].freeze
 
   included do
     before_update :manter_chaves_do_material, if: :manter_chaves_do_material?
   end
 
   class_methods do
-    # Grava `valor` em `chave`, só nela, num UPDATE só. `onde` (opcional) é uma guarda a mais no mesmo UPDATE (ex.: a
-    # rodada do autoteste ainda é a vigente). true se gravou. NÃO mexe no `updated_at`: é estado do sistema, não edição
-    # do dono, e o Desfazer e a correção do ajuste (#1428) usam o `updated_at` para saber se o agente mudou.
-    def gravar_chave_do_material!(agent_id, chave, valor, onde: nil)
+    # Grava `valor` em `chave`, só nela, num UPDATE só. true se gravou. NÃO mexe no `updated_at`: é estado do sistema,
+    # não edição do dono, e o Desfazer e a correção do ajuste (#1428) usam o `updated_at` para saber se o agente mudou.
+    def gravar_chave_do_material!(agent_id, chave, valor)
       raise ArgumentError, "chave fora do material: #{chave}" unless CHAVES.include?(chave)
 
-      escopo = where(id: agent_id)
-      escopo = escopo.where(onde) if onde
-      escopo.update_all(["config = jsonb_set(COALESCE(config, '{}'::jsonb), ?::text[], ?::jsonb, true)", # rubocop:disable Rails/SkipsModelValidations
-                         "{#{chave}}", valor.to_json]) == 1
+      sql = "config = jsonb_set(COALESCE(config, '{}'::jsonb), ?::text[], ?::jsonb, true)"
+      where(id: agent_id).update_all([sql, "{#{chave}}", valor.to_json]) == 1 # rubocop:disable Rails/SkipsModelValidations
     end
   end
 

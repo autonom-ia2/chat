@@ -196,7 +196,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # Chaves de SISTEMA que o usuário NUNCA pode setar via API: forjar `system_key` tornaria um agente
   # invisível/imutável (agents_scope o esconde) e permitiria se passar pelo Guia da Plataforma.
   # `papel` (tema 14): a marca de origem do ajudante só nasce pelo início do Construtor (BuildThread), nunca pela API.
-  # #1426 — as chaves do material (conferências e autoteste) são do sistema: a API nunca as escreve.
+  # #1426 — as chaves do material (conferências) são do sistema: a API nunca as escreve.
   # `base` (#1429): a marca do segmento com que o agente nasceu; o sistema grava no nascimento, nunca a API.
   # `modelo_pronto` (#2881): a marca do modelo pronto de ramo (as listas que entram nas instruções do agente); só o
   # Construtor e a edição conferida do rascunho (`ModelosDeRamo::Edicao`) a escrevem, nunca o PATCH do agente.

@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1426 (tema 4b) — a escolha da pessoa num problema: contradição grava qual vale e não apaga nada; duplicado tira o
-# repetido ou mantém os dois; autoteste confirma a resposta. Problema que sumiu ou escolha fora das opções: Invalido.
+# repetido ou mantém os dois. Problema que sumiu ou escolha fora das opções: Invalido.
 RSpec.describe Autonomia::Agents::Material::Resolver do
   include_context 'with material do agente'
 
@@ -49,31 +49,6 @@ RSpec.describe Autonomia::Agents::Material::Resolver do
 
     expect(agent.sources.count).to eq(2)
     expect(Autonomia::Agents::Material::Problemas.new(agent.reload).lista).to be_empty
-  end
-
-  it 'autoteste "a resposta está certa": o item conta como certo e sai da lista' do
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', {
-                                                         'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto',
-                                                         'itens' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'errado' }]
-                                                       })
-    resolver("duplicado-#{site.id}-#{pdf.id}", 'os_dois')
-
-    resolver('autoteste-r1-0', 'certa')
-
-    expect(agent.reload.config.dig('autoteste', 'itens', 0, 'confirmada')).to be(true)
-    expect(Autonomia::Agents::Material::Problemas.new(agent).lista).to be_empty
-  end
-
-  it 'autoteste: com outra rodada já rodando, o cartão aberto (da rodada dos itens) ainda se resolve' do
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', {
-                                                         'rodada' => 'r2', 'rodada_dos_itens' => 'r1', 'estado' => 'rodando',
-                                                         'itens' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'errado' }]
-                                                       })
-    resolver("duplicado-#{site.id}-#{pdf.id}", 'os_dois')
-
-    resolver('autoteste-r1-0', 'certa')
-
-    expect(agent.reload.config.dig('autoteste', 'itens', 0, 'confirmada')).to be(true)
   end
 
   it 'problema que não existe mais, ou sem escolha nesta tela: Invalido', :aggregate_failures do

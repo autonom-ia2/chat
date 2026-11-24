@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #1431 (F0) — o juiz do placar: mesma saída do juiz do autoteste (veredito por índice, válido para a origem), com a
+# #1431 (F0) — o juiz do placar: um veredito por índice, válido para a origem, com a
 # régua escrita do placar e os trechos que o agente usou. Saída que não fecha ou provedor fora: nil.
 RSpec.describe Autonomia::Agents::JuizDoPlacar do
   include_context 'with material do agente'

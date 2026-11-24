@@ -1,4 +1,4 @@
-# #1426 (tema 4b) — montagem comum dos specs das conferências e do autoteste do material: uma conta da Fase 2, um agente
+# #1426 (tema 4b) — montagem comum dos specs das conferências do material: uma conta da Fase 2, um agente
 # comum e materiais com texto lido. `material(...)` cria um material já lido e revisado, com os trechos dados.
 RSpec.shared_context 'with material do agente' do
   let(:account) { create(:account).tap { |conta| Autonomia::Agents::Fase2.ligar!(conta) } }
