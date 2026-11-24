@@ -30,8 +30,15 @@ class CampaignJourney::Reenvio::Resultado
 
     totais = resultado.totals
     campanha = resultado.campaign_payload
-    { channel: campanha[:channel], id: campanha[:id], name: campanha[:name], processing: campanha[:processing],
+    { channel: campanha[:channel], id: campanha[:id], name: campanha[:name], processing: saindo?(resultado, campanha),
       receberam: resultado.is_a?(CampaignJourney::EmailResult) ? totais[:delivered] : totais[:sent], responderam: totais[:replied] }
+  end
+
+  # Ainda saindo: o resultado dela diz que está enviando ou, no WhatsApp Oficial e no SMS, ela ainda não começou. A
+  # varredura grava `enviado` logo que a cria, e a Campaign nasce `active`: só vira `processing` quando o envio começa
+  # (Campaign#mark_processing!). Sem isto a tela mostrava "0 receberam" sem dizer que ela ainda vai sair.
+  def saindo?(resultado, campanha)
+    campanha[:processing] || (resultado.campaign.is_a?(Campaign) && resultado.campaign.active?)
   end
 
   # O resultado da campanha nova pelo mesmo endereço da tela dele (CampaignJourney::ResultFinder), só dentro da conta.

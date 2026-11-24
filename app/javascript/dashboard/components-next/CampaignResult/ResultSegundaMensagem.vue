@@ -38,6 +38,13 @@ const icone = computed(() => ICONES[status.value] || 'i-lucide-send');
 const numeros = computed(
   () => status.value === 'enviado' && Boolean(campanha.value)
 );
+// #3206: criada há pouco e ninguém recebeu ainda — "está começando", nunca "saiu para 0".
+const comecando = computed(
+  () =>
+    numeros.value &&
+    Boolean(campanha.value.processing) &&
+    !campanha.value.receberam
+);
 
 const quem = computed(() =>
   t(
@@ -121,8 +128,15 @@ const LINK =
         <h2 class="m-0 text-base font-semibold text-n-slate-12">
           {{ t(`${NS}.TITULO`) }}
         </h2>
+        <p
+          v-if="comecando"
+          class="m-0 text-sm break-words text-n-slate-12"
+          data-frase
+        >
+          {{ t(`${NS}.COMECANDO`, { quem }) }}
+        </p>
         <I18nT
-          v-if="numeros"
+          v-else-if="numeros"
           :keypath="`${NS}.ENVIADA`"
           tag="p"
           scope="global"
@@ -145,7 +159,7 @@ const LINK =
           {{ frase }}
         </p>
         <p
-          v-if="numeros && campanha.processing"
+          v-if="numeros && campanha.processing && !comecando"
           class="m-0 text-sm text-n-slate-11"
           data-saindo
         >

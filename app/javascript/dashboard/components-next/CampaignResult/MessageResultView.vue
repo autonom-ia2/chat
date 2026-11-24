@@ -25,7 +25,12 @@ import ResultDuasVersoesDaCampanha from './ResultDuasVersoesDaCampanha.vue';
 import ResultSegundaMensagem from './ResultSegundaMensagem.vue';
 import ResultPeopleTable from './ResultPeopleTable.vue';
 import { useResultPolling } from './useResultPolling';
-import { journeyStatus, messageKpis, resultBalance } from './resultMetrics';
+import {
+  journeyStatus,
+  messageKpis,
+  resultBalance,
+  segundaMensagemSaindo,
+} from './resultMetrics';
 
 const props = defineProps({
   channel: { type: String, required: true },
@@ -136,7 +141,13 @@ const refresh = async () => {
   refreshKey.value += 1;
 };
 
-useResultPolling(refresh, () => Boolean(campaign.value.processing));
+// #3206: também enquanto a segunda mensagem do "Mandar de novo" ainda sai, para os números dela subirem.
+useResultPolling(
+  refresh,
+  () =>
+    Boolean(campaign.value.processing) ||
+    segundaMensagemSaindo(result.value?.segunda_mensagem)
+);
 
 const runApiAction = async action => {
   if (busy.value) return;

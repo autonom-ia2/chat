@@ -4,6 +4,7 @@ import {
   journeyStatus,
   messageKpis,
   percent,
+  segundaMensagemSaindo,
   resultBalance,
   resultRoute,
   statusTabs,
@@ -121,5 +122,28 @@ describe('campaign result helpers (#1007)', () => {
     expect(wonValueText([{ currency: 'REAIS', cents: 990000 }], 'pt-BR')).toBe(
       'REAIS 9.900'
     );
+  });
+
+  // #3206: o resultado continua se atualizando enquanto a segunda mensagem sai.
+  it('segundaMensagemSaindo: só com a segunda enviada e ainda saindo', () => {
+    expect(
+      segundaMensagemSaindo({
+        status: 'enviado',
+        campanha: { processing: true },
+      })
+    ).toBe(true);
+    expect(
+      segundaMensagemSaindo({
+        status: 'enviado',
+        campanha: { processing: false },
+      })
+    ).toBe(false);
+    expect(segundaMensagemSaindo({ status: 'enviado', campanha: null })).toBe(
+      false
+    );
+    expect(
+      segundaMensagemSaindo({ status: 'aguardando', campanha: null })
+    ).toBe(false);
+    expect(segundaMensagemSaindo(null)).toBe(false);
   });
 });

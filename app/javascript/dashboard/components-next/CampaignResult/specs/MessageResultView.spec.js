@@ -456,6 +456,44 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
       });
     });
 
+    // #3206: com a primeira terminada, a tela segue se atualizando enquanto a segunda sai.
+    it('continua se atualizando enquanto a segunda mensagem sai', async () => {
+      vi.useFakeTimers();
+      const segunda = processing => ({
+        status: 'enviado',
+        dias: 3,
+        quem: 'nao_respondeu',
+        previsto_em: null,
+        campanha: {
+          channel: 'whatsapp_official',
+          id: 9,
+          name: 'X · second message',
+          processing,
+          receberam: 3,
+          responderam: 0,
+        },
+      });
+      api.getResult.mockResolvedValue({
+        data: { payload: { ...result(), segunda_mensagem: segunda(true) } },
+      });
+      const { wrapper } = mountView();
+      await flushPromises();
+      expect(api.getResult).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(api.getResult).toHaveBeenCalledTimes(2);
+
+      api.getResult.mockResolvedValue({
+        data: { payload: { ...result(), segunda_mensagem: segunda(false) } },
+      });
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(api.getResult).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(api.getResult).toHaveBeenCalledTimes(3);
+      wrapper.unmount();
+      vi.useRealTimers();
+    });
+
     it('campanha sem segunda mensagem não mostra o bloco', async () => {
       const { wrapper } = mountView();
       await flushPromises();
