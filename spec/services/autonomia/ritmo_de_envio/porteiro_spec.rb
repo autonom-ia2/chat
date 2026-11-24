@@ -9,8 +9,9 @@ RSpec.describe Autonomia::RitmoDeEnvio::Porteiro do
 
   before { account.update_columns(settings: account.settings.to_h.merge('reporting_timezone' => 'America/Sao_Paulo')) } # rubocop:disable Rails/SkipsModelValidations
 
-  def ritmo(limite: nil, horario: nil)
-    account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => { 'limite' => limite, 'horario' => horario })) # rubocop:disable Rails/SkipsModelValidations
+  def ritmo(limite: nil, horario: nil, intervalo: nil)
+    guardado = { 'limite' => limite, 'intervalo' => intervalo, 'horario' => horario }
+    account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => guardado)) # rubocop:disable Rails/SkipsModelValidations
     account.reload
   end
 
@@ -75,6 +76,43 @@ RSpec.describe Autonomia::RitmoDeEnvio::Porteiro do
       enviado(Time.utc(2026, 11, 18, 23, 30, 0)) # quarta, 20h30 em São Paulo
 
       expect(quando).to eq(Time.utc(2026, 11, 20, 11, 0, 0)) # vaga às 20h31 de quinta, sai sexta 8h
+    end
+  end
+
+  describe 'intervalo entre mensagens (#3101)' do
+    before { ritmo(intervalo: { 'horas' => 4 }) }
+
+    it 'deixa mandar quando a última mensagem saiu há mais tempo que o intervalo' do
+      enviado(agora - 5.hours)
+
+      expect(quando).to be_nil
+    end
+
+    it 'adia até a última mensagem mais o intervalo' do
+      enviado(agora - 3.days)
+      enviado(agora - 1.hour)
+
+      expect(quando).to eq(agora - 1.hour + 4.hours + described_class::FOLGA)
+    end
+
+    it 'deixa mandar para quem nunca recebeu e para quem não tem ficha' do
+      expect(quando).to be_nil
+      expect(quando(nil)).to be_nil
+    end
+
+    it 'fica com a vaga mais distante entre o limite e o intervalo' do
+      ritmo(limite: { 'mensagens' => 2, 'dias' => 1 }, intervalo: { 'horas' => 4 })
+      enviado(agora - 20.hours)
+      enviado(agora - 1.hour)
+
+      expect(quando).to eq(agora - 20.hours + 1.day + described_class::FOLGA)
+    end
+
+    it 'joga a vaga do intervalo para a abertura seguinte do horário' do
+      ritmo(intervalo: { 'horas' => 12 }, horario: { 'inicio' => 8, 'fim' => 20, 'dias_da_semana' => [0, 1, 2, 3, 4, 5, 6] })
+      enviado(agora - 1.hour) # 9h em São Paulo; a vaga às 21h01 cai fora do horário
+
+      expect(quando).to eq(Time.utc(2026, 11, 20, 11, 0, 0)) # sexta, 8h em São Paulo
     end
   end
 

@@ -580,6 +580,12 @@ describe('camposDaPessoa', () => {
     { ...definicao(8, 'setor', 'text'), attribute_model: 'company_attribute' },
     definicao(9, 'cor', 'moeda'),
   ];
+  // #3176: a lista do servidor (getter attributes/getChavesInternas).
+  const CHAVES_INTERNAS = [
+    'waha_whatsapp_chat_id',
+    'autonomia_prospecting_lead_id',
+    'autonomia_prospecting_provider_place_id',
+  ];
 
   // #3082 — o valor de campo apagado (guardado escondido) não vira campo solto;
   // o valor sem definição que nunca foi campo continua aparecendo.
@@ -597,6 +603,7 @@ describe('camposDaPessoa', () => {
   it('a ordem: escolhidos pelo configurador, os com valor, os soltos e o resto', () => {
     const campos = camposDaPessoa({
       definicoes: DEFINICOES,
+      chavesInternas: CHAVES_INTERNAS,
       escolhidos: [6],
       valores: {
         site: 'https://exemplo.com.br',
@@ -623,6 +630,51 @@ describe('camposDaPessoa', () => {
     });
     // Tipo desconhecido vira texto.
     expect(campos.find(c => c.chave === 'cor').tipo).toBe('text');
+  });
+
+  // #3176 — contato da Prospecção: o controle interno não vira campo solto, e o
+  // que serve à equipe aparece com nome em português.
+  it('contato da Prospecção: sem linha técnica, com cargo e nota no Google', () => {
+    const traduzir = chave => `t:${chave}`;
+    const campos = camposDaPessoa({
+      definicoes: [],
+      chavesInternas: CHAVES_INTERNAS,
+      traduzir,
+      valores: {
+        autonomia_prospecting_lead_id: 12,
+        autonomia_prospecting_provider_place_id: 'lugar-ficticio-1',
+        autonomia_prospecting_rating: 4.7,
+        autonomia_prospecting_reviews_count: 31,
+        job_title: 'Gerente',
+        cor_favorita: 'Azul',
+      },
+    });
+    expect(campos.map(c => [c.chave, c.rotulo])).toEqual([
+      [
+        'autonomia_prospecting_rating',
+        't:RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.NOTA_NO_GOOGLE',
+      ],
+      [
+        'autonomia_prospecting_reviews_count',
+        't:RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.AVALIACOES_NO_GOOGLE',
+      ],
+      ['job_title', 't:RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.CARGO'],
+      ['cor_favorita', 'Cor favorita'],
+    ]);
+  });
+
+  it('a chave interna com definição também fica fora; sem a lista, nada sai', () => {
+    const valores = { waha_whatsapp_chat_id: '55@c.us' };
+    expect(
+      camposDaPessoa({
+        definicoes: DEFINICOES,
+        chavesInternas: CHAVES_INTERNAS,
+        valores,
+      }).map(c => c.chave)
+    ).not.toContain('waha_whatsapp_chat_id');
+    expect(
+      camposDaPessoa({ definicoes: DEFINICOES, valores }).map(c => c.chave)
+    ).toContain('waha_whatsapp_chat_id');
   });
 
   it('link só abre com http ou https', () => {

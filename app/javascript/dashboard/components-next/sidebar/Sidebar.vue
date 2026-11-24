@@ -3,6 +3,7 @@ import { useRelationships } from 'dashboard/composables/useRelationships';
 import { h, ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { provideSidebarContext, useSidebarResize } from './provider';
+import { useMenuRecolheComOGuia } from './menuEGuia';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
@@ -33,6 +34,7 @@ import {
   META_ADS_VIEW_PERMISSION,
   META_ADS_MANAGE_PERMISSION,
   POSTS_PERMISSIONS,
+  FIDELIDADE_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
@@ -432,6 +434,10 @@ const sidebarStyle = computed(() => ({
       }
     : {}),
 }));
+
+// #3184 — o menu publica a largura para o Guia, e recolhe (sem gravar) quando o
+// Guia abre. Ver menuEGuia.js.
+useMenuRecolheComOGuia({ sidebarWidth, isCollapsed, celular: isMobile });
 
 // On mobile, sidebar is always expanded (flyout mode)
 const isEffectivelyCollapsed = computed(
@@ -1282,6 +1288,22 @@ const menuItems = computed(() => {
           : []),
       ]),
     },
+    // Fidelidade (#3100): depois de Campanhas, sem flag. Vê o administrador ou quem tem fidelidade_view/_manage.
+    ...(isAdministrator.value || hasAnyPermission(FIDELIDADE_PERMISSIONS)
+      ? [
+          {
+            name: 'Fidelidade',
+            label: t('FIDELIDADE.TITULO'),
+            icon: 'i-lucide-gift',
+            to: accountScopedRoute('fidelidade_index'),
+            activeOn: [
+              'fidelidade_index',
+              'fidelidade_montar',
+              'fidelidade_cupom_novo',
+            ],
+          },
+        ]
+      : []),
     // Central de Ajuda da plataforma (#501): a tela de leitura, aberta a todas as contas. O editor de
     // portais do Chatwoot saiu do menu: a Central é só leitura e o conteúdo vem do repositório.
     {

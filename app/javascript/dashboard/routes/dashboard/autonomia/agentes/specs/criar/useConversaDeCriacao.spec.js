@@ -33,6 +33,7 @@ const prepararStore = (extra = {}) => {
     'autonomiaBuildThreads/getPhase': 'interviewing',
     'autonomiaBuildThreads/getError': null,
     'autonomiaBuildThreads/getThread': null,
+    'autonomiaBuildThreads/getThreadState': {},
     'autonomiaBuildThreads/getAgent': null,
     'autonomiaBuildThreads/getUIFlags': { creating: false, sending: false },
     'autonomiaSources/getSources': [],
@@ -80,6 +81,29 @@ const respondeu = vezes => {
 describe('useConversaDeCriacao', () => {
   beforeEach(() => prepararStore());
   afterEach(() => vi.useRealTimers());
+
+  it('#3202: flags the out-of-credit key only on a failed turn with that code', () => {
+    const { conversa } = montar();
+    expect(conversa.semCredito.value).toBe(false);
+
+    store.state['autonomiaBuildThreads/getStatus'] = 'failed';
+    store.state['autonomiaBuildThreads/getThreadState'] = {
+      error: 'ia_sem_credito',
+    };
+    expect(conversa.semCredito.value).toBe(true);
+    expect(conversa.falhou.value).toBe(true);
+
+    store.state['autonomiaBuildThreads/getThreadState'] = {
+      error: 'build_error',
+    };
+    expect(conversa.semCredito.value).toBe(false);
+
+    store.state['autonomiaBuildThreads/getStatus'] = 'processing';
+    store.state['autonomiaBuildThreads/getThreadState'] = {
+      error: 'ia_sem_credito',
+    };
+    expect(conversa.semCredito.value).toBe(false);
+  });
 
   it('opens the Builder with only the model, so the AI speaks first (no message)', () => {
     const { conversa } = montar({ modelo: 'sdr' });

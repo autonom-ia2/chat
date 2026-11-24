@@ -14,8 +14,8 @@ import { dependenciaDe, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
 import { motivoDasChaves, motivoDaTrava } from './motivoDaTrava';
 
-// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 24 módulos e cada uma das 59 chaves
-// aparece na conversa guiada. Os specs conferem 24/24 e 59/59; as chaves que nenhuma tela mostra ficam em FORA (#2352).
+// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 26 módulos e cada uma das 62 chaves
+// aparece na conversa guiada. Os specs conferem 26/26 e 62/62; as chaves que nenhuma tela mostra ficam em FORA (#2352).
 export const LINHAS = ['CONVERSATIONS', 'CONTACTS', 'CRM'];
 export const DENTRO_DE = {
   ASSIGNMENT: 'CONVERSATIONS',
@@ -36,6 +36,7 @@ export const RECOLHIDA = [
   'WHATSAPP_TEMPLATES',
   'META_ADS',
   'POSTS',
+  'LOYALTY',
   'INBOXES',
   'AUTONOMIA',
   // #1430: ligar os robôs a outros sistemas. Só com a flag agente_ferramentas_delegadas (listedModules); a chave é de
@@ -92,6 +93,8 @@ export const DONO_DAS_CHAVES = {
     'meta_ads_manage',
     'posts_view',
     'posts_manage',
+    'fidelidade_view',
+    'fidelidade_manage',
     'inbox_view',
     'inbox_manage',
     'autonomia_view',

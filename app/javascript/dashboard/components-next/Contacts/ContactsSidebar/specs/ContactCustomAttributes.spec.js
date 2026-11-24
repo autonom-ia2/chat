@@ -3,18 +3,25 @@ import ContactCustomAttributes from '../ContactCustomAttributes.vue';
 
 // #2138 — na página do contato, os campos internos da WAHA não aparecem, nem nos
 // usados (com valor) nem nos sem valor; os campos de verdade continuam. A lista
-// passa pelo getter de verdade (attributes/getContactAttributes), que os esconde.
+// passa pelo getter de verdade (attributes/getContactAttributes), que os esconde
+// com a lista do servidor (#3176, aqui as três da WAHA).
 const state = vi.hoisted(() => ({ contactAttributes: [] }));
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables/store', async () => {
   const { getters } = await import('dashboard/store/modules/attributes');
+  const internas = [
+    'waha_whatsapp_chat_id',
+    'waha_whatsapp_jid',
+    'waha_whatsapp_lid',
+  ];
   return {
     useMapGetter: () => ({
       get value() {
-        return getters.getContactAttributes({
-          records: state.contactAttributes,
-        });
+        return getters.getContactAttributes(
+          { records: state.contactAttributes },
+          { getChavesInternas: internas }
+        );
       },
     }),
   };

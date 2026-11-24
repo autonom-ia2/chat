@@ -210,6 +210,34 @@ describe('PainelDoContato — o que aparece', () => {
     ]);
   });
 
+  // #3176: o cargo gravado sem campo conta em "Outras informações"; o controle
+  // interno da Prospecção, não.
+  it('"Outras informações" conta o cargo sem campo e não o controle interno', async () => {
+    const contato = {
+      ...CONTATO,
+      custom_attributes: {
+        melhor_horario: 'Depois das 14h',
+        job_title: 'Gerente',
+        autonomia_prospecting_lead_id: 12,
+      },
+    };
+    const definicoes = [
+      {
+        id: 1,
+        attribute_key: 'melhor_horario',
+        attribute_display_name: 'Melhor horário',
+        attribute_model: 'contact_attribute',
+      },
+    ];
+    const { wrapper } = montar({
+      props: { contact: contato },
+      estado: { definicoes, anexos: [] },
+    });
+    await flushPromises();
+
+    expect(linhasDeMais(wrapper)).toContain('Outras informações (2)');
+  });
+
   it('enquanto "Mais" carrega, mostra o esqueleto; depois some se não há nada', async () => {
     let soltar;
     ContactAPI.getConversations.mockReturnValue(

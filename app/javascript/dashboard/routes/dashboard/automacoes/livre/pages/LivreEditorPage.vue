@@ -60,6 +60,10 @@ import {
   comPassosNovos,
 } from '../passosNovos/passosNovos';
 import { guardarNomesDosPassosNovos } from '../passosNovos/nomesDaConta';
+import {
+  receitaDaFidelidade,
+  requerDaReceita,
+} from '../passosNovos/fidelidadeNaAutomacao';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -70,9 +74,14 @@ const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
 // G13 (#2670): o passo que manda dados para fora pede a chave de integrações.
-const podeIntegrar = usePermissionGranted('integration_manage');
-const temChave = chave =>
-  chave === 'integration_manage' ? podeIntegrar.value : false;
+// #3100: os da fidelidade ("Dar carimbos", "Mandar cupom") pedem fidelidade_manage.
+// Mesma regra do servidor (permission_granted?): administrador ou a função com a
+// chave. Chave que não está aqui não libera o passo.
+const CHAVES_DOS_PASSOS = {
+  integration_manage: usePermissionGranted('integration_manage'),
+  fidelidade_manage: usePermissionGranted('fidelidade_manage'),
+};
+const temChave = chave => Boolean(CHAVES_DOS_PASSOS[chave]?.value);
 const { catalogo: doServidor } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
@@ -241,7 +250,29 @@ const receitaPronta = chave => {
   const liberada = item && (item.requer || []).every(isCloudFeatureEnabled);
   return liberada ? item : null;
 };
+// #3100 — os dois avisos do cartão fidelidade (ProgramaPronto) e o "Mandar
+// este cupom" (aba Cupons) não moram na porta: chegam pelo endereço
+// (?receita=FIDELIDADE_SALDO&unidade=carimbos, ?receita=FIDELIDADE_CUPOM&cupom=7)
+// e só abrem com as flags que pedem.
+const avisoDaFidelidade = chave => {
+  const cupom = Number.parseInt(route.query.cupom, 10);
+  const aviso = receitaDaFidelidade(
+    chave,
+    t,
+    route.query.unidade,
+    Number.isInteger(cupom) ? cupom : null
+  );
+  return aviso && requerDaReceita(chave).every(isCloudFeatureEnabled)
+    ? aviso
+    : null;
+};
 const usarReceita = async chave => {
+  const aviso = avisoDaFidelidade(chave);
+  if (aviso) {
+    await editor.aplicar(copiar(aviso.receita));
+    nome.value = aviso.nome;
+    return;
+  }
   const item = receitaPronta(chave);
   if (!item) return;
   await editor.aplicar(copiar(item.receita));
@@ -666,6 +697,8 @@ onMounted(() => {
                 :automacao-id="automacao.id"
                 :catalogo="catalogoComTextos"
                 :account-id="Number(route.params.accountId)"
+                :receita-ativa="automacao.versao?.receita || null"
+                :pode-mudar="podeMudar"
               />
             </div>
             <aside class="flex flex-col gap-3 lg:sticky lg:top-6">

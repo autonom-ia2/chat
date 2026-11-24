@@ -1,13 +1,17 @@
 <script setup>
 import { computed } from 'vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter.js';
-import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import GuideGrafico from './GuideGrafico.vue';
 import { pedacosDaResposta } from './graficosNaResposta';
 
-// #3158 (B8a) — a fala do Guia no balão. Sem gráfico, é a mensagem de sempre.
-// Com gráfico, cada um entra no lugar do marcador que o modelo escreveu; o que
-// ficou sem marcador vai para o fim (`pedacosDaResposta`).
+// A fala do Guia (#3184): o texto num cartão sem bico, com o ícone do Guia ao
+// lado, e cada gráfico num cartão próprio na largura toda (#3158, B8a: no
+// lugar do marcador que o modelo escreveu; o que ficou sem marcador vai para o
+// fim, `pedacosDaResposta`).
+//
+// Sem bico e sem o nome em cima de cada fala: balão com bico é conversa com
+// gente de verdade (a da cliente, no WhatsApp, fica ao lado). O nome continua
+// para o leitor de tela.
 const props = defineProps({
   message: {
     type: Object,
@@ -17,17 +21,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  isLastMessage: {
-    type: Boolean,
-    default: false,
-  },
   senderName: {
     type: String,
     default: '',
   },
+  // #3191 — o Copiloto da equipe fala com a foto do agente no lugar do ícone
+  // do Guia. Sem foto, fica o ícone.
+  foto: {
+    type: String,
+    default: '',
+  },
 });
-
-const temGraficos = computed(() => (props.graficos || []).length > 0);
 
 const pedacos = computed(() =>
   pedacosDaResposta(props.message?.content, props.graficos)
@@ -37,40 +41,51 @@ const formatar = texto => new MessageFormatter(texto).formattedMessage;
 </script>
 
 <template>
-  <CopilotAssistantMessage
-    v-if="!temGraficos"
-    :message="message"
-    :is-last-message="isLastMessage"
-    :sender-name="senderName"
-  />
-  <div
-    v-else
-    class="flex flex-col gap-1 text-n-slate-12"
-    data-resposta-com-graficos
-  >
-    <!-- Mesma cara do CopilotAssistantMessage: nome e, na resposta retida (sem texto), o mesmo aviso acima do gráfico. -->
-    <div class="font-medium">
-      {{ senderName || $t('AUTONOMIA_GUIDE.TITLE') }}
-    </div>
-    <span v-if="!message?.content" class="text-n-ruby-11" data-sem-texto>
-      {{ $t('CAPTAIN.COPILOT.EMPTY_MESSAGE') }}
+  <div class="flex items-start gap-2 w-full" data-resposta>
+    <img
+      v-if="foto"
+      :src="foto"
+      alt=""
+      class="size-7 mt-1 shrink-0 rounded-lg object-cover"
+      data-foto
+    />
+    <span
+      v-else
+      class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
+      aria-hidden="true"
+    >
+      <span class="i-lucide-sparkles size-4" />
     </span>
-    <template v-for="(pedaco, indice) in pedacos" :key="indice">
-      <GuideGrafico
-        v-if="pedaco.tipo === 'grafico'"
-        :modo="pedaco.grafico.modo"
-        :titulo="pedaco.grafico.titulo"
-        :medida="pedaco.grafico.medida"
-        :barras="pedaco.grafico.barras"
-        :de="pedaco.grafico.de"
-        :ate="pedaco.grafico.ate"
-      />
-      <div
-        v-else
-        v-dompurify-html="formatar(pedaco.texto)"
-        class="prose-sm break-words"
-        data-trecho
-      />
-    </template>
+    <div class="flex flex-col flex-1 gap-2 min-w-0 text-n-slate-12">
+      <span class="sr-only">{{
+        senderName || $t('AUTONOMIA_GUIDE.TITLE')
+      }}</span>
+      <p
+        v-if="!message?.content"
+        class="mb-0 rounded-xl border border-n-weak bg-n-solid-1 px-4 py-3 text-base text-n-ruby-11"
+        data-sem-texto
+      >
+        {{ $t('CAPTAIN.COPILOT.EMPTY_MESSAGE') }}
+      </p>
+      <template v-for="(pedaco, indice) in pedacos" :key="indice">
+        <GuideGrafico
+          v-if="pedaco.tipo === 'grafico'"
+          :modo="pedaco.grafico.modo"
+          :titulo="pedaco.grafico.titulo"
+          :medida="pedaco.grafico.medida"
+          :barras="pedaco.grafico.barras"
+          :de="pedaco.grafico.de"
+          :ate="pedaco.grafico.ate"
+        />
+        <div
+          v-else
+          v-dompurify-html="formatar(pedaco.texto)"
+          class="rounded-xl border border-n-weak bg-n-solid-1 px-4 py-3 text-base leading-relaxed break-words text-n-slate-12 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:ps-5 [&_ul]:list-disc [&_ol]:my-2 [&_ol]:ps-5 [&_ol]:list-decimal [&_a]:text-n-blue-11 [&_a]:underline"
+          data-trecho
+        />
+      </template>
+      <!-- O que se faz com a resposta (no Copiloto: "Usar esta resposta"). -->
+      <slot />
+    </div>
   </div>
 </template>

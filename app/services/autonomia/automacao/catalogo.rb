@@ -65,7 +65,11 @@ module Autonomia::Automacao::Catalogo
                        # G57 (#2769): hoje ou amanhã; a peça mostra também o `daqui`.
                        'quando_do_retorno' => 'quando_do_retorno', 'daqui_do_retorno' => 'duracao',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
-                       'de_novo' => 'de_novo' }.freeze
+                       'de_novo' => 'de_novo',
+                       # #3099: a versão 2 do passo "mensagem" e a regra do teste (LivreDuasVersoes.vue).
+                       'duas_versoes' => 'duas_versoes',
+                       # #3101: quando a mensagem sai, na hora ou no melhor horário do cliente (LivreMelhorHorario.vue).
+                       'quando_mandar' => 'quando' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
   # etapa do "card" (G4) e o contato em que ele nasce (G49), e a hora da conferência do "esperar até" sem prazo (G64,
   # mostrada pela peça do prazo). O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão

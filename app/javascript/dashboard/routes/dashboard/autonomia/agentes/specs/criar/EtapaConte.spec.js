@@ -20,6 +20,30 @@ describe('EtapaConte', () => {
     document.body.innerHTML = '';
   });
 
+  it('#3202: out-of-credit key says so and links to OpenAI billing', async () => {
+    const wrapper = montar({ falhou: true, semCredito: true });
+    const cartao = wrapper.get('[data-sem-credito]');
+    expect(cartao.text()).toContain('AGENTS.JORNADA.CRIAR.CONTE.SEM_CREDITO');
+    expect(cartao.text()).not.toContain('AGENTS.JORNADA.CRIAR.CONTE.ERRO');
+    const link = cartao.get('[data-link-credito]');
+    expect(link.attributes('href')).toBe(
+      'https://platform.openai.com/settings/organization/billing/overview'
+    );
+    expect(link.attributes('target')).toBe('_blank');
+    expect(link.attributes('rel')).toContain('noopener');
+
+    await cartao.get('button').trigger('click');
+    expect(wrapper.emitted('tentarDeNovo')).toHaveLength(1);
+  });
+
+  it('#3202: any other failure keeps the usual card', () => {
+    const wrapper = montar({ falhou: true });
+    expect(wrapper.find('[data-sem-credito]').exists()).toBe(false);
+    expect(wrapper.get('[data-erro-conversa]').text()).toContain(
+      'AGENTS.JORNADA.CRIAR.CONTE.ERRO'
+    );
+  });
+
   it('shows the AI turn and names who speaks for screen readers', () => {
     const wrapper = montar();
     const fala = wrapper.get('[data-fala="assistente"]');

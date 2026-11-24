@@ -10,12 +10,17 @@ module Crm
       # pedido chegou e a resposta não voltou a tempo (Net::ReadTimeout): a OpenAI pode ter processado e cobrado (#2301).
       # `incomplete_reason`: a OpenAI parou a resposta no meio (status incomplete; por exemplo, max_output_tokens) e não
       # sobrou texto. Vem só o motivo que ela manda, nunca o texto (#2696).
+      # `code`: o código do erro que a OpenAI manda no JSON (`error.code`, ou `error.type` sem ele). `sem_credito?`: a
+      # chave ficou sem crédito (`insufficient_quota`); o Construtor usa para dizer isso ao dono da chave (#3202).
       class Error < StandardError
-        attr_reader :status, :incomplete_reason
+        SEM_CREDITO = 'insufficient_quota'.freeze
 
-        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false, incomplete_reason: nil)
+        attr_reader :status, :incomplete_reason, :code
+
+        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false, incomplete_reason: nil, code: nil)
           super(message)
           @status = status
+          @code = code
           @rede = rede
           @tempo_esgotado = tempo_esgotado
           @incomplete_reason = incomplete_reason
@@ -26,6 +31,8 @@ module Crm
         end
 
         def tempo_esgotado? = @tempo_esgotado
+
+        def sem_credito? = @code == SEM_CREDITO
       end
 
       REQUEST_TIMEOUT = 180
@@ -317,7 +324,7 @@ module Crm
       def parse_raw(response, operation: 'openai.request', model: nil, response_id: nil, started_at: nil)
         unless response.success?
           log_http_error(response, operation: operation, model: model, response_id: response_id, started_at: started_at)
-          raise Error.new(extract_error_message(response), status: response.code.to_i)
+          raise Error.new(extract_error_message(response), status: response.code.to_i, code: extract_error_code(response))
         end
 
         response.parsed_response
@@ -363,7 +370,7 @@ module Crm
       def parse_response(response, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil)
         unless response.success?
           log_http_error(response, operation: 'responses.create', model: model, started_at: started_at)
-          raise Error.new(extract_error_message(response), status: response.code.to_i)
+          raise Error.new(extract_error_message(response), status: response.code.to_i, code: extract_error_code(response))
         end
 
         parse_response_payload(response.parsed_response, model: model, requested_tools: requested_tools,
@@ -518,6 +525,13 @@ module Crm
         return parsed['error']['message'] if parsed.is_a?(Hash) && parsed.dig('error', 'message').present?
 
         "openai_responses_error_#{response.code}"
+      end
+
+      def extract_error_code(response)
+        parsed = safe_parsed_response(response)
+        return unless parsed.is_a?(Hash) && parsed['error'].is_a?(Hash)
+
+        (parsed['error']['code'].presence || parsed['error']['type'].presence)&.to_s
       end
     end
   end

@@ -52,6 +52,8 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'contato.etiqueta_tirada', alvo: CONTATO, origem: :evento, parametros: %w[etiqueta]),
     # #3097: a pessoa entrou num grupo de compra, por uma venda ou com o passar do tempo (Relacionamentos::Compras::Recalcular).
     Entrada.new(tipo: 'contato.entrou_no_grupo_de_compra', alvo: CONTATO, origem: :evento, parametros: %w[grupo_de_compra]),
+    # #3100: a pessoa completou o cartão fidelidade, pela compra ou à mão (Fidelidade::CartaoCompleto).
+    Entrada.new(tipo: 'contato.completou_cartao_fidelidade', alvo: CONTATO, origem: :evento, parametros: []),
     Entrada.new(tipo: 'card.criado', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.entrou_na_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),

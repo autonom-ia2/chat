@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 764 |
-| Sem corpo | 212 |
-| Com corpo | 552 |
-| Com corpo e formato completo | 465 (84,2%) |
-| Com corpo e formato incompleto | 87 |
+| No catálogo | 774 |
+| Sem corpo | 213 |
+| Com corpo | 561 |
+| Com corpo e formato completo | 473 (84,3%) |
+| Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 23 de 239 |
-| Leituras cruas tipadas | 235 de 328 |
+| Campos aninhados com vocabulário | 23 de 248 |
+| Leituras cruas tipadas | 243 de 338 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 73 |
+| leitura crua sem tipo | 74 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -99,6 +99,7 @@ Uma ação pode ter mais de um motivo.
 - `POST email_campaigns/maintenance/backfills/:id/retry` — lê o corpo cru da requisição
 - `POST email_campaigns/reputation/override` — leitura crua sem tipo: duration_seconds (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), message_budget (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), reason (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...)
 - `POST email_campaigns/reputation/provider_release` — leitura crua sem tipo: reason (repassada a ::EmailCampaigns::Reputation::ProviderRelease.new.call)
+- `POST fidelidade/cupons/conferir` — leitura crua sem tipo: codigo (repassada a ::Fidelidade::ConferirCupom.new(Current.account, ve_conta...)
 - `POST inboxes/:id/set_agent_bot` — leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)
 - `POST inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
 - `POST inboxes/:inbox_id/whatsapp_conversation_assets/media` — leitura crua sem tipo: file
@@ -200,6 +201,8 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/reputations#provider_release` reason — repassada a ::EmailCampaigns::Reputation::ProviderRelease.new.call
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
+- `api/v1/accounts/fidelidade/cupons#conferir` codigo — repassada a ::Fidelidade::ConferirCupom.new(Current.account
+- `api/v1/accounts/fidelidade/cupons#conferir` ve_conta...) — o código não converte nem compara o valor
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
 - `api/v1/accounts/inboxes/whatsapp_conversation_assets#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
@@ -223,8 +226,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 497 |
-| Com parâmetros conhecidos | 446 |
+| No catálogo | 503 |
+| Com parâmetros conhecidos | 452 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

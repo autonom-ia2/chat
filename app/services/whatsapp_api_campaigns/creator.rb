@@ -16,11 +16,20 @@ module WhatsappApiCampaigns
         attach_media!(campaign)
       end
 
-      ScheduleDueCampaignsJob.perform_later if campaign.scheduled_at <= Time.current && Config.enabled?
+      enqueue_scheduler_after_commit(campaign)
       campaign
     end
 
     private
+
+    # #3101: callers may wrap the creation in a bigger transaction (the journey creator with the audience link, the
+    # journey controller with the sending options). The scheduler is enqueued only after the outermost commit, so it
+    # never runs before the campaign and what goes with it exist; with no transaction open it is enqueued right away.
+    def enqueue_scheduler_after_commit(campaign)
+      return unless campaign.scheduled_at <= Time.current && Config.enabled?
+
+      ActiveRecord.after_all_transactions_commit { ScheduleDueCampaignsJob.perform_later }
+    end
 
     def campaign_attributes
       inbox = fetch_inbox

@@ -130,7 +130,7 @@ const mountGuide = ({ t = key => key } = {}) =>
     attachTo: document.body,
     global: {
       mocks: { $t: t },
-      directives: { onClickOutside: {}, dompurifyHtml: {} },
+      directives: { onClickOutside: {}, onClickaway: {}, dompurifyHtml: {} },
     },
   });
 
@@ -313,9 +313,7 @@ describe('AutonomiaGuideContainer', () => {
     await flushPromises();
     expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledOnce();
 
-    await wrapper
-      .get('button[aria-label="AUTONOMIA_GUIDE.A11Y.NEW_CONVERSATION"]')
-      .trigger('click');
+    await wrapper.get('[data-novo-assunto]').trigger('click');
     resolveResposta({
       data: { status: 'done', available: true, text: 'Resposta antiga.' },
     });
@@ -368,6 +366,24 @@ describe('AutonomiaGuideContainer', () => {
     expect(textarea.attributes('readonly')).toBeDefined();
     expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.SENDING');
     expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.WRITE_WHILE_WORKING');
+  });
+
+  // #3184 — o cartão diz que não tem desfazer, com ou sem o aviso do servidor.
+  it('says the action cannot be undone, even with a server warning', async () => {
+    const store = useAutonomiaGuideStore();
+    store.addAssistantMessage({
+      content: 'Posso apagar.',
+      acao: {
+        ...ACAO,
+        descricao: { ...ACAO.descricao, aviso: 'Isto apaga o registro.' },
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    const cartao = wrapper.get('[data-cartao-acao]');
+    expect(cartao.text()).toContain('Isto apaga o registro.');
+    expect(cartao.find('[data-sem-desfazer]').exists()).toBe(true);
   });
 
   it('sends a single request when confirm is clicked twice', async () => {
@@ -832,7 +848,11 @@ describe('AutonomiaGuideContainer', () => {
         attachTo: document.body,
         global: {
           mocks: { $t: key => key },
-          directives: { onClickOutside: {}, dompurifyHtml: {} },
+          directives: {
+            onClickOutside: {},
+            onClickaway: {},
+            dompurifyHtml: {},
+          },
           stubs: {
             GuideGrafico: {
               name: 'GuideGrafico',
@@ -885,8 +905,11 @@ describe('AutonomiaGuideContainer', () => {
     wrapper = mountGuide();
     await flushPromises();
 
+    // #3184 — "O que eu sei" fica no menu "Mais", com nome escrito.
+    await wrapper.find('[data-mais]').trigger('click');
     await wrapper
-      .find('[aria-label="AUTONOMIA_GUIDE.MEMORY.TITLE"]')
+      .findAll('button')
+      .find(botao => botao.text().includes('AUTONOMIA_GUIDE.MEMORY.TITLE'))
       .trigger('click');
     await flushPromises();
 
@@ -1436,7 +1459,7 @@ describe('AutonomiaGuideContainer — embutido', () => {
       props: { embutido: true, ...props },
       global: {
         mocks: { $t: key => key },
-        directives: { onClickOutside: {}, dompurifyHtml: {} },
+        directives: { onClickOutside: {}, onClickaway: {}, dompurifyHtml: {} },
       },
     });
 
@@ -1969,7 +1992,7 @@ describe('AutonomiaGuideContainer — pergunta pronta de outra tela (#977)', () 
       props: { embutido: true },
       global: {
         mocks: { $t: key => key },
-        directives: { onClickOutside: {}, dompurifyHtml: {} },
+        directives: { onClickOutside: {}, onClickaway: {}, dompurifyHtml: {} },
       },
     });
     await flushPromises();

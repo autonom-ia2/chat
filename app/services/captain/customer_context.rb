@@ -27,7 +27,8 @@ class Captain::CustomerContext
     end
   end
 
+  # #3176: sem as chaves internas (Relationships::ChavesInternas: ids da WAHA, controle da Prospecção).
   def definitions
-    @definitions ||= conversation.account.custom_attribute_definitions.where(attribute_model: ATTRIBUTE_MODELS).order(:id).to_a
+    @definitions ||= conversation.account.custom_attribute_definitions.visiveis.where(attribute_model: ATTRIBUTE_MODELS).order(:id).to_a
   end
 end

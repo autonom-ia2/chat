@@ -103,20 +103,25 @@ const previewsClient = new ApiClient('campaign_journey/recipient_previews', {
   accountScoped: true,
 });
 
-const appendCampaignField = (formData, key, value) => {
+// Nested objects go as campaign[key][inner][…] at any depth: `duas_versoes` (#3099) carries `segunda` with its own
+// `variable_defaults`.
+const appendField = (formData, name, value) => {
   if (value === null || value === undefined) return;
   if (value instanceof File) {
-    formData.append(`campaign[${key}]`, value);
+    formData.append(name, value);
     return;
   }
   if (typeof value === 'object') {
     Object.entries(value).forEach(([inner, innerValue]) =>
-      formData.append(`campaign[${key}][${inner}]`, innerValue)
+      appendField(formData, `${name}[${inner}]`, innerValue)
     );
     return;
   }
-  formData.append(`campaign[${key}]`, value);
+  formData.append(name, value);
 };
+
+const appendCampaignField = (formData, key, value) =>
+  appendField(formData, `campaign[${key}]`, value);
 
 export const journeyCampaignsAPI = {
   create: payload => campaignsClient.create(payload),

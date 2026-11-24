@@ -81,4 +81,14 @@ RSpec.describe 'Campaign journey e-mail medição (#3098)', :aggregate_failures,
 
     expect(response).to have_http_status(:not_found)
   end
+
+  # #3101: a revisão do e-mail grava o melhor horário junto da medição; sem a chave, desliga.
+  it 'liga e desliga o melhor horário do e-mail' do
+    medir({ grupo_de_controle_pct: 0, melhor_horario: true })
+    expect(response).to have_http_status(:no_content)
+    expect(Autonomia::MelhorHorario.ligado?(campaign)).to be(true)
+
+    medir({ grupo_de_controle_pct: 0 })
+    expect(Autonomia::MelhorHorario.ligado?(campaign)).to be(false)
+  end
 end

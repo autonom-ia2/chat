@@ -112,7 +112,7 @@ const trocarVelocidade = () => {
           ? $t('AUTONOMIA_GUIDE.VOICE.PAUSE')
           : $t('AUTONOMIA_GUIDE.VOICE.PLAY')
       "
-      class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+      class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-n-blue-11 text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
       @click="alternar"
     >
       <i
@@ -135,7 +135,7 @@ const trocarVelocidade = () => {
             total: tempoTotal,
           })
         "
-        class="w-full h-11 m-0 cursor-pointer accent-n-brand focus-visible:outline-2 focus-visible:outline focus-visible:outline-n-blue-11"
+        class="w-full h-11 m-0 cursor-pointer accent-n-blue-11 focus-visible:outline-2 focus-visible:outline focus-visible:outline-n-blue-11"
         @input="aoMoverBarra"
         @keydown.left.prevent="irPara(atual - PASSO_DAS_SETAS)"
         @keydown.right.prevent="irPara(atual + PASSO_DAS_SETAS)"

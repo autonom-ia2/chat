@@ -124,4 +124,15 @@ RSpec.describe 'Journey recipient preview (#993)', :aggregate_failures, type: :r
     preview({ channel: 'email' }, agent)
     expect(response).to have_http_status(:unauthorized)
   end
+
+  # #3101: quantos de quem recebe já têm o melhor horário aprendido (quem recusou fica de fora).
+  it 'conta quem de quem recebe já tem melhor horário' do
+    { 'Ana Souza' => 14, 'Bia Lima' => 9, 'Caio Reis' => nil }.each do |nome, hora|
+      Autonomia::HorarioDeResposta.create!(account: account, contact: contact_named(nome), por_hora: Array.new(24, 0),
+                                           hora: hora, calculado_em: Time.current)
+    end
+
+    expect(preview(channel: 'whatsapp_cloud')['melhor_horario']).to eq('conhecidos' => 1)
+    expect(preview(channel: 'email')['melhor_horario']).to eq('conhecidos' => 1)
+  end
 end

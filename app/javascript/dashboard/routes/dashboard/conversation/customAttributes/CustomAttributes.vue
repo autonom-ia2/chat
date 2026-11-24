@@ -15,6 +15,7 @@ import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConf
 import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
 import { naTela } from 'dashboard/helper/atributosNaTela';
+import { informacoesConhecidas } from 'dashboard/helper/informacoesConhecidas';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
@@ -109,6 +110,18 @@ const customAttributes = computed(() => {
 });
 
 const conversationId = computed(() => currentChat.value.id);
+
+// #3176 — a informação do contato sem definição de campo, com chave conhecida
+// (cargo, nota e avaliações no Google), aparece aqui com o mesmo nome da ficha.
+// Só leitura: quem quiser editar cria o campo. Chave com definição na conta
+// (mesmo fora da tela) segue a definição.
+const informacoesSoltas = computed(() => {
+  if (props.attributeType !== 'contact_attribute') return [];
+  const definidas = getters['attributes/getAttributesByModel']
+    .value('contact_attribute')
+    .map(definicao => definicao.attribute_key);
+  return informacoesConhecidas(customAttributes.value, definidas);
+});
 
 const toggleButtonText = computed(() =>
   !showAllAttributes.value
@@ -372,9 +385,23 @@ const evenClass = [
       </template>
     </Draggable>
 
+    <div
+      v-for="informacao in informacoesSoltas"
+      :key="informacao.chave"
+      data-informacao-conhecida
+      class="flex flex-col gap-1 px-4 py-3 text-sm border-b border-n-weak/50 dark:border-n-weak/90"
+    >
+      <span class="min-w-0 break-words font-medium text-n-slate-12">
+        {{ t(informacao.rotulo) }}
+      </span>
+      <span class="min-w-0 break-words text-n-slate-11">
+        {{ informacao.valor }}
+      </span>
+    </div>
     <p
       v-if="
         !displayedElements.length &&
+        !informacoesSoltas.length &&
         emptyStateMessage &&
         !(relationshipSidebar && relationshipState.error)
       "

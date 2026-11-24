@@ -21,6 +21,12 @@ campaign_journey_stalled_campaigns_job:
   class: 'CampaignJourney::StalledCampaignsJob'
   queue: scheduled_jobs
 
+# #3099: picks the version that goes to the rest of a campaign with two versions of the message (fork job)
+campaign_journey_escolher_vencedora_job:
+  cron: '*/5 * * * *'
+  class: 'CampaignJourney::EscolherVencedoraJob'
+  queue: scheduled_jobs
+
 # #2921: puts back in the queue a contact, audience or campaign base import whose worker died midway (fork job)
 campaign_imports_stalled_imports_job:
   cron: '*/5 * * * *'
@@ -340,6 +346,12 @@ autonomia_automacao_tempo_job:
   class: 'Autonomia::Automacao::TempoJob'
   queue: scheduled_jobs
 
+# executed every 15 minutes; escolhe a versão que fica nos passos com duas versões da mensagem da Automação livre (#3099).
+autonomia_automacao_escolher_vencedora_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Automacao::EscolherVencedoraJob'
+  queue: scheduled_jobs
+
 # executed every hour; a renovação da carteira de seguros (#2898, E5): um job por conta que já escolheu onde ficam as
 # renovações cria o card de cada seguro que entra em renovação hoje. De hora em hora porque o dia vira no fuso de cada
 # conta; quem já tem card não entra de novo.
@@ -502,12 +514,27 @@ carteira_limpeza_das_leituras_job:
   class: 'Carteira::LimpezaDasLeiturasJob'
   queue: scheduled_jobs
 
+# executed daily; arruma os contatos que a Prospecção criou antes do #3176 (cargo no lugar que as telas leem, sem a
+# categoria do Google em inglês). Idempotente: depois da primeira noite só lê, e só trava o contato que tem o que arrumar.
+relationships_arrumar_contatos_da_prospeccao_job:
+  cron: '10 8 * * *'
+  class: 'Relationships::ArrumarContatosDaProspeccaoJob'
+  queue: async_database_migration
+
 # A busca de todo dia no Agger da carteira de seguros (#2900, E7): começa, para cada conta que ligou "Buscar novos seguros
 # todo dia" e tem o Agger pronto, a busca dos últimos 7 dias, que entra sozinha na carteira. De madrugada no Brasil
 # (06:20 UTC), quando a corretora não está usando a plataforma; cada conta anda no seu job, uma chamada por vez.
 carteira_conector_busca_diaria_job:
   cron: '20 6 * * *'
   class: 'Carteira::Conector::BuscaDiariaJob'
+  queue: scheduled_jobs
+
+# executed daily; o PDF do Agger que está guardado e nunca foi lido (#3175): o que chegou antes da leitura na chegada
+# existir, ou cuja leitura se perdeu. Põe na fila a leitura de cada um (Carteira::Conector::PdfsSemLeituraJob), depois da
+# busca de todo dia. A leitura é UMA por PDF: o que já foi lido, ou não tem nada vazio, fica de fora.
+carteira_conector_pdfs_sem_leitura_job:
+  cron: '50 7 * * *'
+  class: 'Carteira::Conector::PdfsSemLeituraJob'
   queue: scheduled_jobs
 
 # executed every 5 minutes; devolve ao envio os destinatários de campanha adiados pelo limite por cliente ou pelo
@@ -517,10 +544,31 @@ autonomia_ritmo_de_envio_varredura_job:
   class: 'Autonomia::RitmoDeEnvio::VarreduraJob'
   queue: scheduled_jobs
 
+# executed every 15 minutes; o "Mandar de novo" das campanhas (#3101): grava a hora da segunda mensagem quando a
+# primeira termina e, na hora, cria a campanha da segunda mensagem só com quem não respondeu.
+campaign_journey_reenvio_varredura_job:
+  cron: '*/15 * * * *'
+  class: 'CampaignJourney::ReenvioVarreduraJob'
+  queue: scheduled_jobs
+
+# executed every day at 05:35 UTC (2h35 no Brasil); o melhor horário de cada cliente (#3101): recalcula a hora em que
+# costuma escrever quem escreveu nas últimas 24 h. De madrugada, longe das campanhas e das outras rotinas.
+autonomia_melhor_horario_aprender_job:
+  cron: '35 5 * * *'
+  class: 'Autonomia::MelhorHorario::AprenderJob'
+  queue: scheduled_jobs
+
 # executed every day at 12:45 UTC (9h45 no Brasil); os grupos de compra de Relacionamentos (#3097): refaz o resumo de
 # compras de cada conta com venda, e quem passou de grupo com o tempo dispara "entrou no grupo de compra". De dia, para
 # a mensagem da automação não sair de madrugada; fora do minuto :00 de 12h UTC, que já tem quatro rotinas pesadas.
 relacionamentos_compras_varredura_job:
   cron: '45 12 * * *'
   class: 'Relacionamentos::Compras::VarreduraJob'
+  queue: scheduled_jobs
+
+# executed every day at 12:30 UTC (9h30 no Brasil), fora dos minutos das outras rotinas de 12h; o cartão fidelidade
+# (#3100): vence os carimbos que passaram da validade, por ordem de chegada, e o saldo de cada pessoa desce junto.
+fidelidade_vencer_job:
+  cron: '30 12 * * *'
+  class: 'Fidelidade::VencerJob'
   queue: scheduled_jobs

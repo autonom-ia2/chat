@@ -48,6 +48,34 @@ RSpec.describe Autonomia::Agents::Builder::SubmitJob do
     expect(ActionCable.server).to have_received(:broadcast).with(user.pubsub_token, hash_including(event: event))
   end
 
+  describe 'OpenAI key out of credit (#3202)' do
+    let(:sem_credito) do
+      Crm::Ai::ResponsesClient::Error.new('You have no credits remaining.', status: 429, code: 'insufficient_quota')
+    end
+
+    before { allow(builder).to receive(:run!).and_raise(sem_credito) }
+
+    it 'records a stable code when the account uses its own key' do
+      allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+      create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                                 settings: { 'api_key' => 'chave-de-teste' })
+
+      run_job(thread.begin_build!)
+
+      expect(thread.reload).to be_failed
+      expect(thread.state['error']).to eq(described_class::SEM_CREDITO)
+    end
+
+    it 'keeps the original message when the platform key is the one out of credit' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-plataforma')
+
+      run_job(thread.begin_build!)
+
+      expect(thread.reload).to be_failed
+      expect(thread.state['error']).to eq('You have no credits remaining.')
+    end
+  end
+
   it 'stays quiet when the generation was superseded' do
     run_job('token-antigo')
 

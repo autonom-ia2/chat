@@ -12,6 +12,8 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivrePrazo from './LivrePrazo.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
+import LivreDuasVersoes from './LivreDuasVersoes.vue';
+import LivreMelhorHorario from './LivreMelhorHorario.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreCampanha from './LivreCampanha.vue';
 import LivreProspeccao from './LivreProspeccao.vue';
@@ -48,6 +50,8 @@ import { dadoDoAlvo, temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
 import { custoPorMensagem } from '../custoDaIa';
+import { segundaVersaoPronta, semModeloSobrando } from '../versoesDoPasso';
+import { useHorarioPermitido } from 'dashboard/components-next/CampaignJourney/ritmo/useHorarioPermitido';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -76,6 +80,8 @@ const props = defineProps({
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
 const { t, locale } = useI18n();
+// #3101: o horário de envio da conta, que o "No melhor horário do cliente" respeita.
+const horarioPermitido = useHorarioPermitido();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -239,9 +245,10 @@ const abrir = item => {
 // Quem usa fecha o painel quando a mudança deu certo; se a API recusou, o
 // painel fica aberto com o que a pessoa montou.
 const salvar = () => {
+  // #3099: tirado o modelo da versão 1, o da versão 2 sai junto.
   const valor = trocaDoGatilho.value
     ? { ...rascunho.value, filtros: trocaDoGatilho.value.filtros }
-    : rascunho.value;
+    : semModeloSobrando(rascunho.value);
   emit('salvar', { ...alvo.value, valor: copiar(valor) });
 };
 
@@ -302,6 +309,8 @@ const nativoPronto = campo => {
         (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
       )
     );
+  // #3099: as duas versões, ligadas, pedem a versão 2 pronta e diferente.
+  if (campo.peca === 'duas_versoes') return segundaVersaoPronta(rascunho.value);
   // G14: a peça da campanha mostra e confere o passo inteiro.
   if (campo.peca === 'campanha')
     return campanhaPronta(rascunho.value, caixasDaConta.value);
@@ -545,6 +554,20 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreDuasVersoes
+          v-else-if="campo.peca === 'duas_versoes'"
+          :model-value="rascunho"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => (rascunho = novo)"
+        />
+        <LivreMelhorHorario
+          v-else-if="campo.peca === 'quando'"
+          :rotulo="$t('REENVIO_HORARIO.AUTOMACAO.ROTULO')"
+          :horario-permitido="horarioPermitido"
+          :model-value="rascunho[campo.nome] || 'na_hora'"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreDestinatarios

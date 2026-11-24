@@ -3,7 +3,7 @@ import { useEventListener } from '@vueuse/core';
 import axios from 'dashboard/api/relationships';
 import { useStore } from './store';
 import { useAccount } from './useAccount';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
+import { semChavesInternas } from 'dashboard/helper/chavesInternas';
 
 // A store belongs to one application session. CLEAR_USER also invalidates pending work.
 const sessions = new WeakMap();
@@ -68,11 +68,15 @@ export function useRelationships() {
       ? session.entries[key.value]?.state || emptyState()
       : emptyState()
   );
-  // Fork (#2138): as telas recebem as definições sem os campos internos da WAHA;
-  // a sessão guarda a lista inteira, que é a que vai para o store.
+  // Fork (#2138, #3176): as telas recebem as definições sem as das chaves
+  // internas (lista do servidor, pelo getter attributes/getChavesInternas); a
+  // sessão guarda a lista inteira, que é a que vai para o store.
   const state = computed(() => ({
     ...rawState.value,
-    definitions: semAtributosInternosDoWhatsapp(rawState.value.definitions),
+    definitions: semChavesInternas(
+      rawState.value.definitions,
+      store.getters['attributes/getChavesInternas']
+    ),
   }));
   // A lista inteira, para quem grava a configuração das áreas (FieldConfigurator):
   // montar a lista salva só com as visíveis apagaria os ids escondidos dela.

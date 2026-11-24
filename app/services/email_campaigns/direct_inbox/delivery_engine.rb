@@ -4,6 +4,8 @@ module EmailCampaigns
     # com intervalo aleatório (60-120s), só em horário comercial (9-18h, dias úteis),
     # respeitando o teto diário da caixa e com auto-pausa por falhas. Sem SES.
     class DeliveryEngine
+      include ::Autonomia::MelhorHorario::DoMotor
+
       TIMEZONE = 'America/Sao_Paulo'.freeze
       CHAIN_KEY = 'email_campaigns:direct_inbox:next_tick:%<campaign_id>d'.freeze
       # The key only marks the newest chain; it expires a little after its tick's time, so it never outlives the chain.
@@ -51,7 +53,7 @@ module EmailCampaigns
       # #3063: the limit per customer and the sending hours of the account, right before the send.
       def deliver_now_or_postpone(recipient)
         contato = ::EmailCampaigns::RitmoDoDestinatario.contato(@campaign, recipient)
-        return if ::EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato)
+        return if ::EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato, melhor_horario: melhor_horario_ligado?(@campaign))
 
         result = RecipientSender.new(@campaign, Sender.new(@inbox)).deliver(recipient)
         ::EmailCampaigns::RitmoDoDestinatario.contar!(@campaign, contato) if result == :sent

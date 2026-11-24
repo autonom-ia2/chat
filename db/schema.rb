@@ -703,6 +703,38 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
     t.index ["autor_id"], name: "index_autonomia_automacao_versoes_on_autor_id"
   end
 
+  create_table "autonomia_automacao_versoes_envios", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "passo", null: false
+    t.bigint "execucao_id"
+    t.string "alvo_type", null: false
+    t.bigint "alvo_id", null: false
+    t.bigint "contact_id"
+    t.integer "versao", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_versoes_envios_on_account_id"
+    t.index ["automacao_id", "passo", "versao"], name: "idx_autonomia_automacao_versoes_envios_passo"
+    t.index ["contact_id"], name: "index_autonomia_automacao_versoes_envios_on_contact_id"
+    t.index ["execucao_id"], name: "index_autonomia_automacao_versoes_envios_on_execucao_id"
+  end
+
+  create_table "autonomia_automacao_versoes_vencedoras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "passo", null: false
+    t.integer "vencedora"
+    t.string "escolhida_por"
+    t.bigint "escolhida_por_user_id"
+    t.datetime "escolhida_em"
+    t.datetime "teste_desde", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_versoes_vencedoras_on_account_id"
+    t.index ["automacao_id", "passo"], name: "idx_autonomia_automacao_vencedoras_passo", unique: true
+    t.index ["escolhida_por_user_id"], name: "idx_autonomia_automacao_vencedoras_user"
+  end
+
   create_table "autonomia_automacoes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "nome", null: false
@@ -1561,6 +1593,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
     t.datetime "updated_at", null: false
     t.integer "janela_de_compra_dias", default: 7, null: false
     t.integer "grupo_de_controle_pct", default: 0, null: false
+    t.string "teste_criterio"
+    t.integer "teste_divisao", default: 50, null: false
+    t.integer "teste_espera_horas", default: 4, null: false
+    t.string "teste_estado"
+    t.integer "teste_resto", default: 0, null: false
+    t.datetime "teste_escolhe_em"
+    t.integer "teste_vencedora"
+    t.string "teste_escolhida_por"
+    t.bigint "teste_escolhida_por_user_id"
+    t.datetime "teste_escolhida_em"
+    t.jsonb "segunda_versao", default: {}, null: false
     t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
     t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
@@ -1782,6 +1825,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
     t.index ["code"], name: "index_campaign_reply_codes_on_code", unique: true
   end
 
+  create_table "campaign_version_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_audience_link_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "versao", null: false
+    t.string "fase", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_campaign_version_contacts_on_account_id"
+    t.index ["campaign_audience_link_id", "contact_id"], name: "idx_campaign_version_contacts_link_contact", unique: true
+    t.index ["campaign_audience_link_id", "versao", "fase"], name: "idx_campaign_version_contacts_link_versao"
+    t.index ["contact_id"], name: "index_campaign_version_contacts_on_contact_id"
+  end
+
   create_table "campaigns", force: :cascade do |t|
     t.integer "display_id", null: false
     t.string "title", null: false
@@ -1808,6 +1864,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
     t.index ["campaign_type"], name: "index_campaigns_on_campaign_type"
     t.index ["inbox_id"], name: "index_campaigns_on_inbox_id"
     t.index ["scheduled_at"], name: "index_campaigns_on_scheduled_at"
+  end
+
+  create_table "campanha_opcoes_de_envio", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campanha_type", null: false
+    t.bigint "campanha_id", null: false
+    t.boolean "melhor_horario", default: false, null: false
+    t.string "reenvio_quem"
+    t.integer "reenvio_dias"
+    t.jsonb "reenvio_mensagem"
+    t.string "reenvio_status"
+    t.datetime "reenvio_em"
+    t.string "reenvio_campanha_type"
+    t.bigint "reenvio_campanha_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_campanha_opcoes_de_envio_conta"
+    t.index ["campanha_type", "campanha_id"], name: "idx_campanha_opcoes_de_envio_campanha", unique: true
+    t.index ["reenvio_status", "reenvio_em"], name: "idx_campanha_opcoes_de_envio_reenvio"
   end
 
   create_table "canned_responses", id: :serial, force: :cascade do |t|
@@ -4610,12 +4685,114 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
     t.index ["label_id"], name: "index_etiquetas_nomes_on_label_id", unique: true
   end
 
+  create_table "fidelidade_cupom_codigos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "cupom_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "codigo", limit: 20, null: false
+    t.string "codigo_limpo", limit: 20, null: false
+    t.datetime "enviado_em"
+    t.datetime "vale_ate"
+    t.integer "usos", default: 0, null: false
+    t.datetime "usado_em"
+    t.bigint "usado_por_id"
+    t.bigint "automacao_execucao_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "codigo_limpo"], name: "idx_fidelidade_cupom_codigos_codigo", unique: true
+    t.index ["contact_id"], name: "index_fidelidade_cupom_codigos_on_contact_id"
+    t.index ["cupom_id", "contact_id"], name: "idx_fidelidade_cupom_codigos_pessoa", unique: true
+  end
+
+  create_table "fidelidade_cupons", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "nome", limit: 60, null: false
+    t.string "oferta_tipo", null: false
+    t.integer "oferta_valor"
+    t.string "oferta_texto", limit: 60
+    t.string "moeda"
+    t.string "prefixo", limit: 8, null: false
+    t.integer "validade_dias", null: false
+    t.integer "limite_por_cliente", default: 1, null: false
+    t.boolean "ligado", default: true, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_fidelidade_cupons_conta"
+  end
+
+  create_table "fidelidade_movimentos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "programa_id", null: false
+    t.string "tipo", null: false
+    t.integer "quantos", null: false
+    t.integer "vez", default: 1, null: false
+    t.string "origem_type"
+    t.bigint "origem_id"
+    t.bigint "user_id"
+    t.bigint "valor_centavos"
+    t.string "moeda"
+    t.string "motivo", limit: 60
+    t.datetime "vence_em"
+    t.integer "restante", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_fidelidade_movimentos_conta"
+    t.index ["contact_id", "created_at"], name: "idx_fidelidade_movimentos_pessoa"
+    t.index ["programa_id", "contact_id", "origem_type", "origem_id", "tipo", "vez"], name: "idx_fidelidade_movimentos_origem", unique: true, where: "(((tipo)::text = 'compra'::text) OR ((tipo)::text = 'estorno'::text))"
+    t.index ["programa_id", "tipo", "created_at"], name: "idx_fidelidade_movimentos_programa_tipo"
+    t.index ["vence_em"], name: "idx_fidelidade_movimentos_a_vencer", where: "((restante > 0) AND (vence_em IS NOT NULL))"
+  end
+
+  create_table "fidelidade_programas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "tipo", null: false
+    t.bigint "a_cada_centavos", null: false
+    t.string "moeda", default: "BRL", null: false
+    t.integer "ganha", null: false
+    t.integer "meta", null: false
+    t.string "premio", limit: 80, null: false
+    t.integer "validade_meses"
+    t.boolean "ligado", default: true, null: false
+    t.datetime "ligado_em"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_fidelidade_programas_on_account_id", unique: true
+  end
+
+  create_table "fidelidade_saldos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "programa_id", null: false
+    t.integer "saldo", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_fidelidade_saldos_conta"
+    t.index ["contact_id"], name: "index_fidelidade_saldos_on_contact_id"
+    t.index ["programa_id", "contact_id"], name: "idx_fidelidade_saldos_pessoa", unique: true
+    t.index ["programa_id", "saldo"], name: "idx_fidelidade_saldos_saldo"
+  end
+
   create_table "folders", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "category_id", null: false
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "horarios_de_resposta", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "por_hora", null: false, array: true
+    t.integer "respostas", default: 0, null: false
+    t.integer "hora", limit: 2
+    t.datetime "calculado_em", null: false
+    t.index ["account_id", "contact_id"], name: "idx_horarios_de_resposta_contato", unique: true
+    t.index ["contact_id"], name: "index_horarios_de_resposta_on_contact_id"
   end
 
   create_table "idempotency_keys", force: :cascade do |t|
@@ -5512,6 +5689,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
   add_foreign_key "autonomia_automacao_versoes", "accounts"
   add_foreign_key "autonomia_automacao_versoes", "autonomia_automacoes", column: "automacao_id"
   add_foreign_key "autonomia_automacao_versoes", "users", column: "autor_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_versoes_envios", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_envios", "autonomia_automacao_execucoes", column: "execucao_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_versoes_envios", "autonomia_automacoes", column: "automacao_id", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_envios", "contacts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "autonomia_automacoes", column: "automacao_id", on_delete: :cascade
+  add_foreign_key "autonomia_automacao_versoes_vencedoras", "users", column: "escolhida_por_user_id", on_delete: :nullify
   add_foreign_key "autonomia_automacoes", "accounts"
   add_foreign_key "autonomia_automacoes", "autonomia_automacao_versoes", column: "versao_ativa_id", on_delete: :nullify
   add_foreign_key "autonomia_automacoes", "users", column: "ligada_por_id", on_delete: :nullify
@@ -5608,6 +5792,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "campaign_audience_links", on_delete: :cascade
+  add_foreign_key "campaign_version_contacts", "contacts", on_delete: :cascade
+  add_foreign_key "campanha_opcoes_de_envio", "accounts"
   add_foreign_key "carteira_apolice_eventos", "campaign_imports", on_delete: :nullify
   add_foreign_key "carteira_apolice_eventos", "carteira_apolices", column: "apolice_id", on_delete: :cascade
   add_foreign_key "carteira_apolice_eventos", "users", on_delete: :nullify
@@ -5844,6 +6032,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_103217) do
   add_foreign_key "envios_ao_cliente", "contacts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
+  add_foreign_key "fidelidade_cupom_codigos", "accounts"
+  add_foreign_key "fidelidade_cupom_codigos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_cupom_codigos", "fidelidade_cupons", column: "cupom_id"
+  add_foreign_key "fidelidade_cupom_codigos", "users", column: "usado_por_id", on_delete: :nullify
+  add_foreign_key "fidelidade_cupons", "accounts"
+  add_foreign_key "fidelidade_cupons", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_movimentos", "accounts"
+  add_foreign_key "fidelidade_movimentos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_movimentos", "fidelidade_programas", column: "programa_id"
+  add_foreign_key "fidelidade_movimentos", "users", on_delete: :nullify
+  add_foreign_key "fidelidade_programas", "accounts"
+  add_foreign_key "fidelidade_programas", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_programas", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_saldos", "accounts"
+  add_foreign_key "fidelidade_saldos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_saldos", "fidelidade_programas", column: "programa_id"
+  add_foreign_key "horarios_de_resposta", "accounts"
+  add_foreign_key "horarios_de_resposta", "contacts", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify

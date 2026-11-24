@@ -52,9 +52,13 @@ class Crm::Ai::AttributeExtractorApplier
     end
   end
 
+  # A chave interna (#3176, Relationships::ChavesInternas: os ids da WAHA, o controle da Prospecção) é do sistema: a IA
+  # não grava nela, mesmo que a conta tenha a definição e o modelo a devolva.
   def apply_item(target, item, attribute_model, current, updates)
     normalized = normalize_item(item)
     key = normalized[:key]
+    return reject_item(target, key, 'internal_key') if Relationships::ChavesInternas.interna?(key)
+
     definition = definitions_for(attribute_model)[key]
     rejection = rejection_reason(normalized, definition, current.merge(updates), [target, record_of(target)])
     return reject_item(target, key, rejection) if rejection.present?

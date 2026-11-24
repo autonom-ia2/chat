@@ -29,7 +29,7 @@ const rotuloDaOpcao = (opcoes, valor) => {
 };
 
 const dosCampos = (filtros, contexto) =>
-  camposDoTopo({ ...contexto, veValores: true })
+  camposDoTopo({ ...contexto, veValores: true, comFidelidade: true })
     .filter(({ chave }) => preenchido(filtros[chave]))
     .map(({ chave, rotulo, opcoes }) =>
       contexto.t(`${CR}.CAMPO`, {

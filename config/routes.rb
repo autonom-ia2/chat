@@ -338,6 +338,7 @@ Rails.application.routes.draw do
               get :recipients, as: :result_recipients
               get :export, as: :result_export
               get :period, as: :result_period
+              post :vencedora, controller: :vencedoras, action: :create, as: :result_vencedora # #3099
             end
           end
           # Importar contatos (#1006): the journey's contact import (fork controller).
@@ -723,10 +724,9 @@ Rails.application.routes.draw do
                 member { post :resync }
                 resource :file, only: [:show], controller: 'agents/source_files'
               end
-              # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
+              # #1426 (tema 4b) — conferências do material (gaveta "O que sabe", Fase 2).
               get 'material', to: 'agents/material#show'
               post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
-              post 'material/autoteste', to: 'agents/material#autoteste'
               # #1429 (tema 8, F3) — a base de seguros do agente: ler, comparar (antes e depois), atualizar e desfazer.
               get 'base', to: 'agents/base_de_seguros#show'
               post 'base/comparar', to: 'agents/base_de_seguros#comparar'
@@ -831,6 +831,9 @@ Rails.application.routes.draw do
                 # G13 (#2670): o segredo da assinatura do passo "webhook", só para o administrador.
                 get :segredo_do_webhook, to: 'automacoes_webhook#segredo'
                 post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
+                # #3099: as duas versões da mensagem (o resultado de cada passo e a versão que fica).
+                get :duas_versoes, to: 'automacoes_duas_versoes#duas_versoes'
+                post 'duas_versoes/vencedora', to: 'automacoes_duas_versoes#escolher_versao', as: :escolher_versao
               end
             end
             # #2931 — os pedidos do passo "Pedir aprovação", do lado de quem aprova.
@@ -1189,6 +1192,18 @@ Rails.application.routes.draw do
             resource :configuration, only: [:show, :update], controller: 'configurations'
             patch ':entity/:id/values', to: 'values#update'
           end
+          # #3100 — o cartão fidelidade da conta: ler, criar ou mudar (PUT), pausar ou ligar de novo (PATCH) e os números.
+          namespace :fidelidade do
+            get :programa, to: 'programa#show'
+            put :programa, to: 'programa#update'
+            patch :programa, to: 'programa#ligar'
+            get :resumo, to: 'resumo#show'
+            # O relatório, criar, pausar e ligar os cupons; conferir o código que o cliente mostrou; marcar como usado.
+            resources :cupons, only: [:index, :create, :update] do
+              post :conferir, on: :collection
+            end
+            post 'cupom_codigos/:id/usar', to: 'cupom_codigos#usar', as: :usar_cupom_codigo
+          end
           # #2894 — leituras da Lista nova de Relacionamentos (de todas as contas desde a E9, #2902). Empresa é do Enterprise.
           namespace :relacionamentos do
             # #2895 — as leituras da ficha (show e as de `member`), cada uma no formato que a tela lê.
@@ -1207,6 +1222,12 @@ Rails.application.routes.draw do
                 get :origem
                 # #3097 — o resumo das compras da pessoa (os cards ganhos nos funis de Vender).
                 get :compras
+              end
+              # #3100 — o cartão fidelidade da pessoa: ler, o histórico por página, dar o prêmio e o ajuste à mão.
+              resource :fidelidade, only: [:show], controller: 'fidelidade' do
+                get :movimentos
+                post :premios
+                post :ajustes
               end
             end
             # #3097 — as faixas dos grupos de compra da conta: ler e, o administrador, ajustar.

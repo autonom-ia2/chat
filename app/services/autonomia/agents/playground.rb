@@ -7,7 +7,7 @@ module Autonomia
       # #1367 — o Testar é medido à parte do atendimento (que segue `agente_resposta`).
       USAGE_FEATURE = 'agente_teste'.freeze
 
-      # Tema 6 (#1428): o Testar, a prova do ajuste, o autoteste do material e a comparação da base medem o MESMO agente
+      # Tema 6 (#1428): o Testar, a prova do ajuste e a comparação da base medem o MESMO agente
       # que atende o cliente: sem o portão de confiança, como o Responder (`trust_instruction`). Com o portão, a resposta
       # do modelo era trocada pela mensagem fixa, e o dono testava um agente que o cliente nunca vê. A Lia
       # (insurance_quote) fica no portão (decisão do Rodrigo de 30/10, D6).

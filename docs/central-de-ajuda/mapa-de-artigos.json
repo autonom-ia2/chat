@@ -4461,8 +4461,8 @@
     },
     {
      "id": "13.35",
-     "titulo": "Limitar quantas mensagens cada cliente recebe e em que horário",
-     "para_que_serve": "Escolher quantas mensagens a mesma pessoa recebe num período e em que horário as campanhas e automações podem mandar.",
+     "titulo": "Limitar quantas mensagens cada cliente recebe, com que intervalo e em que horário",
+     "para_que_serve": "Escolher quantas mensagens a mesma pessoa recebe num período, quanto tempo no mínimo entre uma e outra e em que horário as campanhas e automações podem mandar.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [],
@@ -4477,6 +4477,79 @@
      "prints": [],
      "fontes": [
       "porques: limite_de_mensagens_por_cliente"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.36",
+     "titulo": "Criar o cartão fidelidade e ver quem está perto do prêmio",
+     "para_que_serve": "Criar o cartão de carimbos ou pontos que a venda fechada enche sozinha, ver os números e quem está perto do prêmio.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "fidelidade_index",
+      "fidelidade_montar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "fidelidade_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: ver_o_painel_da_fidelidade",
+      "porques: criar_o_cartao_fidelidade"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.37",
+     "titulo": "Criar, mandar e conferir cupons",
+     "para_que_serve": "Criar um cupom com código só de cada cliente, mandar pela automação, conferir no balcão e ver quanto vendeu.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "fidelidade_cupom_novo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "fidelidade_cupom_novo",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: criar_um_cupom",
+      "porques: conferir_e_usar_um_cupom",
+      "porques: ver_quanto_o_cupom_vendeu",
+      "porques: mandar_cupom_pela_automacao"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.38",
+     "titulo": "Mandar de novo para quem não respondeu e mandar no melhor horário",
+     "para_que_serve": "Mandar sozinho uma segunda mensagem, dias depois, para quem não respondeu à campanha, e fazer cada pessoa receber na hora em que costuma responder.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_new",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: mandar_de_novo_para_quem_nao_respondeu",
+      "porques: mandar_no_melhor_horario_de_cada_cliente",
+      "porques: mandar_no_melhor_horario_na_automacao"
      ],
      "revisar": false,
      "nota": null

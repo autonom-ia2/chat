@@ -173,6 +173,8 @@ class Autonomia::Automacao::Executor
     return if impedida?(passo['id'])
     return encerrar(passo['id'], 'parada', 'mensagens_desligadas') if mensagem && !::Autonomia::Automacao::Motor.mensagens?(@account)
 
+    # #3099: o "mensagem" com duas versões escolhe a versão do alvo antes de mandar (DuasVersoes::Envio).
+    classe = ::Autonomia::Automacao::DuasVersoes.classe_do(passo, classe)
     envio = -> { classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar }
     pelo_ritmo(passo, envio) { |resultado| depois_do_nativo(passo, resultado) }
   end

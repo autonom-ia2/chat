@@ -19,15 +19,15 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   end
 
   # V2.3 — INTERNAL/BOTH agents of the account, usable as team copilots in the chat widget.
-  # Lightweight inline json (id/name/actuation/description) — does NOT reuse _agent.json.jbuilder
+  # Lightweight inline json (id/name/actuation/description/avatar_url) — does NOT reuse _agent.json.jbuilder
   # so instruction/scaffold/config never leak through this agent-facing, non-admin endpoint.
   def agents
     # Fora os de sistema (Guia) e os ajudantes de outro agente (tema 14): `Agent.copilotos_da_equipe`.
-    agents = ::Autonomia::Agents::Agent.kept.where(account: Current.account).copilotos_da_equipe.order(:name)
+    agents = ::Autonomia::Agents::Agent.kept.where(account: Current.account).copilotos_da_equipe.with_attached_avatar.order(:name)
 
     render json: {
       agents: agents.map do |agent|
-        { id: agent.id, name: agent.name, actuation: agent.actuation, description: agent.agent_type }
+        { id: agent.id, name: agent.name, actuation: agent.actuation, description: agent.agent_type, avatar_url: agent.avatar_url }
       end
     }
   end

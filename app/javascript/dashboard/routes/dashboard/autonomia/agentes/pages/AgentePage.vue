@@ -463,7 +463,7 @@ watch([fontes, lendoFontes], ([lista, lendo]) => {
   fontesLidas.value = lista || [];
 });
 const listaDeFontes = computed(() => fontesLidas.value || []);
-// #1426 (4b) — conferências e autoteste do material: só na Fase 2 e fora da Lia (o servidor também recusa).
+// #1426 (4b) — conferências do material: só na Fase 2 e fora da Lia (o servidor também recusa).
 const conferencias = useConferenciasDoMaterial({
   agentId: () => Number(props.agentId),
 });
@@ -555,10 +555,9 @@ const mudar = (origem, inicial = null) => {
   vista.value = 'mudar';
 };
 
-// #1426 (4b) — "Corrigir conversando" do cartão do autoteste abre como o "Respondeu errado?" do Testar (pergunta e
-// resposta); "Escrever o que está nela" e "Explicar conversando" abrem o Mudar conversando geral.
-const corrigirDoMaterial = inicial =>
-  inicial ? mudar('teste', inicial) : mudar('geral');
+// #1426 (4b) — "Escrever o que está nela" e "Explicar conversando", dos cartões do material, abrem o Mudar
+// conversando geral.
+const corrigirDoMaterial = () => mudar('geral');
 
 // "Mudar conversando" da nota da gaveta Nome / Foto e nome: mesmo efeito do botão do herói.
 const mudarDaGaveta = () => {

@@ -31,7 +31,8 @@
       "CONVERSA_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada da conversa",
       "CONTATO_ETIQUETA_POSTA": "Quando uma etiqueta é posta no contato",
       "CONTATO_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada do contato",
-      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "Quando a pessoa entra num grupo de compra"
+      "CONTATO_ENTROU_NO_GRUPO_DE_COMPRA": "Quando a pessoa entra num grupo de compra",
+      "CONTATO_COMPLETOU_CARTAO_FIDELIDADE": "Quando a pessoa completa o cartão fidelidade"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",

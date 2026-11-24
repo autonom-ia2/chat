@@ -33,6 +33,8 @@ const props = defineProps({
   deEmpresas: { type: Boolean, default: false },
   // #3097: sem ver valor de venda, sem o filtro do total comprado.
   veValores: { type: Boolean, default: false },
+  // #3100: com o cartão fidelidade na conta (ou o filtro já ligado), o filtro dele.
+  comFidelidade: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
   opcoes: {
     type: Object,
@@ -78,6 +80,7 @@ const campos = computed(() =>
     opcoes: props.opcoes,
     deEmpresas: props.deEmpresas,
     veValores: props.veValores,
+    comFidelidade: props.comFidelidade,
   }).filter(temOQueEscolher)
 );
 

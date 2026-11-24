@@ -317,6 +317,9 @@ const chooseChannel = card => {
       </slot>
     </div>
 
+    <!-- #3099: "Duas versões da mensagem" (DuasVersoesMensagem), abaixo da mensagem do canal, preenchido pela Nova campanha. -->
+    <slot v-if="isJourneyChannel" name="duas-versoes" />
+
     <div class="flex flex-wrap justify-between gap-3">
       <Button
         :label="t('CAMPAIGN_JOURNEY.NEW_CAMPAIGN.BACK')"

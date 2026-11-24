@@ -19,6 +19,8 @@ import ResultHeader from './ResultHeader.vue';
 import ResultKpiStrip from './ResultKpiStrip.vue';
 import ResultCrmBand from './ResultCrmBand.vue';
 import ResultVendas from './ResultVendas.vue';
+// #3099: duas versões da mensagem, logo abaixo dos números.
+import ResultDuasVersoesDaCampanha from './ResultDuasVersoesDaCampanha.vue';
 import ResultPeopleTable from './ResultPeopleTable.vue';
 import { useResultPolling } from './useResultPolling';
 import { journeyStatus, messageKpis, resultBalance } from './resultMetrics';
@@ -269,6 +271,15 @@ watch(() => [props.channel, props.campaignId], load, { immediate: true });
           })
         }}
       </p>
+
+      <ResultDuasVersoesDaCampanha
+        v-if="result.duas_versoes"
+        :channel="channel"
+        :campaign-id="campaignId"
+        :teste="result.duas_versoes"
+        @escolhida="refresh"
+        @recarregar="refresh"
+      />
 
       <CampaignDeliveryBreakdown
         v-if="showBreakdown"

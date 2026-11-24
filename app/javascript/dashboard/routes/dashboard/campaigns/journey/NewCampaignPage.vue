@@ -63,7 +63,10 @@ import {
   accountTimeZone,
   scheduleToUtc,
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
-import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journeyErrors';
+import {
+  createErrorKey,
+  duasVersoesErrorKey,
+} from 'dashboard/components-next/CampaignJourney/journeyErrors';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 import { JOURNEY_EDITOR_QUERY } from './journeyRedirects';
 import { smsStats } from 'dashboard/components-next/CampaignJourney/smsSegments';
@@ -98,6 +101,15 @@ import {
   medicaoDaCampanha,
   emailChecks,
 } from 'dashboard/components-next/CampaignJourney/journeyChannelPayloads';
+// #3099: duas versões da mensagem (cartão do passo Mensagem, resumo e linha do teste na revisão).
+import DuasVersoesMensagem from 'dashboard/components-next/CampaignJourney/DuasVersoesMensagem.vue';
+import ResumoDuasVersoes from 'dashboard/components-next/CampaignJourney/ResumoDuasVersoes.vue';
+import AgoraVaiOTeste from 'dashboard/components-next/CampaignJourney/AgoraVaiOTeste.vue';
+import { useDuasVersoesNaCampanha } from 'dashboard/components-next/CampaignJourney/useDuasVersoesNaCampanha';
+// #3101: melhor horário de cada cliente na revisão (quantos já têm hora e o horário de envio da conta).
+import { useHorarioPermitido } from 'dashboard/components-next/CampaignJourney/ritmo/useHorarioPermitido';
+// #3101: "Mandar de novo" na revisão (os modelos da segunda mensagem e o que vai para o servidor).
+import { useReenvioNaCampanha } from 'dashboard/components-next/CampaignJourney/reenvio/useReenvioNaCampanha';
 
 const COVERAGE_DELAY_MS = 400;
 const SEARCH_DELAY_MS = 300;
@@ -315,12 +327,6 @@ const formatoPendente = computed(() =>
       })
     : []
 );
-const isMessageReady = computed(
-  () =>
-    Boolean(draft.value.title.trim()) &&
-    Boolean(MESSAGE_READY[draft.value.channel]?.()) &&
-    formatoPendente.value.length === 0
-);
 const isEmailChannel = computed(
   () => draft.value.channel === CAMPAIGN_CHANNELS.EMAIL
 );
@@ -328,6 +334,36 @@ const reach = computed(() =>
   audience.value && draft.value.channel
     ? reachOn(draft.value.channel, audience.value.channels)
     : 0
+);
+// #3099: o texto de cada modelo com as mesmas ligações da versão 1 (a versão 2 pede as mesmas informações, D3).
+const corpoDoModelo = modelo =>
+  previewMessage({
+    template: modelo,
+    bindings: draft.value.bindings,
+    defaults: cleanDefaults(draft.value.defaults),
+    sample: sample.value,
+    placeholder: binding => `[${sourceLabel(binding)}]`,
+  });
+const duasVersoes = useDuasVersoesNaCampanha({
+  draft,
+  update,
+  templates,
+  templateOptions,
+  template,
+  corpoDoModelo,
+  emailCampaign: forms.emailCampaign,
+  preview: forms.preview,
+  reach,
+});
+// A versão 1 pronta: com a versão 2 faltando, o cartão diz por que "Continuar" não anda.
+const isFirstVersionReady = computed(
+  () =>
+    Boolean(draft.value.title.trim()) &&
+    Boolean(MESSAGE_READY[draft.value.channel]?.()) &&
+    formatoPendente.value.length === 0
+);
+const isMessageReady = computed(
+  () => isFirstVersionReady.value && duasVersoes.pronta.value
 );
 // Fork (#1335): conversa aberta no WhatsApp oficial. O gate é só a flag
 // campaign_open_window_text (não depende da ponte de Modelos).
@@ -684,6 +720,33 @@ watch(nowBlockedReason, reason => {
   if (reason && draft.value.when === 'now') update({ when: 'later' });
 });
 
+// #3101: sem o horário da conta (ainda lendo, ou sem acesso), a opção não aparece: a tela não promete o que não sabe.
+const horarioPermitido = useHorarioPermitido();
+const melhorHorario = computed(() =>
+  horarioPermitido.value === null
+    ? null
+    : {
+        conhecidos: forms.preview.value?.melhor_horario?.conhecidos ?? null,
+        horarioPermitido: horarioPermitido.value,
+      }
+);
+
+// #3101: "Mandar de novo" (§3.1 do desenho): no WhatsApp Oficial, os outros modelos da caixa com as ligações da primeira
+// mensagem; no SMS e no WhatsApp API, um texto; no e-mail, o assunto.
+const { reenvio: reenvioNaRevisao, modeloParaEnvio: modeloDoReenvio } =
+  useReenvioNaCampanha({
+    draft,
+    ponte,
+    templates,
+    templateOptions,
+    variables,
+    sample,
+    columns,
+    placeholder: binding => `[${sourceLabel(binding)}]`,
+    pedeOferta: soModeloCompleto,
+    motivoDaOferta: t('REENVIO_HORARIO.REENVIO.MODELO_COM_OFERTA'),
+  });
+
 const cancel = () => {
   clearDraft(accountId.value);
   router.push({ name: 'campaigns_journey_index' });
@@ -723,7 +786,10 @@ const SUBMITTERS = {
             : {},
           // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
           freeText: textoDaConversaAberta.value,
-          medicao: medicaoDaCampanha(draft.value),
+          medicao: medicaoDaCampanha(draft.value, {
+            modelo: duasVersoes.modeloDaSegunda.value,
+            modeloDoReenvio: modeloDoReenvio(),
+          }),
         })
       )
     ),
@@ -805,7 +871,10 @@ const submit = async () => {
     useAlert(t(`${NS}.REVIEW.SUCCESS`));
     router.push({ name: 'campaigns_journey_index', query: { channel } });
   } catch (error) {
-    submitError.value = t(`${NS}.REVIEW.ERRORS.${createErrorKey(error)}`);
+    const versaoDois = duasVersoesErrorKey(error);
+    submitError.value = versaoDois
+      ? t(`DUAS_VERSOES.ERROS.${versaoDois}`)
+      : t(`${NS}.REVIEW.ERRORS.${createErrorKey(error)}`);
   } finally {
     isSubmitting.value = false;
   }
@@ -1172,6 +1241,25 @@ onBeforeUnmount(() => {
               @update="update"
             />
           </template>
+          <template v-if="duasVersoes.disponivel.value" #duas-versoes>
+            <DuasVersoesMensagem
+              :canal="draft.channel"
+              :versoes="duasVersoes.versoes.value"
+              :primeira="duasVersoes.primeira.value"
+              :publico="duasVersoes.publico.value"
+              :plano="duasVersoes.plano.value"
+              :modelos="duasVersoes.modelos.value"
+              :sugestoes-de-assunto="duasVersoes.email.value.sugestoes"
+              :remetente="duasVersoes.email.value.remetente"
+              :previa-do-email="duasVersoes.email.value.previa"
+              :extra-columns="columns"
+              :sample="sample"
+              :defaults="cleanDefaults(draft.defaults)"
+              :mostrar-falta="isFirstVersionReady"
+              @update="duasVersoes.mudar"
+              @criar-modelo="createTemplate"
+            />
+          </template>
           <template v-if="modeloDaPrevia" #previa>
             <PontePrevia
               :modelo="modeloDaPrevia"
@@ -1203,13 +1291,20 @@ onBeforeUnmount(() => {
           :now-blocked-reason="nowBlockedReason"
           :so-deixa-pronta="!podeDisparar"
           :montada-por="podeDisparar && prontaAberta ? prontaAberta.autor : ''"
+          :melhor-horario="melhorHorario"
+          :reenvio="reenvioNaRevisao"
           @update="update"
           @go="goTo"
           @back="goTo(2)"
           @submit="submit"
           @test-send="sendTestToMe"
         >
-          <template v-if="modeloEscolhido || comConversaAberta" #modelo>
+          <template
+            v-if="
+              modeloEscolhido || comConversaAberta || duasVersoes.ligadas.value
+            "
+            #modelo
+          >
             <RevisaoDaConversaAberta
               v-if="comConversaAberta && conversaAberta.contagem.value"
               :janela="conversaAberta"
@@ -1223,6 +1318,21 @@ onBeforeUnmount(() => {
               :formato="draft.formato || {}"
               :pedido="pedidoDoFormato"
               :time-zone="timeZone"
+            />
+            <ResumoDuasVersoes
+              v-if="duasVersoes.ligadas.value"
+              :versoes="duasVersoes.resumo.value"
+              :regra="duasVersoes.regra.value"
+              :publico="duasVersoes.publico.value"
+              :plano="duasVersoes.plano.value"
+              @alterar="goTo(2)"
+            />
+          </template>
+          <template v-if="duasVersoes.ligadas.value" #vao-receber="{ quando }">
+            <AgoraVaiOTeste
+              :plano="duasVersoes.plano.value"
+              :espera="duasVersoes.regra.value.espera"
+              :quando="quando"
             />
           </template>
         </StepReview>

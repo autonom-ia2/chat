@@ -129,11 +129,19 @@ describe('GuideResposta', () => {
       },
     });
 
-  it('sem gráfico, é a mensagem de sempre', () => {
+  it('sem gráfico, o texto vem num cartão do Guia (#3184)', () => {
     const wrapper = montar({ message: { content: 'São 3.' } });
 
-    expect(wrapper.find('[data-mensagem-de-sempre]').text()).toBe('São 3.');
+    expect(wrapper.findAll('[data-trecho]').map(item => item.text())).toEqual([
+      'São 3.',
+    ]);
     expect(wrapper.find('[data-grafico]').exists()).toBe(false);
+  });
+
+  it('marcador de gráfico que não veio não aparece como texto', () => {
+    const wrapper = montar({ message: { content: 'São 3. [grafico:1]' } });
+
+    expect(wrapper.text()).not.toContain('[grafico:');
   });
 
   it('com gráfico, desenha no lugar do marcador e o que sobrou vai para o fim', () => {
@@ -171,5 +179,30 @@ describe('GuideResposta', () => {
       'CAPTAIN.COPILOT.EMPTY_MESSAGE'
     );
     expect(wrapper.find('[data-grafico]').text()).toBe('Resolvidas');
+  });
+
+  it('com foto, a fala traz a foto do agente no lugar do ícone (#3191)', () => {
+    const wrapper = montar({
+      message: { content: 'Resumo.' },
+      foto: 'https://exemplo/clara.png',
+    });
+
+    expect(wrapper.get('[data-foto]').attributes('src')).toBe(
+      'https://exemplo/clara.png'
+    );
+    expect(wrapper.find('.i-lucide-sparkles').exists()).toBe(false);
+  });
+
+  it('o que vem no espaço livre fica logo abaixo do cartão (#3191)', () => {
+    const wrapper = mount(GuideResposta, {
+      props: { message: { content: 'Olá, Ana!' } },
+      slots: { default: '<button data-acao>Usar</button>' },
+      global: {
+        plugins: [VueDOMPurifyHTML],
+        mocks: { $t: key => key },
+      },
+    });
+
+    expect(wrapper.find('[data-acao]').exists()).toBe(true);
   });
 });

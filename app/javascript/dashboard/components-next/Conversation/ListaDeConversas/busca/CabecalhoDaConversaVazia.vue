@@ -12,6 +12,7 @@ import { TOPO_DA_CONVERSA } from 'dashboard/components-next/conversa-canal/visua
 import { linhaDaCaixa } from './caixasDaConversaVazia';
 import { iconeDaCaixa } from '../iconeDaCaixa';
 import { nomeNoAvatar } from './buscaDaLista';
+import GuiaNoCabecalho from 'dashboard/components/autonomia/guide/GuiaNoCabecalho.vue';
 
 const props = defineProps({
   nome: { type: String, default: '' },
@@ -94,6 +95,9 @@ const comCaixa = computed(
           </span>
         </div>
       </div>
+      <!-- #3192 — a bolinha do Guia some na conversa (o canto é do enviar): o
+      Guia fica aqui, como no cabeçalho da conversa. -->
+      <GuiaNoCabecalho class="ms-auto ps-2" />
     </div>
     <div
       class="flex flex-row items-center justify-start xl:justify-end flex-shrink-0 gap-2 w-full xl:w-auto"

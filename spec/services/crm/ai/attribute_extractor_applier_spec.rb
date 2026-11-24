@@ -216,4 +216,31 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
     expect(conversation.reload.custom_attributes).to be_empty
     expect(result.rejected).to include(hash_including(target: 'conversation', key: 'sw_cidade', reason: 'unknown_key'))
   end
+
+  # #3176: a chave interna (ids da WAHA, controle da Prospecção) é do sistema. MOTIVO: com a definição criada pela WAHA, um
+  # modelo que devolvesse o chat id gravaria outro endereço e a WAHA acharia o contato errado.
+  it 'recusa chave interna mesmo com definição na conta, e grava o resto' do
+    create_attribute(key: 'waha_whatsapp_chat_id', model: 'contact_attribute', type: 'text')
+    create_attribute(key: 'cidade', model: 'contact_attribute', type: 'text')
+    contact.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '5511900000000@c.us' })
+
+    result = described_class.new(
+      card: card,
+      prefix: '',
+      extracted_attributes: {
+        contact: [
+          { key: 'waha_whatsapp_chat_id', value: '5511900000009@c.us', confidence: 0.99, evidence: 'meu número novo' },
+          { key: 'autonomia_prospecting_lead_id', value: '1', confidence: 0.99, evidence: 'x' },
+          { key: 'cidade', value: 'Curitiba', confidence: 0.9, evidence: 'moro em Curitiba' }
+        ],
+        conversation: []
+      }
+    ).perform
+
+    expect(contact.reload.custom_attributes).to eq('waha_whatsapp_chat_id' => '5511900000000@c.us', 'cidade' => 'Curitiba')
+    expect(result.rejected).to contain_exactly(
+      hash_including(key: 'waha_whatsapp_chat_id', reason: 'internal_key'),
+      hash_including(key: 'autonomia_prospecting_lead_id', reason: 'internal_key')
+    )
+  end
 end

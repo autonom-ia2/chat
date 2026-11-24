@@ -1,5 +1,5 @@
 # #1431 (F0) — o placar da RESPOSTA do agente, ao lado do placar da busca (PlacarDaBase). Cada pergunta passa pelo
-# Answerer como no autoteste do material (`prova: true`: sem ferramentas do agente, sem busca na web, nada sai para
+# Answerer em modo de prova (`prova: true`: sem ferramentas do agente, sem busca na web, nada sai para
 # fora), com a instrução tratada como no atendimento. O juiz do placar (JuizDoPlacar, outro modelo, que recebe os trechos
 # usados) dá o veredito pelo sentido:
 # - acerto: nas perguntas que a base responde, a resposta traz o fato esperado ("certo");
@@ -21,7 +21,7 @@ class Autonomia::Agents::PlacarDaResposta
     @perguntas = perguntas
     @medidor = medidor
     @juiz = juiz || Autonomia::Agents::JuizDoPlacar.new(account: agent.account)
-    @responder = responder || method(:responder_do_autoteste)
+    @responder = responder || method(:responder_em_prova)
   end
 
   def medir
@@ -43,7 +43,7 @@ class Autonomia::Agents::PlacarDaResposta
     }
   end
 
-  def responder_do_autoteste(texto)
+  def responder_em_prova(texto)
     Autonomia::Agents::Answerer.new(agent: @agent, query: texto, feature: FEATURE, prova: true,
                                     trust_instruction: Autonomia::Agents::Playground.como_no_atendimento?(@agent)).answer
   end

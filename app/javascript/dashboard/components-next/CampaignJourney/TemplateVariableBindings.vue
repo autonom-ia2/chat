@@ -8,7 +8,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { BINDING_SOURCES, CONTACT_FIELDS } from './templateVariables';
+import {
+  BINDING_SOURCES,
+  CONTACT_FIELDS,
+  isBindingComplete,
+} from './templateVariables';
 
 const props = defineProps({
   variables: { type: Array, default: () => [] },
@@ -20,6 +24,8 @@ const props = defineProps({
   // Fork (Modelos do WhatsApp): [{ label, options: [{ value: 'field:<chave>', label }] }], campos do
   // catálogo (#1331) oferecidos antes do texto fixo. Vazio (padrão), a lista fica como sempre.
   extraGroups: { type: Array, default: () => [] },
+  // #3101: marca em vermelho a escolha que ainda falta (a segunda mensagem do "Mandar de novo"). Sem ela, nada muda.
+  invalid: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['bind', 'default']);
@@ -147,6 +153,7 @@ const defaultKeys = computed(() => [
               t(`${NS}.SOURCE_ARIA`, { variable: display(variable.key) })
             "
             :placeholder="t(`${NS}.CHOOSE`)"
+            :invalid="invalid && !bindings[variable.key]?.source"
             @update:model-value="choice => choose(variable.key, choice)"
           />
           <Input
@@ -157,6 +164,11 @@ const defaultKeys = computed(() => [
               t(`${NS}.FIXED_ARIA`, { variable: display(variable.key) })
             "
             custom-input-class="!h-11"
+            :message-type="
+              invalid && !isBindingComplete(bindings[variable.key])
+                ? 'error'
+                : 'info'
+            "
             data-test="fixed-text"
             @update:model-value="
               value => emit('bind', variable.key, { source: 'fixed', value })

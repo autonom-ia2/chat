@@ -1,8 +1,9 @@
 # Result of one campaign (#1007, PRD §6.5, O1–O2, E1–E4). Read-only, account-scoped.
 # Contract: docs/campaigns/publicos/resultado-1007.md.
 #
-#   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals, and who
-#                                                            received and bought (#3098, nil without an audience)
+#   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals, who
+#                                                            received and bought (#3098, nil without an audience) and
+#                                                            the two versions of the message (#3099, nil without them)
 #   GET …/campaign_journey/results/:channel/:id/recipients  people, 25 per page, ?status=
 #   GET …/campaign_journey/results/:channel/:id/export      masked CSV, ?status=
 #   GET …/campaign_journey/results/email/:id/period         numbers of this campaign, ?period=7|14|30|all (#990)
@@ -23,7 +24,8 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
         totals: @result.totals,
         filters: @result.filters,
         crm: crm_payload,
-        vendas: vendas_payload
+        vendas: vendas_payload,
+        duas_versoes: duas_versoes_payload
       }
     }
   end
@@ -64,6 +66,15 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
 
     ::CampaignJourney::ComprasDaCampanha.new(Current.account, @result.campaign, @result.source_id)
                                         .payload(user: Current.user, account_user: Current.account_user)
+  end
+
+  # #3099: the two versions of the message (CampaignJourney::DuasVersoes::Resultado); nil without them.
+  def duas_versoes_payload
+    link = CampaignAudienceLink.for_campaign(@result.campaign)
+    return if link.nil?
+
+    ::CampaignJourney::DuasVersoes::Resultado.new(link, account: Current.account)
+                                             .payload(user: Current.user, account_user: Current.account_user)
   end
 
   def authorize_result

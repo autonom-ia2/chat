@@ -4,6 +4,8 @@ module EmailCampaigns
   # refreshes counters; marks the campaign sent when no pending remain. Defensive: a single
   # recipient failure never strands the run.
   class DeliveryEngine
+    include Autonomia::MelhorHorario::DoMotor
+
     BATCH_SIZE = 100
     SEND_INTERVAL = (1.0 / EmailCampaigns::DeliveryConfig.max_send_rate).seconds
 
@@ -51,7 +53,7 @@ module EmailCampaigns
 
     def deliver_one(recipient, sender, _suppressed = nil)
       contato = EmailCampaigns::RitmoDoDestinatario.contato(@campaign, recipient)
-      return if EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato)
+      return if EmailCampaigns::RitmoDoDestinatario.adiado?(@campaign, recipient, contato, melhor_horario: melhor_horario_ligado?(@campaign))
 
       gate = EmailCampaigns::DeliveryClaim.new(@campaign)
       return unless gate.prepare(recipient) == :ready

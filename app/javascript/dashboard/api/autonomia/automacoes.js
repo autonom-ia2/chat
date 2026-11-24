@@ -85,6 +85,21 @@ class AutomacoesAPI extends ApiClient {
     });
   }
 
+  // #3099: o resultado das duas versões de cada passo "mensagem" que testa
+  // duas versões (na versão ativa da automação).
+  duasVersoes(id) {
+    return axios.get(`${this.url}/${id}/duas_versoes`);
+  }
+
+  // #3099: a versão que fica no passo. Responde o resultado do passo; outra
+  // versão já escolhida volta 422.
+  escolherVersao(id, passo, versao) {
+    return axios.post(`${this.url}/${id}/duas_versoes/vencedora`, {
+      passo,
+      versao,
+    });
+  }
+
   // #2932: quantos entrariam hoje no "para cada", até o teto.
   contarLista({ lista, teto }) {
     return axios.post(`${this.url}/contar_lista`, { lista, teto });

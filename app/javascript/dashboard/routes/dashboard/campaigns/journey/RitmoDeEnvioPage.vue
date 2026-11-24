@@ -11,19 +11,21 @@ import RitmoDeEnvioAPI from 'dashboard/api/ritmoDeEnvio';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import RitmoIntervalo from 'dashboard/components-next/CampaignJourney/ritmo/RitmoIntervalo.vue';
 import {
   DIAS,
   DIAS_DA_SEMANA,
   FINS,
   INICIOS,
   MENSAGENS,
+  SEM_INTERVALO,
   SEM_LIMITE,
   alternarDia,
-  diasDoResumo,
   formularioDe,
   pedidoDe,
   problemaDo,
 } from 'dashboard/components-next/CampaignJourney/ritmo/ritmoDeEnvio';
+import { diasEmTexto } from 'dashboard/components-next/CampaignJourney/ritmo/useHorarioPermitido';
 
 const NS = 'CAMPAIGN_JOURNEY.RITMO';
 
@@ -70,20 +72,11 @@ const podeSalvar = computed(
   () => podeMudar.value && mudou.value && !problema.value && !salvando.value
 );
 
-const diasEmTexto = dias => {
-  const { tipo, dias: lista } = diasDoResumo(dias);
-  if (tipo !== 'LISTA') return t(`${NS}.HORARIO.DIAS_RESUMO.${tipo}`);
-  const nomes = lista.map(dia => t(`${NS}.HORARIO.DIAS_LONGOS.${dia}`));
-  return new Intl.ListFormat(locale.value.replace('_', '-'), {
-    type: 'conjunction',
-  }).format(nomes);
-};
-
 const textoDoHorario = () => {
   if (!formulario.value.comHorario) return t(`${NS}.RESUMO.QUALQUER_HORA`);
   if (problema.value) return t(`${NS}.RESUMO.FALTA_HORARIO`);
   return t(`${NS}.RESUMO.HORARIO`, {
-    dias: diasEmTexto(formulario.value.diasDaSemana),
+    dias: diasEmTexto(formulario.value.diasDaSemana, t, locale.value),
     inicio: hora(formulario.value.inicio),
     fim: hora(formulario.value.fim),
   });
@@ -107,6 +100,14 @@ const resumo = computed(() => {
         })
       : t(`${NS}.RESUMO.SEM_LIMITE`)
   );
+  if (formulario.value.intervalo !== SEM_INTERVALO)
+    partes.push(
+      t(
+        `${NS}.RESUMO.INTERVALO`,
+        { n: formulario.value.intervalo },
+        formulario.value.intervalo
+      )
+    );
   partes.push(textoDoHorario());
   return partes.join(' ');
 });
@@ -242,6 +243,8 @@ useOnEnter(carregar);
             </template>
           </div>
         </section>
+
+        <RitmoIntervalo v-if="podeMudar" v-model="formulario.intervalo" />
 
         <section
           v-if="podeMudar"

@@ -13,6 +13,7 @@
 # #3097 — as compras: os grupos de compra, os filtros "compras" e "total acima de", as ordens por compra e o quanto
 # cada grupo já comprou (Relacionamentos::Compras::NaListaDePessoas).
 #
+# #3100 — o filtro "fidelidade" (perto do prêmio, cartão completo), pelo saldo do cartão (Fidelidade::NaListaDePessoas).
 # #3168 — "Por outra informação": as linhas do filtro da lista de contatos de hoje, em `condicoes`
 # (Relacionamentos::CondicoesDaLista), somadas aos filtros da gaveta.
 class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
@@ -139,7 +140,7 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   def consultados(base = grupo == 'ativos_agora' ? @account.contacts : self.class.base(@account))
     carteira.buscados(buscados(base, textos: TEXTOS, numeros: NUMEROS), base, @pedido[:busca])
             .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou).then { |escopo| com_as_compras(escopo) }
-            .then { |escopo| condicoes ? condicoes.aplicar(escopo) : escopo }
+            .where(da_fidelidade).then { |escopo| condicoes ? condicoes.aplicar(escopo) : escopo }
   end
 
   def condicoes
@@ -158,6 +159,14 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
 
   def carteira
     @carteira ||= Carteira::NaListaDePessoas.new(@account)
+  end
+
+  def fidelidade
+    @fidelidade ||= Fidelidade::NaListaDePessoas.new(@account)
+  end
+
+  def da_fidelidade
+    fidelidade.condicao(filtro(:fidelidade))
   end
 
   # Etiquetas e foto vêm juntas: sem isso, cada pessoa da página faria as suas consultas.
@@ -194,7 +203,7 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     super
     recusar("chegou_em desconhecido: #{filtro(:chegou_em)}") unless filtro(:chegou_em).nil? || CHEGOU_EM.key?(filtro(:chegou_em))
     recusar("empresa inválida: #{filtro(:empresa)}") unless filtro(:empresa).nil? || empresa_id
-    motivo = compras.motivo_invalido(filtro(:compras), filtro(:total_acima))
+    motivo = compras.motivo_invalido(filtro(:compras), filtro(:total_acima)) || fidelidade.motivo_invalido(filtro(:fidelidade))
     recusar(motivo) if motivo
     condicoes
   end

@@ -1,5 +1,7 @@
 # O que a gaveta "Mais filtros" da Lista nova de Relacionamentos oferece (#2894): só etiquetas e cidades que existem nas
 # pessoas da conta, e as empresas (do Enterprise). Sem paginação, no formato { value, label } da tela.
+# #3100 — e se a conta tem cartão fidelidade (`fidelidade`): o filtro dele aparece para quem vê a lista, como o cartão
+# da pessoa segue o contato (decisão D1 do Rodrigo, 23/11).
 class Relacionamentos::OpcoesDeFiltro
   CIDADE = Arel.sql("contacts.additional_attributes->>'city'")
 
@@ -8,7 +10,8 @@ class Relacionamentos::OpcoesDeFiltro
   end
 
   def call
-    { empresas: empresas, etiquetas: como_opcoes(etiquetas), cidades: como_opcoes(cidades) }
+    { empresas: empresas, etiquetas: como_opcoes(etiquetas), cidades: como_opcoes(cidades),
+      fidelidade: Fidelidade::Programa.da_conta(@account).present? }
   end
 
   private

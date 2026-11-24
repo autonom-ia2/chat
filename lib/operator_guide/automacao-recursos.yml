@@ -662,6 +662,8 @@ fora:
       # #3098: a medição da campanha por e-mail é parte de confirmar o envio.
       - campaign_journey/email_medicoes
       - campaign_journey/recipient_previews
+      # #3099: escolher à mão a versão vencedora manda o resto do público com ela; é decisão de pessoa, sem desfazer.
+      - campaign_journey/vencedoras
       - email_campaigns/ai
       - email_campaigns/assets
       # G52: criar e mudar a lista é da tela de campanhas; a automação põe o contato na lista pelo passo próprio.
@@ -754,6 +756,16 @@ fora:
       passo de automação, e por isso não chegam ao catálogo (Acoes::SO_NA_TELA).
     recursos:
       - relacionamentos/seguros/palavras
+  - motivo: >-
+      Fidelidade (#3100): o cartão e os cupons são escolha da conta inteira, feita na tela da Fidelidade por quem pode
+      mudar o cartão; criar, mudar, pausar e ligar de novo não é passo de automação. Dar o prêmio, dar ou tirar carimbos
+      à mão e marcar o cupom como usado são ações de pessoa, na ficha ou no Conferir, e não têm desfazer. A automação dá
+      carimbos e manda cupom pelos passos próprios ("Dar carimbos ou pontos" e "Mandar cupom").
+    recursos:
+      - fidelidade/programa
+      - fidelidade/cupons
+      - fidelidade/cupom_codigos
+      - relacionamentos/fidelidade
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules
@@ -761,6 +773,8 @@ fora:
       - autonomia/automacoes_ia
       - autonomia/automacoes_webhook
       - autonomia/automacoes_passos_novos
+      # #3099: escolher a versão vencedora de um passo muda a própria automação.
+      - autonomia/automacoes_duas_versoes
       # #2931: responder o pedido de aprovação é da pessoa que a automação escolheu, nunca de outra automação.
       - autonomia/aprovacoes
       - crm/stage_automations

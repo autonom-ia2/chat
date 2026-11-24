@@ -88,4 +88,15 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
 
     expect(schema[:contact]).to contain_exactly({ key: 'contador', label: 'Contador', type: 'number' })
   end
+
+  # MOTIVO (#3176): a definição da WAHA existe na conta, mas a IA não pode receber o chat id como campo que ela preenche.
+  it 'leaves the internal keys out of the schema' do
+    create_attribute(key: 'waha_whatsapp_chat_id', model: 'contact_attribute', type: 'text', label: 'Chat id')
+    create_attribute(key: 'autonomia_prospecting_lead_id', model: 'contact_attribute', type: 'number', label: 'Lead')
+    create_attribute(key: 'cpf', model: 'contact_attribute', type: 'text', label: 'CPF')
+
+    schema = described_class.new(account: account, prefix: '').perform
+
+    expect(schema[:contact]).to contain_exactly({ key: 'cpf', label: 'CPF', type: 'text' })
+  end
 end

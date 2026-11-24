@@ -3,14 +3,17 @@ import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enResult from 'dashboard/i18n/locale/en/resultJourney.json';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
+import enDuasVersoes from 'dashboard/i18n/locale/en/duasVersoes.json';
 
 const api = vi.hoisted(() => ({
   getResult: vi.fn(),
   getRecipients: vi.fn(),
   exportResult: vi.fn(),
+  escolherVersao: vi.fn(),
 }));
 vi.mock('dashboard/api/campaignResults', () => ({ default: api }));
-vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+const alert = vi.hoisted(() => vi.fn());
+vi.mock('dashboard/composables', () => ({ useAlert: alert }));
 vi.mock(
   'dashboard/components-next/Campaigns/EmailProtection/presentation',
   () => ({
@@ -117,7 +120,7 @@ const mountView = ({ channel = 'whatsapp_official', customRole } = {}) => {
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: { ...enJourney, ...enResult } },
+    messages: { en: { ...enJourney, ...enResult, ...enDuasVersoes } },
     missingWarn: false,
     fallbackWarn: false,
   });
@@ -315,5 +318,98 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-sms-partial]').exists()).toBe(true);
+  });
+
+  // #3099: o bloco das duas versões vem no resultado; escolher a versão do resto é disparo (campaign_send).
+  describe('duas versões da mensagem', () => {
+    const duasVersoes = {
+      estado: 'esperando_voce',
+      criterio: 'eu_escolho',
+      escolhe_em: 1795000000,
+      vencedora: null,
+      escolhida_por: null,
+      escolhida_em: null,
+      resto: 1080,
+      versoes: [
+        {
+          numero: 1,
+          texto: 'Oi! Seu seguro vence logo.',
+          receberam: 135,
+          responderam: 11,
+          compraram: 0,
+          valor: null,
+        },
+        {
+          numero: 2,
+          texto: 'Seu seguro vence: quer renovar?',
+          receberam: 135,
+          responderam: 24,
+          compraram: 0,
+          valor: null,
+        },
+      ],
+    };
+    const comVersoes = () => ({ ...result(), duas_versoes: duasVersoes });
+
+    it('mostra o resultado abaixo dos números e manda a versão escolhida para o resto', async () => {
+      api.getResult.mockResolvedValue({ data: { payload: comVersoes() } });
+      api.escolherVersao.mockResolvedValue({ data: { payload: duasVersoes } });
+      const { wrapper } = mountView();
+      await flushPromises();
+
+      const bloco = wrapper.find('[data-duas-versoes-resultado]');
+      expect(bloco.find('[data-situacao="esperando_voce"]').exists()).toBe(
+        true
+      );
+      const cartao = bloco.find('[data-cartao-versao="2"]');
+      await cartao.find('[data-escolher-versao]').trigger('click');
+      await cartao.find('[data-sim-mandar]').trigger('click');
+      await flushPromises();
+
+      expect(api.escolherVersao).toHaveBeenCalledWith(
+        'whatsapp_official',
+        '5',
+        2
+      );
+      // Mandou: o resultado é lido de novo, com a escolha gravada.
+      expect(api.getResult).toHaveBeenCalledTimes(2);
+    });
+
+    it('outra versão já escolhida (422): avisa e recarrega o resultado', async () => {
+      api.getResult.mockResolvedValue({ data: { payload: comVersoes() } });
+      api.escolherVersao.mockRejectedValue({ response: { status: 422 } });
+      const { wrapper } = mountView();
+      await flushPromises();
+
+      const cartao = wrapper.find('[data-cartao-versao="1"]');
+      await cartao.find('[data-escolher-versao]').trigger('click');
+      await cartao.find('[data-sim-mandar]').trigger('click');
+      await flushPromises();
+
+      expect(alert).toHaveBeenCalledWith(
+        enDuasVersoes.DUAS_VERSOES.RESULTADO.JA_ESCOLHIDA
+      );
+      expect(api.getResult).toHaveBeenCalledTimes(2);
+    });
+
+    it('sem a chave de disparar, vê os números mas não escolhe', async () => {
+      api.getResult.mockResolvedValue({ data: { payload: comVersoes() } });
+      const { wrapper } = mountView({ customRole: ['campaign_view'] });
+      await flushPromises();
+
+      expect(wrapper.find('[data-duas-versoes-resultado]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher-versao]').exists()).toBe(false);
+      expect(wrapper.find('[data-sem-permissao]').text()).toBe(
+        enDuasVersoes.DUAS_VERSOES.RESULTADO.SEM_PERMISSAO
+      );
+    });
+
+    it('campanha sem duas versões não mostra o bloco', async () => {
+      const { wrapper } = mountView();
+      await flushPromises();
+      expect(wrapper.find('[data-duas-versoes-resultado]').exists()).toBe(
+        false
+      );
+    });
   });
 });

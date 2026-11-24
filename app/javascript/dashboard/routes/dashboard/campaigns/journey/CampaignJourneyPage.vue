@@ -31,6 +31,8 @@ import CampaignTabs from 'dashboard/components-next/CampaignJourney/CampaignTabs
 import BrandKitNudge from 'dashboard/components-next/BrandKits/BrandKitNudge.vue';
 // Fork (Modelos do WhatsApp): campanhas paradas por causa do modelo (flag whatsapp_templates_journey).
 import AvisoCampanhasParadas from '../modelos/ponte/AvisoCampanhasParadas.vue';
+// #3099 (D5): campanhas com duas versões esperando alguém escolher a versão do resto.
+import AvisoDuasVersoesEsperando from 'dashboard/components-next/CampaignJourney/AvisoDuasVersoesEsperando.vue';
 // Fork (#1332): campanha com pausa aberta aparece como "Parada", com o motivo curto (com ou sem a flag).
 import whatsappTemplatesAPI from 'dashboard/api/whatsappTemplates';
 import { motivoDaPausa } from '../modelos/helpers/motivoDaPausa';
@@ -326,6 +328,7 @@ useOnEnter(fetchAll);
       <CampaignTabs active="campaigns" />
       <BrandKitNudge v-if="features.emailCampaigns" />
       <AvisoCampanhasParadas class="mb-5" @retomada="fetchAll" />
+      <AvisoDuasVersoesEsperando />
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <h1

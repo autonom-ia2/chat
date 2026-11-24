@@ -1,0 +1,88 @@
+{
+  "REENVIO_HORARIO": {
+    "REENVIO": {
+      "TITULO": "Mandar de novo",
+      "RESUMO_DESLIGADO": "Não manda de novo",
+      "DETALHE_DESLIGADO": "Quem não responder recebe só esta mensagem.",
+      "RESUMO_LIGADO": "Manda de novo 1 dia depois, para quem {quem} | Manda de novo {dias} dias depois, para quem {quem}",
+      "QUEM_RESUMO": {
+        "NAO_RESPONDEU": "não respondeu",
+        "NAO_LEU": "nem leu"
+      },
+      "DETALHE_MODELO": "Segunda mensagem: “{inicio}…”",
+      "DETALHE_TEXTO": "Segunda mensagem: {texto}",
+      "DETALHE_ASSUNTO": "Segundo e-mail com o assunto: {assunto}",
+      "FALTA": {
+        "SEM_MODELO": "Falta escolher a segunda mensagem.",
+        "SEM_TEXTO": "Falta escrever a segunda mensagem.",
+        "SEM_ASSUNTO": "Falta escrever o assunto do segundo e-mail.",
+        "SEM_LIGACAO": "Falta escolher de onde vem uma parte da segunda mensagem."
+      },
+      "LIGACAO_EM_VERMELHO": "Falta escolher de onde vem a parte marcada em vermelho.",
+      "LIGAR": "Mandar uma segunda mensagem",
+      "LIGAR_AJUDA": "Muita gente vê a mensagem e esquece de responder. Um lembrete, alguns dias depois, traz parte dessas pessoas de volta.",
+      "QUEM": "Para quem",
+      "QUEM_OPCAO": {
+        "NAO_RESPONDEU": "Quem não respondeu",
+        "NAO_LEU": "Quem nem leu"
+      },
+      "QUEM_AJUDA": {
+        "NAO_RESPONDEU": "Pode ter lido, mas não respondeu.",
+        "NAO_LEU": "A mensagem chegou, mas a pessoa não abriu."
+      },
+      "DEPOIS_DE": "Quantos dias depois da primeira mensagem",
+      "DIAS": "1 dia depois | {n} dias depois",
+      "SEGUNDA_MENSAGEM": "Segunda mensagem",
+      "MODELO_AJUDA": "Escolha outro modelo aprovado pelo WhatsApp. Dias depois, só modelo aprovado pode ser mandado.",
+      "MODELO_ESCOLHER": "Escolha o modelo",
+      "MODELO_LABEL": "Modelo da segunda mensagem",
+      "SEM_MODELOS": "Esta caixa não tem outro modelo aprovado, então não dá para mandar de novo. Crie um em Modelos do WhatsApp e volte aqui.",
+      "MODELO_COM_OFERTA": "tem cupom, oferta ou catálogo",
+      "TEXTO_AJUDA": "Escreva diferente da primeira: curta, lembrando o que você ofereceu.",
+      "TEXTO_EXEMPLO": "Oi! Passando para lembrar da oferta que te mandei. Ainda dá tempo, quer que eu separe para você?",
+      "TEXTO_PLACEHOLDER": "Escreva aqui a segunda mensagem",
+      "ASSUNTO_AJUDA": "O conteúdo é o mesmo do primeiro e-mail. Um assunto novo ajuda a pessoa a abrir.",
+      "ASSUNTO_LABEL": "Assunto do segundo e-mail",
+      "ASSUNTO_EXEMPLO": "Ainda dá tempo: sua oferta continua de pé",
+      "ASSUNTO_PLACEHOLDER": "Escreva aqui o assunto",
+      "COMO_CHEGA": "Como o cliente vê",
+      "REGRAS": "Quem responder antes disso, sair da lista ou estiver bloqueado não recebe. A segunda mensagem também respeita o limite e o horário da conta.",
+      "NO_RESUMO": "Manda de novo 1 dia depois | Manda de novo {dias} dias depois",
+      "SEGUNDO_EMAIL": "Segundo e-mail",
+      "PRONTO": "Pronto",
+      "FECHAR": "Fechar",
+      "CONFIRM": "1 dia depois que a primeira terminar de sair, quem {quem} recebe a segunda mensagem: até {total} pessoas. | {dias} dias depois que a primeira terminar de sair, quem {quem} recebe a segunda mensagem: até {total} pessoas.",
+      "CONFIRM_PAGO": "Cada segunda mensagem é um modelo cobrado pela Meta."
+    },
+    "MELHOR_HORARIO": {
+      "TITULO": "No melhor horário de cada cliente",
+      "AJUDA": "Cada pessoa recebe na hora em que costuma responder, nas {horas} horas depois do início.",
+      "NINGUEM": "Ainda não sabemos o melhor horário de ninguém deste público. Todos recebem {inicio}.",
+      "CONTANDO": "Contando quem já respondeu antes…",
+      "COM_HORA": "Recebem no melhor horário",
+      "COM_HORA_AJUDA": "Sabemos a hora em que cada um costuma responder.",
+      "SEM_HORA": "Recebem no início",
+      "SEM_HORA_AJUDA": "Ainda não sabemos a hora deles: recebem {inicio}.",
+      "PESSOAS": "1 pessoa | {n} pessoas",
+      "INICIO": {
+        "NOW": "agora",
+        "LATER": "na data e hora escolhidas"
+      },
+      "HORARIO_PERMITIDO": "{dias}, das {inicio} às {fim}",
+      "HORARIO_DA_CONTA": "Sempre dentro do horário permitido da conta: {horario}.",
+      "QUALQUER_HORA": "Sua conta deixa mandar a qualquer hora.",
+      "NO_RESUMO": "Quem já respondeu recebe no melhor horário, em até {horas} horas",
+      "CONFIRM_NOW_TEXT": "O envio começa agora. Quem já respondeu antes recebe no seu melhor horário, em até {horas} horas. Os outros recebem agora.",
+      "CONFIRM_LATER_TEXT": "O envio começa em {when}. Quem já respondeu antes recebe no seu melhor horário, nas {horas} horas seguintes. Os outros recebem no início. Até lá você pode editar ou cancelar a campanha."
+    },
+    "AUTOMACAO": {
+      "ROTULO": "Quando mandar",
+      "NA_HORA": "Assim que chegar neste passo",
+      "NA_HORA_AJUDA": "A mensagem sai na hora.",
+      "MELHOR_HORARIO": "No melhor horário de cada cliente",
+      "MELHOR_HORARIO_AJUDA": "Espera a hora em que ele costuma responder, no máximo 24 horas. Se ainda não sabemos a hora dele, recebe na hora.",
+      "REGRAS": "Sempre dentro do horário permitido da conta: {horario}. Se o cliente acabou de escrever, a resposta sai na hora.",
+      "REGRAS_QUALQUER_HORA": "Sua conta deixa mandar a qualquer hora. Se o cliente acabou de escrever, a resposta sai na hora."
+    }
+  }
+}

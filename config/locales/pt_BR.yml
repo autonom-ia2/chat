@@ -229,6 +229,7 @@ pt_BR:
       pessoa_so_no_card: 'O campo de pessoa da equipe só existe no card.'
       contato_so_no_card: 'Campo do tipo Contato só existe no card.'
       contato_em_uso: 'Este campo do tipo Contato está em uso pela automação %{automacoes} para achar o contato ligado. Desligue a automação, ou escolha outro campo nela, antes de mudar o tipo ou apagar este campo.'
+      campo_interno: 'Este campo é usado pelo sistema para achar o contato (WhatsApp ou Prospecção). Ele não pode ser apagado, e a chave, o tipo e onde ele fica não mudam. O nome e o "Para que serve" você pode mudar.'
     mfa:
       already_enabled: MFA já está habilitado
       not_enabled: MFA não está habilitado
@@ -348,6 +349,8 @@ pt_BR:
       phone: Telefone
       email: E-mail
       company: Empresa
+    # #3101: o nome da campanha da segunda mensagem ("Mandar de novo").
+    segunda_mensagem: "%{nome} · segunda mensagem"
   conversation_audience:
     columns:
       city: Cidade
@@ -1503,7 +1506,8 @@ pt_BR:
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
-        adiado_pelo_ritmo: "Ainda não mandou: o cliente já recebeu o máximo de mensagens que a conta permite no período, ou está fora do horário de envio. Manda sozinho quando puder."
+        adiado_pelo_ritmo: "Ainda não mandou: o cliente já recebeu o máximo de mensagens que a conta permite no período, recebeu outra há menos tempo que o intervalo mínimo, ou está fora do horário de envio. Manda sozinho quando puder."
+        adiado_pelo_melhor_horario: "Esperando o melhor horário do cliente: a hora em que ele costuma escrever. Manda sozinho nessa hora."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."
@@ -1637,6 +1641,10 @@ pt_BR:
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         um_de: 'Passo %{passo}: %{campo} tem de ser um destes: %{opcoes}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
+        versoes_sem_modelo: "Passo %{passo}: a mensagem usa um modelo quando a janela de 24 h está fechada, então a versão 2 também precisa de um modelo."
+        versoes_modelo_sobrando: "Passo %{passo}: a versão 2 tem um modelo, mas a versão 1 não. Escolha um modelo para a versão 1 ou tire o da versão 2."
+        versoes_iguais: "Passo %{passo}: a versão 2 está igual à versão 1. Mude alguma coisa para dar para comparar."
+        versoes_sem_compras: "Passo %{passo}: \"mais compras\" precisa dos funis de venda, que estão desligados nesta conta. Escolha \"mais respostas\" ou \"eu escolho\"."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
@@ -1705,6 +1713,9 @@ pt_BR:
         rodizio: 'Passar a conversa para alguém online, em rodízio'
       webhook:
         gravar: 'Gravar o que o outro sistema respondeu'
+      duas_versoes:
+        versao_invalida: 'Escolha a versão 1 ou a versão 2.'
+        versao_ja_escolhida: 'Outra versão já foi escolhida para este passo.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
@@ -2186,9 +2197,6 @@ pt_BR:
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
     material:
       problema_invalido: 'Isto já foi resolvido ou mudou. A página foi atualizada.'
-      autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
-      autoteste_espere: 'Espere um pouco para testar de novo.'
-      autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
     base_de_seguros:
       sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
       base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'

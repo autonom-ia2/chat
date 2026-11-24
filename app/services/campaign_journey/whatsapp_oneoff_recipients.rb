@@ -23,10 +23,24 @@
 # With the flag off they run Chatwoot's code untouched (pure `super`).
 # Uses #audience_link from CampaignJourney::AudienceContacts (prepended alongside) and the
 # recipient bookkeeping shared with SMS (CampaignJourney::RecipientTracking, #1004).
+#
+# #3099 (duas versões, D3): who fell in version 2 gets its template (same variables as version 1, checked at creation)
+# and the message kept on the recipient is version 2's body. #enviar_resto sends the rest after the choice.
 module CampaignJourney::WhatsappOneoffRecipients
   include CampaignJourney::RecipientTracking
 
   ORIGEM_DO_RITMO = 'campanha_whatsapp'.freeze
+
+  # #3099: the campaign already ran (the test); the rest of the audience, now with the chosen version, gets a queued
+  # recipient (idempotent per campaign + contact) and is sent like the first run. Called by
+  # CampaignJourney::DuasVersoes::EnvioDoResto; the campaign stays completed.
+  def enviar_resto
+    contatos = audience_contacts
+    return skip_all_recipients(contatos, CampaignJourney::AudienceContacts::CHANNEL_DISABLED_REASON) unless audience_whatsapp_enabled?
+
+    insert_recipients(contatos, status: :queued)
+    process_recipients(campaign.campaign_recipients.queued.where(adiado_ate: nil).includes(:contact).find_each(batch_size: INSERT_BATCH_SIZE))
+  end
 
   private
 
@@ -95,7 +109,7 @@ module CampaignJourney::WhatsappOneoffRecipients
   end
 
   def recipient_template_params(recipient, contact)
-    return super unless audience_variables&.any?
+    return na_versao(super, contact) unless audience_variables&.any?
 
     values, missing = audience_variables.resolve(contact, audience_extra_values(contact.id))
     if missing.any?
@@ -104,15 +118,28 @@ module CampaignJourney::WhatsappOneoffRecipients
     end
 
     params = super
-    params && with_variable_values(params, contact, values)
+    params && na_versao(with_variable_values(params, contact, values), contact)
+  end
+
+  # #3099: version 2 swaps only the template; the processed values are the same (same variables).
+  def na_versao(params, contact)
+    return params unless params && duas_versoes.versao_2?(contact.id)
+
+    params.merge('name' => duas_versoes.segunda['template_name'], 'language' => duas_versoes.segunda['template_language'])
+  end
+
+  def duas_versoes
+    @duas_versoes ||= CampaignJourney::DuasVersoes.new(audience_link)
   end
 
   # The message kept on the recipient shows what this person received (single literal pass).
   def rendered_message_content(contact)
     values = resolved_values.delete(contact.id)
-    return super unless values
+    corpo = duas_versoes.segunda['message'].to_s if duas_versoes.versao_2?(contact.id)
+    return CampaignJourney::TemplatePlaceholders.render(corpo || campaign.message.to_s, values) if values
+    return super unless corpo
 
-    CampaignJourney::TemplatePlaceholders.render(campaign.message.to_s, values)
+    Liquid::CampaignTemplateService.new(campaign: campaign, contact: contact).call(corpo)
   end
 
   # Values go in after Liquid ran on the template (body, TEXT header and URL buttons, #993), so spreadsheet text is never parsed as Liquid.

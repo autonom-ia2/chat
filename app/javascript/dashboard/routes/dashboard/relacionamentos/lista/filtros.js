@@ -14,11 +14,19 @@ export const FILTROS_VAZIOS = Object.freeze({
   // (`ultimos_30`...); totalAcima: o total comprado, em reais, acima de N.
   compras: '',
   totalAcima: '',
+  // #3100 — o cartão fidelidade: perto do prêmio ou cartão completo. Só o
+  // servidor sabe o saldo: a lista da demonstração não filtra por ele.
+  fidelidade: '',
   // #3168 — "Por outra informação": as linhas (lista/informacoes.js) e se a
   // pessoa precisa ter todas ou pelo menos uma.
   condicoes: Object.freeze([]),
   juntar: JUNTAR.TODAS,
 });
+
+export const FIDELIDADE = { PERTO: 'perto', COMPLETO: 'completo' };
+// O valor que chega pela URL (?fidelidade=perto), ou vazio se não for um deles.
+export const fidelidadeValida = valor =>
+  Object.values(FIDELIDADE).includes(valor) ? valor : '';
 
 export const COMPRAS = {
   JA_COMPROU: 'ja_comprou',

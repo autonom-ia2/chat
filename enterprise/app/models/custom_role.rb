@@ -81,6 +81,10 @@
 #   view sees the profile numbers and the posts; the comments (who wrote them) also need to see the inbox
 #   (InboxPolicy#show?). manage answers, hides and shows a comment again and sends the private reply, also only on
 #   inboxes the person sees. Common delegable module (Funções, 27/10).
+# - 'fidelidade_view' / 'fidelidade_manage': the loyalty card and coupons (#3100). view sees the Fidelidade panel and its
+#   numbers; manage creates and changes the card, pauses it and turns it back on, and gives or takes stamps by hand.
+#   Seeing a person's card and giving the prize on the contact page follow the contact access instead (Rodrigo, D1,
+#   23/11). Common delegable module.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own
@@ -165,6 +169,8 @@ class CustomRole < ApplicationRecord
     meta_ads_manage
     posts_view
     posts_manage
+    fidelidade_view
+    fidelidade_manage
     label_manage
     attribute_manage
     macro_manage
@@ -189,8 +195,13 @@ class CustomRole < ApplicationRecord
                         crm_export].freeze
 
   # A key that only works with another one stored next to it: the CRM editing keys need crm_view (#2124); the tools key
-  # needs autonomia_view, because the tools drawer lives on the agent page (#1430).
-  IMPLIED_VIEWS = { 'crm_view' => CRM_EDITING_KEYS, 'autonomia_view' => %w[autonomia_tools_manage] }.freeze
+  # needs autonomia_view, because the tools drawer lives on the agent page (#1430); fidelidade_manage needs
+  # fidelidade_view, because the card is changed on the Fidelidade panel (#3100).
+  IMPLIED_VIEWS = {
+    'crm_view' => CRM_EDITING_KEYS,
+    'autonomia_view' => %w[autonomia_tools_manage],
+    'fidelidade_view' => %w[fidelidade_manage]
+  }.freeze
 
   # The keys as the role stores them. Readers check the stored keys, and the grant guard checks these, so nobody hands
   # out a view they do not hold.

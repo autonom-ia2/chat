@@ -19,6 +19,7 @@ import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
 import ConversaNova from '../components/carteira/ConversaNova.vue';
 import SecaoCompras from '../components/ficha/SecaoCompras.vue';
+import FidelidadeDaFicha from '../components/ficha/FidelidadeDaFicha.vue';
 import { FALHA_DA_PARTE } from '../ficha/falhas';
 import DialogoDeConfirmacao from '../components/carteira/DialogoDeConfirmacao.vue';
 import AvisoVivo from '../components/ficha/AvisoVivo.vue';
@@ -170,6 +171,8 @@ const campos = computed(() =>
         definicoes: camposDaConta.definicoes.value,
         escolhidos: camposDaConta.escolhidos.value,
         guardadas: camposDaConta.guardadas.value,
+        chavesInternas: camposDaConta.chavesInternas.value,
+        traduzir: t,
         valores: ficha.pessoa.value.custom_attributes ?? {},
       })
     : []
@@ -671,6 +674,14 @@ watch(
                 @chamar="conversar"
                 @tentar="ficha.relerParte('compras')"
               />
+              <!-- #3100: o cartão fidelidade, logo depois de Compras (fora da demonstração). -->
+              <FidelidadeDaFicha
+                v-if="!fonte.usaDemo"
+                :dono-id="id"
+                :nome="nome"
+                :agora="agora"
+                :pode-editar="podeEditar"
+              />
               <SegurosDaFicha
                 v-if="comSeguros"
                 :dono-id="id"
@@ -704,6 +715,7 @@ watch(
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
       :guardadas="camposDaConta.guardadas.value"
+      :chaves-internas="camposDaConta.chavesInternas.value"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
     />

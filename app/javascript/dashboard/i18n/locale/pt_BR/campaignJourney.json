@@ -764,6 +764,14 @@
         "DIAS": "1 dia | {n} dias",
         "DIAS_LABEL": "Período do limite"
       },
+      "INTERVALO": {
+        "TITLE": "Intervalo entre mensagens",
+        "HELP": "Quanto tempo, no mínimo, entre duas mensagens para a mesma pessoa.",
+        "LABEL": "Intervalo mínimo",
+        "SEM_INTERVALO": "Sem intervalo mínimo",
+        "HORAS": "Pelo menos 1 hora | Pelo menos {n} horas",
+        "EXEMPLO": "Se alguém recebeu uma mensagem agora, a próxima espera pelo menos 1 hora. | Se alguém recebeu uma mensagem agora, a próxima espera pelo menos {n} horas."
+      },
       "HORARIO": {
         "TITLE": "Horário de envio",
         "HELP": "Em que horário as mensagens podem sair.",
@@ -805,9 +813,10 @@
         "SEM_LIMITE": "Sem limite de mensagens por cliente.",
         "HORARIO": "As mensagens saem {dias}, das {inicio} às {fim}.",
         "QUALQUER_HORA": "As mensagens saem a qualquer hora.",
-        "FALTA_HORARIO": "Falta arrumar o horário para poder salvar."
+        "FALTA_HORARIO": "Falta arrumar o horário para poder salvar.",
+        "INTERVALO": "Pelo menos 1 hora entre duas mensagens. | Pelo menos {n} horas entre duas mensagens."
       },
-      "ESPERA": "Se passar do limite ou do horário, a mensagem fica guardada: ela espera e sai sozinha depois.",
+      "ESPERA": "Se passar do limite, do intervalo ou do horário, a mensagem fica guardada: ela espera e sai sozinha depois.",
       "FORA_DA_CONTA": "O limite não vale para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente.",
       "PROBLEMA": {
         "FIM_ANTES": "O fim ({fim}) precisa ser depois do começo ({inicio}).",

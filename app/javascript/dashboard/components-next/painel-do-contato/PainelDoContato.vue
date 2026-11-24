@@ -128,7 +128,7 @@ const linhas = computed(() =>
     },
     {
       tipo: 'informacoes',
-      count: listas.informacoes.value.length,
+      count: listas.informacoes.value.length + listas.conhecidas.value.length,
       texto: n => t('PAINEL_DO_CONTATO.LISTAS.INFORMACOES', { count: n }),
       so: props.podeVerContatos,
     },
@@ -153,6 +153,7 @@ const verPagina = () => router.push(ficha.pessoa(props.contact.id));
         conversas: listas.conversas.value,
         arquivos: listas.arquivos.value,
         informacoes: listas.informacoes.value,
+        conhecidas: listas.conhecidas.value,
         quemAcompanha: listas.quemAcompanha.value,
       }"
       :contact="contact"

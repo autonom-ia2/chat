@@ -11,6 +11,7 @@
 #
 # - Limite: no máximo `mensagens` nos últimos `dias`. Cheio, a vaga abre quando a mais velha das que contam sai do
 #   período.
+# - Intervalo (#3101): pelo menos `horas` entre duas mensagens para o mesmo cliente, contadas da última que saiu.
 # - Horário: só entre `inicio` e `fim`, nos dias da semana escolhidos, no fuso do cliente (o mesmo resolvedor do CRM: o
 #   fuso da ficha, o do país, o da conta). Destinatário sem ficha (e-mail de planilha) usa o fuso da conta e não conta
 #   no limite.
@@ -42,9 +43,9 @@ class Autonomia::RitmoDeEnvio::Porteiro
   # nil: pode mandar agora. Time: o primeiro instante em que pode.
   def quando
     config = Autonomia::RitmoDeEnvio::Config.da(@account)
-    return nil if config.limite.nil? && config.horario.nil?
+    return nil if config.limite.nil? && config.intervalo.nil? && config.horario.nil?
 
-    livre = config.limite && @contact ? vaga_do_limite(config.limite) : @agora
+    livre = @contact ? [vaga_do_limite(config.limite), vaga_do_intervalo(config.intervalo)].max : @agora
     ate = config.proximo_horario(livre, fuso)
     ate > @agora ? ate : nil
   end
@@ -52,6 +53,8 @@ class Autonomia::RitmoDeEnvio::Porteiro
   private
 
   def vaga_do_limite(limite)
+    return @agora if limite.nil?
+
     mensagens = limite['mensagens']
     dias = limite['dias'].days
     envios = Autonomia::EnvioAoCliente.where(account_id: @account.id, contact_id: @contact.id, enviado_em: (@agora - dias)..)
@@ -59,6 +62,15 @@ class Autonomia::RitmoDeEnvio::Porteiro
     return @agora if envios.size < mensagens
 
     envios.last + dias + FOLGA
+  end
+
+  def vaga_do_intervalo(intervalo)
+    return @agora if intervalo.nil?
+
+    ultimo = Autonomia::EnvioAoCliente.where(account_id: @account.id, contact_id: @contact.id).maximum(:enviado_em)
+    return @agora if ultimo.nil?
+
+    [ultimo + intervalo['horas'].hours + FOLGA, @agora].max
   end
 
   def fuso

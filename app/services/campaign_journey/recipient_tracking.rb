@@ -13,7 +13,11 @@
 #   recipient stays `queued` with `adiado_ate`, is not failed at the end of the run and is sent later by
 #   CampaignJourney::RetomarAdiadosJob (#retomar_adiados), which the sweep enqueues when the time comes. A message that
 #   went out counts for the limit.
+# - #3101: with "melhor horário" on (Autonomia::MelhorHorario.na_campanha), the first pass of a recipient waits for the
+#   hour the contact usually writes, the same way (`queued` with `adiado_ate`).
 module CampaignJourney::RecipientTracking
+  include Autonomia::MelhorHorario::DoMotor
+
   NOT_PROCESSED_REASON = 'Recipient was not processed'.freeze
   INSERT_BATCH_SIZE = 1000
 
@@ -31,7 +35,8 @@ module CampaignJourney::RecipientTracking
 
   # true when the recipient has to wait: it keeps `queued`, with the time it may go.
   def adiado_pelo_ritmo?(recipient, contact)
-    ate = Autonomia::RitmoDeEnvio::Porteiro.quando(account: campaign.account, contact: contact)
+    ate = Autonomia::MelhorHorario.na_campanha(campanha: campaign, contact: contact, adiado_ate: recipient.adiado_ate,
+                                               ligado: melhor_horario_ligado?(campaign))
     return false unless ate
 
     recipient.update!(adiado_ate: ate)

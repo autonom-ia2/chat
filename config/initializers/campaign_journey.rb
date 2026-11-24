@@ -39,6 +39,14 @@ Rails.application.config.to_prepare do
   prepend_once.call(EmailCampaigns::Presentation::SendReadiness, CampaignJourney::EmailAudienceGate::Readiness)
   # #999 review M2: a due linked e-mail campaign syncs its list before the hygiene/admission checks.
   prepend_once.call(EmailCampaigns::Scheduler, CampaignJourney::EmailAudienceGate::Scheduler)
+  # #3099 (D2): with two versions, who fell in version 2 gets its subject (SES and the direct inbox).
+  prepend_once.call(EmailCampaigns::DeliveryEngine, CampaignJourney::DuasVersoes::AssuntoDoEmail)
+  prepend_once.call(EmailCampaigns::DirectInbox::RecipientSender, CampaignJourney::DuasVersoes::AssuntoDoEmail)
+
+  # #3101: editing a campaign before its second message goes out cancels the second message.
+  [Campaign, EmailCampaign].each do |klass|
+    klass.include(CampaignJourney::Reenvio::Cancelavel) unless klass.include?(CampaignJourney::Reenvio::Cancelavel)
+  end
 
   # #1002: a reply to a campaign marks the conversation in the CRM (listener on message_created).
   # Independent of initializer order: the prepend covers a later load_listeners, ensure_subscribed!

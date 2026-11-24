@@ -1,9 +1,8 @@
-# #1426 (tema 4b) — a lista "um problema por vez": o que as conferências e o autoteste acharam, na ordem em que a tela
-# mostra. Cada problema tem `id` estável, `tipo`, os materiais envolvidos (`fontes`) e o que o cartão precisa. O texto
-# leigo é da tela (i18n); daqui saem só dados. Nada aqui chama IA: lê o que já foi gravado.
+# #1426 (tema 4b) — a lista "um problema por vez": o que as conferências acharam, na ordem em que a tela mostra. Cada
+# problema tem `id` estável, `tipo`, os materiais envolvidos (`fontes`) e o que o cartão precisa. O texto leigo é da tela
+# (i18n); daqui saem só dados. Nada aqui chama IA: lê o que já foi gravado.
 #
-# Tipos: vazio · ocr · sem_cabecalho · duplicado · contradicao · paginas_de_fora · autoteste (resposta errada) ·
-# autoteste_fora (inventou numa pergunta de fora do material).
+# Tipos: vazio · ocr · sem_cabecalho · duplicado · contradicao · paginas_de_fora.
 class Autonomia::Agents::Material::Problemas
   ERRO_DE_VAZIO = 'empty_extraction'.freeze
   REPROVADOS = %w[ocr sem_cabecalho].freeze
@@ -17,7 +16,7 @@ class Autonomia::Agents::Material::Problemas
   def lista
     return [] unless Autonomia::Agents::Material.conferir?(@agent)
 
-    vazios + reprovados + duplicados + contradicoes + paginas_de_fora + do_autoteste
+    vazios + reprovados + duplicados + contradicoes + paginas_de_fora
   end
 
   private
@@ -82,19 +81,6 @@ class Autonomia::Agents::Material::Problemas
 
       { 'id' => "paginas-#{fonte.id}", 'tipo' => 'paginas_de_fora', 'fontes' => [fonte.id], 'nome' => nome(fonte) }
         .merge(Autonomia::Agents::Material::PaginasDeFora.resumo(fora))
-    end
-  end
-
-  def do_autoteste
-    estado = @agent.chave_do_material(Autonomia::Agents::Material::Autoteste::CHAVE).to_h
-    Array(estado['itens']).each_with_index.filter_map do |item, indice|
-      next if item['confirmada'] || %w[errado inventou].exclude?(item['veredito'])
-
-      fonte = @por_id[item['fonte']]
-      { 'id' => "autoteste-#{estado['rodada_dos_itens']}-#{indice}", 'tipo' => item['origem'] == 'fora' ? 'autoteste_fora' : 'autoteste',
-        'fontes' => [], 'pergunta' => item['pergunta'], 'resposta' => item['resposta'], 'equipe' => item['equipe'] == true,
-        'esperado' => item['esperado'], 'onde' => fonte && nome(fonte),
-        'trechos' => Autonomia::Agents::Material::TrechosUsados.da_tela(item, @por_id) }.compact
     end
   end
 

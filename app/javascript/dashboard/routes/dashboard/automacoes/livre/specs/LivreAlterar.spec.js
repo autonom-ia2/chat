@@ -22,6 +22,20 @@ vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: () => ({ value: true }),
 }));
 
+// #3101: o horário de envio da conta, que a peça "Quando mandar" mostra.
+vi.mock('dashboard/api/ritmoDeEnvio', () => ({
+  default: {
+    buscar: () =>
+      Promise.resolve({
+        data: {
+          payload: {
+            horario: { inicio: 8, fim: 20, dias_da_semana: [1, 2, 3, 4, 5] },
+          },
+        },
+      }),
+  },
+}));
+
 const PainelFalso = defineComponent({
   name: 'SidePanel',
   setup(_, { expose }) {
@@ -941,5 +955,165 @@ describe('LivreAlterar, extrair no card', () => {
     expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' }, false)).toBe(
       false
     );
+  });
+
+  // #3099: o passo "mensagem" ganha a peça das duas versões no lugar do campo
+  // `versoes` do catálogo, e só salva com a versão 2 pronta.
+  describe('duas versões da mensagem', () => {
+    const MENSAGEM = {
+      tipo: 'mensagem',
+      grupo: 'MENSAGEM',
+      frase: 'MENSAGEM',
+      campos: [
+        {
+          nome: 'texto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'TEXTO',
+        },
+        {
+          nome: 'modelo',
+          peca: 'modelo_whatsapp',
+          obrigatorio: false,
+          rotulo: 'MODELO',
+        },
+        {
+          nome: 'versoes',
+          peca: 'duas_versoes',
+          obrigatorio: false,
+          rotulo: 'VERSOES',
+        },
+      ],
+    };
+    const regra = { criterio: 'respostas', divisao: 50, espera: 4 };
+    const montarMensagem = () =>
+      mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [MENSAGEM] },
+          opcoes: {},
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: {
+            SidePanel: PainelFalso,
+            LivreTexto: true,
+            LivreModelo: true,
+            LivreDuasVersoes: {
+              name: 'LivreDuasVersoes',
+              props: ['modelValue'],
+              emits: ['update:modelValue'],
+              template: '<div data-peca-duas-versoes />',
+            },
+          },
+          mocks: { $t: chave => chave },
+        },
+      });
+
+    it('mostra a peça e segura o Salvar até a versão 2 ficar pronta', async () => {
+      const wrapper = montarMensagem();
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'p1', tipo: 'mensagem', texto: ['Oi'] },
+      });
+      await flushPromises();
+      const peca = wrapper.findComponent({ name: 'LivreDuasVersoes' });
+      expect(peca.exists()).toBe(true);
+      expect(salvarDesligado(wrapper)).toBe(false);
+
+      await peca.vm.$emit('update:modelValue', {
+        id: 'p1',
+        tipo: 'mensagem',
+        texto: ['Oi'],
+        versoes: { ...regra, texto: [], modelo: null },
+      });
+      expect(salvarDesligado(wrapper)).toBe(true);
+
+      await peca.vm.$emit('update:modelValue', {
+        id: 'p1',
+        tipo: 'mensagem',
+        texto: ['Oi'],
+        versoes: { ...regra, texto: ['Olá!'], modelo: null },
+      });
+      expect(salvarDesligado(wrapper)).toBe(false);
+    });
+
+    it('sem o modelo da versão 1, o da versão 2 sai ao salvar', async () => {
+      const wrapper = montarMensagem();
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: {
+          id: 'p1',
+          tipo: 'mensagem',
+          texto: ['Oi'],
+          versoes: {
+            ...regra,
+            texto: ['Olá!'],
+            modelo: { nome: 'ola', idioma: 'pt_BR', variaveis: [] },
+          },
+        },
+      });
+      await flushPromises();
+      await wrapper.find('[data-salvar]').trigger('click');
+      expect(wrapper.emitted('salvar')[0][0].valor.versoes).toEqual({
+        ...regra,
+        texto: ['Olá!'],
+        modelo: null,
+      });
+    });
+  });
+
+  // #3101: o passo "Mandar mensagem" ganha a peça "Quando mandar".
+  describe('quando mandar', () => {
+    const MENSAGEM_COM_QUANDO = {
+      tipo: 'mensagem',
+      grupo: 'MENSAGEM',
+      frase: 'MENSAGEM',
+      campos: [
+        {
+          nome: 'texto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'TEXTO',
+        },
+        {
+          nome: 'quando',
+          peca: 'quando',
+          obrigatorio: false,
+          rotulo: 'QUANDO',
+        },
+      ],
+    };
+
+    it('começa na hora, mostra o horário da conta e salva o melhor horário', async () => {
+      const wrapper = mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [MENSAGEM_COM_QUANDO] },
+          opcoes: {},
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: { SidePanel: PainelFalso, LivreTexto: true },
+          mocks: { $t: chave => chave },
+        },
+      });
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'p1', tipo: 'mensagem', texto: ['Oi'] },
+      });
+      await flushPromises();
+
+      const peca = wrapper.findComponent({ name: 'LivreMelhorHorario' });
+      expect(peca.props('modelValue')).toBe('na_hora');
+      expect(peca.props('horarioPermitido')).toContain('HORARIO_PERMITIDO');
+
+      await wrapper.find('[data-quando="melhor_horario"]').trigger('click');
+      expect(wrapper.find('[data-quando-regras]').exists()).toBe(true);
+      await wrapper.find('[data-salvar]').trigger('click');
+      expect(wrapper.emitted('salvar')[0][0].valor.quando).toBe(
+        'melhor_horario'
+      );
+    });
   });
 });

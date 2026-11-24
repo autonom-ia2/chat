@@ -1855,48 +1855,7 @@
                 "TEMPO": "a leitura levou mais tempo do que o permitido",
                 "FALHA": "algumas páginas não puderam ser lidas"
               }
-            },
-            "AUTOTESTE": {
-              "TITULO": "No teste automático, {agente} errou uma resposta",
-              "TEXTO": "O seu material diz outra coisa.",
-              "PERGUNTA": "Pergunta",
-              "RESPONDEU": "{agente} respondeu",
-              "PASSOU": "Passou a conversa para a equipe.",
-              "MATERIAL": "O material",
-              "MATERIAL_DIZ": "{onde} diz: \"{texto}\"",
-              "CORRIGIR": "Corrigir conversando",
-              "CERTA": "A resposta está certa"
-            },
-            "AUTOTESTE_FORA": {
-              "TITULO": "No teste automático, {agente} inventou uma resposta",
-              "TEXTO": "A pergunta não está no seu material. O certo era dizer que não sabe e passar para a equipe."
             }
-          },
-          "AUTOTESTE": {
-            "TITULO": "Teste automático",
-            "RODANDO": "Testando {nome} com {total} perguntas… {feitas} de {total}",
-            "BASE_MUDOU": "O material mudou, então {nome} está sendo testado de novo.",
-            "ACERTOU": "{nome} acertou {certas} de {total} perguntas sobre o seu material.",
-            "SEM_DO_MATERIAL": "Neste teste, nenhuma pergunta sobre o seu material deu para julgar. Teste de novo.",
-            "NAO_JULGADAS": "1 pergunta do teste não deu para julgar e ficou de fora da conta. | {n} perguntas do teste não deram para julgar e ficaram de fora da conta.",
-            "FORA_OK": "Na pergunta que não está no material, {nome} não inventou resposta. | Nas {n} perguntas que não estão no material, {nome} não inventou resposta.",
-            "FORA_ERRO": "Em perguntas que não estão no material, {nome} inventou resposta.",
-            "NUNCA": "{nome} ainda não foi testado com o seu material.",
-            "PARADO": "Não consegui terminar o teste agora.",
-            "VER": "Ver a pergunta | Ver as {n} perguntas",
-            "DO_MATERIAL": "do material",
-            "DE_FORA": "fora do material",
-            "CERTA": "Certa",
-            "ERRADA": "Errada",
-            "TESTAR": "Testar agora",
-            "TENTAR_DE_NOVO": "Tentar de novo",
-            "DE_NOVO": "Testar de novo",
-            "TIROU": {
-              "TITULO": "De onde {agente} tirou",
-              "NENHUM": "{agente} não usou nenhum trecho do material para responder.",
-              "ONDE_PAGINAS": "{onde}, páginas {de} a {ate}"
-            },
-            "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
         },
@@ -1965,6 +1924,9 @@
           "FECHOU": "Pronto. {nome} já sabe o principal. Veja como {nome} responde.",
           "ERRO": "Não consegui responder agora.",
           "ERRO_GARANTIA": "O que você contou está guardado.",
+          "SEM_CREDITO": "A chave da OpenAI da sua conta está sem crédito.",
+          "SEM_CREDITO_GARANTIA": "Coloque crédito na OpenAI e toque em Tentar de novo. O que você contou está guardado.",
+          "SEM_CREDITO_LINK": "Colocar crédito na OpenAI",
           "ANEXO_FRASE": "Tem um cardápio, uma tabela ou o seu site? {acao} Não é obrigatório.",
           "ANEXO_ACAO": "Mande aqui.",
           "EXEMPLO_DO_MEU_JEITO": "Ex.: responder dúvidas de preço e entrega da minha loja",

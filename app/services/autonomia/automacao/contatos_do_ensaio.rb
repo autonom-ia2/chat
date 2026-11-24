@@ -6,6 +6,7 @@
 # - Com a etiqueta escolhida no gatilho, os que a têm: no "posta", como se ela acabasse de entrar; no "tirada", os que a
 #   perderiam, como o "saiu da etapa" do card. Sem etiqueta escolhida, os mais recentes.
 # - #3097: no "entrou no grupo de compra", os que estão no grupo escolhido agora (Relacionamentos::Compra).
+# - #3100: no "completou o cartão fidelidade", os que estão com o cartão completo agora (Fidelidade::NaListaDePessoas).
 # - O contato não tem conversa própria: como o card sem conversa, a da caixa da conversa nova (ConversaNovaNoEnsaio).
 class Autonomia::Automacao::ContatosDoEnsaio
   include ::Autonomia::Automacao::ConversaNovaNoEnsaio
@@ -41,6 +42,7 @@ class Autonomia::Automacao::ContatosDoEnsaio
     etiqueta = @gatilho['etiqueta']
     return @conta.contacts.tagged_with(etiqueta, on: :labels) if etiqueta.present?
     return no_grupo_de_compra(@gatilho['grupo_de_compra']) if @gatilho['grupo_de_compra'].present?
+    return @conta.contacts.where(::Fidelidade::NaListaDePessoas.new(@conta).condicao('completo')) if cartao_completo?
 
     @conta.contacts
   end
@@ -48,6 +50,8 @@ class Autonomia::Automacao::ContatosDoEnsaio
   def no_grupo_de_compra(grupo)
     @conta.contacts.where(id: ::Relacionamentos::Compra.where(account_id: @conta.id, grupo: grupo).select(:contact_id))
   end
+
+  def cartao_completo? = @gatilho['tipo'] == ::Fidelidade::CartaoCompleto::GATILHO
 
   def alcanca?(contato) = ContactPolicy.new(contexto, contato).update?
 

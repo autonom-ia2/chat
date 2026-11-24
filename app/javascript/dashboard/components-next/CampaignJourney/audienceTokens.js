@@ -59,6 +59,37 @@ export const insertToken = (text, token, position = text.length) => {
   return `${text.slice(0, at)}{{${token}}}${text.slice(at)}`;
 };
 
+/**
+ * #3099 — the text in the pieces the Automação livre editor uses (livre/texto.js), so the box can show
+ * "[Primeiro nome]" instead of `{{contact.first_name}}`: `["Oi ", { $valor: 'contact.first_name' }]`. Only the
+ * `known` tokens become pieces; any other `{{…}}` stays as text, so the round trip never changes the message.
+ */
+export const piecesOfTokens = (text, known) => {
+  const source = String(text || '');
+  const pieces = [];
+  let position = 0;
+  let start = source.indexOf('{{');
+  while (start !== -1) {
+    const finish = source.indexOf('}}', start + 2);
+    if (finish === -1) break;
+    const token = source.slice(start + 2, finish).trim();
+    if (known.includes(token)) {
+      if (start > position) pieces.push(source.slice(position, start));
+      pieces.push({ $valor: token });
+      position = finish + 2;
+    }
+    start = source.indexOf('{{', finish + 2);
+  }
+  if (position < source.length) pieces.push(source.slice(position));
+  return pieces;
+};
+
+/** The pieces back to the stored text, with `{{token}}`. */
+export const tokensOfPieces = pieces =>
+  (pieces || [])
+    .map(piece => (typeof piece === 'string' ? piece : `{{${piece.$valor}}}`))
+    .join('');
+
 const contactValue = (token, sample) => {
   const name = String(sample?.name || '').trim();
   if (token === 'contact.first_name')

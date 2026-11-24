@@ -7,6 +7,10 @@ import { emitter } from 'shared/helpers/mitt';
 import ConversaVazia from '../ConversaVazia.vue';
 import { BUSCA_DESATUALIZADA } from '../buscaDaLista';
 import { criarI18n } from '../../specs/apoio';
+// #3192 — o botão do Guia tem spec próprio (GuiaNoCabecalho.spec.js) e pede o store de verdade.
+vi.mock('dashboard/components/autonomia/guide/GuiaNoCabecalho.vue', () => ({
+  default: { name: 'GuiaNoCabecalho', render: () => null },
+}));
 
 // #2211 (rodada 4) — "Escrever" abre a tela da conversa, vazia. As regras de envio são as da
 // Nova conversa (composables simulados aqui); o que se testa é a tela: uma caixa já pronta,

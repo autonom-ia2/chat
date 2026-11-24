@@ -4451,6 +4451,20 @@
   },
   "PATCH campaign_journey/email_medicoes/:id": {
     "campos": {
+      "duas_versoes": {
+        "campos": {
+          "criterio": {},
+          "divisao": {},
+          "espera_horas": {},
+          "segunda": {
+            "campos": {
+              "subject": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "grupo_de_controle_pct": {
         "padrao": 0,
         "tipo": "inteiro",
@@ -4469,15 +4483,27 @@
           15,
           30
         ]
-      }
+      },
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
     "modelo": "CampaignAudienceLink",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:55",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -6941,6 +6967,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -7067,6 +7095,40 @@
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:23",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:59",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH fidelidade/cupons/:id": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "padrao": true,
+        "tipo": "booleano"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#update",
+    "modelo": "Fidelidade::Cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:23",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:25",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH fidelidade/programa": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/programa#ligar",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:19",
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:20"
     ],
     "sem_corpo": false
   },
@@ -8674,6 +8736,12 @@
         },
         "tipo": "objeto"
       },
+      "intervalo": {
+        "campos": {
+          "horas": {}
+        },
+        "tipo": "objeto"
+      },
       "limite": {
         "campos": {
           "dias": {},
@@ -8686,8 +8754,8 @@
     "controller": "api/v1/accounts/ritmo_de_envio#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:18",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:31"
     ],
     "sem_corpo": false
   },
@@ -11513,15 +11581,6 @@
     ],
     "sem_corpo": true
   },
-  "POST autonomia/agents/:agent_id/material/autoteste": {
-    "completo": true,
-    "controller": "api/v1/accounts/autonomia/agents/material#autoteste",
-    "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:37"
-    ],
-    "sem_corpo": true
-  },
   "POST autonomia/agents/:agent_id/material/problemas/:problema_id/resolver": {
     "campos": {
       "escolha": {
@@ -11534,7 +11593,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:12",
       "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/material_controller.rb:26"
     ],
     "sem_corpo": false
   },
@@ -11811,6 +11870,27 @@
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": true
+  },
+  "POST autonomia/automacoes/:id/duas_versoes/vencedora": {
+    "campos": {
+      "passo": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "versao": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes_duas_versoes#escolher_versao",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_duas_versoes_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_duas_versoes_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_duas_versoes_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_duas_versoes_controller.rb:48"
+    ],
+    "sem_corpo": false
   },
   "POST autonomia/automacoes/:id/ensaio": {
     "campos": {
@@ -13389,6 +13469,17 @@
   "POST campaign_journey/campaigns": {
     "campos": {
       "delivery_mode": {},
+      "duas_versoes": {
+        "campos": {
+          "criterio": {},
+          "divisao": {},
+          "espera_horas": {},
+          "segunda": {
+            "tipo": "objeto_livre"
+          }
+        },
+        "tipo": "objeto"
+      },
       "free_text": {},
       "from_email": {},
       "from_name": {},
@@ -13398,11 +13489,20 @@
         "tipo": "inteiro"
       },
       "janela_de_compra_dias": {},
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "message": {
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
       "preheader": {},
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {},
       "reply_to_inbox_id": {},
       "scheduled_at": {
         "tipo": "data_hora"
@@ -13443,27 +13543,34 @@
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:19",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:122",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:129",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:33",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:105",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:68",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:56",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:95",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:81",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:22",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:21"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:27",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:156",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:177",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:185",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:49",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:160",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:151",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:80",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:72",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:99",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:88",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:30",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:29"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
       "delivery_mode",
+      "duas_versoes",
       "free_text",
       "from_email",
       "from_name",
       "grupo_de_controle_pct",
       "janela_de_compra_dias",
+      "melhor_horario",
       "preheader",
+      "reenvio_dias",
+      "reenvio_mensagem",
+      "reenvio_quem",
       "reply_to_inbox_id",
       "sender_identity_id",
       "sender_inbox_id",
@@ -13653,23 +13760,61 @@
     "campos": {
       "campaign_import_id": {
         "obrigatorio": true,
-        "tipo": "id",
-        "tipo_pela_leitura": "nome"
+        "tipo": "inteiro"
       },
       "channel": {},
+      "duas_versoes": {
+        "campos": {
+          "divisao": {
+            "tipo": "inteiro",
+            "tipo_pela_leitura": "uso"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "grupo_de_controle_pct": {
+        "padrao": 0,
+        "tipo": "inteiro",
+        "um_de": [
+          0,
+          5,
+          10,
+          20
+        ]
+      },
       "message_body": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/campaign_journey/recipient_previews#create",
-    "modelo": "CampaignImport",
+    "modelo": "CampaignAudienceLink",
     "motivos": [
       "leitura crua sem tipo: channel (repassada a ::CampaignJourney::RecipientPreview.new), message_body (repassada a ::CampaignJourney::RecipientPreview.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:9",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:14",
       "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:13",
-      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:11"
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:43",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:31",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:29",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:18",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:17",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:15"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/results/:channel/:id/vencedora": {
+    "campos": {
+      "versao": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/vencedoras#create",
+    "modelo": "CampaignAudienceLink",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/vencedoras_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_journey/vencedoras_controller.rb:32",
+      "app/controllers/api/v1/accounts/campaign_journey/vencedoras_controller.rb:28"
     ],
     "sem_corpo": false
   },
@@ -18390,6 +18535,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -19095,6 +19242,57 @@
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:18",
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:47"
+    ],
+    "sem_corpo": false
+  },
+  "POST fidelidade/cupom_codigos/:id/usar": {
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupom_codigos#usar",
+    "modelo": "Fidelidade::CupomCodigo",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupom_codigos_controller.rb:11",
+      "app/controllers/api/v1/accounts/fidelidade/cupom_codigos_controller.rb:12"
+    ],
+    "sem_corpo": true
+  },
+  "POST fidelidade/cupons": {
+    "campos": {
+      "nome": {},
+      "oferta": {
+        "campos": {
+          "texto": {},
+          "tipo": {},
+          "valor": {}
+        },
+        "tipo": "objeto"
+      },
+      "prefixo": {},
+      "validade_dias": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#create",
+    "corpo_plano": false,
+    "envelope": "cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:16",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:17"
+    ],
+    "sem_corpo": false
+  },
+  "POST fidelidade/cupons/conferir": {
+    "campos": {
+      "codigo": {
+        "obrigatorio": true
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/fidelidade/cupons#conferir",
+    "motivos": [
+      "leitura crua sem tipo: codigo (repassada a ::Fidelidade::ConferirCupom.new(Current.account, ve_conta...)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:29",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:31"
     ],
     "sem_corpo": false
   },
@@ -21113,6 +21311,39 @@
     ],
     "sem_corpo": false
   },
+  "POST relacionamentos/pessoas/:pessoa_id/fidelidade/ajustes": {
+    "campos": {
+      "motivo": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "quantos": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#ajustes",
+    "modelo": "Fidelidade::Programa",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:41",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:46",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:43",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:55"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/pessoas/:pessoa_id/fidelidade/premios": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#premios",
+    "modelo": "IdempotencyKey",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:33",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:55"
+    ],
+    "sem_corpo": true
+  },
   "POST relacionamentos/pessoas/exportar": {
     "campos": {
       "busca": {},
@@ -21124,6 +21355,7 @@
           "compras": {},
           "empresa": {},
           "etiqueta": {},
+          "fidelidade": {},
           "total_acima": {}
         },
         "tipo": "objeto"
@@ -21136,8 +21368,8 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:43",
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:95"
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:45",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:97"
     ],
     "sem_corpo": false
   },
@@ -25153,6 +25385,20 @@
   },
   "PUT campaign_journey/email_medicoes/:id": {
     "campos": {
+      "duas_versoes": {
+        "campos": {
+          "criterio": {},
+          "divisao": {},
+          "espera_horas": {},
+          "segunda": {
+            "campos": {
+              "subject": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "grupo_de_controle_pct": {
         "padrao": 0,
         "tipo": "inteiro",
@@ -25171,15 +25417,27 @@
           15,
           30
         ]
-      }
+      },
+      "melhor_horario": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "reenvio_dias": {},
+      "reenvio_mensagem": {
+        "tipo": "objeto_livre"
+      },
+      "reenvio_quem": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_journey/email_medicoes#update",
     "modelo": "CampaignAudienceLink",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:38",
-      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:13"
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:55",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/campaign_journey/email_medicoes_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -27607,6 +27865,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -27733,6 +27993,43 @@
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:23",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:59",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
+  "PUT fidelidade/cupons/:id": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "padrao": true,
+        "tipo": "booleano"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#update",
+    "modelo": "Fidelidade::Cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:23",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:25",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PUT fidelidade/programa": {
+    "campos": {
+      "a_cada": {},
+      "ganha": {},
+      "meta": {},
+      "premio": {},
+      "tipo": {},
+      "validade_meses": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/programa#update",
+    "corpo_plano": true,
+    "envelope": "programa",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:12",
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -29230,6 +29527,12 @@
         },
         "tipo": "objeto"
       },
+      "intervalo": {
+        "campos": {
+          "horas": {}
+        },
+        "tipo": "objeto"
+      },
       "limite": {
         "campos": {
           "dias": {},
@@ -29242,8 +29545,8 @@
     "controller": "api/v1/accounts/ritmo_de_envio#update",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:18",
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:31"
     ],
     "sem_corpo": false
   },

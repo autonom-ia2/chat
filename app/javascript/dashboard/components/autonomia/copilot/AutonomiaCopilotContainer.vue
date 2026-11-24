@@ -8,26 +8,33 @@ import {
   onBeforeUnmount,
 } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useAlert } from 'dashboard/composables';
+import { useAlert, useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { COPILOT_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
 import { useAutonomiaCopilotStore } from 'dashboard/store/modules/autonomiaCopilot';
+import { useLarguraDoGuia } from 'dashboard/components/autonomia/guide/useLarguraDoGuia';
+import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
 
-import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
-import ToggleCopilotAssistant from 'dashboard/components-next/copilot/ToggleCopilotAssistant.vue';
-import CopilotInput from 'dashboard/components-next/copilot/CopilotInput.vue';
-import CopilotAgentMessage from 'dashboard/components-next/copilot/CopilotAgentMessage.vue';
-import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
-import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
+import CopilotHeader from './CopilotHeader.vue';
+import GuideComposer from 'dashboard/components/autonomia/guide/GuideComposer.vue';
+import GuideUserMessage from 'dashboard/components/autonomia/guide/GuideUserMessage.vue';
+import GuideResposta from 'dashboard/components/autonomia/guide/GuideResposta.vue';
 
-// V2.3 — "Copiloto Autonom.ia" chat widget. Reuses the Captain widget's presentational pieces
-// (header / input / message bubbles / assistant selector) but is powered by OUR internal/both
-// agents, gated by the kanban + copilot flags, with its own uiSetting keys. The drawer TITLE is
-// the SELECTED AGENT'S NAME. Independent of Captain (works whether or not captain_integration is on).
+// V2.3 — "Copiloto Autonom.ia": a equipe conversa, dentro de uma conversa com cliente, com os
+// agentes internos/both da conta. Gated pelas flags do kanban + copiloto, com chaves próprias de
+// uiSetting. Independe do Captain.
+// #3191 — mesmo desenho e mesma largura do Guia (#3184): balão azul de quem pergunta, resposta em
+// cartão sem bico com a foto do agente, "Novo assunto" escrito e caixa de pergunta do Guia. Abrir
+// recolhe o menu sem gravar preferência (menuEGuia.js). Guia e copiloto não ficam abertos juntos:
+// seriam três colunas ao lado da conversa.
 const { t } = useI18n();
 const { uiSettings, updateUISettings } = useUISettings();
 const globalConfig = useMapGetter('globalConfig/get');
@@ -59,6 +66,10 @@ const isPanelOpen = computed(
   () => uiSettings.value.is_autonomia_copilot_panel_open === true
 );
 
+const isGuideOpen = computed(
+  () => uiSettings.value.is_autonomia_guide_panel_open === true
+);
+
 const conversationDisplayId = computed(() => currentChat.value?.id);
 
 // Só DENTRO de uma conversa: o copiloto agora é acessado pelo switch da conversa (SidepanelSwitch),
@@ -79,15 +90,26 @@ const panelTitle = computed(
   () => activeAgent.value?.name || t('AUTONOMIA_COPILOT.TITLE')
 );
 
-const headerButtons = computed(() => {
-  if (!hasMessages.value) return [];
-  return [
-    {
-      key: 'reset',
-      icon: 'i-lucide-refresh-ccw',
-      tooltip: t('AUTONOMIA_COPILOT.RESET'),
-    },
-  ];
+const fotoDoAgente = computed(() => activeAgent.value?.avatar_url || '');
+
+// Os três pedidos de sempre da equipe, num toque (o mesmo trio do teste do copiloto).
+const sugestoes = computed(() => [
+  t('AUTONOMIA_COPILOT.SUGGESTIONS.SUMMARY'),
+  t('AUTONOMIA_COPILOT.SUGGESTIONS.NEXT_STEP'),
+  t('AUTONOMIA_COPILOT.SUGGESTIONS.DRAFT'),
+]);
+
+// #3191 — mesma largura do Guia; o copiloto avisa o menu, que recolhe sem gravar.
+// Avisa quando a pessoa ABRE o copiloto (a chave liga), não a cada volta a uma conversa: o
+// painel some e reaparece com a conversa, e recolher de novo o menu que ela reabriu seria brigar
+// com o clique dela. Ao carregar a página, vale o painel na tela.
+const { estilo: estiloDoPainel } = useLarguraDoGuia({
+  embutido: false,
+  larguraDaTela: windowWidth,
+});
+menuEGuia.copilotoAberto.value = showPanel.value;
+watch(isPanelOpen, aberto => {
+  menuEGuia.copilotoAberto.value = aberto && showPanel.value;
 });
 
 const scrollToBottom = async () => {
@@ -109,12 +131,30 @@ const handleClickOutside = () => {
   if (isSmallScreen.value && isPanelOpen.value) closePanel();
 };
 
-const handleHeaderAction = action => {
-  if (action === 'reset') {
-    requestSequence += 1;
-    isSending.value = false;
-    store.reset();
+const resetConversation = () => {
+  requestSequence += 1;
+  isSending.value = false;
+  store.reset();
+};
+
+// O Guia abriu: o copiloto fecha. Só a chave dele: reabrir o contato ao lado do Guia daria as
+// três colunas que se quer evitar (quem abre o Guia já cuida do contato).
+watch(isGuideOpen, aberto => {
+  if (aberto && isPanelOpen.value) {
+    updateUISettings({ is_autonomia_copilot_panel_open: false });
   }
+});
+
+// "Usar esta resposta": só na última fala, e só quando o agente a escreveu como resposta ao
+// cliente. Entra pela caixa rica para o markdown virar parágrafos.
+const podeUsar = (item, index) =>
+  Boolean(item.message?.content && item.message?.reply_suggestion) &&
+  index === messages.length - 1;
+
+const usarResposta = item => {
+  emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, item.message.content);
+  useTrack(COPILOT_EVENTS.USE_CAPTAIN_RESPONSE);
+  useAlert(t('AUTONOMIA_COPILOT.INSERTED'));
 };
 
 // Default agent = the inbox's linked agent when it is internal/both, else the first agent.
@@ -205,7 +245,7 @@ const requestReply = async (requestConversation, message, requestId) => {
   }
 };
 
-// CopilotInput clears the field only when this returns true. Accept = the question is in the
+// GuideComposer clears the field only when this returns true. Accept = the question is in the
 // thread, so return right away and let the reply load behind the loader; false keeps the text.
 const sendMessage = message => {
   if (isSending.value || !activeAgent.value || !conversationDisplayId.value) {
@@ -262,6 +302,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   requestSequence += 1;
   agentsRequestSequence += 1;
+  menuEGuia.copilotoAberto.value = false;
 });
 </script>
 
@@ -269,61 +310,135 @@ onBeforeUnmount(() => {
   <div
     v-if="showPanel"
     v-on-click-outside="handleClickOutside"
-    class="bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex"
+    role="complementary"
+    :aria-label="$t('AUTONOMIA_COPILOT.PANEL')"
+    class="bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full transition-transform duration-300 ease-in-out md:static md:shrink-0 ltr:border-l rtl:border-r border-n-weak shadow-lg md:shadow-none flex"
+    :style="estiloDoPainel"
   >
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
-      <SidebarActionsHeader
-        :title="panelTitle"
-        :buttons="headerButtons"
-        @click="handleHeaderAction"
+      <CopilotHeader
+        :agente="activeAgent"
+        :agentes="agents"
+        :can-reset="hasMessages"
+        @reset="resetConversation"
         @close="closePanel"
+        @trocar="setAgent"
       />
 
       <div
         ref="chatContainer"
-        class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
+        role="log"
+        :aria-label="$t('AUTONOMIA_COPILOT.LOG', { nome: panelTitle })"
+        class="flex-1 flex px-4 py-5 overflow-y-auto items-start"
       >
-        <div v-if="hasMessages" class="space-y-6 flex-1 flex flex-col w-full">
+        <div v-if="hasMessages" class="space-y-5 flex-1 flex flex-col w-full">
           <template v-for="(item, index) in messages" :key="item.id">
-            <CopilotAgentMessage
+            <GuideUserMessage
               v-if="item.message_type === 'user'"
-              :message="item.message"
+              :item="{ texto: item.message.content }"
+              destaque
             />
-            <CopilotAssistantMessage
+            <GuideResposta
               v-else
               :message="item.message"
-              :is-last-message="index === messages.length - 1"
-            />
+              :sender-name="panelTitle"
+              :foto="fotoDoAgente"
+            >
+              <Button
+                v-if="podeUsar(item, index)"
+                data-usar-resposta
+                :label="$t('AUTONOMIA_COPILOT.USE')"
+                icon="i-lucide-corner-down-left"
+                blue
+                faded
+                class="self-start min-h-11"
+                @click="usarResposta(item)"
+              />
+            </GuideResposta>
           </template>
-          <CopilotLoader v-if="isSending" />
+          <div v-if="isSending" class="flex items-start gap-2 w-full">
+            <img
+              v-if="fotoDoAgente"
+              :src="fotoDoAgente"
+              alt=""
+              class="size-7 mt-1 shrink-0 rounded-lg object-cover"
+            />
+            <span
+              v-else
+              class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-sparkles size-4" />
+            </span>
+            <p
+              class="flex flex-1 items-center gap-3 mb-0 min-w-0 rounded-xl border border-dashed border-n-strong bg-n-solid-1 px-4 py-3 text-[0.9375rem] text-n-slate-11"
+            >
+              <span
+                class="i-lucide-loader-circle animate-spin size-4 shrink-0"
+                aria-hidden="true"
+              />
+              {{ $t('AUTONOMIA_COPILOT.THINKING') }}
+            </p>
+          </div>
         </div>
-        <div v-else class="flex-1 flex flex-col gap-2 px-2 py-4">
-          <h3 class="text-base font-medium text-n-slate-12 leading-8">
-            {{ panelTitle }}
-          </h3>
-          <p class="text-sm text-n-slate-11 leading-6">
-            {{
-              hasAgents
-                ? $t('AUTONOMIA_COPILOT.KICK_OFF')
-                : $t('AUTONOMIA_COPILOT.NO_AGENTS')
-            }}
-          </p>
+        <div v-else class="flex-1 flex flex-col gap-3 w-full">
+          <!-- A primeira fala é do agente: o que ele faz, num cartão dele. -->
+          <div class="flex items-start gap-2 w-full" data-boas-vindas>
+            <img
+              v-if="fotoDoAgente"
+              :src="fotoDoAgente"
+              alt=""
+              class="size-7 mt-1 shrink-0 rounded-lg object-cover"
+            />
+            <span
+              v-else
+              class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-sparkles size-4" />
+            </span>
+            <div
+              class="flex flex-col flex-1 gap-1 min-w-0 rounded-xl border border-n-weak bg-n-solid-1 px-4 py-3"
+            >
+              <h3 class="mb-0 text-base font-semibold text-n-slate-12">
+                {{ panelTitle }}
+              </h3>
+              <p class="mb-0 text-base leading-relaxed text-n-slate-12">
+                {{
+                  hasAgents
+                    ? $t('AUTONOMIA_COPILOT.KICK_OFF')
+                    : $t('AUTONOMIA_COPILOT.NO_AGENTS')
+                }}
+              </p>
+            </div>
+          </div>
+          <div v-if="hasAgents" class="flex flex-col gap-2 ms-9">
+            <button
+              v-for="sugestao in sugestoes"
+              :key="sugestao"
+              type="button"
+              data-sugestao
+              :disabled="isSending"
+              class="text-start text-[0.9375rem] font-medium text-n-blue-11 bg-n-solid-1 ring-1 ring-inset ring-n-blue-6 hover:bg-n-blue-2 rounded-xl px-4 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              @click="sendMessage(sugestao)"
+            >
+              {{ sugestao }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="mx-3 mt-px mb-2">
-        <div class="flex items-center gap-2 justify-between w-full mb-1">
-          <ToggleCopilotAssistant
-            v-if="agents.length > 1 && activeAgent"
-            :assistants="agents"
-            :active-assistant="activeAgent"
-            @set-assistant="setAgent"
-          />
-          <div v-else />
-        </div>
-        <CopilotInput
-          v-if="hasAgents"
-          class="mb-1 w-full"
+      <div
+        v-if="hasAgents"
+        class="px-3 pt-2 pb-3 border-t border-n-weak bg-n-solid-1"
+      >
+        <GuideComposer
+          class="w-full"
+          :is-busy="isSending"
+          :anexos="false"
+          :placeholder="
+            $t('AUTONOMIA_COPILOT.PLACEHOLDER', { nome: panelTitle })
+          "
           @send="sendMessage"
         />
       </div>
