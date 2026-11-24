@@ -50,13 +50,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::GuiaRevisarConversas do
     conversa
     chamar(semana)
 
-    expect(chamar('acao' => 'parar')).to include('Parei')
+    expect(chamar({ 'acao' => 'parar' })).to include('Parei')
     expect(Autonomia::Guide::Revisao.last.status).to eq('parada')
-    expect(chamar('acao' => 'parar')).to include('Não há revisão')
+    expect(chamar({ 'acao' => 'parar' })).to include('Não há revisão')
   end
 
   it 'devolve a recusa do filtro ao modelo' do
-    expect(chamar('de' => 'semana passada', 'ate' => '2026-11-23')).to include('AAAA-MM-DD')
+    expect(chamar({ 'de' => 'semana passada', 'ate' => '2026-11-23' })).to include('AAAA-MM-DD')
   end
 
   it 'avisa a revisão em andamento na pergunta, e só enquanto ela anda', :aggregate_failures do
@@ -64,7 +64,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GuiaRevisarConversas do
     chamar(semana)
     expect(Autonomia::Guide::Revisoes::Aviso.bloco(account, admin)).to include('REVISÃO DE CONVERSAS EM ANDAMENTO', 'acao parar')
 
-    chamar('acao' => 'parar')
+    chamar({ 'acao' => 'parar' })
     expect(Autonomia::Guide::Revisoes::Aviso.bloco(account, admin)).to eq('')
   end
 end

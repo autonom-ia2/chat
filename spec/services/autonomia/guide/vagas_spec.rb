@@ -7,7 +7,7 @@ RSpec.describe Autonomia::Guide::Vagas do
 
   before do
     Redis::Alfred.delete(Autonomia::Guide::Tarefas::Semaforo::RODANDO)
-    Redis::Alfred.delete(Autonomia::Guide::Revisoes::Semaforo::RODANDO)
+    Redis::Alfred.delete("#{Autonomia::Guide::Revisoes::Semaforo::PREFIXO}:rodando")
   end
 
   after do

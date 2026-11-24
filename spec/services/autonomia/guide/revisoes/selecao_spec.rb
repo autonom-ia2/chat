@@ -58,8 +58,8 @@ RSpec.describe Autonomia::Guide::Revisoes::Selecao do
   end
 
   it 'recusa data fora do formato e período invertido', :aggregate_failures do
-    expect { ids('de' => 'ontem', 'ate' => '2026-11-23') }.to raise_error(described_class::Recusado, /AAAA-MM-DD/)
-    expect { ids('de' => '2026-11-23', 'ate' => '2026-11-17') }.to raise_error(described_class::Recusado)
+    expect { ids({ 'de' => 'ontem', 'ate' => '2026-11-23' }) }.to raise_error(described_class::Recusado, /AAAA-MM-DD/)
+    expect { ids({ 'de' => '2026-11-23', 'ate' => '2026-11-17' }) }.to raise_error(described_class::Recusado)
   end
 
   it 'pede filtro a mais acima do teto' do
