@@ -9,17 +9,32 @@ class Api::V1::Accounts::Autonomia::GuideRevisoesController < Api::V1::Accounts:
   before_action :carregar_revisao
 
   def show
-    render json: @revisao.para_tela
+    render json: @revisao.para_tela(visiveis: visiveis)
   end
 
   def continuar
-    return render json: { error: 'nada_a_continuar' }, status: :unprocessable_entity unless @revisao.continuar!
+    return render json: { error: erro_ao_continuar }, status: :unprocessable_entity unless @revisao.continuar!
 
     ::Autonomia::Guide::RevisaoJob.perform_later(@revisao.id)
-    render json: @revisao.para_tela
+    render json: @revisao.para_tela(visiveis: visiveis)
   end
 
   private
+
+  # A permissão é conferida de novo na hora de mostrar: a conversa que a dona deixou de ver depois da leitura sai do
+  # cartão, com o motivo e o link.
+  def visiveis
+    ids = @revisao.resultados.pluck('conversa_id')
+    return Set.new if ids.empty?
+
+    Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account, for_reading: true)
+                                          .perform.where(id: ids).pluck(:id).to_set
+  end
+
+  def erro_ao_continuar
+    outra = ::Autonomia::Guide::Revisao.de(Current.account, Current.user).andando.where.not(id: @revisao.id).exists?
+    outra ? 'outra_andando' : 'nada_a_continuar'
+  end
 
   def carregar_revisao
     @revisao = ::Autonomia::Guide::Revisao.de(Current.account, Current.user).find_by(id: params[:id])

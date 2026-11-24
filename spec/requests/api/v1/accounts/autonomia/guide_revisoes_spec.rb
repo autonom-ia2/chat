@@ -40,5 +40,29 @@ RSpec.describe 'Guia da Plataforma — revisão de conversas', type: :request do
     post "#{rota}/#{revisao.id}/continuar", headers: dono.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('nada_a_continuar')
+  end
+
+  it 'diz que outra revisão anda quando é isso que impede continuar' do
+    Autonomia::Guide::Revisao.create!(account: account, user: dono, status: 'rodando', titulo: 'Outra', pedido: 'Por quê',
+                                      selecao: {}, ids: [1], limite: 300)
+    post "#{rota}/#{revisao.id}/continuar", headers: dono.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['error']).to eq('outra_andando')
+  end
+
+  it 'não mostra o motivo de conversa que o dono deixou de ver', :aggregate_failures do
+    inbox = create(:inbox, account: account)
+    create(:inbox_member, user: dono, inbox: inbox)
+    vista = create(:conversation, account: account, inbox: inbox)
+    escondida = create(:conversation, account: account)
+    revisao.update!(resultados: [{ 'categoria' => 'Demora', 'motivo' => 'vista', 'conversa_id' => vista.id, 'numero' => vista.display_id },
+                                 { 'categoria' => 'Demora', 'motivo' => 'escondida', 'conversa_id' => escondida.id,
+                                   'numero' => escondida.display_id }])
+
+    get "#{rota}/#{revisao.id}", headers: dono.create_new_auth_token, as: :json
+
+    motivos = response.parsed_body['categorias'].flat_map { |categoria| categoria['conversas'] }.pluck('motivo')
+    expect(motivos).to eq(['vista'])
   end
 end

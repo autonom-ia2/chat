@@ -143,6 +143,8 @@ const buscar = async () => {
   } catch (error) {
     if (!revisao.value) falhouAoCarregar.value = true;
     if (desistir(error)) {
+      // Sem isto o cartão seguiria girando "Lendo" para sempre.
+      falhouAoCarregar.value = true;
       parar();
       return;
     }
@@ -170,8 +172,11 @@ const continuar = async () => {
     revisao.value = data;
     parar();
     relogio = setTimeout(buscar, INTERVALO);
-  } catch {
-    erro.value = t('AUTONOMIA_GUIDE.REVISAO.CONTINUAR_FALHOU');
+  } catch (error) {
+    erro.value =
+      error?.response?.data?.error === 'outra_andando'
+        ? t('AUTONOMIA_GUIDE.REVISAO.CONTINUAR_OUTRA')
+        : t('AUTONOMIA_GUIDE.REVISAO.CONTINUAR_FALHOU');
   } finally {
     continuando.value = false;
   }

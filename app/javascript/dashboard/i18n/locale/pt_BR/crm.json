@@ -4858,6 +4858,7 @@
       "FALTAM_PERGUNTA": "Li {lidas} de {total}. Faltam {faltam}. Quer que eu leia as que faltam?",
       "LER_FALTAM": "Ler as {faltam} que faltam",
       "CONTINUAR_FALHOU": "Não consegui continuar agora. Tente de novo.",
+      "CONTINUAR_OUTRA": "Outra revisão sua está em andamento. Espere ela terminar e tente de novo.",
       "MOTIVOS": {
         "TITULO": "Motivos encontrados",
         "PERIODO": "Conversas de {de} a {ate}",

@@ -284,7 +284,8 @@ describe('GuideRevisao', () => {
     await flushPromises();
 
     expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(2);
-    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.REVISAO.LENDO');
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.REVISAO.NAO_CARREGOU');
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.REVISAO.LENDO');
   });
 
   it('com erro do servidor, tenta de novo cada vez mais devagar', async () => {

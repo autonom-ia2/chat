@@ -90,6 +90,8 @@ class Autonomia::Guide::Revisao < ApplicationRecord
     mudou = self.class.where(id: id, status: RODANDO, posicao: posicao).update_all( # rubocop:disable Rails/SkipsModelValidations
       [AVANCO, lida, 1 - lida, (resultado ? [resultado] : []).to_json, custo.to_d, agora, agora]
     )
+    # Não gravou (parada, outra cadeia), mas a chamada foi paga: o gasto entra mesmo assim.
+    self.class.where(id: id).update_all(['custo = custo + ?', custo.to_d]) if mudou.zero? && custo.to_d.positive? # rubocop:disable Rails/SkipsModelValidations
     reload
     mudou == 1
   end
@@ -99,21 +101,27 @@ class Autonomia::Guide::Revisao < ApplicationRecord
     "#{lidas} de #{ate} lidas (#{total} escolhidas)#{" e #{falhas} não abriram" if falhas.positive?}"
   end
 
-  def para_tela
+  # `visiveis`: as conversas que a dona ainda abre (o controller confere a permissão na hora). O motivo e o link de
+  # uma conversa que ela deixou de ver depois da leitura não aparecem. nil: todas.
+  def para_tela(visiveis: nil)
     { 'id' => id, 'status' => status, 'titulo' => titulo, 'de' => selecao['de'], 'ate' => selecao['ate'],
       'total' => total, 'limite' => ate, 'lidas' => lidas, 'falhas' => falhas, 'faltam' => total - posicao,
-      'motivo' => motivo, 'categorias' => andando? ? [] : categorias }
+      'motivo' => motivo, 'categorias' => andando? ? [] : categorias(visiveis) }
   end
 
   # Os motivos agrupados, do mais comum ao menos; acima de `CATEGORIAS`, o resto junto em "outros" (o rótulo é
   # da tela). Cada categoria leva as conversas dela, para a pessoa abrir.
-  def categorias
-    grupos = resultados.group_by { |resultado| resultado['categoria'] }
-                       .map { |nome, itens| { 'nome' => nome, 'conversas' => itens.map { |item| item.slice('numero', 'motivo') } } }
-                       .sort_by { |grupo| [-grupo['conversas'].size, grupo['nome'].to_s] }
+  def categorias(visiveis = nil)
+    grupos = lidos(visiveis).group_by { |resultado| resultado['categoria'] }
+                            .map { |nome, itens| { 'nome' => nome, 'conversas' => itens.map { |item| item.slice('numero', 'motivo') } } }
+                            .sort_by { |grupo| [-grupo['conversas'].size, grupo['nome'].to_s] }
     return grupos if grupos.size <= CATEGORIAS + 1
 
     grupos.first(CATEGORIAS) + [{ 'nome' => nil, 'outros' => true, 'conversas' => grupos.drop(CATEGORIAS).flat_map { |grupo| grupo['conversas'] } }]
+  end
+
+  def lidos(visiveis)
+    visiveis ? resultados.select { |resultado| visiveis.include?(resultado['conversa_id']) } : resultados
   end
 
   # As categorias que a IA já deu nesta revisão, da mais comum, para ela repetir o mesmo nome e a contagem valer.

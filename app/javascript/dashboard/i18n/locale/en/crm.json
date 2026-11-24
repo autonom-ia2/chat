@@ -4857,6 +4857,7 @@
       "FALTAM_PERGUNTA": "I read {lidas} of {total}. {faltam} are left. Do you want me to read the rest?",
       "LER_FALTAM": "Read the remaining {faltam}",
       "CONTINUAR_FALHOU": "I couldn't continue right now. Try again.",
+      "CONTINUAR_OUTRA": "Another review of yours is running. Wait for it to finish and try again.",
       "MOTIVOS": {
         "TITULO": "Reasons found",
         "PERIODO": "Conversations from {de} to {ate}",

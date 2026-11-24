@@ -87,6 +87,13 @@ RSpec.describe Autonomia::Guide::Revisao do
       expect(andando.avancar!(nil, custo: 0)).to be(false)
       expect(andando.reload).to have_attributes(posicao: 1, lidas: 1, falhas: 0)
     end
+
+    it 'guarda o gasto da chamada paga mesmo quando não grava a conversa' do
+      parada = revisao(status: 'parada', custo: 0.1)
+
+      expect(parada.avancar!(resultado('Demora', 1), custo: 0.05)).to be(false)
+      expect(parada.reload.custo.to_f).to eq(0.15)
+    end
   end
 
   it 'para só o que ainda anda', :aggregate_failures do

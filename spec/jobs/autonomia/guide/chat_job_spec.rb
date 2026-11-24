@@ -60,6 +60,22 @@ RSpec.describe Autonomia::Guide::ChatJob do
     expect(Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)['status']).to eq('failed')
   end
 
+  # #3158 (B8b) — o turno caiu depois de começar uma revisão: a tela recebe o cartão e não oferece "Tentar de novo",
+  # que começaria outra, paga.
+  it 'a falha leva a revisão que o turno começou', :aggregate_failures do
+    conversa = Autonomia::Guide::Conversa.create!(account: conta, user: admin, titulo: 'revisão')
+    turno = Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: 'revise', tela: 'home')
+    revisao = Autonomia::Guide::Revisao.create!(account: conta, user: admin, turno: turno, status: 'na_fila', titulo: 'Revisão',
+                                                pedido: 'Por quê', selecao: {}, ids: [1], limite: 300)
+    allow(Autonomia::Guide::Chat).to receive(:new).and_raise(StandardError, 'caiu')
+
+    rodar
+
+    lido = Autonomia::Guide::Pedido.ler(pedido, account: conta, user: admin)
+    expect(lido['status']).to eq('failed')
+    expect(lido['revisao']).to eq({ 'id' => revisao.id, 'status' => 'na_fila' })
+  end
+
   it 'marca a falha quando a pessoa ou a conta já não existem' do
     rodar(user_id: 0)
 

@@ -36,5 +36,6 @@ RSpec.describe Autonomia::Guide::Revisoes::Mascara do
     expect(mascara.call('Pedido 4521 de 17/11/2026 custou R$ 1.299,90')).to eq('Pedido 4521 de 17/11/2026 custou R$ 1.299,90')
     expect(mascara.call('arroba @ sozinha')).to eq('arroba @ sozinha')
     expect(mascara.call('valor 1.500.000,00 pago')).to eq('valor 1.500.000,00 pago')
+    expect(mascara.call('custou 1.500 2.000 3.000')).to eq('custou 1.500 2.000 3.000')
   end
 end

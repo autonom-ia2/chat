@@ -77,8 +77,9 @@ class Autonomia::Agents::Tools::Native::GuiaRevisarConversas < Autonomia::Agents
     return "Nenhuma conversa atende a este filtro (#{periodo(selecao)})." if ids.empty?
 
     revisao = criar(selecao, ids)
-    ::Autonomia::Guide::RevisaoJob.perform_later(revisao.id)
+    # O cartão antes do job: se o enfileiramento falhar, a revisão fica na tela e o vigia a retoma.
     @operador.revisao_iniciada(revisao)
+    ::Autonomia::Guide::RevisaoJob.perform_later(revisao.id)
     "Achei #{ids.size} conversas (#{periodo(selecao)}). Comecei a ler #{revisao.ate}; o painel mostra o andamento e o " \
       'resultado. Diga à pessoa quantas achou e o período que você entendeu; não invente motivos agora.'
   end

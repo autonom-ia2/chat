@@ -61,9 +61,13 @@ class Autonomia::Guide::Revisoes::Mascara
     nil
   end
 
-  # -> os dígitos da palavra feita só de número e pontuação de número, ou nil.
+  # -> os dígitos da palavra feita só de número e pontuação de número, ou nil. Com ponto não entra: "1.500 2.000"
+  # é valor, e telefone em grupos se escreve com espaço ou hífen.
   def so_numero(palavra)
-    numeros = nucleo(palavra).delete(PONTUACAO_DE_NUMERO)
+    nucleo = nucleo(palavra)
+    return nil if nucleo.include?('.')
+
+    numeros = nucleo.delete(PONTUACAO_DE_NUMERO)
     numeros if numeros.present? && digitos?(numeros)
   end
 
