@@ -35,7 +35,7 @@ module Captain::Assistant::RunnerStateHelper
     state[:channel_type] = @conversation.inbox&.channel_type
     state[:message_length_limit] = Captain::MessageLengthLimit.for(@conversation)
     state[:can_verify_email] = can_verify_email?
-    state[:contact] = slice_attrs(@conversation.contact, CONTACT_STATE_ATTRIBUTES) if @conversation.contact
+    state[:contact] = contact_state(@conversation.contact) if @conversation.contact
     state[:campaign] = slice_attrs(@conversation.campaign, CAMPAIGN_STATE_ATTRIBUTES) if @conversation.campaign
     build_contact_inbox_state(state) if @conversation.contact_inbox
   end
@@ -43,6 +43,12 @@ module Captain::Assistant::RunnerStateHelper
   def build_contact_inbox_state(state)
     state[:contact_inbox] = slice_attrs(@conversation.contact_inbox, CONTACT_INBOX_STATE_ATTRIBUTES)
     state[:verified_email] = Captain::EmailVerification.new(@conversation).verified_email
+  end
+
+  # Chave interna (WAHA, controle da Prospecção) não vai para o modelo (#3176).
+  def contact_state(contact)
+    attrs = slice_attrs(contact, CONTACT_STATE_ATTRIBUTES)
+    attrs.merge(custom_attributes: Relationships::ChavesInternas.sem_internas(attrs[:custom_attributes]))
   end
 
   def slice_attrs(record, keys)

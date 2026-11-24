@@ -9,6 +9,8 @@
 #   these as new before the person saves.
 # - A key never repeats within the file and never takes a standard contact field (name, email,
 #   city...): it gets "_2", "_3"...
+# - #3176: a chave interna (Relationships::ChavesInternas: os ids da WAHA, o controle da Prospecção) nunca recebe
+#   coluna da planilha: a definição dela não é oferecida e o nome dela conta como ocupado, como o campo padrão.
 class ContactImports::AttributeColumns
   Column = Struct.new(:column, :key, :label, :existing, :definition, :description, keyword_init: true) do
     def type = definition&.attribute_display_type || 'text'
@@ -56,13 +58,13 @@ class ContactImports::AttributeColumns
 
   def new_column(header, name, used)
     base = self.class.normalize(name).presence || FALLBACK_KEY
-    taken = used + RESERVED_KEYS + definitions_by_key.keys
+    taken = used + RESERVED_KEYS + Relationships::ChavesInternas::LISTA + definitions_by_key.keys
     key = taken.include?(base) ? (2..).lazy.map { |number| "#{base}_#{number}" }.find { |candidate| taken.exclude?(candidate) } : base
     Column.new(column: header, key: key, label: name.to_s.strip, existing: false, description: @fields.dig(header, 'para_que_serve').presence)
   end
 
   def definitions
-    @definitions ||= @account.custom_attribute_definitions.contact_attribute.to_a
+    @definitions ||= @account.custom_attribute_definitions.visiveis.contact_attribute.to_a
   end
 
   def definitions_by_key

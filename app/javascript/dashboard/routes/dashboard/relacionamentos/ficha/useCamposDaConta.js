@@ -12,6 +12,9 @@
 // mesma regra do botão "Configurar" da ficha antiga (can_manage do servidor).
 // #3078 — a ficha da empresa usa o mesmo, com os campos da empresa
 // (`company_attribute`) e a área `company_details`, a da ficha antiga dela.
+// #3176 — `chavesInternas`: as chaves do sistema (WAHA, controle da
+// Prospecção), da conta aberta, que a ficha da pessoa não mostra nem como campo
+// solto. A empresa não tem chave interna.
 import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -56,8 +59,12 @@ const semConfiguracao = () => ({
 });
 
 export const useCamposDaConta = ({ de = DA_PESSOA } = {}) => {
-  // Todas as da conta, já sem as internas da WAHA; aqui ficam as do registro.
+  // Todas as da conta, já sem as das chaves internas; aqui ficam as do registro.
   const daConta = useMapGetter('attributes/getAttributes');
+  const internasDaConta = useMapGetter('attributes/getChavesInternas');
+  const chavesInternas = computed(() =>
+    de.modelo === DA_PESSOA.modelo ? (internasDaConta.value ?? []) : []
+  );
   const definicoes = computed(() =>
     (daConta.value ?? []).filter(
       definicao => definicao.attribute_model === de.modelo
@@ -70,5 +77,5 @@ export const useCamposDaConta = ({ de = DA_PESSOA } = {}) => {
   const { escolhidos, podeEscolher, guardadas } = comConfigurador
     ? daConfiguracao(de.area, de.modelo)
     : semConfiguracao();
-  return { definicoes, escolhidos, podeEscolher, guardadas };
+  return { definicoes, escolhidos, podeEscolher, guardadas, chavesInternas };
 };

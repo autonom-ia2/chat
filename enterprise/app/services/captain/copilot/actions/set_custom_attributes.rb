@@ -28,8 +28,9 @@ class Captain::Copilot::Actions::SetCustomAttributes < Captain::Copilot::Actions
     @arguments['attributes']
   end
 
+  # #3176: as chaves internas (ids da WAHA, controle da Prospecção) não são oferecidas nem aceitas: são do sistema.
   def validate!
-    definitions = @account.custom_attribute_definitions.where(attribute_model: self.class::ATTRIBUTE_MODEL)
+    definitions = @account.custom_attribute_definitions.visiveis.where(attribute_model: self.class::ATTRIBUTE_MODEL)
     unknown = attributes.keys - definitions.where(attribute_key: attributes.keys).pluck(:attribute_key)
     return if unknown.empty?
 

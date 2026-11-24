@@ -6,28 +6,37 @@
 // Cada campo sai como { id, chave, rotulo, tipo, opcoes, valor, principal } (o
 // solto, sem definição, não tem `id`):
 //  - `rotulo` é o nome que a conta deu ao campo (attribute_display_name). Valor
-//    gravado sem definição (por importação ou pela IA) usa o nome da chave;
+//    gravado sem definição (por importação ou pela IA) usa o nome da chave, ou
+//    o nome em português da informação conhecida (#3176, cargo, nota no
+//    Google: helper/informacoesConhecidas.js), quando quem chama passa o `t`;
 //  - `tipo` é um dos TIPOS; tipo que a tela não conhece vira texto;
 //  - `principal`: aparece na ficha e no topo da gaveta. É o campo escolhido pelo
 //    configurador para a ficha (área `contact_details`, a mesma da ficha antiga)
 //    ou o que já tem valor. O resto fica atrás de "Mais campos" na gaveta.
 // Fora da lista, como nas outras telas: o campo com "Mostrar na tela"
-// desligado (#2435), os internos da WAHA (#2138) e o CPF, que tem linha própria.
+// desligado (#2435), as chaves internas (#2138, #3176: WAHA e controle da
+// Prospecção, a lista do servidor em `chavesInternas`), com ou sem definição, e
+// o CPF, que tem linha própria.
 import { naTela } from 'dashboard/helper/atributosNaTela';
-import { ehAtributoInternoDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
+import { ehChaveInterna } from 'dashboard/helper/chavesInternas';
+import { rotuloConhecido } from 'dashboard/helper/informacoesConhecidas';
 
 export const TIPOS = ['text', 'number', 'link', 'date', 'list', 'checkbox'];
 export const CHAVE_DO_CPF = 'cpf';
 
 // O nome que a conta deu à informação. A chave não tem acento, então os nomes
 // conhecidos vêm daqui; os outros saem da própria chave ("cor_favorita" ->
-// "Cor favorita"). Só para o valor gravado sem definição.
+// "Cor favorita"). Só para o valor gravado sem definição. #3176: a informação
+// que a plataforma conhece (cargo, nota no Google) tem nome no i18n, traduzido
+// pelo `traduzir` (o `t` de quem chama).
 const NOMES_CONHECIDOS = {
   melhor_horario: 'Melhor horário',
   como_prefere_ser_chamado: 'Como prefere ser chamado',
 };
 
-export const nomeDaInformacao = chave => {
+export const nomeDaInformacao = (chave, traduzir) => {
+  const conhecido = rotuloConhecido(chave);
+  if (conhecido && traduzir) return traduzir(conhecido);
   if (NOMES_CONHECIDOS[chave]) return NOMES_CONHECIDOS[chave];
   const palavras = String(chave).split('_').filter(Boolean).join(' ');
   return palavras.charAt(0).toUpperCase() + palavras.slice(1);
@@ -37,24 +46,24 @@ export const nomeDaInformacao = chave => {
 export const temValor = valor =>
   valor !== undefined && valor !== null && valor !== '';
 
-const foraDaFicha = chave =>
-  chave === CHAVE_DO_CPF || ehAtributoInternoDoWhatsapp(chave);
+const foraDaFicha = (chave, chavesInternas) =>
+  chave === CHAVE_DO_CPF || ehChaveInterna(chave, chavesInternas);
 
 const tipoConhecido = tipo => (TIPOS.includes(tipo) ? tipo : 'text');
 
 // #3078 — a empresa tem os campos dela (attribute_model company_attribute); o
-// CPF e os internos da WAHA são só da pessoa.
+// CPF e as chaves internas são só da pessoa.
 export const MODELOS = {
   pessoa: 'contact_attribute',
   empresa: 'company_attribute',
 };
 
-const foraDoModelo = (modelo, chave) =>
-  modelo === MODELOS.pessoa && foraDaFicha(chave);
+const foraDoModelo = (modelo, chave, chavesInternas) =>
+  modelo === MODELOS.pessoa && foraDaFicha(chave, chavesInternas);
 
-const doModelo = modelo => definicao =>
+const doModelo = (modelo, chavesInternas) => definicao =>
   definicao.attribute_model === modelo &&
-  !foraDoModelo(modelo, definicao.attribute_key);
+  !foraDoModelo(modelo, definicao.attribute_key, chavesInternas);
 
 const campoDaDefinicao = (definicao, valores, escolhidos) => {
   const valor = valores[definicao.attribute_key];
@@ -75,14 +84,18 @@ const campoDaDefinicao = (definicao, valores, escolhidos) => {
 // `valores`: os custom_attributes da pessoa (ou da empresa, com `modelo`).
 // `guardadas`: #3082 — as chaves dos campos apagados (guardados escondidos). O
 // valor deles continua gravado, mas não aparece como campo solto.
+// `chavesInternas`: #3176 — as do servidor (getter attributes/getChavesInternas);
+// nem campo nem solto. `traduzir`: o `t`, para o nome da informação conhecida.
 export const camposDoRegistro = ({
   definicoes = [],
   escolhidos = [],
   valores = {},
   guardadas = [],
+  chavesInternas = [],
+  traduzir,
   modelo = MODELOS.pessoa,
 }) => {
-  const daConta = definicoes.filter(doModelo(modelo));
+  const daConta = definicoes.filter(doModelo(modelo, chavesInternas));
   const ids = new Set(escolhidos);
   const conhecidas = new Set([
     ...daConta.map(d => d.attribute_key),
@@ -94,13 +107,13 @@ export const camposDoRegistro = ({
   const soltos = Object.entries(valores)
     .filter(
       ([chave, valor]) =>
-        !foraDoModelo(modelo, chave) &&
+        !foraDoModelo(modelo, chave, chavesInternas) &&
         !conhecidas.has(chave) &&
         temValor(valor)
     )
     .map(([chave, valor]) => ({
       chave,
-      rotulo: nomeDaInformacao(chave),
+      rotulo: nomeDaInformacao(chave, traduzir),
       tipo: 'text',
       opcoes: [],
       valor,

@@ -1033,6 +1033,7 @@ watch(naAbaDeSeguros, estaNela => {
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
       :guardadas="camposDaConta.guardadas.value"
+      :chaves-internas="camposDaConta.chavesInternas.value"
       marca="gaveta-da-pessoa"
       @fechar="gaveta.fechar"
       @salvar="gaveta.salvar"

@@ -41,4 +41,13 @@ RSpec.describe ContactImports::AttributeColumns, :aggregate_failures do
   it 'never takes a standard contact field and never repeats a key in the file' do
     expect(columns(['City', 'Plano', 'plano', '!!!']).pluck('key')).to eq(%w[city_2 plano plano_2 coluna])
   end
+
+  # #3176: a coluna da planilha nunca escreve numa chave interna (ids da WAHA, controle da Prospecção), com ou sem definição.
+  it 'never fills an internal key, by key or by display name' do
+    account.custom_attribute_definitions.create!(attribute_model: :contact_attribute, attribute_key: 'waha_whatsapp_chat_id',
+                                                 attribute_display_name: 'WhatsApp', attribute_display_type: :text)
+
+    expect(columns(%w[waha_whatsapp_chat_id WhatsApp autonomia_prospecting_lead_id]).map { |column| column.values_at('key', 'existing') })
+      .to eq([['waha_whatsapp_chat_id_2', false], ['whatsapp', false], ['autonomia_prospecting_lead_id_2', false]])
+  end
 end

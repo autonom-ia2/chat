@@ -45,17 +45,27 @@ const VALORES = {
   waha_whatsapp_lid: '123@lid',
   cpf: '000',
 };
+// #3176: a lista do servidor, que o getter usa para esconder.
+const CHAVES_INTERNAS = [
+  'waha_whatsapp_chat_id',
+  'waha_whatsapp_jid',
+  'waha_whatsapp_lid',
+  'autonomia_prospecting_lead_id',
+];
 
-const montar = (attributeFrom, definicoes = DEFINICOES) => {
+const montar = (attributeFrom, definicoes = DEFINICOES, valores = VALORES) => {
   const store = createStore({
     getters: {
       getSelectedChat: () => ({ id: 42, meta: { sender: { id: 9 } } }),
       'contacts/getContact': () => () => ({
         id: 9,
-        custom_attributes: VALORES,
+        custom_attributes: valores,
       }),
       'attributes/getAttributesByModel': () =>
-        gettersDosCampos.getAttributesByModel({ records: definicoes }),
+        gettersDosCampos.getAttributesByModel(
+          { records: definicoes },
+          { getChavesInternas: CHAVES_INTERNAS }
+        ),
       canOperateConversation: () => () => true,
       getCurrentRole: () => 'agent',
       getCurrentCustomRoleId: () => null,
@@ -121,5 +131,54 @@ describe('CustomAttributes — atributo fora da tela', () => {
     expect(campos(wrapper)).toEqual(['melhor_horario']);
     relacionamentos.ligado = false;
     relacionamentos.definicoes = [];
+  });
+});
+
+// #3176 — a informação sem definição com chave conhecida (cargo, nota e
+// avaliações no Google) aparece no painel com o nome da ficha; a chave interna
+// da Prospecção e a solta desconhecida não aparecem.
+describe('CustomAttributes — informação conhecida sem campo', () => {
+  const informacoes = wrapper =>
+    wrapper
+      .findAll('[data-informacao-conhecida]')
+      .map(item => item.findAll('span').map(parte => parte.text()));
+  const daProspeccao = {
+    ...VALORES,
+    job_title: 'Gerente',
+    autonomia_prospecting_rating: 4.7,
+    autonomia_prospecting_lead_id: 12,
+    cor_favorita: 'Azul',
+  };
+
+  it('mostra o cargo e a nota no Google, e não o controle interno', () => {
+    relacionamentos.ligado = false;
+    const wrapper = montar(
+      'conversation_contact_panel',
+      DEFINICOES,
+      daProspeccao
+    );
+    expect(informacoes(wrapper)).toEqual([
+      ['RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.CARGO', 'Gerente'],
+      ['RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.NOTA_NO_GOOGLE', '4.7'],
+    ]);
+    expect(wrapper.text()).not.toContain('autonomia_prospecting_lead_id');
+    expect(wrapper.text()).not.toContain('Azul');
+  });
+
+  it('com definição na conta, o cargo segue o campo e não se repete', () => {
+    relacionamentos.ligado = false;
+    const comCargo = [
+      ...DEFINICOES,
+      { ...DEFINICOES[0], id: 99, attribute_key: 'job_title' },
+    ];
+    const wrapper = montar(
+      'conversation_contact_panel',
+      comCargo,
+      daProspeccao
+    );
+    expect(campos(wrapper)).toContain('job_title');
+    expect(informacoes(wrapper)).toEqual([
+      ['RELACIONAMENTOS_FICHA.CAMPOS.CONHECIDOS.NOTA_NO_GOOGLE', '4.7'],
+    ]);
   });
 });

@@ -171,6 +171,8 @@ const campos = computed(() =>
         definicoes: camposDaConta.definicoes.value,
         escolhidos: camposDaConta.escolhidos.value,
         guardadas: camposDaConta.guardadas.value,
+        chavesInternas: camposDaConta.chavesInternas.value,
+        traduzir: t,
         valores: ficha.pessoa.value.custom_attributes ?? {},
       })
     : []
@@ -713,6 +715,7 @@ watch(
       :definicoes="camposDaConta.definicoes.value"
       :escolhidos="camposDaConta.escolhidos.value"
       :guardadas="camposDaConta.guardadas.value"
+      :chaves-internas="camposDaConta.chavesInternas.value"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
     />

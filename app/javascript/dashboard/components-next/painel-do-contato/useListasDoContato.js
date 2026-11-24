@@ -5,6 +5,8 @@
 // Conversas e quem acompanha são pedidos aqui, com estado (carregando, erro, 403);
 // quem acompanha vai também para o store, que o ⋯ do topo lê. Arquivos e
 // definições já vêm do store (MessagesView e ContactPanel os pedem).
+// #3176 — e as informações conhecidas sem definição (cargo, nota e avaliações
+// no Google: helper/informacoesConhecidas.js), só leitura, com o nome da ficha.
 import { computed, unref, watch } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import ContactAPI from 'dashboard/api/contacts';
@@ -12,6 +14,7 @@ import ConversationInboxApi from 'dashboard/api/inbox/conversation';
 import types from 'dashboard/store/mutation-types';
 import { NON_FILE_TYPES } from 'dashboard/components-next/message/constants';
 import { naTela } from 'dashboard/helper/atributosNaTela';
+import { informacoesConhecidas } from 'dashboard/helper/informacoesConhecidas';
 import { ESTADO, useParteDoPainel } from './useParteDoPainel';
 
 const temValor = valor =>
@@ -79,6 +82,14 @@ export function useListasDoContato({ contact, conversationId }) {
     );
   });
 
+  // Chave com definição na conta (mesmo fora da tela) segue a definição.
+  const conhecidas = computed(() =>
+    informacoesConhecidas(
+      unref(contact)?.custom_attributes || {},
+      definicoes.value('contact_attribute').map(d => d.attribute_key)
+    )
+  );
+
   // Do store: o ⋯ do topo inclui ou tira a pessoa e a linha acompanha.
   const quemAcompanha = computed(() =>
     parteDeQuemAcompanha.estado.value === ESTADO.ESCONDIDO
@@ -101,6 +112,7 @@ export function useListasDoContato({ contact, conversationId }) {
     conversas,
     arquivos,
     informacoes,
+    conhecidas,
     quemAcompanha,
     carregando,
     comErro,
