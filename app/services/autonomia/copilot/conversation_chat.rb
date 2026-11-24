@@ -96,14 +96,38 @@ module Autonomia
           "PEDIDO DO ATENDENTE:\n#{@message}"
       end
 
-      # Real customer/agent messages only (no activities, no private notes).
+      # Real customer/agent messages only (no activities, no private notes). #3198: a message with only a file (audio,
+      # photo, PDF...) counts too; its text comes from MidiaDaConversa.
       def chat_messages
-        @chat_messages ||= conversation.messages.chat.where.not(content: [nil, ''])
-                                       .order(:created_at).last(MAX_MESSAGES)
+        @chat_messages ||= begin
+          chat = conversation.messages.chat
+          chat.where.not(content: [nil, '']).or(chat.where(Crm::Ai::LeitorDeMidia.com_anexo))
+              .includes(attachments: { file_attachment: :blob }).order(:created_at).last(MAX_MESSAGES)
+        end
       end
 
+      # #3198: builds from the newest message back and stops at the cap — with files in it, the cap is reached sooner,
+      # and the newest messages are the ones the operator is asking about. Whole lines only (who spoke stays on each
+      # line). Messages older than the first one that does not fit are never read, so their documents are not downloaded.
       def transcript
-        chat_messages.map { |m| email_autoria.linha(m) }.join("\n").first(MAX_TRANSCRIPT)
+        midia.ler_pendentes(chat_messages)
+        linhas = []
+        chat_messages.reverse_each do |message|
+          linha = linha(message).truncate(MAX_TRANSCRIPT)
+          break if linhas.any? && linhas.sum { |l| l.length + 1 } + linha.length > MAX_TRANSCRIPT
+
+          linhas.unshift(linha)
+        end
+        linhas.join("\n")
+      end
+
+      def linha(message)
+        arquivos = message.attachments.any? ? midia.texto(message) : ''
+        [email_autoria.linha(message).rstrip, arquivos].compact_blank.join(' ')
+      end
+
+      def midia
+        @midia ||= MidiaDaConversa.new(account: account)
       end
 
       def email_autoria
