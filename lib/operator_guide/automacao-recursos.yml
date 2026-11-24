@@ -756,6 +756,16 @@ fora:
       passo de automação, e por isso não chegam ao catálogo (Acoes::SO_NA_TELA).
     recursos:
       - relacionamentos/seguros/palavras
+  - motivo: >-
+      Fidelidade (#3100): o cartão e os cupons são escolha da conta inteira, feita na tela da Fidelidade por quem pode
+      mudar o cartão; criar, mudar, pausar e ligar de novo não é passo de automação. Dar o prêmio, dar ou tirar carimbos
+      à mão e marcar o cupom como usado são ações de pessoa, na ficha ou no Conferir, e não têm desfazer. A automação dá
+      carimbos e manda cupom pelos passos próprios ("Dar carimbos ou pontos" e "Mandar cupom").
+    recursos:
+      - fidelidade/programa
+      - fidelidade/cupons
+      - fidelidade/cupom_codigos
+      - relacionamentos/fidelidade
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

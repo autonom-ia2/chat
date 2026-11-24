@@ -28,12 +28,19 @@ const td = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.GAVETA.DADOS.${chave}`, valores);
 const idDoTitulo = useId();
 
-const PLANILHA = 'planilha';
+// #3175 — "Como chegou" diz a porta: planilha, Agger, PDF ou à mão. A origem
+// que a tela não conhece diz só quando chegou.
+const FRASE_DA_ORIGEM = {
+  planilha: 'POR_PLANILHA',
+  conector: 'POR_AGGER',
+  pdf: 'POR_PDF',
+  manual: 'A_MAO',
+};
 
 const origem = computed(() => {
   const { tipo, em } = props.seguro.origem;
   const data = textos.diaMes(em, props.agora);
-  return td(tipo === PLANILHA ? 'POR_PLANILHA' : 'CHEGOU_EM', { data });
+  return td(FRASE_DA_ORIGEM[tipo] ?? 'CHEGOU_EM', { data });
 });
 
 const dataOuNada = segundos =>

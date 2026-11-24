@@ -100,6 +100,26 @@ class RelacionamentosAPI extends ApiClient {
     return axios.get(`${this.url}/pessoas/${id}/compras`);
   }
 
+  // #3100 — o cartão fidelidade da pessoa: o cartão da conta, o saldo, o que
+  // vence, os últimos movimentos e os cupons; o histórico por página (20);
+  // dar o prêmio (com a chave de idempotência: o mesmo toque repetido não tira
+  // a meta duas vezes).
+  fidelidadeDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/fidelidade`);
+  }
+
+  movimentosDaPessoa(id, pagina) {
+    return axios.get(`${this.url}/pessoas/${id}/fidelidade/movimentos`, {
+      params: { pagina },
+    });
+  }
+
+  darPremio(id, chave) {
+    return axios.post(`${this.url}/pessoas/${id}/fidelidade/premios`, null, {
+      headers: { 'Idempotency-Key': chave },
+    });
+  }
+
   notasDaPessoa(id) {
     return axios.get(`${this.url}/pessoas/${id}/notas`);
   }

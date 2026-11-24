@@ -6956,6 +6956,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -7082,6 +7084,40 @@
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:23",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:59",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH fidelidade/cupons/:id": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "padrao": true,
+        "tipo": "booleano"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#update",
+    "modelo": "Fidelidade::Cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:23",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:25",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH fidelidade/programa": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/programa#ligar",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:19",
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:20"
     ],
     "sem_corpo": false
   },
@@ -18476,6 +18512,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -19181,6 +19219,57 @@
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:18",
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:47"
+    ],
+    "sem_corpo": false
+  },
+  "POST fidelidade/cupom_codigos/:id/usar": {
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupom_codigos#usar",
+    "modelo": "Fidelidade::CupomCodigo",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupom_codigos_controller.rb:11",
+      "app/controllers/api/v1/accounts/fidelidade/cupom_codigos_controller.rb:12"
+    ],
+    "sem_corpo": true
+  },
+  "POST fidelidade/cupons": {
+    "campos": {
+      "nome": {},
+      "oferta": {
+        "campos": {
+          "texto": {},
+          "tipo": {},
+          "valor": {}
+        },
+        "tipo": "objeto"
+      },
+      "prefixo": {},
+      "validade_dias": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#create",
+    "corpo_plano": false,
+    "envelope": "cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:16",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:17"
+    ],
+    "sem_corpo": false
+  },
+  "POST fidelidade/cupons/conferir": {
+    "campos": {
+      "codigo": {
+        "obrigatorio": true
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/fidelidade/cupons#conferir",
+    "motivos": [
+      "leitura crua sem tipo: codigo (repassada a ::Fidelidade::ConferirCupom.new(Current.account, ve_conta...)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:29",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:31"
     ],
     "sem_corpo": false
   },
@@ -21199,6 +21288,39 @@
     ],
     "sem_corpo": false
   },
+  "POST relacionamentos/pessoas/:pessoa_id/fidelidade/ajustes": {
+    "campos": {
+      "motivo": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "quantos": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#ajustes",
+    "modelo": "Fidelidade::Programa",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:41",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:46",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:43",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:55"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/pessoas/:pessoa_id/fidelidade/premios": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#premios",
+    "modelo": "IdempotencyKey",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:33",
+      "app/controllers/api/v1/accounts/relacionamentos/fidelidade_controller.rb:55"
+    ],
+    "sem_corpo": true
+  },
   "POST relacionamentos/pessoas/exportar": {
     "campos": {
       "busca": {},
@@ -21210,6 +21332,7 @@
           "compras": {},
           "empresa": {},
           "etiqueta": {},
+          "fidelidade": {},
           "total_acima": {}
         },
         "tipo": "objeto"
@@ -21222,8 +21345,8 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:43",
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:95"
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:45",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:97"
     ],
     "sem_corpo": false
   },
@@ -27708,6 +27831,8 @@
           "meta_ads_manage",
           "posts_view",
           "posts_manage",
+          "fidelidade_view",
+          "fidelidade_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -27834,6 +27959,43 @@
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:23",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:59",
       "app/controllers/api/v1/accounts/email_oauth_apps_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
+  "PUT fidelidade/cupons/:id": {
+    "campos": {
+      "ligado": {
+        "obrigatorio": true,
+        "padrao": true,
+        "tipo": "booleano"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/cupons#update",
+    "modelo": "Fidelidade::Cupom",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:23",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:25",
+      "app/controllers/api/v1/accounts/fidelidade/cupons_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PUT fidelidade/programa": {
+    "campos": {
+      "a_cada": {},
+      "ganha": {},
+      "meta": {},
+      "premio": {},
+      "tipo": {},
+      "validade_meses": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/fidelidade/programa#update",
+    "corpo_plano": true,
+    "envelope": "programa",
+    "origem": [
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:12",
+      "app/controllers/api/v1/accounts/fidelidade/programa_controller.rb:13"
     ],
     "sem_corpo": false
   },

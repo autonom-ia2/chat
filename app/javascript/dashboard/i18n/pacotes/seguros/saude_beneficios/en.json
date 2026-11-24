@@ -1456,5 +1456,10 @@
     "HEROI": {
       "NENHUMA_APOIO": "A purchase counts when a card is marked as implemented."
     }
+  },
+  "FIDELIDADE": {
+    "PAINEL": {
+      "PASSO_1": "The customer buys and you tap Implemented on their card, in the CRM."
+    }
   }
 }

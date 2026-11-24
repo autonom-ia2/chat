@@ -1456,5 +1456,10 @@
     "HEROI": {
       "NENHUMA_APOIO": "A compra conta quando um card é marcado como implantado."
     }
+  },
+  "FIDELIDADE": {
+    "PAINEL": {
+      "PASSO_1": "O cliente compra e você toca em Implantado no card dele, no CRM."
+    }
   }
 }

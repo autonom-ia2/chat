@@ -2042,6 +2042,18 @@
     "controller": "api/v1/accounts/email_oauth_apps#show",
     "parametros": []
   },
+  "fidelidade/cupons": {
+    "controller": "api/v1/accounts/fidelidade/cupons#index",
+    "parametros": []
+  },
+  "fidelidade/programa": {
+    "controller": "api/v1/accounts/fidelidade/programa#show",
+    "parametros": []
+  },
+  "fidelidade/resumo": {
+    "controller": "api/v1/accounts/fidelidade/resumo#show",
+    "parametros": []
+  },
   "inbox_members/:inbox_id": {
     "controller": "api/v1/accounts/inbox_members#show",
     "parametros": []
@@ -2445,6 +2457,16 @@
   "relacionamentos/pessoas/:id/seguros_de_fora/arquivos": {
     "controller": "api/v1/accounts/relacionamentos/pessoas/seguros_de_fora#arquivos",
     "parametros": []
+  },
+  "relacionamentos/pessoas/:pessoa_id/fidelidade": {
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#show",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:pessoa_id/fidelidade/movimentos": {
+    "controller": "api/v1/accounts/relacionamentos/fidelidade#movimentos",
+    "parametros": [
+      "pagina"
+    ]
   },
   "relacionamentos/pessoas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",

@@ -530,3 +530,10 @@ relacionamentos_compras_varredura_job:
   cron: '45 12 * * *'
   class: 'Relacionamentos::Compras::VarreduraJob'
   queue: scheduled_jobs
+
+# executed every day at 12:30 UTC (9h30 no Brasil), fora dos minutos das outras rotinas de 12h; o cartão fidelidade
+# (#3100): vence os carimbos que passaram da validade, por ordem de chegada, e o saldo de cada pessoa desce junto.
+fidelidade_vencer_job:
+  cron: '30 12 * * *'
+  class: 'Fidelidade::VencerJob'
+  queue: scheduled_jobs

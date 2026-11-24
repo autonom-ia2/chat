@@ -167,6 +167,9 @@
     },
     {
       "file": "duasVersoes.json"
+    },
+    {
+      "file": "fidelidade.json"
     }
   ],
   "pacotes": {

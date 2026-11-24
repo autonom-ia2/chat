@@ -19,6 +19,7 @@ import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
 import ConversaNova from '../components/carteira/ConversaNova.vue';
 import SecaoCompras from '../components/ficha/SecaoCompras.vue';
+import FidelidadeDaFicha from '../components/ficha/FidelidadeDaFicha.vue';
 import { FALHA_DA_PARTE } from '../ficha/falhas';
 import DialogoDeConfirmacao from '../components/carteira/DialogoDeConfirmacao.vue';
 import AvisoVivo from '../components/ficha/AvisoVivo.vue';
@@ -670,6 +671,14 @@ watch(
                 pode-chamar
                 @chamar="conversar"
                 @tentar="ficha.relerParte('compras')"
+              />
+              <!-- #3100: o cartão fidelidade, logo depois de Compras (fora da demonstração). -->
+              <FidelidadeDaFicha
+                v-if="!fonte.usaDemo"
+                :dono-id="id"
+                :nome="nome"
+                :agora="agora"
+                :pode-editar="podeEditar"
               />
               <SegurosDaFicha
                 v-if="comSeguros"

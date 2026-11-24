@@ -346,5 +346,10 @@
     "HEROI": {
       "NENHUMA_APOIO": "A compra conta quando um card fecha o seguro."
     }
+  },
+  "FIDELIDADE": {
+    "PAINEL": {
+      "PASSO_1": "O cliente compra e você toca em Fechou o seguro no card dele, no CRM."
+    }
   }
 }

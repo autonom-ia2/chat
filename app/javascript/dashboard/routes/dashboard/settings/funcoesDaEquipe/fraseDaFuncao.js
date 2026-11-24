@@ -42,6 +42,7 @@ const CHAVES_DA_RECOLHIDA = [
   'whatsapp_templates_manage',
   'meta_ads_manage',
   'posts_manage',
+  'fidelidade_manage',
   'inbox_manage',
   'autonomia_manage',
   'autonomia_tools_manage',
@@ -273,6 +274,8 @@ const MENU = [
   // Seus posts (#2302) é item de primeiro nível do menu lateral, antes de Campanhas.
   ['POSTS', 'SEUS_POSTS'],
   ['CAMPAIGNS', 'CAMPANHAS'],
+  // Fidelidade (#3100) é item de primeiro nível do menu lateral, depois de Campanhas.
+  ['LOYALTY', 'FIDELIDADE'],
   ['META_ADS', 'ANUNCIOS'],
   ['AUTONOMIA', 'ROBOS'],
   // #1430: as ferramentas moram na página do robô, não em Configurações.

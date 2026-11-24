@@ -17,6 +17,10 @@ import {
 // número oficial está fechada. Com a janela aberta, sai o texto acima. Cada
 // variável do corpo ganha uma caixa de texto com os dados da conversa, como o
 // texto livre. Os modelos vêm das caixas que a pessoa já vê no painel.
+// `textos` (opcional) troca a explicação, o "não mandar", o "sem modelos" e o
+// "sumiu" por chaves de i18n de quem usa ({ DICA, NENHUM, SEM_MODELOS, SUMIU });
+// sem ele, ficam os textos de sempre da Automação livre (#3100: o passo
+// "Mandar cupom" fala com quem nunca ouviu "janela de 24 h").
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: Object, default: null },
@@ -27,6 +31,7 @@ const props = defineProps({
   // #3099 — a versão 2: sem os nomes técnicos ({{1}}, "Variável 1", "pt_BR"). A receita guarda as variáveis próprias
   // da versão 2 (o servidor confere cada modelo com as dele), então os campos continuam, com rótulos simples.
   daSegundaVersao: { type: Boolean, default: false },
+  textos: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -35,6 +40,7 @@ const { t, locale } = useI18n();
 const idModelo = useId();
 const M = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.MODELO';
 const NENHUM = '';
+const chaveDoTexto = nome => props.textos[nome] || `${M}.${nome}`;
 
 const caixas = useMapGetter('inboxes/getInboxes');
 const modelos = computed(() => modelosDasCaixas(caixas.value));
@@ -59,7 +65,7 @@ const rotuloDoModelo = modelo =>
       })
     : t(`${M}.OPCAO`, { nome: modelo.name, idioma: modelo.language });
 const opcoes = computed(() => [
-  { value: NENHUM, label: t(`${M}.NENHUM`) },
+  { value: NENHUM, label: t(chaveDoTexto('NENHUM')) },
   ...modelos.value.map(modelo => ({
     value: chaveDoModelo(modelo),
     label: rotuloDoModelo(modelo),
@@ -130,7 +136,7 @@ const mudarVariavel = (indice, partes) => {
         {{ rotulo }}
       </label>
       <p v-if="!semAjuda" class="mb-0 text-sm text-n-slate-11">
-        {{ $t(`${M}.DICA`) }}
+        {{ $t(chaveDoTexto('DICA')) }}
       </p>
       <ChoiceSelect
         data-escolher-modelo
@@ -146,7 +152,7 @@ const mudarVariavel = (indice, partes) => {
         data-sem-modelos
         class="mb-0 text-sm text-n-slate-11"
       >
-        {{ $t(`${M}.SEM_MODELOS`) }}
+        {{ $t(chaveDoTexto('SEM_MODELOS')) }}
       </p>
       <p
         v-else-if="modelValue && !escolhido"
@@ -154,7 +160,7 @@ const mudarVariavel = (indice, partes) => {
         role="status"
         class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-12"
       >
-        {{ $t(`${M}.SUMIU`, { nome: modelValue.nome }) }}
+        {{ $t(chaveDoTexto('SUMIU'), { nome: modelValue.nome }) }}
       </p>
     </div>
 

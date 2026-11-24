@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_23_210137) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_211000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -4640,6 +4640,97 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_210137) do
     t.index ["label_id"], name: "index_etiquetas_nomes_on_label_id", unique: true
   end
 
+  create_table "fidelidade_cupom_codigos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "cupom_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "codigo", limit: 20, null: false
+    t.string "codigo_limpo", limit: 20, null: false
+    t.datetime "enviado_em"
+    t.datetime "vale_ate"
+    t.integer "usos", default: 0, null: false
+    t.datetime "usado_em"
+    t.bigint "usado_por_id"
+    t.bigint "automacao_execucao_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "codigo_limpo"], name: "idx_fidelidade_cupom_codigos_codigo", unique: true
+    t.index ["contact_id"], name: "index_fidelidade_cupom_codigos_on_contact_id"
+    t.index ["cupom_id", "contact_id"], name: "idx_fidelidade_cupom_codigos_pessoa", unique: true
+  end
+
+  create_table "fidelidade_cupons", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "nome", limit: 60, null: false
+    t.string "oferta_tipo", null: false
+    t.integer "oferta_valor"
+    t.string "oferta_texto", limit: 60
+    t.string "moeda"
+    t.string "prefixo", limit: 8, null: false
+    t.integer "validade_dias", null: false
+    t.integer "limite_por_cliente", default: 1, null: false
+    t.boolean "ligado", default: true, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_fidelidade_cupons_conta"
+  end
+
+  create_table "fidelidade_movimentos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "programa_id", null: false
+    t.string "tipo", null: false
+    t.integer "quantos", null: false
+    t.integer "vez", default: 1, null: false
+    t.string "origem_type"
+    t.bigint "origem_id"
+    t.bigint "user_id"
+    t.bigint "valor_centavos"
+    t.string "moeda"
+    t.string "motivo", limit: 60
+    t.datetime "vence_em"
+    t.integer "restante", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_fidelidade_movimentos_conta"
+    t.index ["contact_id", "created_at"], name: "idx_fidelidade_movimentos_pessoa"
+    t.index ["programa_id", "contact_id", "origem_type", "origem_id", "tipo", "vez"], name: "idx_fidelidade_movimentos_origem", unique: true, where: "(((tipo)::text = 'compra'::text) OR ((tipo)::text = 'estorno'::text))"
+    t.index ["programa_id", "tipo", "created_at"], name: "idx_fidelidade_movimentos_programa_tipo"
+    t.index ["vence_em"], name: "idx_fidelidade_movimentos_a_vencer", where: "((restante > 0) AND (vence_em IS NOT NULL))"
+  end
+
+  create_table "fidelidade_programas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "tipo", null: false
+    t.bigint "a_cada_centavos", null: false
+    t.string "moeda", default: "BRL", null: false
+    t.integer "ganha", null: false
+    t.integer "meta", null: false
+    t.string "premio", limit: 80, null: false
+    t.integer "validade_meses"
+    t.boolean "ligado", default: true, null: false
+    t.datetime "ligado_em"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_fidelidade_programas_on_account_id", unique: true
+  end
+
+  create_table "fidelidade_saldos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "programa_id", null: false
+    t.integer "saldo", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_fidelidade_saldos_conta"
+    t.index ["contact_id"], name: "index_fidelidade_saldos_on_contact_id"
+    t.index ["programa_id", "contact_id"], name: "idx_fidelidade_saldos_pessoa", unique: true
+    t.index ["programa_id", "saldo"], name: "idx_fidelidade_saldos_saldo"
+  end
+
   create_table "folders", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "category_id", null: false
@@ -5881,6 +5972,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_210137) do
   add_foreign_key "envios_ao_cliente", "contacts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
+  add_foreign_key "fidelidade_cupom_codigos", "accounts"
+  add_foreign_key "fidelidade_cupom_codigos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_cupom_codigos", "fidelidade_cupons", column: "cupom_id"
+  add_foreign_key "fidelidade_cupom_codigos", "users", column: "usado_por_id", on_delete: :nullify
+  add_foreign_key "fidelidade_cupons", "accounts"
+  add_foreign_key "fidelidade_cupons", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_movimentos", "accounts"
+  add_foreign_key "fidelidade_movimentos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_movimentos", "fidelidade_programas", column: "programa_id"
+  add_foreign_key "fidelidade_movimentos", "users", on_delete: :nullify
+  add_foreign_key "fidelidade_programas", "accounts"
+  add_foreign_key "fidelidade_programas", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_programas", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "fidelidade_saldos", "accounts"
+  add_foreign_key "fidelidade_saldos", "contacts", on_delete: :cascade
+  add_foreign_key "fidelidade_saldos", "fidelidade_programas", column: "programa_id"
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify
