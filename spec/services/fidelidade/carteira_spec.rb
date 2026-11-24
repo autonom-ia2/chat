@@ -18,7 +18,7 @@ RSpec.describe Fidelidade::Carteira do
 
   def saldo = Fidelidade::Saldo.find_by(programa_id: programa.id, contact_id: ana.id).saldo
 
-  def presente(quantos, em: agora) = carteira.entrar(tipo: 'presente', quantos: quantos, agora: em)
+  def presente(quantos, quando: agora) = carteira.entrar(tipo: 'presente', quantos: quantos, agora: quando)
 
   it 'a entrada soma no saldo, guarda o resto e quando vence' do
     entrada = presente(4)
@@ -28,7 +28,7 @@ RSpec.describe Fidelidade::Carteira do
   end
 
   it 'a saída tira das entradas mais antigas primeiro' do
-    antiga = presente(3, em: agora - 2.months)
+    antiga = presente(3, quando: agora - 2.months)
     nova = presente(5)
 
     carteira.sair(tipo: 'ajuste', quantos: 4)
@@ -69,8 +69,8 @@ RSpec.describe Fidelidade::Carteira do
   end
 
   it 'vence o que sobrou das entradas vencidas, num movimento só' do
-    velha = presente(3, em: agora - 4.months)
-    presente(2, em: agora - 4.months + 1.day)
+    velha = presente(3, quando: agora - 4.months)
+    presente(2, quando: agora - 4.months + 1.day)
     nova = presente(5)
     carteira.sair(tipo: 'ajuste', quantos: 1)
 

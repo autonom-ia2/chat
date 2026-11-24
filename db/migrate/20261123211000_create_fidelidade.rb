@@ -62,13 +62,19 @@ class CreateFidelidade < ActiveRecord::Migration[7.2]
       t.datetime :vence_em
       t.integer :restante, null: false, default: 0
       t.timestamps
-      t.index %i[account_id], name: 'idx_fidelidade_movimentos_conta'
-      t.index %i[contact_id created_at], name: 'idx_fidelidade_movimentos_pessoa'
-      t.index %i[programa_id contact_id origem_type origem_id tipo vez], unique: true, name: 'idx_fidelidade_movimentos_origem',
-                                                                        where: "tipo IN ('compra', 'estorno')"
-      t.index %i[programa_id tipo created_at], name: 'idx_fidelidade_movimentos_programa_tipo'
-      t.index %i[vence_em], name: 'idx_fidelidade_movimentos_a_vencer', where: 'restante > 0 AND vence_em IS NOT NULL'
+      indices_dos_movimentos(t)
     end
+  end
+
+  # A compra e o estorno de um card são únicos por pessoa e por vez (ver o topo). O filtro do índice único vai em `OR`,
+  # não em `IN`: é a forma que o Postgres devolve igual depois de ler o schema.rb.
+  def indices_dos_movimentos(tabela)
+    tabela.index %i[account_id], name: 'idx_fidelidade_movimentos_conta'
+    tabela.index %i[contact_id created_at], name: 'idx_fidelidade_movimentos_pessoa'
+    tabela.index %i[programa_id contact_id origem_type origem_id tipo vez],
+                 unique: true, name: 'idx_fidelidade_movimentos_origem', where: "tipo = 'compra' OR tipo = 'estorno'"
+    tabela.index %i[programa_id tipo created_at], name: 'idx_fidelidade_movimentos_programa_tipo'
+    tabela.index %i[vence_em], name: 'idx_fidelidade_movimentos_a_vencer', where: 'restante > 0 AND vence_em IS NOT NULL'
   end
 
   def criar_saldos

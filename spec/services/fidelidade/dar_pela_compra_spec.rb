@@ -173,8 +173,7 @@ RSpec.describe Fidelidade::DarPelaCompra do
       card.update!(status: :won, closed_at: agora)
       dar(ana)
 
-      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).twice
-        .with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:1")
+      expect(Autonomia::Automacao::Escuta).to have_received(:comecar).with(ana, gatilho, evento: "#{gatilho}:#{ana.id}:1").twice
     end
 
     it 'depois do prêmio, completar de novo é o cartão seguinte' do

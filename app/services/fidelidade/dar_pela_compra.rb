@@ -79,10 +79,13 @@ class Fidelidade::DarPelaCompra
       estornar(carteira, aberta, card_id)
       aberta = nil
     end
-    return if aberta || card.nil? || !@programa.conta_a_compra?(card.closed_at, card.currency)
+    return if aberta || !conta?(card)
 
     dar(carteira, card, (movimentos.map(&:vez).max || 0) + 1)
   end
+
+  # O card ganho (ainda existe e) conta para o cartão, pela data e pela moeda (Fidelidade::Programa#conta_a_compra?).
+  def conta?(card) = card.present? && @programa.conta_a_compra?(card.closed_at, card.currency)
 
   # A compra da última vez, se ainda não foi estornada.
   def compra_aberta(movimentos)
@@ -97,7 +100,7 @@ class Fidelidade::DarPelaCompra
   end
 
   def estornar(carteira, compra, card_id)
-    carteira.sair(tipo: Fidelidade::Movimento::ESTORNO, quantos: compra.quantos, de: compra, origem_type: CARD,
+    carteira.sair(tipo: Fidelidade::Movimento::ESTORNO, quantos: compra.quantos, desfaz: compra, origem_type: CARD,
                   origem_id: card_id, vez: compra.vez, valor_centavos: compra.valor_centavos, moeda: compra.moeda)
   end
 

@@ -5,7 +5,7 @@
 # - `entrar`: a compra, o presente, o ajuste para mais. A entrada guarda o que ainda não saiu (`restante`) e quando
 #   vence, pela validade do cartão.
 # - `sair`: o prêmio, o estorno, o ajuste para menos. Tira das entradas mais antigas primeiro; o estorno tira primeiro
-#   da compra que ele desfaz (`de`). O saldo nunca fica negativo: sai no máximo o que a pessoa tem. Com `exige`, recusa
+#   da compra que ele desfaz (`desfaz`). O saldo nunca fica negativo: sai no máximo o que a pessoa tem. Com `exige`, recusa
 #   (SaldoInsuficiente) quando a pessoa não tem tanto: o prêmio só sai com o cartão completo.
 # - `vencer`: leva o que sobrou das entradas vencidas, num movimento "venceu" só.
 #
@@ -29,12 +29,12 @@ class Fidelidade::Carteira
     end
   end
 
-  def sair(tipo:, quantos:, de: nil, exige: nil, **atributos)
+  def sair(tipo:, quantos:, desfaz: nil, exige: nil, **atributos)
     travado do |saldo|
       raise SaldoInsuficiente if exige && saldo.saldo < exige
 
       tirado = [quantos, saldo.saldo].min
-      tirar_das_entradas(tirado, de)
+      tirar_das_entradas(tirado, desfaz)
       saldo.update!(saldo: saldo.saldo - tirado)
       criar(tipo: tipo, quantos: -tirado, **atributos)
     end
@@ -89,10 +89,10 @@ class Fidelidade::Carteira
     Fidelidade::Movimento.create!(account_id: programa.account_id, programa: programa, contact_id: contato.id, **atributos)
   end
 
-  # Tira `quantos` das entradas com resto: primeiro da entrada `de` (o estorno da compra), depois das mais antigas.
-  def tirar_das_entradas(quantos, de)
+  # Tira `quantos` das entradas com resto: primeiro da compra que o estorno desfaz (`desfaz`), depois das mais antigas.
+  def tirar_das_entradas(quantos, desfaz)
     faltam = quantos
-    entradas_em_ordem(de).each do |entrada|
+    entradas_em_ordem(desfaz).each do |entrada|
       break if faltam.zero?
 
       tira = [entrada.restante, faltam].min
@@ -101,9 +101,9 @@ class Fidelidade::Carteira
     end
   end
 
-  def entradas_em_ordem(de)
+  def entradas_em_ordem(desfaz)
     entradas = movimentos.com_resto.order(:created_at, :id).lock.to_a
-    primeira = de && entradas.find { |entrada| entrada.id == de.id }
+    primeira = desfaz && entradas.find { |entrada| entrada.id == desfaz.id }
     primeira ? [primeira, *(entradas - [primeira])] : entradas
   end
 end

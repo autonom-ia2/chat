@@ -35,12 +35,15 @@ class Autonomia::Automacao::PassoDeMandarCupom < Autonomia::Automacao::PassoDeMe
 
     id = passo['id']
     [*(texto(:passo_desligado, passo: id) unless ::Autonomia::Automacao::Motor.mensagens?(conta)),
-     *(fidelidade(:sem_permissao_cupom, passo: id) if conferencia.account_user && !conferencia.account_user.permission_granted?(PERMISSAO)),
+     *(fidelidade(:sem_permissao_cupom, passo: id) if sem_permissao?(conferencia.account_user)),
      *(fidelidade(:sem_cupom, passo: id) unless ::Fidelidade::Cupom.da_conta(conta).exists?(id: passo['cupom_id'])),
      *(fidelidade(:sem_codigo, passo: id) unless com_codigo?(passo)),
      *dados_do_cupom_desconhecidos(passo).map { |caminho| texto(:valor_desconhecido, passo: id, caminho: caminho) },
      *::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(conta, id, passo['modelo'])]
   end
+
+  # Quem salva (quando a conferência diz quem é) precisa cuidar do cartão.
+  def self.sem_permissao?(account_user) = account_user.present? && !account_user.permission_granted?(PERMISSAO)
 
   def self.com_codigo?(passo) = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).include?(::Fidelidade::ValoresDoCupom::CODIGO)
 
@@ -143,8 +146,10 @@ class Autonomia::Automacao::PassoDeMandarCupom < Autonomia::Automacao::PassoDeMe
   # Os valores da execução, com os do cupom por cima (só depois de achar o código).
   def valores
     base = super
-    return base unless @codigo
+    @codigo ? valores_do_cupom(base) : base
+  end
 
+  def valores_do_cupom(base)
     @valores_do_cupom ||= ::Fidelidade::ValoresDoCupom.new(base, codigo: @codigo, vale_ate: @vale_ate)
   end
 end
