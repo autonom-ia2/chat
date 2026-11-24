@@ -24,7 +24,7 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   # #3191 — avatar_url: o painel mostra a foto do agente no cabeçalho e ao lado de cada resposta.
   def agents
     # Fora os de sistema (Guia) e os ajudantes de outro agente (tema 14): `Agent.copilotos_da_equipe`.
-    agents = ::Autonomia::Agents::Agent.kept.where(account: Current.account).copilotos_da_equipe.order(:name)
+    agents = ::Autonomia::Agents::Agent.kept.where(account: Current.account).copilotos_da_equipe.with_attached_avatar.order(:name)
 
     render json: {
       agents: agents.map do |agent|

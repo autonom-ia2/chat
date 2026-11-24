@@ -1,4 +1,4 @@
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
 import { emitter } from 'shared/helpers/mitt';
@@ -10,6 +10,7 @@ import AutonomiaCopilotContainer from '../AutonomiaCopilotContainer.vue';
 const currentAccountId = ref(1);
 const uiSettings = ref({ is_autonomia_copilot_panel_open: true });
 const updateUISettings = vi.fn();
+const selectedChat = ref({ id: 42 });
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables', () => ({
@@ -27,7 +28,7 @@ vi.mock('dashboard/composables/store', () => ({
     if (getter === 'globalConfig/get') {
       return ref({ crmKanbanEnabled: true, crmCopilotEnabled: true });
     }
-    if (getter === 'getSelectedChat') return ref({ id: 42 });
+    if (getter === 'getSelectedChat') return selectedChat;
     if (getter === 'getCurrentAccountId') return currentAccountId;
     return ref(null);
   },
@@ -59,6 +60,7 @@ describe('AutonomiaCopilotContainer', () => {
 
   beforeEach(() => {
     currentAccountId.value = 1;
+    selectedChat.value = { id: 42 };
     uiSettings.value = { is_autonomia_copilot_panel_open: true };
     AutonomiaCopilotAPI.listAgents.mockResolvedValue({
       data: { agents: [{ id: 7, name: 'Lia' }] },
@@ -167,7 +169,7 @@ describe('AutonomiaCopilotContainer', () => {
     await flushPromises();
 
     expect(useAutonomiaCopilotStore().messages).toHaveLength(2);
-    expect(wrapper.text()).not.toContain('CAPTAIN.COPILOT.LOADER');
+    expect(wrapper.text()).not.toContain('AUTONOMIA_COPILOT.THINKING');
   });
 
   describe('desenho do Guia (#3191)', () => {
@@ -231,6 +233,54 @@ describe('AutonomiaCopilotContainer', () => {
       emit.mockRestore();
     });
 
+    it('"Usar esta resposta" só na última fala, e some enquanto espera', async () => {
+      let resolveSegunda;
+      AutonomiaCopilotAPI.chat
+        .mockResolvedValueOnce({
+          data: { available: true, text: 'Olá, Ana!', reply_suggestion: true },
+        })
+        .mockReturnValueOnce(
+          new Promise(resolve => {
+            resolveSegunda = resolve;
+          })
+        );
+      wrapper = await mountCopilot();
+      await send(wrapper.find('textarea'), 'Escreva uma resposta');
+      expect(wrapper.findAll('[data-usar-resposta]')).toHaveLength(1);
+
+      await send(wrapper.find('textarea'), 'Outra, mais curta');
+      expect(wrapper.findAll('[data-usar-resposta]')).toHaveLength(0);
+
+      resolveSegunda({
+        data: { available: true, text: 'Oi, Ana!', reply_suggestion: true },
+      });
+      await flushPromises();
+      const respostas = wrapper.findAll('[data-resposta]');
+      expect(wrapper.findAll('[data-usar-resposta]')).toHaveLength(1);
+      expect(
+        respostas[respostas.length - 1].find('[data-usar-resposta]').exists()
+      ).toBe(true);
+    });
+
+    it('voltar a uma conversa não recolhe de novo o menu', async () => {
+      wrapper = await mountCopilot();
+      expect(menuEGuia.copilotoAberto.value).toBe(true);
+      menuEGuia.copilotoAberto.value = true;
+      const mudancas = [];
+      const parar = watch(menuEGuia.copilotoAberto, valor =>
+        mudancas.push(valor)
+      );
+
+      selectedChat.value = null;
+      await nextTick();
+      selectedChat.value = { id: 42 };
+      await nextTick();
+      await flushPromises();
+
+      expect(mudancas).toEqual([]);
+      parar();
+    });
+
     it('sem resposta pronta para o cliente, não oferece usar', async () => {
       AutonomiaCopilotAPI.chat.mockResolvedValue({
         data: { available: true, text: 'O cliente quer desconto.' },
@@ -250,7 +300,7 @@ describe('AutonomiaCopilotContainer', () => {
       expect(menuEGuia.copilotoAberto.value).toBe(false);
     });
 
-    it('o Guia abrir fecha o copiloto e devolve o painel do contato', async () => {
+    it('o Guia abrir fecha o copiloto sem reabrir o contato', async () => {
       wrapper = await mountCopilot();
 
       uiSettings.value = {
@@ -261,7 +311,6 @@ describe('AutonomiaCopilotContainer', () => {
 
       expect(updateUISettings).toHaveBeenCalledWith({
         is_autonomia_copilot_panel_open: false,
-        is_contact_sidebar_open: true,
       });
     });
   });

@@ -100,17 +100,17 @@ const sugestoes = computed(() => [
 ]);
 
 // #3191 — mesma largura do Guia; o copiloto avisa o menu, que recolhe sem gravar.
+// Avisa quando a pessoa ABRE o copiloto (a chave liga), não a cada volta a uma conversa: o
+// painel some e reaparece com a conversa, e recolher de novo o menu que ela reabriu seria brigar
+// com o clique dela. Ao carregar a página, vale o painel na tela.
 const { estilo: estiloDoPainel } = useLarguraDoGuia({
   embutido: false,
   larguraDaTela: windowWidth,
 });
-watch(
-  showPanel,
-  aberto => {
-    menuEGuia.copilotoAberto.value = aberto;
-  },
-  { immediate: true }
-);
+menuEGuia.copilotoAberto.value = showPanel.value;
+watch(isPanelOpen, aberto => {
+  menuEGuia.copilotoAberto.value = aberto && showPanel.value;
+});
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -137,9 +137,12 @@ const resetConversation = () => {
   store.reset();
 };
 
-// O Guia abriu: o copiloto fecha e a conversa volta a ter o painel do contato.
+// O Guia abriu: o copiloto fecha. Só a chave dele: reabrir o contato ao lado do Guia daria as
+// três colunas que se quer evitar (quem abre o Guia já cuida do contato).
 watch(isGuideOpen, aberto => {
-  if (aberto && isPanelOpen.value) closePanel();
+  if (aberto && isPanelOpen.value) {
+    updateUISettings({ is_autonomia_copilot_panel_open: false });
+  }
 });
 
 // "Usar esta resposta": só na última fala, e só quando o agente a escreveu como resposta ao
