@@ -1193,11 +1193,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar um cupom de desconto ou presente
 - intent: Como crio um cupom de desconto?; Como dou um cupom para o cliente voltar?; Dá para fazer cupom de presente?; Como escolho o começo do código do cupom?; Quanto tempo o cupom vale?; Cada cliente tem um código diferente?
-- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > Criar cupom (ou Novo cupom)
+- onde_fica: Menu lateral > Crescer > Fidelidade > aba Cupons > Criar cupom
 - rota: `fidelidade_cupom_novo` - `/app/accounts/:accountId/fidelidade/cupons/novo`
 - gate: papel `administrator` ou `fidelidade_manage`
 - pre_requisitos: ser administrador, ou ter uma função com Fidelidade em Editar.
-- passos: 1. Em Fidelidade, abra a aba Cupons; 2. Clique em Criar cupom (ou Novo cupom); 3. Dê um nome ao cupom (só você vê); 4. Escolha o que ele dá: desconto em %, desconto em dinheiro ou um presente; 5. Escreva o começo do código (por exemplo VOLTA); 6. Escolha quanto tempo ele vale depois que o cliente recebe; 7. Confira a mensagem como chega e clique em Criar cupom; 8. Na aba Cupons, clique em Mandar este cupom para abrir a automação que manda.
+- passos: 1. Em Fidelidade, abra a aba Cupons; 2. Clique em Criar cupom; 3. Dê um nome ao cupom (só você vê); 4. Escolha o que ele dá: desconto em %, desconto em dinheiro ou um presente; 5. Escreva o começo do código (por exemplo VOLTA); 6. Escolha quanto tempo ele vale depois que o cliente recebe; 7. Confira a mensagem como chega e clique em Criar cupom; 8. Na aba Cupons, clique em Mandar este cupom para abrir a automação que manda.
 - gotchas: cada cliente recebe um código só dele, como VOLTA-7KD2, e usa uma vez; mandar de novo para a mesma pessoa manda o mesmo código; o prazo conta de quando o cliente recebe; o código não tem letras que se confundem (0 e O, 1, I e L); o cupom não dá desconto sozinho: o desconto você dá no caixa, depois de conferir; pausar o cupom para de mandar, mas quem já recebeu ainda pode usar até vencer.
 - nav_target: `fidelidade_cupom_novo`
 

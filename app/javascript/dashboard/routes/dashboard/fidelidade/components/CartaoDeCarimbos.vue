@@ -108,7 +108,7 @@ const frase = computed(() => {
       aria-hidden="true"
       data-fidelidade="bolinhas"
       class="relative grid gap-2 sm:gap-3 justify-items-center"
-      :class="[colunas, compacto ? 'max-w-xs' : '']"
+      :class="colunas"
     >
       <span
         v-for="bolinha in bolinhas"

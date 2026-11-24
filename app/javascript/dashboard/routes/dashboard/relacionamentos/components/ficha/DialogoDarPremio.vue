@@ -19,13 +19,13 @@ const props = defineProps({
 });
 const emit = defineEmits(['confirmar']);
 
-const { t, unidade } = useTextosDaFidelidade();
+const { t, unidade, premioNaFrase } = useTextosDaFidelidade();
 const D = `${F}.DAR_PREMIO`;
 
 const conta = computed(() => progresso(props.tem, props.programa.meta));
 const texto = computed(() => {
   const saem = t(`${D}.TEXTO`, {
-    premio: props.programa.premio,
+    premio: premioNaFrase(props.programa.premio),
     quantos: unidade(props.programa.meta, props.programa.tipo),
   });
   if (!conta.value.sobra) return saem;
@@ -49,6 +49,7 @@ defineExpose({
     :confirmar="t(`${D}.CONFIRMAR`)"
     :cancelar="t(`${D}.CANCELAR`)"
     marca-confirmar="confirmar-premio"
+    margem-no-celular
     :carregando="carregando"
     @confirm="emit('confirmar')"
   />

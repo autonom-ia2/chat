@@ -144,7 +144,7 @@ onMounted(carregar);
         @tentar="carregar"
       />
       <CartaoDaSecao v-else :titulo="t(`${F}.FICHA.TITULO`)">
-        <FalhaDaParte @tentar="carregar" />
+        <FalhaDaParte :mensagem="t(`${F}.FICHA.ERRO`)" @tentar="carregar" />
       </CartaoDaSecao>
       <DialogoDarPremio
         v-if="dados?.programa"

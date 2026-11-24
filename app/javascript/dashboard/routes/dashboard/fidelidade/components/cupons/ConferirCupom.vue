@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import DialogoDaFicha from 'dashboard/routes/dashboard/relacionamentos/components/ficha/DialogoDaFicha.vue';
 import { F, useTextosDaFidelidade } from '../../useTextosDaFidelidade';
 import { TOM_DO_CODIGO, codigoDigitado } from '../../regras';
 
@@ -14,7 +15,10 @@ import { TOM_DO_CODIGO, codigoDigitado } from '../../regras';
 // `usado` troca a frase por "Pronto… Dê 10% de desconto ao cliente.".
 // "Marcar como usado" só aparece com `podeUsar` (quem pode mexer no contato,
 // a regra do servidor em CupomCodigosController#usar); sem ela, o resultado do
-// conferir aparece igual, sem o botão.
+// conferir aparece igual, sem o botão. Como na ficha, "Marcar como usado"
+// pergunta antes (o mesmo DialogoDaFicha e as mesmas frases); marcado, o campo
+// fica limpo para o próximo código. Com um resultado na tela, "Conferir" fica
+// discreto: a ação da vez é a do resultado.
 const props = defineProps({
   resultado: { type: Object, default: null },
   conferindo: { type: Boolean, default: false },
@@ -31,10 +35,28 @@ const C = `${F}.CONFERIR`;
 const idDoCampo = useId();
 
 const codigo = ref(props.codigoInicial);
+// A pergunta de "Marcar como usado" repete o código como a pessoa digitou.
+const comoDigitado = texto => (texto || '').trim().toUpperCase();
+const conferido = ref(comoDigitado(props.codigoInicial));
 const conferir = () => {
   const limpo = codigoDigitado(codigo.value);
-  if (limpo) emit('conferir', limpo);
+  if (!limpo) return;
+  conferido.value = comoDigitado(codigo.value);
+  emit('conferir', limpo);
 };
+
+const dialogoUsar = ref(null);
+const usar = () => {
+  dialogoUsar.value?.close();
+  emit('usar');
+};
+watch(
+  () => props.usado,
+  usado => {
+    if (usado) codigo.value = '';
+  },
+  { immediate: true }
+);
 
 const TONS = {
   verde: 'bg-n-teal-2 border-n-teal-6 text-n-teal-12',
@@ -102,6 +124,7 @@ const frase = computed(() => {
         type="submit"
         size="lg"
         class="min-h-12"
+        :variant="resultado ? 'faded' : 'solid'"
         :is-loading="conferindo"
         :disabled="conferindo"
         :label="t(`${C}.BOTAO`)"
@@ -147,8 +170,20 @@ const frase = computed(() => {
         :is-loading="usando"
         :disabled="usando"
         :label="t(`${C}.USAR`)"
-        @click="emit('usar')"
+        @click="dialogoUsar?.open()"
       />
     </div>
+
+    <DialogoDaFicha
+      v-if="podeUsar"
+      ref="dialogoUsar"
+      :titulo="t(`${F}.FICHA.USAR_CUPOM_TITULO`, { codigo: conferido })"
+      :texto="t(`${F}.FICHA.USAR_CUPOM_TEXTO`)"
+      :confirmar="t(`${F}.FICHA.USAR_CUPOM_CONFIRMAR`)"
+      :cancelar="t(`${F}.FICHA.CANCELAR`)"
+      marca-confirmar="confirmar-usar-codigo"
+      margem-no-celular
+      @confirm="usar"
+    />
   </section>
 </template>

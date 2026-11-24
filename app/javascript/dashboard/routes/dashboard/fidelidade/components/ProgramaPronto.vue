@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { F, useTextosDaFidelidade } from '../useTextosDaFidelidade';
 import {
@@ -11,11 +11,13 @@ import {
 
 // #3100 — logo depois de criar o cartão: diz que já está valendo e oferece os
 // dois avisos prontos pelo WhatsApp (saldo depois da compra; cartão completo).
-// Cada aviso abre a automação pronta e desligada (`usar` com 'saldo' ou
-// 'meta'), como as receitas da Automação livre; a pessoa confere e liga.
-// "Agora não" volta para o painel (`depois`). As mensagens de exemplo saem do
-// programa criado (carimbos ou pontos, a meta e o quanto a compra dá), com o
-// mesmo cliente de exemplo da tela de montar.
+// Cada aviso abre a automação pronta e desligada em outra aba (`usar` com
+// 'saldo' ou 'meta'), como as receitas da Automação livre; a pessoa confere e
+// liga por lá. O aviso aberto troca o botão por "Pronto: o aviso abriu em
+// outra aba", e o outro continua à mão. "Agora não" volta para o painel
+// (`depois`); com algum aviso aberto, ele vira "Ver meu cartão". As mensagens
+// de exemplo saem do programa criado (carimbos ou pontos, a meta e o quanto a
+// compra dá), com o mesmo cliente de exemplo da tela de montar.
 const props = defineProps({
   programa: { type: Object, required: true },
   nomeDeExemplo: { type: String, default: '' },
@@ -23,6 +25,11 @@ const props = defineProps({
 const emit = defineEmits(['usar', 'depois']);
 
 const { t, unidade, nomeDaUnidade } = useTextosDaFidelidade();
+const abertos = ref([]);
+const usar = id => {
+  abertos.value = [...abertos.value, id];
+  emit('usar', id);
+};
 const P = `${F}.PRONTO`;
 const AVISOS = [
   // O aviso do saldo é o que mais traz o cliente de volta: é o botão forte.
@@ -101,11 +108,24 @@ const valoresDoExemplo = computed(() => {
               }}
             </p>
           </figure>
+          <p
+            v-if="abertos.includes(aviso.id)"
+            :data-fidelidade="`aviso-aberto-${aviso.id}`"
+            role="status"
+            class="flex items-start gap-2 px-4 py-3 m-0 text-sm font-medium rounded-xl bg-n-teal-2 text-n-teal-12"
+          >
+            <span
+              class="i-lucide-check mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            {{ t(`${P}.ABERTO`) }}
+          </p>
           <Button
+            v-else
             class="w-full min-h-11"
             :variant="aviso.variante"
             :label="t(`${P}.USAR_${aviso.id.toUpperCase()}`)"
-            @click="emit('usar', aviso.id)"
+            @click="usar(aviso.id)"
           />
         </article>
       </div>
@@ -117,7 +137,7 @@ const valoresDoExemplo = computed(() => {
         variant="ghost"
         color="slate"
         class="min-h-11"
-        :label="t(`${P}.AGORA_NAO`)"
+        :label="abertos.length ? t(`${P}.VER_CARTAO`) : t(`${P}.AGORA_NAO`)"
         @click="emit('depois')"
       />
     </div>

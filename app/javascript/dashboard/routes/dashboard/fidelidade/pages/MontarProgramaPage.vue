@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import ErroComTentarDeNovo from 'dashboard/routes/dashboard/relacionamentos/components/comum/ErroComTentarDeNovo.vue';
+import LinkDeVolta from 'dashboard/routes/dashboard/relacionamentos/components/ficha/LinkDeVolta.vue';
 import MontarPrograma from '../components/MontarPrograma.vue';
 import ProgramaPronto from '../components/ProgramaPronto.vue';
 import { programaNovo } from '../regras';
@@ -16,8 +17,9 @@ import { F } from '../useTextosDaFidelidade';
 // só para quem pode mudar). Sem cartão, começa pelo que serve à maioria
 // (programaNovo); com cartão, pelas regras de hoje. Criar leva ao "Pronto!",
 // com os dois avisos prontos pelo WhatsApp: cada um abre a automação já
-// montada e desligada (?receita=…), e "Agora não" volta para o painel. Mudar
-// as regras volta para o painel com o aviso de que mudou.
+// montada e desligada (?receita=…) em outra aba, para o outro aviso continuar
+// à mão nesta; "Agora não" volta para o painel. Mudar as regras volta para o
+// painel com o aviso de que mudou. "‹ Fidelidade" no topo volta sem gravar.
 const { t } = useI18n();
 const router = useRouter();
 
@@ -71,12 +73,15 @@ const salvar = async () => {
   }
 };
 
-// "Usar o aviso": a automação nova já com a receita do aviso, desligada.
-const usarAviso = aviso =>
-  router.push({
+// "Usar o aviso": a automação nova já com a receita do aviso, desligada, em
+// outra aba (o ProgramaPronto marca o aviso como aberto).
+const usarAviso = aviso => {
+  const { href } = router.resolve({
     name: 'automacoes_livre_nova',
     query: { receita: RECEITA_DO_AVISO[aviso], unidade: criado.value.tipo },
   });
+  window.open(href, '_blank');
+};
 
 onMounted(carregar);
 </script>
@@ -91,6 +96,13 @@ onMounted(carregar);
         ref="raiz"
         class="flex flex-col w-full max-w-6xl min-w-0 gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10 md:pb-10"
       >
+        <LinkDeVolta
+          v-if="!criado"
+          :texto="t(`${F}.PAGINA.VOLTAR`)"
+          :rotulo="t(`${F}.PAGINA.VOLTAR_ROTULO`)"
+          class="-mb-4"
+          @voltar="voltar"
+        />
         <div
           v-if="carregando"
           data-fidelidade="carregando"

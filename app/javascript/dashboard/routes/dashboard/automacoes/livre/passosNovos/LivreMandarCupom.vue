@@ -21,6 +21,8 @@ import { FA, comValoresDoCupom, faltaOCodigo } from './fidelidadeNaAutomacao';
 // passo diz para criar antes (`criarCupom`). Com a janela de 24 h fechada, vai
 // o modelo aprovado escolhido (as variáveis dele também aceitam o código), ou
 // nada, como no passo mensagem. Os dados do cupom só entram nas caixas daqui.
+// O bloco do modelo fala sem "janela" nem "Meta" (`textos` do LivreModelo):
+// "Se o cliente não falou com você nas últimas 24 horas…".
 const props = defineProps({
   modelValue: { type: Object, required: true },
   cupons: { type: Array, default: () => [] },
@@ -33,6 +35,13 @@ const emit = defineEmits(['update:modelValue', 'criarCupom']);
 const { t, oferta, data } = useTextosDaFidelidade();
 const C = `${FA}.CUPOM`;
 const SEGUNDOS_POR_DIA = 86400;
+const JANELA = `${C}.JANELA`;
+const TEXTOS_DA_JANELA = {
+  DICA: `${JANELA}.DICA`,
+  NENHUM: `${JANELA}.NENHUM`,
+  SEM_MODELOS: `${JANELA}.SEM_MODELOS`,
+  SUMIU: `${JANELA}.SUMIU`,
+};
 
 const mudar = mudanca =>
   emit('update:modelValue', { ...props.modelValue, ...mudanca });
@@ -132,10 +141,11 @@ const catalogoComCupom = computed(() => comValoresDoCupom(props.catalogo));
       </figure>
 
       <LivreModelo
-        :rotulo="t('AUTOMACAO_LIVRE.CAMPOS.MODELO')"
+        :rotulo="t(`${JANELA}.ROTULO`)"
         :model-value="modelValue.modelo || null"
         :catalogo="catalogoComCupom"
         :atributos-do="atributosDo"
+        :textos="TEXTOS_DA_JANELA"
         @update:model-value="modelo => mudar({ modelo })"
       />
 

@@ -36,5 +36,25 @@ export const useTextosDaFidelidade = () => {
       ganha: unidade(programa.ganha, programa.tipo),
     });
 
-  return { t, idioma, unidade, nomeDaUnidade, dinheiro, data, oferta, regra };
+  // O prêmio no meio da frase ("Prêmio: uma lavagem grátis"): a primeira letra
+  // em minúscula, sem mexer no que foi salvo. Sigla ("PIX de R$ 10") fica.
+  const premioNaFrase = (premio = '') => {
+    const texto = premio || '';
+    const segunda = texto.charAt(1);
+    if (!texto || segunda !== segunda.toLocaleLowerCase(idioma.value))
+      return texto;
+    return texto.charAt(0).toLocaleLowerCase(idioma.value) + texto.slice(1);
+  };
+
+  return {
+    t,
+    idioma,
+    unidade,
+    nomeDaUnidade,
+    dinheiro,
+    data,
+    oferta,
+    regra,
+    premioNaFrase,
+  };
 };

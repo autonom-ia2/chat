@@ -12,7 +12,8 @@ import { F, useTextosDaFidelidade } from '../useTextosDaFidelidade';
 // filtrada: é quem vale chamar agora). "Mudar as regras" e "Pausar o cartão"
 // (com confirmação) só para quem pode (`podeMudar`, fidelidade_manage).
 // Pausado, a faixa âmbar diz que as compras não estão dando carimbos e traz
-// "Ligar o cartão de novo"; quem não pode lê a quem pedir. O cartão é o modelo
+// "Ligar o cartão de novo" (aí ele é o botão forte, e "Ver quem está perto"
+// fica discreto); quem não pode lê a quem pedir. O cartão é o modelo
 // da conta, sem saldo de ninguém. No celular os números vêm antes do cartão:
 // a ação principal fica na primeira tela. `resumo` nulo é carregando.
 const props = defineProps({
@@ -198,6 +199,7 @@ const ninguem = computed(() => props.resumo && !props.resumo.com_saldo);
           v-else-if="resumo"
           data-fidelidade="ver-perto"
           size="lg"
+          :variant="!programa.ligado && podeMudar ? 'faded' : 'solid'"
           icon="i-lucide-users"
           class="self-start min-h-11"
           :label="t(`${P}.VER_PERTO`)"
@@ -235,6 +237,7 @@ const ninguem = computed(() => props.resumo && !props.resumo.com_saldo);
       :confirmar="t(`${P}.PAUSAR`)"
       :cancelar="t(`${P}.CANCELAR`)"
       marca-confirmar="confirmar-pausar"
+      margem-no-celular
       @confirm="pausar"
     />
   </div>

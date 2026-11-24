@@ -28,7 +28,7 @@ import {
 // pessoa, com "Marcar como usado" no que ainda vale, que pergunta antes de
 // gastar o cupom. Sem nada ainda, a frase diz como ela ganha o primeiro. O bloco só
 // aparece com o programa criado; pausado, avisa que os carimbos ficam
-// guardados. `saldo`: { tem, vencem, historico, historico_total, cupons }.
+// guardados (e, com data de vencer à vista, que vencem nela mesmo assim). `saldo`: { tem, vencem, historico, historico_total, cupons }.
 // O código de cada cupom só chega para quem pode usá-lo ou vê o painel
 // Fidelidade; sem ele, o cupom aparece só com o estado e a oferta.
 const props = defineProps({
@@ -41,7 +41,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['darPremio', 'usarCupom', 'verTudo', 'tentar']);
 
-const { t, unidade, nomeDaUnidade, dinheiro, data, oferta } =
+const { t, unidade, nomeDaUnidade, dinheiro, data, oferta, premioNaFrase } =
   useTextosDaFidelidade();
 const FI = `${F}.FICHA`;
 
@@ -95,7 +95,7 @@ const estadoDoCupom = cupom => {
 <template>
   <CartaoDaSecao :titulo="t(`${FI}.TITULO`)" data-relacionamentos="fidelidade">
     <template v-if="!falhou && perto" #acao>
-      <SeloDeEstado tom="azul">{{ t(`${FI}.SELO_PERTO`) }}</SeloDeEstado>
+      <SeloDeEstado tom="verde">{{ t(`${FI}.SELO_PERTO`) }}</SeloDeEstado>
     </template>
 
     <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
@@ -105,7 +105,11 @@ const estadoDoCupom = cupom => {
         data-fidelidade="ficha-pausado"
         class="px-4 py-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-amber-12"
       >
-        {{ t(`${FI}.PAUSADO`, { unidade: nomeDaUnidade(programa.tipo) }) }}
+        {{
+          t(vencem ? `${FI}.PAUSADO_VENCEM` : `${FI}.PAUSADO`, {
+            unidade: nomeDaUnidade(programa.tipo),
+          })
+        }}
       </p>
 
       <div
@@ -133,7 +137,11 @@ const estadoDoCupom = cupom => {
             }}
           </p>
           <p class="m-0 mt-1 text-sm text-n-slate-11">
-            {{ t(`${FI}.SEM_SALDO_PREMIO`, { premio: programa.premio }) }}
+            {{
+              t(`${FI}.SEM_SALDO_PREMIO`, {
+                premio: premioNaFrase(programa.premio),
+              })
+            }}
           </p>
         </div>
       </div>
@@ -294,6 +302,7 @@ const estadoDoCupom = cupom => {
       :confirmar="t(`${FI}.USAR_CUPOM_CONFIRMAR`)"
       :cancelar="t(`${FI}.CANCELAR`)"
       marca-confirmar="confirmar-usar-cupom"
+      margem-no-celular
       @confirm="usarCupom"
     />
   </CartaoDaSecao>

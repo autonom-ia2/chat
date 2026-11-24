@@ -21,8 +21,8 @@ import {
 // #3100 — montar (ou mudar) o cartão fidelidade da conta, numa tela só: à
 // esquerda as quatro perguntas (como junta, a cada quanto, quantos para o
 // prêmio, qual prêmio) e até quando valem; à direita o cartão de um cliente
-// de exemplo, mudando junto (no celular, compacto, para o formulário aparecer
-// logo). O botão principal nunca fica apagado: tocado com algo faltando, cada
+// de exemplo, mudando junto (no celular, compacto e depois do formulário: as
+// perguntas vêm primeiro). O botão principal nunca fica apagado: tocado com algo faltando, cada
 // campo diz o que falta (`tentou`), a faixa vermelha acima dos botões avisa e
 // o foco vai ao primeiro campo errado. O programa entra e sai inteiro por
 // `modelValue`; quem usa grava no servidor ao `salvar`.
@@ -132,7 +132,7 @@ const resumo = computed(() => {
 
     <div class="flex flex-col gap-6 lg:grid lg:grid-cols-5 lg:items-start">
       <aside
-        class="flex flex-col gap-3 lg:order-2 lg:col-span-2 lg:sticky lg:top-6"
+        class="flex flex-col order-2 gap-3 lg:col-span-2 lg:sticky lg:top-6"
       >
         <p class="m-0 text-sm font-medium text-n-slate-11">
           {{ t(`${M}.PREVIA`) }}
@@ -304,6 +304,7 @@ const resumo = computed(() => {
           <Button
             variant="faded"
             color="slate"
+            size="lg"
             class="min-h-11"
             :label="t(`${M}.CANCELAR`)"
             @click="emit('cancelar')"

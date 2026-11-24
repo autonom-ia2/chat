@@ -69,6 +69,11 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // Fork #3100: keeps a 16px gap on each side on narrow screens. Off by default, so other dialogs stay as they are.
+  mobileMargin: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['confirm', 'close']);
@@ -79,7 +84,19 @@ const dialogRef = ref(null);
 const dialogContentRef = ref(null);
 const isOpen = ref(false);
 
+const MOBILE_MARGIN_CLASSES = {
+  '5xl': 'max-w-[min(64rem,calc(100%-2rem))]',
+  '4xl': 'max-w-[min(56rem,calc(100%-2rem))]',
+  '3xl': 'max-w-[min(48rem,calc(100%-2rem))]',
+  '2xl': 'max-w-[min(42rem,calc(100%-2rem))]',
+  xl: 'max-w-[min(36rem,calc(100%-2rem))]',
+  lg: 'max-w-[min(32rem,calc(100%-2rem))]',
+  md: 'max-w-[min(28rem,calc(100%-2rem))]',
+  sm: 'max-w-[min(24rem,calc(100%-2rem))]',
+};
+
 const maxWidthClass = computed(() => {
+  if (props.mobileMargin) return MOBILE_MARGIN_CLASSES[props.width];
   const classesMap = {
     '5xl': 'max-w-5xl',
     '4xl': 'max-w-4xl',

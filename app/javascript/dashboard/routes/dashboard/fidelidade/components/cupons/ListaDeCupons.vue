@@ -1,14 +1,16 @@
 <script setup>
+import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import HeroiEscuro from 'dashboard/routes/dashboard/relacionamentos/components/comum/HeroiEscuro.vue';
 import LinhaDoCupom from './LinhaDoCupom.vue';
 import { F, useTextosDaFidelidade } from '../../useTextosDaFidelidade';
 
 // #3100 — a aba Cupons: sem cupom, o herói com uma frase e "Criar cupom"; com
-// cupons, o relatório de cada um (LinhaDoCupom) e "Novo cupom" no topo, para
+// cupons, o relatório de cada um (LinhaDoCupom) e "Criar cupom" no topo, para
 // quem pode (`podeMudar`, fidelidade_manage); cada cupom repassa "Mandar este
-// cupom", "Pausar" e "Ligar de novo". `cupons` nulo é carregando.
-defineProps({
+// cupom", "Pausar" e "Ligar de novo". `cupons` nulo é carregando. A régua de
+// "Em vendas" só aparece para quem vê valores (o servidor manda `vendas`).
+const props = defineProps({
   cupons: { type: Array, default: null },
   podeMudar: { type: Boolean, default: false },
 });
@@ -16,6 +18,9 @@ const emit = defineEmits(['criar', 'mandar', 'pausar', 'ligar']);
 
 const { t } = useTextosDaFidelidade();
 const C = `${F}.CUPONS`;
+const veVendas = computed(() =>
+  (props.cupons || []).some(cupom => Array.isArray(cupom.vendas))
+);
 </script>
 
 <template>
@@ -59,11 +64,13 @@ const C = `${F}.CUPONS`;
           variant="faded"
           icon="i-lucide-plus"
           class="min-h-11"
-          :label="t(`${C}.NOVO`)"
+          :label="t(`${C}.CRIAR`)"
           @click="emit('criar')"
         />
       </header>
-      <p class="m-0 -mt-2 text-sm text-n-slate-11">{{ t(`${C}.REGUA`) }}</p>
+      <p v-if="veVendas" class="m-0 -mt-2 text-sm text-n-slate-11">
+        {{ t(`${C}.REGUA`) }}
+      </p>
       <div class="grid gap-4 md:grid-cols-2">
         <LinhaDoCupom
           v-for="cupom in cupons"

@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import LivrePassoNovo from '../LivrePassoNovo.vue';
 import LivreRepetir from '../LivreRepetir.vue';
 import LivreBloco from '../LivreBloco.vue';
@@ -10,6 +10,8 @@ import LivrePedidoAprovacao from '../LivrePedidoAprovacao.vue';
 import LivreSeletorPasso from '../../components/LivreSeletorPasso.vue';
 import { PASSOS_NOVOS, comPassosNovos, novoPassoNovo } from '../passosNovos';
 import * as servidor from '../dadosDaConta';
+import { relerCuponsDaConta } from 'dashboard/routes/dashboard/fidelidade/cuponsDaConta';
+import { relerProgramaDaConta } from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
 
 // Protótipo #2931–#2936 — as telas dos passos novos: cada uma começa pronta,
 // mostra antes de fazer (contagem, teste, prévia da mensagem) e o "Pedir
@@ -25,6 +27,7 @@ vi.mock('dashboard/routes/dashboard/fidelidade/programaDaConta', () => {
     programaDaConta: () => programa,
     carregarProgramaDaConta: () => Promise.resolve(programa),
     esquecerProgramaDaConta: () => {},
+    relerProgramaDaConta: vi.fn(),
   };
 });
 // #3100: o "Mandar cupom" lê os cupons da conta do mesmo jeito.
@@ -44,6 +47,7 @@ vi.mock('dashboard/routes/dashboard/fidelidade/cuponsDaConta', () => {
     cupomDaConta: id => cupons.find(cupom => cupom.id === id) || null,
     carregarCuponsDaConta: () => Promise.resolve(cupons),
     esquecerCuponsDaConta: () => {},
+    relerCuponsDaConta: vi.fn(),
   };
 });
 // #2932–#2934: o que vem do servidor (os públicos, os blocos, a contagem e o
@@ -225,6 +229,66 @@ describe('LivrePassoNovo', () => {
       expect(tela.find('[data-previa-historico]').text()).not.toBe('');
     }
   );
+});
+
+// Cada teste desmonta as telas que montou: o passo do cartão e o do cupom
+// deixam ouvintes no document e na janela enquanto estão na tela.
+enableAutoUnmount(afterEach);
+
+// #3100: quem criou o cartão ou o cupom na outra aba volta e já vê o que criou.
+describe('LivrePassoNovo: voltar à aba relê o cartão ou os cupons', () => {
+  const montarPasso = tipo =>
+    montar(LivrePassoNovo, {
+      modelValue: novo(tipo),
+      catalogo: CATALOGO,
+      opcoes: OPCOES,
+      atributosDo: () => [],
+      etapas: ETAPAS,
+    });
+
+  it('Mandar cupom relê os cupons quando a aba volta a ficar visível', async () => {
+    montarPasso('mandar_cupom');
+    await flushPromises();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
+
+    expect(relerCuponsDaConta).toHaveBeenCalledTimes(1);
+    expect(relerProgramaDaConta).not.toHaveBeenCalled();
+  });
+
+  it('Dar carimbos relê o cartão quando a janela volta ao foco', async () => {
+    montarPasso('dar_carimbos');
+    await flushPromises();
+
+    window.dispatchEvent(new Event('focus'));
+    await flushPromises();
+
+    expect(relerProgramaDaConta).toHaveBeenCalledTimes(1);
+  });
+
+  it('o passo que saiu da tela não ouve mais a volta à aba', async () => {
+    const tela = montarPasso('mandar_cupom');
+    await flushPromises();
+    tela.unmount();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+    await flushPromises();
+
+    expect(relerCuponsDaConta).not.toHaveBeenCalled();
+  });
+
+  it('os outros passos novos não releem nada', async () => {
+    montarPasso('consultar');
+    await flushPromises();
+
+    window.dispatchEvent(new Event('focus'));
+    await flushPromises();
+
+    expect(relerCuponsDaConta).not.toHaveBeenCalled();
+    expect(relerProgramaDaConta).not.toHaveBeenCalled();
+  });
 });
 
 describe('Veja como fica', () => {

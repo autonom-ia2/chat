@@ -24,6 +24,13 @@ export const carregarProgramaDaConta = () => {
   return lido;
 };
 
+// A pessoa voltou de outra aba (onde pode ter criado o cartão): lê de novo,
+// sem apagar o que está na tela enquanto a resposta não chega.
+export const relerProgramaDaConta = () => {
+  lido = null;
+  return carregarProgramaDaConta();
+};
+
 // Depois de criar ou mudar o cartão em outra aba, a próxima leitura vai ao
 // servidor de novo.
 export const esquecerProgramaDaConta = () => {

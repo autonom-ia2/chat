@@ -9,10 +9,11 @@ import { exemploDeCodigo, taxaDeUso } from '../../regras';
 // #3100 — um cupom no relatório: o nome (só a conta vê), o que ele dá, quanto
 // tempo vale e o jeito do código; embaixo, quantos foram mandados, quantos
 // usaram e quanto venderam. Quem não vê valores de venda (sales_value_view)
-// recebe `vendas` nulo: o número vira um traço e o rótulo diz por quê. Cupom
+// recebe `vendas` nulo: o quadro de vendas nem aparece para essa pessoa. Cupom
 // valendo e ainda não mandado traz "Mandar este cupom", que abre a automação
 // pronta e desligada (como o "Usar o aviso" do ProgramaPronto). Quem pode
-// (`podeMudar`, fidelidade_manage) pausa o cupom ou liga de novo no topo.
+// (`podeMudar`, fidelidade_manage) pausa o cupom ou liga de novo no topo; no
+// celular o selo e o botão descem para uma linha própria, sob o nome.
 const props = defineProps({
   cupom: { type: Object, required: true },
   podeMudar: { type: Boolean, default: false },
@@ -47,7 +48,9 @@ const detalhe = computed(
     :data-fidelidade="`cupom-${cupom.id}`"
     class="flex flex-col gap-4 p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1"
   >
-    <header class="flex items-start justify-between gap-3">
+    <header
+      class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+    >
       <div class="flex items-start min-w-0 gap-3">
         <span
           class="flex items-center justify-center rounded-xl size-10 shrink-0 bg-n-amber-3 text-n-amber-11"
@@ -62,7 +65,9 @@ const detalhe = computed(
           <p class="m-0 mt-0.5 text-sm text-n-slate-11">{{ detalhe }}</p>
         </div>
       </div>
-      <div class="flex flex-col items-end gap-1 shrink-0">
+      <div
+        class="flex items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-start sm:gap-1 shrink-0"
+      >
         <SeloDeEstado :tom="cupom.ligado ? 'verde' : 'neutro'">
           {{ cupom.ligado ? t(`${C}.VALENDO`) : t(`${C}.PAUSADO`) }}
         </SeloDeEstado>
@@ -89,7 +94,11 @@ const detalhe = computed(
       </code>
     </p>
 
-    <dl v-if="mandado" class="grid grid-cols-2 gap-2 m-0 sm:grid-cols-3">
+    <dl
+      v-if="mandado"
+      class="grid grid-cols-2 gap-2 m-0"
+      :class="vendeu ? 'sm:grid-cols-3' : ''"
+    >
       <div class="flex flex-col gap-0.5 p-3 rounded-xl bg-n-alpha-1">
         <dt class="order-2 text-xs text-n-slate-11">
           {{ t(`${C}.MANDADOS`) }}
@@ -107,25 +116,17 @@ const detalhe = computed(
         </dd>
       </div>
       <div
+        v-if="vendeu"
         data-fidelidade="vendeu"
-        class="flex flex-col col-span-2 gap-0.5 p-3 rounded-xl sm:col-span-1"
-        :class="vendeu ? 'bg-n-teal-2' : 'bg-n-alpha-1'"
+        class="flex flex-col col-span-2 gap-0.5 p-3 rounded-xl sm:col-span-1 bg-n-teal-2"
       >
         <dt class="order-2 text-xs text-n-slate-11">
-          {{ vendeu ? t(`${C}.VENDERAM`) : t(`${C}.VENDERAM_SEM_ACESSO`) }}
+          {{ t(`${C}.VENDERAM`) }}
         </dt>
         <dd
-          v-if="vendeu"
           class="order-1 m-0 text-xl font-bold break-words tabular-nums text-n-teal-11"
         >
           {{ vendeu }}
-        </dd>
-        <dd
-          v-else
-          class="order-1 m-0 text-xl font-bold text-n-slate-11"
-          aria-hidden="true"
-        >
-          <span class="block i-lucide-minus size-5" />
         </dd>
       </div>
     </dl>

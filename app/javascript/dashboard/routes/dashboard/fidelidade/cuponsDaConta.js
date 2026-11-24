@@ -26,6 +26,13 @@ export const carregarCuponsDaConta = () => {
   return lido;
 };
 
+// A pessoa voltou de outra aba (onde pode ter criado um cupom): lê de novo,
+// sem apagar a lista da tela enquanto a resposta não chega.
+export const relerCuponsDaConta = () => {
+  lido = null;
+  return carregarCuponsDaConta();
+};
+
 // Depois de criar um cupom em outra aba, a próxima leitura vai ao servidor.
 export const esquecerCuponsDaConta = () => {
   lido = null;

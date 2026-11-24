@@ -69,7 +69,7 @@
         "META": "Escolha quantos carimbos para o prêmio.",
         "META_PONTOS": "De 2 a 100.000 pontos.",
         "PREMIO": "Escreva o prêmio, em até 80 letras.",
-        "TUDO": "Faltam as regras do cartão."
+        "TUDO": "Confira o que está em vermelho."
       }
     },
     "PRONTO": {
@@ -82,10 +82,12 @@
       "SALDO_EXEMPLO": "Oi, {nome}! Você recebeu {ganhou} e já tem {tem} de {meta}. Faltam {faltam} para o seu prêmio.",
       "META_EXEMPLO": "Parabéns, {nome}! Você juntou {meta} e completou o cartão. Na próxima visita, o prêmio é por nossa conta.",
       "NOME_DE_EXEMPLO": "Maria",
-      "DICA": "O aviso abre pronto na Automação, desligado. Você confere e liga.",
+      "DICA": "O aviso abre pronto na Automação, em outra aba, desligado. Você confere e liga por lá.",
       "AGORA_NAO": "Agora não, ver meu cartão",
       "USAR_SALDO": "Usar o aviso de saldo",
-      "USAR_META": "Usar o aviso de cartão completo"
+      "USAR_META": "Usar o aviso de cartão completo",
+      "ABERTO": "Pronto: o aviso abriu em outra aba. Confira e ligue por lá.",
+      "VER_CARTAO": "Ver meu cartão"
     },
     "PAINEL": {
       "SEU_CARTAO": "Seu cartão",
@@ -101,7 +103,7 @@
       "NINGUEM": "Ainda ninguém recebeu {unidade}. Eles aparecem quando uma venda é fechada.",
       "VER_PERTO": "Ver quem está perto do prêmio",
       "COMO_FUNCIONA": "Como funciona",
-      "PASSO_1": "O cliente compra e você marca a venda como fechada.",
+      "PASSO_1": "O cliente compra e você toca em Ganhou no card dele, no CRM.",
       "PASSO_2": "Ele recebe {unidade} pelo valor da compra, sozinho.",
       "PASSO_3": "Completou, a ficha dele mostra o botão Dar o prêmio.",
       "PAUSADO_AVISO": "O cartão está pausado: as compras não estão dando {unidade}.",
@@ -117,8 +119,7 @@
       "VAZIO_APOIO": "Cada cliente recebe um código só dele. Você vê quantos usaram e quanto venderam.",
       "CRIAR": "Criar cupom",
       "TITULO": "Seus cupons",
-      "NOVO": "Novo cupom",
-      "REGUA": "Em vendas: o que quem usou o cupom comprou em até 7 dias.",
+      "REGUA": "Em vendas: o que esses clientes compraram nos 7 dias depois de usar o cupom.",
       "VALENDO": "Valendo",
       "PAUSADO": "Pausado",
       "VALE": "vale {count} dia depois de receber | vale {count} dias depois de receber",
@@ -127,7 +128,6 @@
       "USADOS": "usados ({taxa}%)",
       "VENDERAM": "em vendas",
       "NINGUEM": "Ainda não foi mandado.",
-      "VENDERAM_SEM_ACESSO": "em vendas (você não vê valores)",
       "MANDAR": "Mandar este cupom",
       "LIGAR": "Ligar de novo",
       "PAUSAR": "Pausar"
@@ -158,8 +158,8 @@
       "NOME_EXEMPLO": "Ex.: Volta de dezembro",
       "NOME_DICA": "Só você vê. O cliente recebe o código.",
       "OFERTA": "O que o cupom dá",
-      "OFERTA_PORCENTAGEM": "% de desconto",
-      "OFERTA_VALOR": "R$ de desconto",
+      "OFERTA_PORCENTAGEM": "Desconto em %",
+      "OFERTA_VALOR": "Desconto em reais",
       "OFERTA_PRESENTE": "Presente",
       "PORCENTAGEM": "Quanto de desconto (%)",
       "VALOR": "Quanto de desconto (R$)",
@@ -178,7 +178,7 @@
         "OFERTA": "Diga o que o cupom dá.",
         "PREFIXO": "Escreva o começo do código, com letras ou números.",
         "VALIDADE": "Escolha quanto tempo vale.",
-        "TUDO": "Faltam os dados do cupom."
+        "TUDO": "Confira o que está em vermelho."
       }
     },
     "FICHA": {
@@ -215,7 +215,9 @@
       "USAR_CUPOM_TITULO": "Marcar o cupom {codigo} como usado?",
       "USAR_CUPOM_TEXTO": "Depois disso ele não vale mais.",
       "CANCELAR": "Cancelar",
-      "USAR_CUPOM_CONFIRMAR": "Sim, marcar"
+      "USAR_CUPOM_CONFIRMAR": "Sim, marcar",
+      "PAUSADO_VENCEM": "O cartão está pausado. Os {unidade} do cliente ficam guardados, mas vencem na data de sempre.",
+      "ERRO": "Não consegui mostrar o cartão fidelidade."
     },
     "DAR_PREMIO": {
       "TITULO": "Dar o prêmio para {nome}?",
@@ -260,12 +262,12 @@
         "TEXTO_PADRAO_2": " dá ",
         "TEXTO_PADRAO_3": ". Vale até ",
         "TEXTO_PADRAO_4": ".",
-        "SEM_CODIGO": "A mensagem está sem o código do cupom. Ponha o Código do cupom pelo Pôr um dado.",
+        "SEM_CODIGO": "Falta o código do cupom na mensagem. Em “Pôr um dado do cupom ou do cartão”, escolha “Código do cupom”.",
         "PREVIA": "Assim chega",
         "EXEMPLO_SALDO": "7",
         "EXEMPLO_FALTAM": "3",
         "EXEMPLO_PREMIO": "uma lavagem grátis",
-        "REGRAS": "Cada cliente recebe um código só dele. Quem já recebeu recebe o mesmo código. Se o cliente não conversou com você no último dia, o WhatsApp só deixa mandar uma mensagem aprovada.",
+        "REGRAS": "Cada cliente recebe um código só dele. Quem já recebeu recebe o mesmo código.",
         "SEM_CUPOM": "Crie um cupom antes de usar este passo.",
         "CRIAR": "Criar cupom",
         "TEXTO_DICA": "O que estiver entre colchetes é trocado na hora: o código, o desconto e a data entram sozinhos.",
@@ -279,7 +281,14 @@
         "ENSAIO_PAUSADO": "Nada sairia: o cupom está pausado.",
         "ENSAIO_USADO": "Nada sairia: este cliente já usou o cupom.",
         "ENSAIO_VENCIDO": "Nada sairia: o cupom deste cliente já venceu.",
-        "ENSAIO_SEM_CONTATO": "Nada sairia: aqui não há um cliente para receber."
+        "ENSAIO_SEM_CONTATO": "Nada sairia: aqui não há um cliente para receber.",
+        "JANELA": {
+          "ROTULO": "Se o cliente não falou com você nas últimas 24 horas",
+          "DICA": "Nesse caso, o WhatsApp oficial só deixa mandar uma mensagem pronta, que já foi aprovada. Escolha qual vai no lugar da mensagem acima. Cada mensagem pronta enviada tem custo.",
+          "NENHUM": "Não mandar o cupom para esse cliente",
+          "SEM_MODELOS": "Você ainda não tem mensagem pronta aprovada no WhatsApp oficial. Crie em Modelos.",
+          "SUMIU": "A mensagem pronta {nome} não está mais aprovada. Escolha outra."
+        }
       },
       "GATILHO": {
         "NOME": "Quando completa o cartão fidelidade",
@@ -309,7 +318,9 @@
       "ERRO_LIGAR_CUPOM": "Não deu para mudar o cupom agora. Tente de novo.",
       "ERRO_CONFERIR": "Não deu para conferir o código agora. Tente de novo.",
       "CUPOM_VENCEU": "Este cupom venceu. Não dá mais para usar.",
-      "ERRO_USAR": "Não deu para marcar o cupom agora. Tente de novo."
+      "ERRO_USAR": "Não deu para marcar o cupom agora. Tente de novo.",
+      "VOLTAR": "Fidelidade",
+      "VOLTAR_ROTULO": "Voltar para a Fidelidade"
     },
     "FICHA_ACOES": {
       "PREMIO_DADO": "Pronto, o prêmio de {nome} ficou anotado.",
@@ -333,7 +344,7 @@
     },
     "FILTRO": {
       "ROTULO": "Cartão fidelidade",
-      "QUALQUER": "Qualquer um",
+      "QUALQUER": "Todos",
       "PERTO": "Perto do prêmio",
       "COMPLETO": "Cartão completo"
     }

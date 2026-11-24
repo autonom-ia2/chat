@@ -69,7 +69,7 @@
         "META": "Choose how many stamps for the reward.",
         "META_PONTOS": "From 2 to 100,000 points.",
         "PREMIO": "Write the reward, up to 80 characters.",
-        "TUDO": "The card rules are missing."
+        "TUDO": "Check what is in red."
       }
     },
     "PRONTO": {
@@ -82,10 +82,12 @@
       "SALDO_EXEMPLO": "Hi {nome}! You earned {ganhou} and now have {tem} of {meta}. {faltam} to go for your reward.",
       "META_EXEMPLO": "Congrats, {nome}! You collected {meta} and completed the card. Your reward is on us next time.",
       "NOME_DE_EXEMPLO": "Maria",
-      "DICA": "The message opens ready in Automations, turned off. You check it and turn it on.",
+      "DICA": "The message opens ready in Automations, in another tab, turned off. You check it and turn it on there.",
       "AGORA_NAO": "Not now, see my card",
       "USAR_SALDO": "Use the balance message",
-      "USAR_META": "Use the card complete message"
+      "USAR_META": "Use the card complete message",
+      "ABERTO": "Done: the message opened in another tab. Check it and turn it on there.",
+      "VER_CARTAO": "See my card"
     },
     "PAINEL": {
       "SEU_CARTAO": "Your card",
@@ -101,7 +103,7 @@
       "NINGUEM": "No one has earned {unidade} yet. They show up when a sale is closed.",
       "VER_PERTO": "See who is close to the reward",
       "COMO_FUNCIONA": "How it works",
-      "PASSO_1": "The customer buys and you mark the sale as closed.",
+      "PASSO_1": "The customer buys and you tap Won on their card, in the CRM.",
       "PASSO_2": "They earn {unidade} by the purchase amount, automatically.",
       "PASSO_3": "Once complete, their profile shows the Give reward button.",
       "PAUSADO_AVISO": "The card is paused: purchases are not earning {unidade}.",
@@ -117,8 +119,7 @@
       "VAZIO_APOIO": "Each customer gets their own code. You see how many used it and how much it sold.",
       "CRIAR": "Create coupon",
       "TITULO": "Your coupons",
-      "NOVO": "New coupon",
-      "REGUA": "In sales: what coupon users bought within 7 days.",
+      "REGUA": "In sales: what these customers bought in the 7 days after using the coupon.",
       "VALENDO": "Live",
       "PAUSADO": "Paused",
       "VALE": "valid {count} day after received | valid {count} days after received",
@@ -127,7 +128,6 @@
       "USADOS": "used ({taxa}%)",
       "VENDERAM": "in sales",
       "NINGUEM": "Not sent yet.",
-      "VENDERAM_SEM_ACESSO": "in sales (you cannot see amounts)",
       "MANDAR": "Send this coupon",
       "LIGAR": "Turn back on",
       "PAUSAR": "Pause"
@@ -158,8 +158,8 @@
       "NOME_EXEMPLO": "E.g. December comeback",
       "NOME_DICA": "Only you see it. The customer gets the code.",
       "OFERTA": "What the coupon gives",
-      "OFERTA_PORCENTAGEM": "% off",
-      "OFERTA_VALOR": "Amount off",
+      "OFERTA_PORCENTAGEM": "Discount in %",
+      "OFERTA_VALOR": "Discount in money",
       "OFERTA_PRESENTE": "Gift",
       "PORCENTAGEM": "How much off (%)",
       "VALOR": "How much off",
@@ -178,7 +178,7 @@
         "OFERTA": "Say what the coupon gives.",
         "PREFIXO": "Write the code start, with letters or numbers.",
         "VALIDADE": "Choose how long it lasts.",
-        "TUDO": "The coupon details are missing."
+        "TUDO": "Check what is in red."
       }
     },
     "FICHA": {
@@ -215,7 +215,9 @@
       "USAR_CUPOM_TITULO": "Mark coupon {codigo} as used?",
       "USAR_CUPOM_TEXTO": "After that it is no longer valid.",
       "CANCELAR": "Cancel",
-      "USAR_CUPOM_CONFIRMAR": "Yes, mark it"
+      "USAR_CUPOM_CONFIRMAR": "Yes, mark it",
+      "PAUSADO_VENCEM": "The card is paused. The customer keeps their {unidade}, but they still expire on the usual date.",
+      "ERRO": "I could not show the loyalty card."
     },
     "DAR_PREMIO": {
       "TITULO": "Give the reward to {nome}?",
@@ -260,12 +262,12 @@
         "TEXTO_PADRAO_2": " gives ",
         "TEXTO_PADRAO_3": ". Valid until ",
         "TEXTO_PADRAO_4": ".",
-        "SEM_CODIGO": "The message has no coupon code. Add the Coupon code with Add a detail.",
+        "SEM_CODIGO": "The coupon code is missing from the message. In “Add a coupon or card detail”, choose “Coupon code”.",
         "PREVIA": "How it arrives",
         "EXEMPLO_SALDO": "7",
         "EXEMPLO_FALTAM": "3",
         "EXEMPLO_PREMIO": "a free car wash",
-        "REGRAS": "Each customer gets their own code. Anyone who already got it gets the same code. If the customer has not talked to you in the last day, WhatsApp only allows an approved message.",
+        "REGRAS": "Each customer gets their own code. Anyone who already got it gets the same code.",
         "SEM_CUPOM": "Create a coupon before using this step.",
         "CRIAR": "Create coupon",
         "TEXTO_DICA": "Whatever is in brackets is filled in on sending: the code, the discount and the date go in on their own.",
@@ -279,7 +281,14 @@
         "ENSAIO_PAUSADO": "Nothing would be sent: the coupon is paused.",
         "ENSAIO_USADO": "Nothing would be sent: this customer already used the coupon.",
         "ENSAIO_VENCIDO": "Nothing would be sent: this customer's coupon has expired.",
-        "ENSAIO_SEM_CONTATO": "Nothing would be sent: there is no customer here to receive it."
+        "ENSAIO_SEM_CONTATO": "Nothing would be sent: there is no customer here to receive it.",
+        "JANELA": {
+          "ROTULO": "If the customer has not talked to you in the last 24 hours",
+          "DICA": "In that case, official WhatsApp only lets you send a ready-made message that was already approved. Choose which one goes instead of the message above. Each ready-made message sent has a cost.",
+          "NENHUM": "Do not send the coupon to this customer",
+          "SEM_MODELOS": "You do not have an approved ready-made message on official WhatsApp yet. Create one in Templates.",
+          "SUMIU": "The ready-made message {nome} is no longer approved. Choose another one."
+        }
       },
       "GATILHO": {
         "NOME": "When the loyalty card is completed",
@@ -309,7 +318,9 @@
       "ERRO_LIGAR_CUPOM": "Could not change the coupon now. Try again.",
       "ERRO_CONFERIR": "Could not check the code now. Try again.",
       "CUPOM_VENCEU": "This coupon has expired. It can no longer be used.",
-      "ERRO_USAR": "Could not mark the coupon now. Try again."
+      "ERRO_USAR": "Could not mark the coupon now. Try again.",
+      "VOLTAR": "Loyalty",
+      "VOLTAR_ROTULO": "Back to Loyalty"
     },
     "FICHA_ACOES": {
       "PREMIO_DADO": "Done, the reward for {nome} was recorded.",
@@ -333,7 +344,7 @@
     },
     "FILTRO": {
       "ROTULO": "Loyalty card",
-      "QUALQUER": "Any",
+      "QUALQUER": "All",
       "PERTO": "Close to the reward",
       "COMPLETO": "Card complete"
     }

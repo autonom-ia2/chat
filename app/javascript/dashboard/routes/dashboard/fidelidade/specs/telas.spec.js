@@ -56,7 +56,10 @@ const stubs = {
 
 describe('FidelidadeTela', () => {
   const montar = props =>
-    mount(FidelidadeTela, { props: { aba: 'cartao', agora: AGORA, ...props } });
+    mount(FidelidadeTela, {
+      global: { stubs },
+      props: { aba: 'cartao', agora: AGORA, ...props },
+    });
 
   it('sem cartão, quem pode vê o convite e cria', async () => {
     const tela = montar({ programa: null, podeMudar: true });
@@ -276,6 +279,18 @@ describe('ProgramaPronto', () => {
     expect(tela.emitted('usar')[0]).toEqual(['meta']);
   });
 
+  it('o aviso usado fica marcado e o outro continua à mão', async () => {
+    const tela = mount(ProgramaPronto, { props: { programa: PROGRAMA } });
+    await tela.find(`${sel('aviso-saldo')} button`).trigger('click');
+
+    expect(tela.find(sel('aviso-aberto-saldo')).text()).toContain(
+      'o aviso abriu em outra aba'
+    );
+    expect(tela.find(`${sel('aviso-saldo')} button`).exists()).toBe(false);
+    expect(tela.find(`${sel('aviso-meta')} button`).exists()).toBe(true);
+    expect(texto(tela)).toContain('Ver meu cartão');
+  });
+
   it('a mensagem de exemplo segue o programa criado', () => {
     const tela = mount(ProgramaPronto, {
       props: {
@@ -291,7 +306,10 @@ describe('ProgramaPronto', () => {
 
 describe('ConferirCupom', () => {
   const montar = props =>
-    mount(ConferirCupom, { props: { agora: AGORA, ...props } });
+    mount(ConferirCupom, {
+      global: { stubs },
+      props: { agora: AGORA, ...props },
+    });
 
   it('confere o código digitado, limpo', async () => {
     const tela = montar();
@@ -319,7 +337,31 @@ describe('ConferirCupom', () => {
     expect(texto(tela)).toContain('Vale! 10% de desconto.');
     expect(texto(tela)).toContain('De Maria Souza.');
     await tela.find(sel('usar')).trigger('click');
+    expect(tela.emitted('usar')).toBeUndefined();
+    await tela.find('[data-confirmar]').trigger('click');
     expect(tela.emitted('usar')).toHaveLength(1);
+  });
+
+  it('com resultado na tela, "Conferir" fica discreto', async () => {
+    const tela = montar();
+    const botao = () => tela.findComponent(sel('botao-conferir'));
+    expect(botao().props('variant')).toBe('solid');
+    await tela.setProps({ resultado: { estado: 'nao_existe' } });
+    expect(botao().props('variant')).toBe('faded');
+  });
+
+  it('marcado como usado, o campo fica limpo para o próximo código', async () => {
+    const tela = montar({
+      codigoInicial: 'VOLTA-7KD2',
+      resultado: {
+        estado: 'valido',
+        oferta: { tipo: 'porcentagem', valor: 10 },
+      },
+      podeUsar: true,
+    });
+    expect(tela.find(sel('codigo')).element.value).toBe('VOLTA-7KD2');
+    await tela.setProps({ usado: true });
+    expect(tela.find(sel('codigo')).element.value).toBe('');
   });
 
   it('valendo, quem não pode mexer no contato confere mas não marca', () => {
@@ -375,7 +417,8 @@ describe('cupons no relatório', () => {
     const linha = mount(LinhaDoCupom, {
       props: { cupom: { ...CUPOM, vendas: null } },
     });
-    expect(linha.find(sel('vendeu')).text()).toContain('você não vê valores');
+    expect(linha.find(sel('vendeu')).exists()).toBe(false);
+    expect(linha.findAll('dl > div')).toHaveLength(2);
   });
 
   it('cupom não mandado traz o botão que abre a automação pronta', async () => {
@@ -414,7 +457,7 @@ describe('MontarCupom', () => {
     await tela.find(sel('salvar-cupom')).trigger('click');
     expect(tela.emitted('salvar')).toBeUndefined();
     expect(texto(tela)).toContain('Dê um nome ao cupom.');
-    expect(texto(tela)).toContain('Faltam os dados do cupom.');
+    expect(texto(tela)).toContain('Confira o que está em vermelho.');
   });
 
   it('o começo do código sai limpo e a prévia mostra o código', async () => {

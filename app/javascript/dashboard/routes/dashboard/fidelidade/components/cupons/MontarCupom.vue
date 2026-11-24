@@ -17,8 +17,9 @@ import {
 // #3100 — criar um cupom: o nome (só a conta vê), o que ele dá (desconto em %,
 // desconto em dinheiro ou um presente), o começo do código e quanto tempo vale
 // depois que o cliente recebe. Cada cliente recebe um código só dele e usa uma
-// vez (regra fixa nesta fase). À direita, a mensagem como chega no WhatsApp
-// (o mesmo texto que o passo "Mandar cupom" já traz escrito). O botão
+// vez (regra fixa nesta fase). À direita (no celular, depois do formulário), a
+// mensagem como chega no WhatsApp (o mesmo texto que o passo "Mandar cupom" já
+// traz escrito). O botão
 // principal nunca fica apagado: com algo faltando, o campo diz o quê, a faixa
 // vermelha acima dos botões avisa e o foco vai ao primeiro campo errado.
 const props = defineProps({
@@ -110,7 +111,7 @@ const previa = computed(() =>
 
     <div class="flex flex-col gap-6 lg:grid lg:grid-cols-5 lg:items-start">
       <aside
-        class="flex flex-col gap-3 lg:order-2 lg:col-span-2 lg:sticky lg:top-6"
+        class="flex flex-col order-2 gap-3 lg:col-span-2 lg:sticky lg:top-6"
       >
         <p class="m-0 text-sm font-medium text-n-slate-11">
           {{ t(`${M}.PREVIA`) }}
@@ -273,6 +274,7 @@ const previa = computed(() =>
           <Button
             variant="faded"
             color="slate"
+            size="lg"
             class="min-h-11"
             :label="t(`${M}.CANCELAR`)"
             @click="emit('cancelar')"

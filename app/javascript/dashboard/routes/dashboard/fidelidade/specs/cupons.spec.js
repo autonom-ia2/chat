@@ -146,8 +146,12 @@ describe('FidelidadePage, aba Cupons', () => {
     );
 
     await pagina.find(sel('usar')).trigger('click');
+    expect(fonte.usarCodigo).not.toHaveBeenCalled();
+    expect(pagina.text()).toContain('Marcar o cupom VOLTA-7KD2 como usado?');
+    await pagina.find('[data-confirmar]').trigger('click');
     await flushPromises();
     expect(fonte.usarCodigo).toHaveBeenCalledWith(9);
+    expect(pagina.find(sel('codigo')).element.value).toBe('');
     expect(pagina.find(sel('usado-ok')).text()).toContain(
       'Dê 10% de desconto ao cliente.'
     );
@@ -164,6 +168,7 @@ describe('FidelidadePage, aba Cupons', () => {
     await pagina.find(sel('botao-conferir')).trigger('submit');
     await flushPromises();
     await pagina.find(sel('usar')).trigger('click');
+    await pagina.find('[data-confirmar]').trigger('click');
     await flushPromises();
 
     expect(alertas).toEqual(['Este cupom venceu. Não dá mais para usar.']);

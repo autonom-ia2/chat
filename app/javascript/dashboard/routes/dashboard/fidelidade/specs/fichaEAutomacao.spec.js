@@ -141,7 +141,8 @@ describe('DialogoDarPremio', () => {
       global: { stubs },
     });
     expect(texto(dialogo)).toContain('Dar o prêmio para Maria?');
-    expect(texto(dialogo)).toContain('Prêmio: Lavagem grátis.');
+    // O prêmio entra no meio da frase com a primeira letra minúscula.
+    expect(texto(dialogo)).toContain('Prêmio: lavagem grátis.');
     expect(texto(dialogo)).toContain('Saem 10 carimbos do cartão.');
     expect(texto(dialogo)).toContain('Ficam 2 carimbos para o próximo cartão.');
     await dialogo.find('[data-confirmar]').trigger('click');
