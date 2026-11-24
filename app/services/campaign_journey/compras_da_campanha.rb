@@ -13,6 +13,15 @@
 # O valor só vai para quem vê valor de venda (Crm::ValorDeVenda); as contagens ficam. Funis que a pessoa não vê nos
 # relatórios (#1148) ficam de fora, como no resto do resultado. nil quando a campanha não tem público (sem link).
 class CampaignJourney::ComprasDaCampanha
+  # Os destinatários da campanha, no lugar onde cada canal os guarda.
+  def self.recipients_de(campaign)
+    case campaign
+    when EmailCampaign then EmailCampaignRecipient.where(email_campaign_id: campaign.id)
+    when WhatsappApiCampaign then WhatsappApiCampaignRecipient.where(whatsapp_api_campaign_id: campaign.id)
+    else CampaignRecipient.where(campaign_id: campaign.id)
+    end
+  end
+
   def initialize(account, campaign, source_id)
     @account = account
     @campaign = campaign
@@ -27,6 +36,16 @@ class CampaignJourney::ComprasDaCampanha
     visible = Crm::Access::VisiblePipelines.new(user: user, account: @account, account_user: account_user)
     @pipeline_ids = visible.report_ids if visible.restricted?
     montar
+  end
+
+  # #3099: as compras de cada pessoa que recebeu, pela mesma régua (janela, campanha mais recente), para comparar as
+  # duas versões da mensagem. `pipeline_ids`: nil = todos os funis (a escolha automática da vencedora); senão os funis
+  # que quem lê vê nos relatórios. [{ contato:, inicio:, fechado_em:, moeda:, centavos: }]
+  def compras_por_pessoa(pipeline_ids: nil)
+    return [] if @link.nil?
+
+    @pipeline_ids = pipeline_ids
+    sem_campanha_depois(compras_de(envios))
   end
 
   private
@@ -55,11 +74,7 @@ class CampaignJourney::ComprasDaCampanha
   end
 
   def recipients_desta
-    case @campaign
-    when EmailCampaign then EmailCampaignRecipient.where(email_campaign_id: @campaign.id)
-    when WhatsappApiCampaign then WhatsappApiCampaignRecipient.where(whatsapp_api_campaign_id: @campaign.id)
-    else CampaignRecipient.where(campaign_id: @campaign.id)
-    end
+    self.class.recipients_de(@campaign)
   end
 
   # A janela ainda aberta para alguém: até quando os números podem subir (epoch), ou nil quando já fechou.

@@ -843,6 +843,10 @@ en:
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         um_de: 'Step %{passo}: %{campo} must be one of: %{opcoes}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
+        versoes_sem_modelo: "Step %{passo}: the message uses a template when the 24-hour window is closed, so version 2 needs a template too."
+        versoes_modelo_sobrando: "Step %{passo}: version 2 has a template, but version 1 does not. Choose a template for version 1 or remove it from version 2."
+        versoes_iguais: "Step %{passo}: version 2 is the same as version 1. Change something so they can be compared."
+        versoes_sem_compras: "Step %{passo}: \"more purchases\" needs the sales pipelines, which are off in this account. Choose \"more replies\" or \"I choose\"."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
@@ -911,6 +915,9 @@ en:
         rodizio: 'Hand the conversation to someone online, in rotation'
       webhook:
         gravar: 'Save what the other system answered'
+      duas_versoes:
+        versao_invalida: 'Choose version 1 or version 2.'
+        versao_ja_escolhida: 'Another version was already chosen for this step.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

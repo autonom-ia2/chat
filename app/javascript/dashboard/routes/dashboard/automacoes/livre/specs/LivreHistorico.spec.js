@@ -403,4 +403,26 @@ describe('LivreHistorico', () => {
     await flushPromises();
     expect(falhou.find('[data-erro]').exists()).toBe(true);
   });
+
+  // #3099: o passo com duas versões diz qual versão a pessoa recebeu.
+  it('diz qual versão da mensagem a pessoa recebeu', async () => {
+    responder([
+      execucao(1, {
+        passos: [
+          {
+            passo: 'p1',
+            resultado: 'ok',
+            motivo: null,
+            dados: { mensagem_id: 9, versao: 2 },
+          },
+        ],
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-versao]').text()).toBe(
+      'DUAS_VERSOES.RESULTADO.AUTOMACAO.RECEBEU(2)'
+    );
+  });
 });

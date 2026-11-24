@@ -1725,6 +1725,12 @@
           "peca": "modelo_whatsapp",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        },
+        {
+          "nome": "versoes",
+          "peca": "duas_versoes",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.VERSOES"
         }
       ]
     },

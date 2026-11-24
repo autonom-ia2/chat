@@ -1,0 +1,192 @@
+{
+  "DUAS_VERSOES": {
+    "MENSAGEM": {
+      "TITULO": "Two versions of the message",
+      "LIGAR": "Two versions of the message",
+      "AJUDA_DESLIGADO": "Write the same message another way. Part of the audience gets each version, and the one with more replies goes to the other people.",
+      "AJUDA_LIGADO": "Version 1 is the message you already chose above. Now set up version 2.",
+      "VERSAO": "Version {n}",
+      "VAZIA": "Set up version 2 to continue.",
+      "IGUAL": "Version 2 is the same as version 1. Change something so they can be compared.",
+      "AJUDA_LIGADO_EMAIL": "Version 1 is the e-mail you already built. In version 2, only the subject changes."
+    },
+    "TEXTO": {
+      "ROTULO": "Version 2 text",
+      "PLACEHOLDER": "Say it another way: a different opening, offer or invitation.",
+      "COMECAR_DA_1": "Start from the version 1 text",
+      "COMO_FICA": "How each version arrives",
+      "AINDA_VAZIA": "Version 2 shows up here once you write it.",
+      "PARTES_DIFERENTES": "Version 1 uses {a} SMS per person and version 2 uses {b}."
+    },
+    "MODELO": {
+      "ROTULO": "Version 2 template",
+      "AJUDA": "On WhatsApp Official, each version is a template approved by WhatsApp. Choose another template from the same inbox.",
+      "PLACEHOLDER": "Choose the template",
+      "JA_E_A_1": "Already version 1",
+      "OUTRAS_INFORMACOES": "Asks for different information than version 1",
+      "SEM_OUTRO": "This inbox has no other approved template that fits. A new template must be approved by WhatsApp, which can take a few hours. To send now, turn off “Two versions of the message”.",
+      "CRIAR": "Create another template",
+      "COMO_FICA": "How each version arrives",
+      "AINDA_VAZIA": "Version 2 shows up here once you choose the template."
+    },
+    "ASSUNTO": {
+      "ROTULO": "Version 2 subject",
+      "PLACEHOLDER": "Write another subject",
+      "IDEIAS": "AI ideas",
+      "USAR_IDEIA": "Use the subject: {assunto}",
+      "COMO_FICA": "How it shows in the inbox",
+      "SEM_ASSUNTO": "No subject yet"
+    },
+    "REGRA": {
+      "TITULO": "How to pick the better one",
+      "CRITERIO": "Which version is better?",
+      "RESPOSTAS": "The one with more replies",
+      "COMPRAS": "The one with more purchases",
+      "EU_ESCOLHO": "I choose after seeing the result",
+      "SEM_COMPRAS": "To choose by purchases, the account needs its sales pipelines turned on: that is where customer purchases are kept.",
+      "ESPERA": "How long to wait before choosing?",
+      "HORAS": "{n} hour | {n} hours",
+      "ESPERA_AJUDA_RESPOSTAS": "Most replies arrive in the first hours. If unsure, keep 4 hours.",
+      "ESPERA_AJUDA_COMPRAS": "Purchases take longer than replies. If unsure, keep 24 hours.",
+      "DIVISAO": "How to split the test?",
+      "METADE": "Half each",
+      "METADE_DETALHE": "{n} in 10 for each version",
+      "MAIS_NA_1": "More on version 1",
+      "MAIS_NA_1_DETALHE": "{n} in 10 on version 1",
+      "DIVISAO_AJUDA": "Use “More on version 1” when version 1 already works and you only want to try version 2 with fewer people.",
+      "PRONTO": "Done"
+    },
+    "PLANO": {
+      "TESTE": "First, {teste} people get the test: {v1} get version 1 and {v2} get version 2.",
+      "DEPOIS_RESPOSTAS": "After {horas}, the other {resto} people get the one with more replies.",
+      "DEPOIS_COMPRAS": "After {horas}, the other {resto} people get the one with more purchases.",
+      "DEPOIS_EU_ESCOLHO": "After {horas}, you choose which one goes to the other {resto} people.",
+      "EMPATE": "If both turn out about the same, version 1 goes on.",
+      "TODOS": "The audience is small, so there is no way to test first. Each of the {total} people gets one of the two: {v1} version 1 and {v2} version 2. At the end, we show which one did better.",
+      "PEQUENO": "With fewer than {minimo} people, use the result only as a hint.",
+      "AUTOMACAO_METADE": "Each person who reaches this step gets one of the two, half each.",
+      "AUTOMACAO_MAIS_NA_1": "Each person who reaches this step gets one of the two: 7 in 10 get version 1.",
+      "AUTOMACAO_DEPOIS_RESPOSTAS": "Once {minimo} people have received each version, we wait {horas} and, from then on, everyone gets the one with more replies.",
+      "AUTOMACAO_DEPOIS_COMPRAS": "Once {minimo} people have received each version, we wait {horas} and, from then on, everyone gets the one with more purchases.",
+      "AUTOMACAO_DEPOIS_EU_ESCOLHO": "Once {minimo} people have received each version, we wait {horas} and you choose which one stays.",
+      "TESTE_AO_ENVIAR": "When you send, only {teste} people get it now: {v1} get version 1 and {v2} get version 2."
+    },
+    "RESUMO": {
+      "TITULO": "Two versions of the message",
+      "AGORA_VAO": "{teste} now, {resto} after {horas}",
+      "AGORA_VAO_TODOS": "Now, one of the two versions for each person",
+      "DEPOIS_VAO": "{teste} on {quando}, {resto} {horas} later",
+      "DEPOIS_VAO_TODOS": "{quando}, one of the two versions for each person"
+    },
+    "RESULTADO": {
+      "TITULO": "Two versions of the message",
+      "CARREGANDO": "Loading the result of the two versions",
+      "TESTANDO": "Testing. The better one goes to the other {resto} people {quando}.",
+      "TESTANDO_EU_ESCOLHO": "Testing. The test ends {quando} and then you choose which one goes to the other {resto} people.",
+      "TESTANDO_SEM_ENVIO": "The test failed: the message didn't reach anyone in the test. If it stays this way, version 1 goes to the other {resto} people {quando}, without comparing the two.",
+      "ESPERANDO_VOCE": "The test is over. Choose which version goes to the other {resto} people.",
+      "ESCOLHIDA_SISTEMA": "Version {n} went to the other {resto} people.",
+      "ESCOLHIDA_VOCE": "You chose version {n}. It went to the other {resto} people.",
+      "ESCOLHIDA_EMPATE": "Version 1 went to the other {resto} people, because both turned out about the same.",
+      "ESCOLHIDA_SEM_ENVIO": "No one in the test received the message, so version 1 went to the other {resto} people.",
+      "TODOS": "Each person in the audience got one of the two versions.",
+      "ATE_AGORA": "So far, {frase}",
+      "NA_FRENTE": "Ahead",
+      "GANHOU": "Won",
+      "FOI_PARA_O_RESTO": "Went to the other people",
+      "RECEBERAM": "Received",
+      "RESPONDERAM": "Replied",
+      "COMPRARAM": "Purchased",
+      "DE_CADA": "{n} in every {escala}",
+      "VALOR": "{valor} in purchases",
+      "ESCOLHER": "Send this one to the other people",
+      "CONFIRMAR": "Send version {n} to the other {resto} people?",
+      "CONFIRMAR_SIM": "Yes, send",
+      "VOLTAR": "Back",
+      "SEM_PERMISSAO": "You can't choose the version. Ask an administrator or someone who can send campaigns.",
+      "FRASE": {
+        "RESPOSTAS": {
+          "DOBRO": "Version {n} got twice as many replies.",
+          "TRIPLO": "Version {n} got three times as many replies.",
+          "MAIS": "Version {n} got {vezes} times as many replies.",
+          "UM_POUCO_MAIS": "Version {n} got more replies.",
+          "SO_UMA": "Only version {n} got replies.",
+          "EMPATE": "Both versions got about the same replies.",
+          "POUCOS": "Too few replies yet to know which one is better."
+        },
+        "COMPRAS": {
+          "DOBRO": "Version {n} got twice as many purchases.",
+          "TRIPLO": "Version {n} got three times as many purchases.",
+          "MAIS": "Version {n} got {vezes} times as many purchases.",
+          "UM_POUCO_MAIS": "Version {n} got more purchases.",
+          "SO_UMA": "Only version {n} got purchases.",
+          "EMPATE": "Both versions got about the same purchases.",
+          "POUCOS": "Too few purchases yet to know which one is better."
+        }
+      },
+      "AUTOMACAO": {
+        "TESTANDO": "Each person who comes through gets one of the two. Once {minimo} people have received each version, we wait {horas} and pick the better one.",
+        "TESTANDO_EU_ESCOLHO": "Each person who comes through gets one of the two. Once {minimo} people have received each version, we wait {horas} and you choose which one stays.",
+        "FALTAM": "{n} more people need to get version {versao} to close the test. | {n} more person needs to get version {versao} to close the test. | {n} more people need to get version {versao} to close the test.",
+        "ESPERANDO_VOCE": "The test is over. Choose which version stays from now on. Until someone chooses, each person keeps getting one of the two.",
+        "ESCOLHIDA": "Since {data}, everyone gets version {n}.",
+        "ESCOLHIDA_EMPATE": "Both turned out about the same. Since {data}, everyone gets version 1.",
+        "FICOU": "Stayed",
+        "ESCOLHER": "Keep this one",
+        "CONFIRMAR": "From now on, everyone gets version {n}?",
+        "CONFIRMAR_SIM": "Yes, keep it",
+        "SEM_PERMISSAO": "You can't choose the version. Ask an administrator or someone who can change automations.",
+        "ESCOLHER_ARIA": "Keep this one: version {n}",
+        "SEM_PERMISSAO_TESTANDO": "To choose the version before the set time, ask an administrator or someone who can change automations.",
+        "RECEBEU": "Got version {n} of the message",
+        "PASSO": "In the step: {frase}",
+        "JA_ESCOLHIDA": "A version was already chosen for this step. See which one below.",
+        "ERRO_ESCOLHER": "Couldn't keep the version right now. Try again."
+      },
+      "RECEBERAM_NO_TESTE": "Received in the test",
+      "ESCOLHER_ARIA": "Send this one to the other people: version {n}",
+      "CONFIRMAR_AVISO": "After sending, you cannot switch versions.",
+      "SEM_PERMISSAO_TESTANDO": "To choose the version before the set time, ask an administrator or someone who can send campaigns.",
+      "ERRO": "Couldn't load the result of the two versions right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "ERRO_ESCOLHER": "Couldn't send the version right now. Try again.",
+      "JA_ESCOLHIDA": "A version was already chosen for this campaign. See which one below.",
+      "SOZINHA": "If no one chooses, version 1 goes on its own {quando}.",
+      "NINGUEM_RECEBEU": "No one received this version.",
+      "NINGUEM_RECEBEU_AINDA": "No one has received this version yet."
+    },
+    "AUTOMACAO": {
+      "LIGAR": "Two versions of the message",
+      "AJUDA_DESLIGADO": "Write the same message another way. Each person gets one of the two and, after the test, everyone gets the better one.",
+      "TEXTO_2": "Version 2 text",
+      "MODELO_2": "Version 2 template",
+      "ESPACO": "slot {n}",
+      "O_QUE_ENTRA": "What goes in slot {n} of the template",
+      "OPCAO_MODELO": "{nome} · {idioma}"
+    },
+    "ERROS": {
+      "OUTRAS_INFORMACOES": "The version 2 template asks for different information than version 1. Choose another template in the Message step.",
+      "MODELO": "The version 2 template is no longer approved by WhatsApp. Choose another one in the Message step.",
+      "SEGUNDA": "Version 2 of the message couldn't be used. Check it in the Message step.",
+      "INDISPONIVEL": "This channel cannot test two versions of the message. Turn off “Two versions of the message” in the Message step.",
+      "SEM_COMPRAS": "To choose by purchases, the account needs its sales pipelines turned on: that is where customer purchases are kept. In “Which version is better?”, pick another option."
+    },
+    "AVISO_LISTA": {
+      "TITULO": "Campaigns waiting for you to choose the version",
+      "TITULO_ATENCAO": "Campaigns with two versions that need you",
+      "TEXTO": "{nome}: the test is over. Choose which version goes to the other {resto} people.",
+      "SOZINHA": "If no one chooses, version 1 goes on its own {quando}.",
+      "TEXTO_SEM_ENVIO": "{nome}: the test failed, the message didn't reach anyone in the test. Check the result to see what happened.",
+      "SOZINHA_SEM_ENVIO": "If it stays this way, version 1 goes to the other {resto} people {quando}.",
+      "VER": "See the result",
+      "VER_ARIA": "See the result of {nome}",
+      "ESCOLHER": "Choose the version",
+      "ESCOLHER_ARIA": "Choose the version of {nome}"
+    },
+    "QUANDO": {
+      "HOJE": "today at {hora}",
+      "AMANHA": "tomorrow at {hora}",
+      "DIA": "on {dia} at {hora}"
+    }
+  }
+}

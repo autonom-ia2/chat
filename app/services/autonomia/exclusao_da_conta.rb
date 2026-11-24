@@ -157,6 +157,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
     ['Autonomia::Automacao::Conversao', :por_conta],
+    # Duas versões da mensagem (#3099): os envios e a vencedora de cada passo. Apontam para a automação em cascata.
+    ['Autonomia::Automacao::VersaoEnvio', :por_conta],
+    ['Autonomia::Automacao::VersaoVencedora', :por_conta],
     ['Autonomia::Automacao::Registro', :por_conta],
     ['Autonomia::Automacao::CampanhaDaVez', :por_conta],
     ['Autonomia::Automacao::Execucao', :por_conta],
@@ -179,6 +182,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['CampaignFreeText', :por_conta],
     # Grupo de controle da campanha (#3098): sai antes do link a que pertence.
     ['CampaignControlContact', :por_conta],
+    # Quem recebeu qual versão (duas versões, #3099): sai antes do link a que pertence.
+    ['CampaignVersionContact', :por_conta],
     ['CampaignAudienceLink', :por_conta],
     ['CampaignPause', :por_conta],
     ['CampaignReplyCode', :por_conta],

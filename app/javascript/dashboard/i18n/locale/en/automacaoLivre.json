@@ -225,6 +225,7 @@
       "CAIXA_ID_EMAIL": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",
+      "VERSOES": "Two versions of the message",
       "LISTA_ID": "Which e-mail list",
       "TIME_ID": "Among whom",
       "REGISTRO": "Where to run the steps inside",
@@ -583,7 +584,8 @@
         "ESPERAR": "The “Wait until something happens” step is incomplete: choose the condition.",
         "OUTRO_REGISTRO": "The “Do it on the linked contact or cards” step is incomplete: choose where to do it and add at least one step inside it.",
         "CADA": "The “{nome}” step is incomplete: add at least one step under “For each one in the list”.",
-        "NOVO": "The “{nome}” step is incomplete: tap Change on it and fill in what is missing."
+        "NOVO": "The “{nome}” step is incomplete: tap Change on it and fill in what is missing.",
+        "VERSAO_2": "The “Send a message to the customer” step is incomplete: write version 2 of the message, different from version 1, or turn off “Two versions of the message”."
       }
     },
     "CRIADO": {
