@@ -288,6 +288,46 @@ describe('GuideRevisao', () => {
     expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.REVISAO.LENDO');
   });
 
+  it('com "espere um pouco" (429), segue buscando', async () => {
+    AutonomiaGuideAPI.revisao.mockResolvedValueOnce({ data: revisao() });
+    AutonomiaGuideAPI.revisao.mockRejectedValueOnce({
+      response: { status: 429 },
+    });
+    AutonomiaGuideAPI.revisao.mockResolvedValue({ data: revisao() });
+    const wrapper = montar();
+    await flushPromises();
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+    vi.advanceTimersByTime(6000);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.REVISAO.LENDO');
+  });
+
+  it('tentar de novo busca uma vez só, sem a espera do erro anterior', async () => {
+    AutonomiaGuideAPI.revisao.mockRejectedValueOnce({
+      response: { status: 500 },
+    });
+    AutonomiaGuideAPI.revisao.mockResolvedValue({
+      data: revisao({ status: 'concluida', lidas: 214, faltam: 0 }),
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    const tentar = wrapper
+      .findAll('button')
+      .find(item => item.text().includes('TENTAR_DE_NOVO'));
+    await tentar.trigger('click');
+    await flushPromises();
+    vi.advanceTimersByTime(60000);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.revisao).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('DESFECHO.CONCLUIDA');
+  });
+
   it('com erro do servidor, tenta de novo cada vez mais devagar', async () => {
     AutonomiaGuideAPI.revisao.mockResolvedValueOnce({ data: revisao() });
     AutonomiaGuideAPI.revisao.mockRejectedValue({ response: { status: 500 } });

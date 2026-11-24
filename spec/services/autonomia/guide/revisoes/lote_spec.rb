@@ -43,6 +43,16 @@ RSpec.describe Autonomia::Guide::Revisoes::Lote do
     expect(revisao.reload).to have_attributes(status: 'parada', lidas: 0, posicao: 0)
   end
 
+  it 'guarda o gasto da conversa paga que terminou depois de a pessoa parar' do
+    allow(revisor).to receive(:revisar) do
+      Autonomia::Guide::Revisao.find(revisao.id).parar!
+      { 'categoria' => 'Demora', 'motivo' => 'x' }
+    end
+
+    described_class.new(revisao).rodar
+    expect(revisao.reload.custo.to_f).to eq(0.002)
+  end
+
   it 'não grava de novo a conversa que outra cadeia do job já gravou', :aggregate_failures do
     outra = Autonomia::Guide::Revisao.find(revisao.id)
     allow(revisor).to receive(:revisar) do

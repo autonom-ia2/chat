@@ -126,10 +126,12 @@ const parar = () => {
 };
 
 // Erro 4xx (a revisão não existe mais, a sessão caiu) não melhora tentando:
-// para de buscar. Erro do servidor tenta de novo, cada vez mais devagar.
+// para de buscar. Erro do servidor, e os 4xx de "espere um pouco" (408, 425,
+// 429), tentam de novo, cada vez mais devagar.
+const ESPERE_UM_POUCO = [408, 425, 429];
 const desistir = error => {
   const codigo = error?.response?.status || 0;
-  return codigo >= 400 && codigo < 500;
+  return codigo >= 400 && codigo < 500 && !ESPERE_UM_POUCO.includes(codigo);
 };
 
 const buscar = async () => {
@@ -141,10 +143,11 @@ const buscar = async () => {
     falhouAoCarregar.value = false;
     errosSeguidos = 0;
   } catch (error) {
-    if (!revisao.value) falhouAoCarregar.value = true;
-    if (desistir(error)) {
-      // Sem isto o cartão seguiria girando "Lendo" para sempre.
-      falhouAoCarregar.value = true;
+    // Sem a revisão, ou sem volta (4xx): diz que não carregou. Sem isto o
+    // cartão seguiria girando "Lendo" para sempre.
+    const semVolta = desistir(error);
+    if (!revisao.value || semVolta) falhouAoCarregar.value = true;
+    if (semVolta) {
       parar();
       return;
     }
@@ -158,6 +161,8 @@ const buscar = async () => {
 };
 
 const tentarDeNovo = () => {
+  // A espera do erro anterior não pode buscar junto.
+  parar();
   carregando.value = true;
   falhouAoCarregar.value = false;
   buscar();

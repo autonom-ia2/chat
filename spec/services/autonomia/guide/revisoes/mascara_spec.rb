@@ -18,6 +18,8 @@ RSpec.describe Autonomia::Guide::Revisoes::Mascara do
     expect(mascara.call('Liga 11 98765 4321 hoje')).to eq('Liga [telefone] hoje')
     expect(mascara.call('ou +55 11 98765-4321.')).to eq('ou [telefone]')
     expect(mascara.call('ou 1199 8765 4321')).to eq('ou [telefone]')
+    expect(mascara.call('ou 11 9 8765 4321')).to eq('ou [telefone]')
+    expect(mascara.call('ou +55 11 98765 4321')).to eq('ou [telefone]')
   end
 
   it 'não junta números curtos de uma lista' do
