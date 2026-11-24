@@ -8,6 +8,9 @@ RSpec.describe ConversationMonitors::MessageTracking do
   let(:account) { create(:account) }
   let(:monitor) { create(:conversation_monitor, account: account, created_at: 3.days.ago, paused_at: 1.hour.ago) }
   let(:conversation) { create(:conversation, account: account, created_at: 1.day.ago) }
+  # Sem transação, o registro de auditoria (Audited) do que este spec cria fica no banco mesmo depois de apagar a caixa,
+  # e o spec seguinte que conta auditorias da tabela inteira (enterprise/models/inbox_spec) passa a contar estas.
+  let!(:ultima_auditoria) { Audited::Audit.maximum(:id).to_i }
 
   before do
     account.enable_features!('reports', 'conversation_monitors')
@@ -24,6 +27,7 @@ RSpec.describe ConversationMonitors::MessageTracking do
       account.destroy!
       users.each(&:destroy!)
     end
+    Audited::Audit.where('id > ?', ultima_auditoria).delete_all
   end
 
   %w[catch_up from_now].product(%i[incoming outgoing]).each do |mode, message_type|
