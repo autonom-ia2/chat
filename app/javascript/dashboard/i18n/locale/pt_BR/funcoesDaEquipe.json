@@ -188,6 +188,7 @@
       "WHATSAPP_TEMPLATES_MANAGE": "Criar e mudar os modelos do WhatsApp",
       "META_ADS_MANAGE": "Conectar e mudar os anúncios",
       "POSTS_MANAGE": "Responder, esconder e apagar os comentários dos posts",
+      "FIDELIDADE_MANAGE": "Criar e mudar o cartão fidelidade",
       "INBOX_MANAGE": "Arrumar os canais",
       "AUTONOMIA_MANAGE": "Criar e treinar os robôs de IA",
       "AUTONOMIA_TOOLS_MANAGE": "Criar e ligar as ferramentas dos agentes",
@@ -211,6 +212,7 @@
       "CLIENTES_NOVOS": "Clientes novos",
       "SEUS_POSTS": "Seus posts",
       "CAMPANHAS": "Campanhas",
+      "FIDELIDADE": "Fidelidade",
       "ANUNCIOS": "Anúncios",
       "ROBOS": "Robôs de IA",
       "COTACOES": "Cotações",
@@ -298,6 +300,10 @@
       "POSTS": {
         "NOME": "Seus posts",
         "NA_FRASE": "os posts"
+      },
+      "LOYALTY": {
+        "NOME": "Fidelidade",
+        "NA_FRASE": "o cartão fidelidade"
       },
       "INBOXES": {
         "NOME": "Canais (números de WhatsApp, Instagram, e-mail)",

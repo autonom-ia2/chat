@@ -91,6 +91,8 @@ export const FORK_LAYOUT = {
             'Campaign Management': 'VISAO_GERAL',
           },
         },
+        // Fidelidade (#3100): depois de Campanhas.
+        { pega: 'Fidelidade' },
         // As duas abas da Cotação são da mesma tela: o item vira link direto.
         { pega: 'Insurance', direto: true },
       ],

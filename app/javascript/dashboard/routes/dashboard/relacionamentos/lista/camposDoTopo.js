@@ -2,6 +2,7 @@ import { formatarDinheiro } from '../ficha/compras';
 import {
   COMPRAS,
   DIAS_DAS_COMPRAS,
+  FIDELIDADE,
   PERIODOS_DE_CHEGADA,
   TOTAIS_ACIMA,
 } from './filtros';
@@ -68,12 +69,26 @@ const totalAcima = (t, idioma) => ({
   ],
 });
 
+// #3100 — o cartão fidelidade (só em Pessoas, com cartão na conta): perto do
+// prêmio ou cartão completo.
+const FF = 'FIDELIDADE.FILTRO';
+const fidelidade = t => ({
+  chave: 'fidelidade',
+  rotulo: t(`${FF}.ROTULO`),
+  opcoes: [
+    { value: '', label: t(`${FF}.QUALQUER`) },
+    { value: FIDELIDADE.PERTO, label: t(`${FF}.PERTO`) },
+    { value: FIDELIDADE.COMPLETO, label: t(`${FF}.COMPLETO`) },
+  ],
+});
+
 export const camposDoTopo = ({
   t,
   idioma,
   opcoes = {},
   deEmpresas = false,
   veValores = false,
+  comFidelidade = false,
 }) => {
   if (deEmpresas) return [cidade(t, opcoes.cidades_das_empresas), chegouEm(t)];
   return [
@@ -91,5 +106,6 @@ export const camposDoTopo = ({
     chegouEm(t),
     compras(t),
     ...(veValores ? [totalAcima(t, idioma)] : []),
+    ...(comFidelidade ? [fidelidade(t)] : []),
   ];
 };

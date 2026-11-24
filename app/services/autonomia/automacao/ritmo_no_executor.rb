@@ -57,7 +57,8 @@ module Autonomia::Automacao::RitmoNoExecutor
   # O passo manda mensagem ao cliente: "avisar", o resumo que avisa a equipe e a aprovação ficam fora.
   def ao_cliente?(passo)
     case passo['tipo']
-    when 'mensagem', 'email', *PASSOS_QUE_PERGUNTAM_AO_CLIENTE then true
+    # #3100: o "Mandar cupom" é uma mensagem ao cliente por iniciativa da empresa.
+    when 'mensagem', 'email', ::Autonomia::Automacao::PassoDeMandarCupom::TIPO, *PASSOS_QUE_PERGUNTAM_AO_CLIENTE then true
     when 'escrever' then ::Autonomia::Automacao::PassoDeEscrever.fala_com_gente?(passo)
     else false
     end

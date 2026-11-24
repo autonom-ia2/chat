@@ -204,6 +204,12 @@
           "LEVEL_VIEW": "Sees the posts and numbers of the Instagram and Page inboxes they see.",
           "LEVEL_MANAGE": "For now, the same as View. Once the page has comments, also replies, hides and sends the private reply, on the inboxes they see."
         },
+        "LOYALTY": {
+          "NAME": "Loyalty",
+          "HINT": "Loyalty card: stamps, points and reward",
+          "LEVEL_VIEW": "Sees the loyalty card panel: how many customers are collecting, who is close to the reward and the rewards given.",
+          "LEVEL_MANAGE": "Also creates and changes the card, pauses and turns it back on, gives or removes stamps by hand and adds the Give stamps step to automations. Giving the reward from the profile belongs to whoever can edit the contact."
+        },
         "INBOXES": {
           "NAME": "Inboxes",
           "HINT": "Channels, WhatsApp QR and members",

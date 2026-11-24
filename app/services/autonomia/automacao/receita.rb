@@ -119,12 +119,12 @@ class Autonomia::Automacao::Receita
                                                                     end
   end
 
-  # Os passos novos com motor (#2932–#2934, PassosNovos). As entradas da consulta pronta (#2934) leem valores do alvo,
-  # conferidos pela régua de sempre, como o texto de uma mensagem.
+  # Os passos novos com motor (#2932–#2934, PassosNovos). As entradas da consulta pronta (#2934) e o texto do "Mandar
+  # cupom" (#3100) leem valores do alvo, conferidos pela régua de sempre, como o texto de uma mensagem.
   def passos_novos(passo)
     conferencia = ::Autonomia::Automacao::PassosNovos::Conferencia.new(conta: @conta, account_user: @account_user, alvo: alvo,
                                                                        dentro: @alvo.present?)
-    lidos = ::Autonomia::Automacao::PassoConsultar.caminhos_lidos(passo).flat_map { |caminho| leitura.problemas(passo['id'], caminho, onde: :texto) }
+    lidos = ::Autonomia::Automacao::PassosNovos.caminhos_lidos(passo).flat_map { |caminho| leitura.problemas(passo['id'], caminho, onde: :texto) }
     ::Autonomia::Automacao::PassosNovos.problemas_ao_salvar(passo, conferencia) + lidos
   end
 

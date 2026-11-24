@@ -164,6 +164,9 @@
     },
     {
       "file": "campanhaVendas.json"
+    },
+    {
+      "file": "fidelidade.json"
     }
   ],
   "pacotes": {

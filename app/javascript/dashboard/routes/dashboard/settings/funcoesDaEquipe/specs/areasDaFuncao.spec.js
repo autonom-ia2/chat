@@ -31,7 +31,7 @@ import {
   TUDO_SEM_MEXER,
 } from './quemMonta';
 
-// #2308, especificação 6 e 7: o mapa fechado (25/25 módulos, 60/60 chaves, com a área de ferramentas do #1430), a recolhida e o Cuidado em três grupos.
+// #2308, especificação 6 e 7: o mapa fechado (26/26 módulos, 62/62 chaves, com a área de ferramentas do #1430 e a Fidelidade do #3100), a recolhida e o Cuidado em três grupos.
 const permissoesDoServidor = () => {
   const fonte = readFileSync(
     resolve(process.cwd(), 'enterprise/app/models/custom_role.rb'),
@@ -47,7 +47,7 @@ const permissoesDoServidor = () => {
 };
 
 describe('mapa das áreas e chaves', () => {
-  it('25/25 módulos têm lugar, sem repetir', () => {
+  it('26/26 módulos têm lugar, sem repetir', () => {
     const lugares = [
       ...LINHAS,
       ...Object.keys(DENTRO_DE),
@@ -55,16 +55,16 @@ describe('mapa das áreas e chaves', () => {
       ...CONDICIONAL,
       ...SO_ADMIN,
     ];
-    expect(lugares).toHaveLength(25);
+    expect(lugares).toHaveLength(26);
     expect(new Set(lugares)).toEqual(new Set(MODULES.map(m => m.key)));
   });
 
-  it('60/60 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
+  it('62/62 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
     const donas = Object.values(DONO_DAS_CHAVES).flat();
     const servidor = permissoesDoServidor();
 
-    expect(servidor).toHaveLength(60);
-    expect(donas).toHaveLength(60);
+    expect(servidor).toHaveLength(62);
+    expect(donas).toHaveLength(62);
     expect(new Set(donas)).toEqual(new Set(servidor));
   });
 });
@@ -87,8 +87,12 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       temFlag: () => false,
     });
     expect(areas.subiram).toEqual([]);
-    // Seus posts (#2302): a Carla não tem posts_view, então a área inteira fica fora do alcance dela.
-    expect(areas.cadeado.map(m => m.key)).toEqual(['POSTS', ...SO_ADMIN]);
+    // Seus posts (#2302) e Fidelidade (#3100): a Carla não tem as chaves, então as áreas ficam fora do alcance dela.
+    expect(areas.cadeado.map(m => m.key)).toEqual([
+      'POSTS',
+      'LOYALTY',
+      ...SO_ADMIN,
+    ]);
     expect(resumoDaRecolhida(areas.recolhidas, comDesempenho)).toEqual({
       primeiras: ['REPORTS', 'DESEMPENHO'],
       mais: 10,
@@ -121,7 +125,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       temFlag: () => false,
     });
     expect(areas.cadeado).toEqual([]);
-    expect(areas.recolhidas).toHaveLength(17);
+    expect(areas.recolhidas).toHaveLength(18);
   });
 
   // #1430: a área de ferramentas só entra com a flag agente_ferramentas_delegadas. A chave é de delegação: quem não é
