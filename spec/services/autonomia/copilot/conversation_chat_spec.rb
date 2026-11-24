@@ -97,4 +97,45 @@ RSpec.describe Autonomia::Copilot::ConversationChat do
       expect(result.available).to be(false)
     end
   end
+
+  # #3198: a mensagem que é só um arquivo entra na conversa que o copiloto lê, com o texto guardado no anexo.
+  describe 'files in the conversation' do
+    def capturar_pergunta
+      captured = nil
+      answer = instance_double(Autonomia::Agents::AnswerResult, reply: 'ok', raw_reply: 'ok', answered_from_knowledge: false)
+      allow(Autonomia::Agents::Copilot).to receive(:new) do |kwargs|
+        captured = kwargs[:message]
+        instance_double(Autonomia::Agents::Copilot, suggest: answer)
+      end
+      yield
+      captured
+    end
+
+    def mensagem(conteudo = nil)
+      create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :incoming, content: conteudo)
+    end
+
+    it 'puts a file-only message, with its saved text, in the transcript' do
+      anexar_audio(mensagem, meta: { 'transcribed_text' => 'meu carro foi roubado ontem' })
+
+      pergunta = capturar_pergunta do
+        described_class.new(conversation: conversation, agent_id: agent.id, message: 'resuma').perform
+      end
+
+      expect(pergunta).to include('Cliente: [Áudio: meu carro foi roubado ontem]')
+    end
+
+    it 'keeps the newest messages when the transcript overflows', :aggregate_failures do
+      mensagem('primeira mensagem')
+      6.times { anexar_audio(mensagem, meta: { 'transcribed_text' => 'b' * 3_000 }) }
+      mensagem('ultima mensagem')
+
+      pergunta = capturar_pergunta do
+        described_class.new(conversation: conversation, agent_id: agent.id, message: 'resuma').perform
+      end
+
+      expect(pergunta).to include('ultima mensagem')
+      expect(pergunta).not_to include('primeira mensagem')
+    end
+  end
 end
