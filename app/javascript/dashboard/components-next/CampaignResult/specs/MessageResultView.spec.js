@@ -4,6 +4,7 @@ import { createStore } from 'vuex';
 import enResult from 'dashboard/i18n/locale/en/resultJourney.json';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enDuasVersoes from 'dashboard/i18n/locale/en/duasVersoes.json';
+import enReenvio from 'dashboard/i18n/locale/en/reenvioHorario.json';
 
 const api = vi.hoisted(() => ({
   getResult: vi.fn(),
@@ -120,7 +121,9 @@ const mountView = ({ channel = 'whatsapp_official', customRole } = {}) => {
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: { ...enJourney, ...enResult, ...enDuasVersoes } },
+    messages: {
+      en: { ...enJourney, ...enResult, ...enDuasVersoes, ...enReenvio },
+    },
     missingWarn: false,
     fallbackWarn: false,
   });
@@ -410,6 +413,51 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
       expect(wrapper.find('[data-duas-versoes-resultado]').exists()).toBe(
         false
       );
+    });
+  });
+
+  // #3101: a segunda mensagem do "Mandar de novo" no resultado da primeira.
+  describe('segunda mensagem', () => {
+    it('mostra quantos receberam e responderam, com o caminho para a campanha nova', async () => {
+      api.getResult.mockResolvedValue({
+        data: {
+          payload: {
+            ...result(),
+            segunda_mensagem: {
+              status: 'enviado',
+              dias: 3,
+              quem: 'nao_respondeu',
+              previsto_em: 1764000000,
+              campanha: {
+                channel: 'whatsapp_official',
+                id: 9,
+                name: 'Renovação auto · second message',
+                processing: false,
+                receberam: 12,
+                responderam: 1,
+              },
+            },
+          },
+        },
+      });
+      const { wrapper } = mountView();
+      await flushPromises();
+
+      const bloco = wrapper.get('[data-segunda-mensagem="enviado"]');
+      expect(bloco.text()).toContain('Second message');
+      expect(bloco.get('[data-frase]').text()).toBe('12 got it, 1 replied');
+      expect(
+        JSON.parse(bloco.get('[data-ver-segunda]').attributes('data-to'))
+      ).toEqual({
+        name: 'campaigns_journey_result',
+        params: { channel: 'whatsapp_official', campaignId: '9' },
+      });
+    });
+
+    it('campanha sem segunda mensagem não mostra o bloco', async () => {
+      const { wrapper } = mountView();
+      await flushPromises();
+      expect(wrapper.find('[data-segunda-mensagem]').exists()).toBe(false);
     });
   });
 });

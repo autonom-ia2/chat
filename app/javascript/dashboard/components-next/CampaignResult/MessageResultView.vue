@@ -21,6 +21,8 @@ import ResultCrmBand from './ResultCrmBand.vue';
 import ResultVendas from './ResultVendas.vue';
 // #3099: duas versões da mensagem, logo abaixo dos números.
 import ResultDuasVersoesDaCampanha from './ResultDuasVersoesDaCampanha.vue';
+// #3101: a segunda mensagem do "Mandar de novo", logo abaixo das duas versões.
+import ResultSegundaMensagem from './ResultSegundaMensagem.vue';
 import ResultPeopleTable from './ResultPeopleTable.vue';
 import { useResultPolling } from './useResultPolling';
 import { journeyStatus, messageKpis, resultBalance } from './resultMetrics';
@@ -279,6 +281,11 @@ watch(() => [props.channel, props.campaignId], load, { immediate: true });
         :teste="result.duas_versoes"
         @escolhida="refresh"
         @recarregar="refresh"
+      />
+
+      <ResultSegundaMensagem
+        v-if="result.segunda_mensagem"
+        :segunda="result.segunda_mensagem"
       />
 
       <CampaignDeliveryBreakdown

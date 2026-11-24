@@ -67,6 +67,13 @@ da Gestão: `null` ou `{ id, source, reason_code, details, paused_at, paused_by_
 e aparece na Gestão, com `sent: 0`. Retomar: `POST …/campaign_journey/campaign_pauses/:id/resume`
 (`campaign_manage`).
 
+**Segunda mensagem (#3101).** `segunda_mensagem` no Resultado dos quatro canais: `null` sem "Mandar de novo", ou
+`{ status, dias, quem, previsto_em, campanha }` (`CampaignJourney::Reenvio::Resultado`). `status` é o `reenvio_status`
+(`aguardando`, `enviado`, `sem_ninguem`, `cancelado`, `falhou`); `previsto_em` (epoch) fica nulo até a primeira
+terminar de sair. No `enviado`, `campanha = { channel, id, name, processing, receberam, responderam }` é a campanha
+nova pelo endereço do resultado dela, com os números pela régua dele: receberam = Enviadas (no e-mail, Entregues),
+responderam = Responderam (marca da campanha). `campanha: null` quando a campanha nova foi apagada.
+
 Permissões: `campaign_view` lê (Resultado, pessoas, Gestão); `campaign_manage` exporta (mesma regra do
 export dos relatórios de e-mail). Sem a permissão → 401. Campanha de outra conta ou de outro canal → 404.
 Flag desligada → 404. "Abrir conversa" (`conversation_display_id`) só vem para conversa que o agente

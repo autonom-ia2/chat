@@ -83,6 +83,19 @@
       "MELHOR_HORARIO_AJUDA": "Espera a hora em que ele costuma responder, no máximo 24 horas. Se ainda não sabemos a hora dele, recebe na hora.",
       "REGRAS": "Sempre dentro do horário permitido da conta: {horario}. Se o cliente acabou de escrever, a resposta sai na hora.",
       "REGRAS_QUALQUER_HORA": "Sua conta deixa mandar a qualquer hora. Se o cliente acabou de escrever, a resposta sai na hora."
+    },
+    "RESULTADO": {
+      "TITULO": "Segunda mensagem",
+      "AGUARDANDO_DATA": "Sai {quando}, para quem {quem}.",
+      "AGUARDANDO_SEM_DATA": "Sai 1 dia depois que esta campanha terminar de sair, para quem {quem}. | Sai {dias} dias depois que esta campanha terminar de sair, para quem {quem}.",
+      "ENVIADA": "{receberam}, {responderam}",
+      "RECEBERAM": "{n} recebeu | {n} receberam",
+      "RESPONDERAM": "{n} respondeu | {n} responderam",
+      "SAINDO": "Ainda saindo. Os números crescem enquanto ela sai.",
+      "APAGADA": "Ela saiu, mas a campanha dela foi apagada.",
+      "SEM_NINGUEM": "Não saiu: não sobrou ninguém para receber. Todos responderam ou não podiam receber mensagens.",
+      "CANCELADO": "Cancelada: esta campanha foi editada ou cancelada antes de a segunda mensagem sair.",
+      "FALHOU": "Não saiu: deu um problema ao criá-la. Crie uma campanha nova para quem não respondeu."
     }
   }
 }

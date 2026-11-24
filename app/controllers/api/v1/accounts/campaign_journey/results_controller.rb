@@ -4,6 +4,7 @@
 #   GET …/campaign_journey/results/:channel/:id             campaign, totals, the CRM mark and its deals, who
 #                                                            received and bought (#3098, nil without an audience) and
 #                                                            the two versions of the message (#3099, nil without them)
+#                                                            and the second message (#3101, nil without it)
 #   GET …/campaign_journey/results/:channel/:id/recipients  people, 25 per page, ?status=
 #   GET …/campaign_journey/results/:channel/:id/export      masked CSV, ?status=
 #   GET …/campaign_journey/results/email/:id/period         numbers of this campaign, ?period=7|14|30|all (#990)
@@ -25,7 +26,8 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
         filters: @result.filters,
         crm: crm_payload,
         vendas: vendas_payload,
-        duas_versoes: duas_versoes_payload
+        duas_versoes: duas_versoes_payload,
+        segunda_mensagem: ::CampaignJourney::Reenvio::Resultado.new(@result.campaign, account: Current.account).payload
       }
     }
   end
