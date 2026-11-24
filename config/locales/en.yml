@@ -711,7 +711,7 @@ en:
         modelo_faltou_valor: "The window was closed, and a value the template needs was empty in this conversation. The message was not sent, and the automation stopped in this conversation."
         modelo_texto_longo: "The window was closed, and the template with the values in place went over the 1024 characters WhatsApp accepts. The message was not sent, and the automation stopped in this conversation."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
-        adiado_pelo_ritmo: "Not sent yet: the customer already got the most messages the account allows in the period, or it is outside the sending hours. It goes out on its own when allowed."
+        adiado_pelo_ritmo: "Not sent yet: the customer already got the most messages the account allows in the period, got another one less than the minimum gap ago, or it is outside the sending hours. It goes out on its own when allowed."
         adiado_pelo_melhor_horario: "Waiting for the customer's best time: the hour they usually write. It goes out on its own then."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."

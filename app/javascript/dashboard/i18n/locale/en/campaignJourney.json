@@ -816,7 +816,7 @@
         "FALTA_HORARIO": "Fix the hours to be able to save.",
         "INTERVALO": "At least 1 hour between two messages. | At least {n} hours between two messages."
       },
-      "ESPERA": "If it goes over the limit or outside the hours, the message is kept: it waits and goes out on its own later.",
+      "ESPERA": "If it goes over the limit, comes before the gap or falls outside the hours, the message is kept: it waits and goes out on its own later.",
       "FORA_DA_CONTA": "The limit doesn't apply to replies to someone who just wrote to you, nor to your team's conversation with the customer.",
       "PROBLEMA": {
         "FIM_ANTES": "The end ({fim}) must be after the start ({inicio}).",

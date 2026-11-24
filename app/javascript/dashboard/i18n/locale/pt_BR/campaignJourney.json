@@ -816,7 +816,7 @@
         "FALTA_HORARIO": "Falta arrumar o horário para poder salvar.",
         "INTERVALO": "Pelo menos 1 hora entre duas mensagens. | Pelo menos {n} horas entre duas mensagens."
       },
-      "ESPERA": "Se passar do limite ou do horário, a mensagem fica guardada: ela espera e sai sozinha depois.",
+      "ESPERA": "Se passar do limite, do intervalo ou do horário, a mensagem fica guardada: ela espera e sai sozinha depois.",
       "FORA_DA_CONTA": "O limite não vale para a resposta a quem acabou de te escrever, nem para a conversa da sua equipe com o cliente.",
       "PROBLEMA": {
         "FIM_ANTES": "O fim ({fim}) precisa ser depois do começo ({inicio}).",
