@@ -188,6 +188,7 @@
       "WHATSAPP_TEMPLATES_MANAGE": "Create and change WhatsApp templates",
       "META_ADS_MANAGE": "Connect and change the ads",
       "POSTS_MANAGE": "Reply to, hide and delete the comments on the posts",
+      "FIDELIDADE_MANAGE": "Create and change the loyalty card",
       "INBOX_MANAGE": "Set up the channels",
       "AUTONOMIA_MANAGE": "Create and train the AI bots",
       "AUTONOMIA_TOOLS_MANAGE": "Create and turn on the agent tools",
@@ -211,6 +212,7 @@
       "CLIENTES_NOVOS": "New customers",
       "SEUS_POSTS": "Your posts",
       "CAMPANHAS": "Campaigns",
+      "FIDELIDADE": "Loyalty",
       "ANUNCIOS": "Ads",
       "ROBOS": "AI bots",
       "COTACOES": "Quotes",
@@ -298,6 +300,10 @@
       "POSTS": {
         "NOME": "Your posts",
         "NA_FRASE": "the posts"
+      },
+      "LOYALTY": {
+        "NOME": "Loyalty",
+        "NA_FRASE": "the loyalty card"
       },
       "INBOXES": {
         "NOME": "Channels (WhatsApp numbers, Instagram, email)",

@@ -618,6 +618,14 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.GRUPO_DE_COMPRA"
         }
       ]
+    },
+    {
+      "tipo": "contato.completou_cartao_fidelidade",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_COMPLETOU_CARTAO_FIDELIDADE",
+      "grupo": "contato",
+      "requer": "automacao_gatilhos",
+      "se_repetir": true
     }
   ],
   "operadores": [
@@ -1036,6 +1044,24 @@
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
       ],
+      "na_origem": true
+    },
+    {
+      "caminho": "contato.fidelidade_saldo",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_FIDELIDADE_SALDO",
+      "na_origem": true
+    },
+    {
+      "caminho": "contato.fidelidade_faltam",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_FIDELIDADE_FALTAM",
+      "na_origem": true
+    },
+    {
+      "caminho": "contato.fidelidade_premio",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_FIDELIDADE_PREMIO",
       "na_origem": true
     },
     {
@@ -1699,6 +1725,12 @@
           "peca": "modelo_whatsapp",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        },
+        {
+          "nome": "versoes",
+          "peca": "duas_versoes",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.VERSOES"
         }
       ]
     },

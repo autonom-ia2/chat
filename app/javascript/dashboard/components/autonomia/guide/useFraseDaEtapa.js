@@ -9,6 +9,7 @@ export const useFraseDaEtapa = etapa => {
   const { t } = useI18n();
   const frases = computed(() => ({
     ler_da_conta: t('AUTONOMIA_GUIDE.STEP.READ_ACCOUNT'),
+    relatorio_de_atendimento: t('AUTONOMIA_GUIDE.STEP.READ_REPORTS'),
     ler_da_central: t('AUTONOMIA_GUIDE.STEP.READ_HELP'),
     ler_anexo: t('AUTONOMIA_GUIDE.STEP.READ_ATTACHMENT'),
     ler_pagina: t('AUTONOMIA_GUIDE.STEP.READ_PAGE'),

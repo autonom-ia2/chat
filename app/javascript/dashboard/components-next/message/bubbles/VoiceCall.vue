@@ -25,6 +25,7 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import AudioChip from 'next/message/chips/Audio.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useSoLeitura } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 
 const LABEL_MAP = {
   [VOICE_CALL_STATUS.IN_PROGRESS]: 'CONVERSATION.VOICE_CALL.CALL_IN_PROGRESS',
@@ -216,7 +217,10 @@ const iconContainerClass = computed(() => {
 
 const callSid = computed(() => call.value?.providerCallId);
 
+// #3165: quem só lê a conversa (o card do CRM) não liga nem atende por aqui.
+const soLeitura = useSoLeitura();
 const canJoinCall = computed(() => {
+  if (soLeitura.value) return false;
   if (status.value !== VOICE_CALL_STATUS.RINGING) return false;
   if (isOutbound.value) return false;
   if (acceptedByAgentId.value) return false;
@@ -271,6 +275,7 @@ const handleJoinCall = async () => {
 
 const canCallBack = computed(
   () =>
+    !soLeitura.value &&
     isMissedInbound.value &&
     (isWhatsapp.value || !!sender.value?.phoneNumber) &&
     !!inboxId.value &&

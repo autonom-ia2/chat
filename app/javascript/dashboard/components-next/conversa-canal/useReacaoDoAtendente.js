@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import ConversaCanalAPI from 'dashboard/api/conversaCanal';
 import WahaMessageActionsAPI from 'dashboard/api/wahaMessageActions';
 import { PELES, usePele } from './pele';
@@ -26,7 +27,7 @@ export const useReacaoDoAtendente = mensagem => {
   const { t } = useI18n();
   const pele = usePele();
   const instagram = useInstagramDaConversa();
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   const caixaPorId = useMapGetter('inboxes/getInbox');
   const enviando = ref(false);
 

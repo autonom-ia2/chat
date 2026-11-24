@@ -244,6 +244,9 @@
         "BONUS": "Classe de bônus",
         "ORIGEM": "Como chegou",
         "POR_PLANILHA": "Chegou por planilha, em {data}",
+        "POR_AGGER": "Chegou pelo Agger, em {data}",
+        "POR_PDF": "Chegou por PDF, em {data}",
+        "A_MAO": "Cadastrado à mão, em {data}",
         "CHEGOU_EM": "Chegou em {data}",
         "NAO_INFORMADO": "Não informado"
       },
@@ -359,7 +362,17 @@
         "PROPOSTA_PRONTA": "A proposta de renovação ficou pronta.",
         "PROPOSTA_ENVIADA": "A proposta de renovação foi enviada ao cliente.",
         "PROPOSTA_ENVIADA_SOZINHA": "A proposta de renovação saiu sozinha para o cliente.",
-        "DADOS_LIDOS_PDF": "Dados do segurado lidos do PDF guardado, para a cotação."
+        "DADOS_LIDOS_PDF": "Dados do segurado lidos do PDF guardado, para a cotação.",
+        "CHEGOU_AGGER": "Chegou pelo Agger.",
+        "PDF_LIDO": "PDF lido. O que estava em branco foi completado."
+      },
+      "PDF_LIDO": {
+        "NADA": "PDF lido. Não tinha nada em branco para completar.",
+        "NAO_E_APOLICE": "O PDF guardado não parece ser uma apólice. Nada mudou no seguro.",
+        "NAO_DEU": "Não deu para ler o PDF guardado. Nada mudou no seguro."
+      },
+      "DO_AGGER": {
+        "CHEGOU_DE_NOVO": "Atualizado pelo Agger."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",

@@ -39,7 +39,8 @@ const fieldIcon = computed(
       checkbox: 'i-lucide-check-check',
     })[props.definition.attribute_display_type] || 'i-lucide-text'
 );
-const { t } = useI18n();
+// #3082 — a data sai no formato do idioma do painel, não no do navegador.
+const { t, locale } = useI18n();
 const { accountId } = useAccount();
 const store = useStore();
 const companies = useCompaniesStore();
@@ -386,7 +387,7 @@ onBeforeUnmount(() => {
               : typeof value === 'boolean'
                 ? t(value ? 'RELATIONSHIPS.YES' : 'RELATIONSHIPS.NO')
                 : definition.attribute_display_type === 'date'
-                  ? formatAttributeDate(value)
+                  ? formatAttributeDate(value, locale)
                   : value
           }}
         </div>

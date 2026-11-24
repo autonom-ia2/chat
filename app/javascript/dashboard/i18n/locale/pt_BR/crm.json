@@ -4832,6 +4832,9 @@
     "INSERTED": "Inserido na resposta."
   },
   "AUTONOMIA_GUIDE": {
+    "GRAFICO": {
+      "FONTE": "Mesmos números da tela Relatórios · {de} a {ate}"
+    },
     "AVISOS": {
       "LAUNCHER_LABEL": "Pergunte ao Guia, {count} aviso novo | Pergunte ao Guia, {count} avisos novos",
       "SELO": "Aviso do Guia"
@@ -4856,33 +4859,35 @@
     "LAUNCHER": "Guia da Plataforma",
     "THINKING": "Pensando…",
     "HIGHLIGHT_HERE": "é aqui",
-    "RESET": "Nova conversa",
-    "KICK_OFF": "Eu explico onde fica cada coisa, consulto os dados da sua conta e, para quem administra, faço o que você pedir — tudo o que eu mudar pode ser desfeito por 5 dias.",
+    "KICK_OFF": "Pergunte onde fica qualquer coisa. Eu também vejo os números da sua conta. Se você pedir, eu faço a mudança, e dá para desfazer por 5 dias.",
     "GO_TO_SCREEN": "Ir para a tela",
     "GO_TO_SCREEN_NAMED": "Ir para: {rotulo}",
     "GO_TO_SCREEN_NUMBERED": "Ir para a tela {numero}",
     "READ_ARTICLE": "Ler o artigo completo",
     "READ_ARTICLE_NAMED": "Ler: {titulo}",
     "READ_SECTION": "Para ler com calma",
-    "UNAVAILABLE": "O guia está indisponível no momento.",
-    "WITHHELD": "Não consegui montar a resposta agora. Pergunte de novo, com outras palavras.",
-    "ERROR": "Não foi possível falar com o guia. Tente novamente.",
+    "UNAVAILABLE": "Não consegui responder agora. Espere um minuto e toque em Tentar de novo.",
+    "WITHHELD": "Não consegui montar a resposta agora. Tente de novo ou pergunte de outro jeito.",
+    "ERROR": "Não consegui responder agora.",
     "SENDING": "Ainda estou respondendo a pergunta anterior.",
     "RETRY": "Tentar de novo",
-    "WRITE_WHILE_WORKING": "Pode escrever: eu leio enquanto trabalho.",
+    "WRITE_WHILE_WORKING": "Pode escrever enquanto eu trabalho. Se quiser que eu pare, é só dizer.",
+    "MID_WORK_NOT_SENT": "Sua última mensagem não chegou. Se quiser que eu pare, escreva de novo.",
+    "DONE_NO_REPLY": "Fiz o que está abaixo, mas não consegui escrever a resposta. Confira antes de pedir de novo.",
     "STEP": {
       "READ_ACCOUNT": "Lendo os dados da conta…",
       "READ_HELP": "Lendo a Central de Ajuda…",
       "READ_ATTACHMENT": "Lendo o anexo…",
       "READ_PAGE": "Lendo a página…",
-      "CLASSIFY": "Separando os itens…",
+      "CLASSIFY": "Organizando o que encontrei…",
       "CHECK_FORMAT": "Conferindo como fazer…",
       "PICK_SCREEN": "Procurando a tela certa…",
       "CHANGE": "Fazendo a mudança…",
       "PROPOSE": "Preparando a ação…",
       "PLAN_TASK": "Planejando a tarefa…",
       "REMEMBER": "Anotando…",
-      "FORGET": "Apagando a anotação…"
+      "FORGET": "Apagando a anotação…",
+      "READ_REPORTS": "Lendo os relatórios da conta…"
     },
     "SUGGESTIONS": {
       "KANBAN": "Crie um funil chamado Comercial",
@@ -4890,8 +4895,8 @@
       "REPORTS": "Quais funis eu tenho hoje?"
     },
     "ACTION": {
-      "CONFIRM": "Confirmar",
-      "CANCEL": "Cancelar",
+      "CONFIRM": "Sim, pode fazer",
+      "CANCEL": "Não, deixa como está",
       "CANCELLED": "Cancelado. Nada foi alterado.",
       "RUNNING": "Fazendo agora…",
       "FAILED": "Não consegui fazer isso. Você pode fazer direto na tela.",
@@ -4923,7 +4928,7 @@
       "EMPTY": "Nada feito pelo Guia nos últimos 5 dias."
     },
     "HISTORY": {
-      "TITLE": "Histórico",
+      "TITLE": "Conversas anteriores",
       "TAB_CONVERSAS": "Conversas",
       "LOADING": "Carregando suas conversas…",
       "LOAD_FAILED": "Não consegui carregar suas conversas. Tente de novo em instantes.",
@@ -4946,7 +4951,7 @@
       "START_NEW": "Começar outra conversa"
     },
     "MEMORY": {
-      "TITLE": "O que eu sei",
+      "TITLE": "O que o Guia anotou",
       "KEPT": "Isto é o que eu lembro para te ajudar. Você pode corrigir ou apagar.",
       "LOADING": "Carregando o que eu sei…",
       "LOAD_FAILED": "Não consegui carregar o que eu sei. Confira a internet e tente de novo.",
@@ -5048,7 +5053,6 @@
     "A11Y": {
       "PANEL": "Guia da Plataforma",
       "LOG": "Conversa com o Guia",
-      "NEW_CONVERSATION": "Iniciar nova conversa",
       "CLOSE": "Fechar o Guia",
       "SEND": "Enviar mensagem"
     },
@@ -5094,7 +5098,21 @@
       "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
       "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
       "TIME": "{atual} / {total}"
-    }
+    },
+    "HEADER": {
+      "NAME": "Guia",
+      "SUBTITLE": "Só você vê",
+      "NEW_TOPIC": "Novo assunto",
+      "MORE": "Mais opções",
+      "BACK": "Voltar para a plataforma",
+      "CHANGES": "Mudanças que o Guia fez"
+    },
+    "PLACEHOLDER": "Pergunte ao Guia",
+    "ACTION_CARD": {
+      "TITLE": "O que vai mudar na sua conta:",
+      "NO_UNDO": "Isto não tem como desfazer depois."
+    },
+    "WELCOME_TITLE": "Oi! Eu sou o Guia."
   },
   "AUTOMACOES": {
     "MENU": "Automações",
@@ -6315,7 +6333,19 @@
       "ATENDE": "{nome} atende",
       "SEM_ATENDENTE": "sem atendente",
       "SO_AS_SUAS": "Aparecem as 10 mais recentes que você pode ver.",
-      "VAZIO": "Nenhuma conversa ligada a este cliente."
+      "VAZIO": "Nenhuma conversa ligada a este cliente.",
+      "VISOR": {
+        "ROTULO": "Conversa nº {numero}",
+        "SUBTITULO": "Conversa nº {numero} · {situacao}",
+        "CARREGANDO": "Carregando a conversa",
+        "ERRO": "Não deu para carregar esta conversa agora.",
+        "TENTAR_DE_NOVO": "Tentar de novo",
+        "VAZIA": "Esta conversa ainda não tem mensagens.",
+        "CARREGANDO_ANTIGAS": "Carregando mensagens antigas",
+        "MENSAGENS": "Mensagens da conversa",
+        "ERRO_ANTIGAS": "Não deu para trazer as mensagens antigas.",
+        "SO_LEITURA": "Aqui é só para ler. Para responder, toque em Abrir a conversa."
+      }
     },
     "RETORNOS": {
       "COMBINADO": "Já marcado",

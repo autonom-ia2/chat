@@ -346,5 +346,10 @@
     "HEROI": {
       "NENHUMA_APOIO": "A purchase counts when a card closes a policy."
     }
+  },
+  "FIDELIDADE": {
+    "PAINEL": {
+      "PASSO_1": "The customer buys and you tap Policy closed on their card, in the CRM."
+    }
   }
 }

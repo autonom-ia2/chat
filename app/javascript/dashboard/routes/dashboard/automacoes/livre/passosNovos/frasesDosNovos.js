@@ -16,6 +16,9 @@ import {
   valorDoTeste,
 } from './dadosDaConta';
 import { nomeDaConta } from './nomesDaConta';
+import { FA } from './fidelidadeNaAutomacao';
+import { programaDaConta } from 'dashboard/routes/dashboard/fidelidade/programaDaConta';
+import { cupomDaConta } from 'dashboard/routes/dashboard/fidelidade/cuponsDaConta';
 
 const CABE_NA_LINHA = 60;
 const curto = texto => {
@@ -119,6 +122,18 @@ export const rotuloDoGalhoFixo = (chave, t) =>
     caminho: t(`AUTOMACAO_LIVRE.RAMOS.${chave.toUpperCase()}`),
   });
 
+// #3100: "2 carimbos" (ou pontos, pelo cartão da conta; sem ele, carimbos).
+const unidadeEmFrase = (quantos, t, tipo = programaDaConta()?.tipo) =>
+  t(
+    `FIDELIDADE.UNIDADE.${tipo === 'pontos' ? 'pontos' : 'carimbos'}`,
+    { count: quantos ?? 0 },
+    quantos ?? 0
+  );
+const DAR = `${FA}.DAR`;
+// #3100: o nome do cupom do passo, dos cupons da conta (lidos pela peça).
+const CUPOM = `${FA}.CUPOM`;
+const nomeDoCupom = id => cupomDaConta(id)?.nome || '';
+
 // A linha do Confira. `nomeDoDado` dá o nome de um dado do texto (fraseDoValor).
 const FRASE = {
   pedir_aprovacao: (passo, t, nomeDoDado) =>
@@ -152,6 +167,19 @@ const FRASE = {
     t(`${P}.REUNIAO.FRASE`, { quem: quemEmFrase(passo.com, t, 'DE') }),
   pesquisa_nota: (passo, t) =>
     t(`${P}.PESQUISA.FRASE`, { pergunta: curto(passo.pergunta) }),
+  dar_carimbos: (passo, t) => {
+    const quantos = unidadeEmFrase(passo.quantos, t);
+    const motivo = curto(passo.motivo);
+    return motivo
+      ? t(`${DAR}.FRASE_COM_MOTIVO`, { quantos, motivo })
+      : t(`${DAR}.FRASE`, { quantos });
+  },
+  mandar_cupom: (passo, t) => {
+    const cupom = nomeDoCupom(passo.cupom_id);
+    return cupom
+      ? t(`${CUPOM}.FRASE`, { cupom })
+      : t(`${CUPOM}.FRASE_SEM_CUPOM`);
+  },
 };
 
 export const fraseDoPassoNovo = (passo, t, nomeDoDado = caminho => caminho) =>
@@ -210,6 +238,15 @@ const ENSAIO = {
     balao: passo.pergunta,
     aviso: foraDaJanela(passo, t),
   }),
+  dar_carimbos: (passo, t) => ({
+    destaque: t(`${DAR}.ENSAIO_PREVIA`, {
+      quantos: unidadeEmFrase(passo.quantos, t),
+    }),
+  }),
+  mandar_cupom: (passo, t) => ({
+    destaque: t(`${CUPOM}.ENSAIO_PREVIA`),
+    aviso: foraDaJanela(passo, t),
+  }),
 };
 
 export const linhaDoEnsaioNovo = (passo, t) => ENSAIO[passo.tipo](passo, t);
@@ -263,6 +300,18 @@ const HISTORICO = {
       caminho: t('AUTOMACAO_LIVRE.RAMOS.NOTA_ALTA'),
     }),
   }),
+  dar_carimbos: (passo, t) => ({
+    texto: t(`${DAR}.HISTORICO`, {
+      nome: NOMES_DE_EXEMPLO[0],
+      quantos: unidadeEmFrase(passo.quantos, t),
+    }),
+  }),
+  mandar_cupom: (passo, t) => ({
+    texto: t(`${CUPOM}.HISTORICO`, {
+      nome: NOMES_DE_EXEMPLO[0],
+      cupom: nomeDoCupom(passo.cupom_id),
+    }),
+  }),
 };
 
 export const linhaDoHistoricoNovo = (passo, t) =>
@@ -279,7 +328,45 @@ const AVISO_DO_BLOCO = {
   bloco_em_laco: 'BLOCO_EM_LACO',
   bloco_fundo_demais: 'BLOCO_FUNDO_DEMAIS',
 };
+// #3100: sem cartão, com o cartão pausado ou sem contato, ninguém receberia.
+const AVISO_DOS_CARIMBOS = {
+  sem_cartao_fidelidade: 'ENSAIO_SEM_CARTAO',
+  cartao_fidelidade_pausado: 'ENSAIO_PAUSADO',
+  fidelidade_sem_contato: 'ENSAIO_SEM_CONTATO',
+};
+// #3100: cupom apagado ou pausado, sem contato, já usado ou vencido: nada sai.
+const AVISO_DO_CUPOM = {
+  sem_cupom: 'ENSAIO_SEM_CUPOM',
+  cupom_pausado: 'ENSAIO_PAUSADO',
+  cupom_sem_contato: 'ENSAIO_SEM_CONTATO',
+  cupom_ja_usado: 'ENSAIO_USADO',
+  cupom_vencido: 'ENSAIO_VENCIDO',
+};
 const ENSAIO_COM_MOTOR = {
+  // Qual cupom iria e se o cliente recebe o mesmo código de antes.
+  mandar_cupom: (no, t) => {
+    if (AVISO_DO_CUPOM[no.faria])
+      return { aviso: t(`${CUPOM}.${AVISO_DO_CUPOM[no.faria]}`) };
+    const { cupom, mesmo_codigo: mesmo } = no.dados || {};
+    return {
+      destaque: t(`${CUPOM}.${mesmo ? 'ENSAIO_MESMO' : 'ENSAIO_NOVO'}`, {
+        cupom,
+      }),
+    };
+  },
+  // Quantos a pessoa tem e com quantos ficaria (ou que completaria o cartão).
+  dar_carimbos: (no, t) => {
+    if (AVISO_DOS_CARIMBOS[no.faria])
+      return { aviso: t(`${DAR}.${AVISO_DOS_CARIMBOS[no.faria]}`) };
+    const { quantos, tem, ficaria, meta, unidade } = no.dados || {};
+    const emFrase = n => unidadeEmFrase(n, t, unidade);
+    return {
+      destaque: t(
+        `${DAR}.${ficaria >= meta ? 'ENSAIO_COMPLETA' : 'ENSAIO_FICA'}`,
+        { quantos: emFrase(quantos), tem, ficaria, meta: emFrase(meta) }
+      ),
+    };
+  },
   // Passou do teto: o total de verdade e quantos ficam para as próximas vezes.
   repetir_lista: (no, t) => {
     const {

@@ -38,7 +38,8 @@ export const emGente = (receberam, controle) => {
   };
 };
 
-const pelaDiferenca = vezes => {
+// #3099: também usada para comparar as duas versões da mensagem (vencedora.js), com a mesma régua de palavras.
+export const pelaDiferenca = vezes => {
   if (vezes >= DIZ_AS_VEZES) return { chave: 'MAIS', vezes: Math.floor(vezes) };
   if (vezes >= TRIPLO) return { chave: 'TRIPLO' };
   if (vezes >= DOBRO) return { chave: 'DOBRO' };

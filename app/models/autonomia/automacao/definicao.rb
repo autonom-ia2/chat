@@ -122,8 +122,11 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     with_lock do
       raise VersaoMudou if base != :atual && versao_ativa_id != base
 
+      anterior = versao_ativa&.receita
       versao = versoes.create!(account: account, numero: versoes.maximum(:numero).to_i + 1, receita: receita, autor: autor)
       update!(versao_ativa: versao, ativa: ativa && autor.present? && autor.id == ligada_por_id)
+      # #3099: o texto que mudou numa das duas versões da mensagem recomeça o teste daquele passo.
+      ::Autonomia::Automacao::DuasVersoes.versao_salva!(self, anterior, receita)
       pausar_quem_usa(autor) if bloco
       versao
     end

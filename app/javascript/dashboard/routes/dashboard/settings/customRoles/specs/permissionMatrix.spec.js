@@ -664,6 +664,8 @@ describe('permissionMatrix', () => {
     'meta_ads_manage',
     'posts_view',
     'posts_manage',
+    'fidelidade_view',
+    'fidelidade_manage',
     'label_manage',
     'attribute_manage',
     'macro_manage',
@@ -684,8 +686,8 @@ describe('permissionMatrix', () => {
     ...(module.type === 'conversations' ? ['conversation_manage'] : []),
   ]);
 
-  it('covers exactly the 60 server keys between the matrix and the keys outside it', () => {
-    expect(SERVER_KEYS).toHaveLength(60);
+  it('covers exactly the 62 server keys between the matrix and the keys outside it', () => {
+    expect(SERVER_KEYS).toHaveLength(62);
     expect(known.filter(key => KEYS_OUTSIDE_MATRIX.includes(key))).toEqual([]);
     expect([...new Set([...known, ...KEYS_OUTSIDE_MATRIX])].sort()).toEqual(
       [...SERVER_KEYS].sort()

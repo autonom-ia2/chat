@@ -10,6 +10,9 @@
 # transaction that creates the campaign: two tabs or two people sending the same draft create one campaign, and the
 # other gets 422 draft_gone; a refused campaign rolls the claim back and the draft stays. For e-mail it is linked to the
 # new e-mail draft and goes when that e-mail is sent or scheduled (CampaignJourney::DraftCleanup).
+# `campaign.duas_versoes` (#3099): { criterio, divisao, espera_horas, segunda } turns on the two versions of the message
+# (WhatsApp Oficial, SMS, WhatsApp API); `recipients_count` is then who receives now (the test). E-mail sets them in
+# PUT email_medicoes.
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
   CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
@@ -121,7 +124,8 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   def whatsapp_cloud_params
     params.require(:campaign).permit(
       :title, :inbox_id, :scheduled_at, :message, :free_text, :janela_de_compra_dias, :grupo_de_controle_pct,
-      template_params: {}, variable_bindings: {}, variable_defaults: {}
+      template_params: {}, variable_bindings: {}, variable_defaults: {},
+      duas_versoes: [:criterio, :divisao, :espera_horas, { segunda: {} }]
     ).to_h
   end
 

@@ -127,6 +127,23 @@ RSpec.describe CustomRole, type: :model do
     end
   end
 
+  # #3100: quem mexe no cartão fidelidade o faz no painel Fidelidade, então vê o painel.
+  describe 'fidelidade_manage implies fidelidade_view' do
+    it 'stores fidelidade_view with fidelidade_manage' do
+      role = create(:custom_role, permissions: %w[fidelidade_manage])
+
+      expect(role.reload.permissions).to contain_exactly('fidelidade_manage', 'fidelidade_view')
+    end
+
+    it 'keeps a single fidelidade_view and adds nothing for view only' do
+      both = create(:custom_role, permissions: %w[fidelidade_view fidelidade_manage])
+      view_only = create(:custom_role, permissions: %w[fidelidade_view])
+
+      expect(both.reload.permissions).to contain_exactly('fidelidade_view', 'fidelidade_manage')
+      expect(view_only.reload.permissions).to eq(%w[fidelidade_view])
+    end
+  end
+
   describe 'filtered unread count invalidation' do
     let(:account) { create(:account) }
     let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_manage']) }

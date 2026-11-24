@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
 import {
   INBOX_TYPES,
@@ -42,7 +43,8 @@ export const INBOX_FEATURE_MAP = {
  * @returns {Object} An object containing inbox type checking functions
  */
 export const useInbox = (inboxId = null) => {
-  const currentChat = useMapGetter('getSelectedChat');
+  // #3165: a conversa da tela (no card do CRM, a lida ao lado; no painel, a aberta).
+  const currentChat = useConversaDaTela();
   const inboxGetter = useMapGetter('inboxes/getInboxById');
 
   const inbox = computed(() => {

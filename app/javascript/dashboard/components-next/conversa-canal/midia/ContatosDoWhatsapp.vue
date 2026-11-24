@@ -17,6 +17,7 @@ import NovaConversaEntrada from '../../NovaConversa/NovaConversaEntrada.vue';
 import { useContatosDaMensagem } from '../album/useAlbuns';
 import { contatosDoCartao } from './contatos';
 import { soDigitos, useAcoesDoContato } from './useAcoesDoContato';
+import { useSoLeitura } from '../conversaDaTela';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 
 const { id, attachments, contentAttributes } = useMessageContext();
@@ -24,6 +25,8 @@ const { t } = useI18n();
 const { salvar, paraConversar } = useAcoesDoContato();
 // Salvar e Conversar procuram o número na base de contatos: pedem ver contatos (#1849).
 const { canViewRelationshipRecords } = useRelationshipPermissions();
+// #3165: quem só lê a conversa (o card do CRM) não grava contato nem abre conversa.
+const soLeitura = useSoLeitura();
 
 const doMesmoEnvio = useContatosDaMensagem(id);
 const contatos = computed(() =>
@@ -216,7 +219,9 @@ const ACAO =
                 </div>
               </div>
               <div
-                v-if="contato.comAcoes && canViewRelationshipRecords"
+                v-if="
+                  contato.comAcoes && canViewRelationshipRecords && !soLeitura
+                "
                 class="flex border-t border-[#000]/10 dark:border-white/10 divide-x divide-[#000]/10 dark:divide-white/10 [&>*]:flex-1"
                 data-acoes-do-contato
               >

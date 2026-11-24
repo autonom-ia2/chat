@@ -1637,6 +1637,10 @@ pt_BR:
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         um_de: 'Passo %{passo}: %{campo} tem de ser um destes: %{opcoes}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
+        versoes_sem_modelo: "Passo %{passo}: a mensagem usa um modelo quando a janela de 24 h está fechada, então a versão 2 também precisa de um modelo."
+        versoes_modelo_sobrando: "Passo %{passo}: a versão 2 tem um modelo, mas a versão 1 não. Escolha um modelo para a versão 1 ou tire o da versão 2."
+        versoes_iguais: "Passo %{passo}: a versão 2 está igual à versão 1. Mude alguma coisa para dar para comparar."
+        versoes_sem_compras: "Passo %{passo}: \"mais compras\" precisa dos funis de venda, que estão desligados nesta conta. Escolha \"mais respostas\" ou \"eu escolho\"."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
@@ -1705,10 +1709,60 @@ pt_BR:
         rodizio: 'Passar a conversa para alguém online, em rodízio'
       webhook:
         gravar: 'Gravar o que o outro sistema respondeu'
+      duas_versoes:
+        versao_invalida: 'Escolha a versão 1 ou a versão 2.'
+        versao_ja_escolhida: 'Outra versão já foi escolhida para este passo.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
     guide:
+      relatorio:
+        titulo: '%{metrica} por %{por}'
+        titulo_de: '%{titulo}, %{quem}'
+        formato_dia: '%d/%m'
+        formato_mes: '%m/%Y'
+        e: ' e '
+        metricas:
+          conversations_count: 'Conversas'
+          incoming_messages_count: 'Mensagens recebidas'
+          outgoing_messages_count: 'Mensagens enviadas'
+          resolutions_count: 'Conversas resolvidas'
+          avg_first_response_time: 'Tempo da primeira resposta (minutos)'
+          avg_resolution_time: 'Tempo de resolução (minutos)'
+          reply_time: 'Tempo de resposta (minutos)'
+          bot_resolutions_count: 'Resolvidas pelo robô'
+          bot_handoffs_count: 'Passadas do robô para uma pessoa'
+        por:
+          conta: 'conta'
+          agente: 'pessoa'
+          caixa: 'caixa'
+          etiqueta: 'etiqueta'
+          time: 'time'
+          dia: 'dia'
+          semana: 'semana'
+          mes: 'mês'
+        unidades:
+          years:
+            one: '%{count} ano'
+            other: '%{count} anos'
+          months:
+            one: '%{count} mês'
+            other: '%{count} meses'
+          weeks:
+            one: '%{count} semana'
+            other: '%{count} semanas'
+          days:
+            one: '%{count} dia'
+            other: '%{count} dias'
+          hours:
+            one: '%{count} hora'
+            other: '%{count} horas'
+          minutes:
+            one: '%{count} minuto'
+            other: '%{count} minutos'
+          seconds:
+            one: '%{count} segundo'
+            other: '%{count} segundos'
       done: 'Pronto, feito.'
       failed: 'Não consegui fazer isso agora.'
       unknown_action: 'Isto o Guia não faz.'

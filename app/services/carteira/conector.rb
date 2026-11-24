@@ -12,7 +12,8 @@
 #
 # Quem faz o quê: Carteira::Conector::Sincronizar (a busca, um passo por vez, num job que se reagenda), Ler (cada
 # registro vira um item da leitura), Gravar (os itens viram seguros pelo gravador único), BaixarPdf (o PDF de cada
-# seguro), Conferir e Historico (o que a tela lê) e BuscaDiaria (o interruptor e a rotina de todo dia).
+# seguro, também de dentro do ZIP, com nova tentativa: PdfDoZip e PdfsPendentes), LerPdf (o PDF guardado completa o que
+# está vazio no seguro, #3175), Conferir e Historico (o que a tela lê) e BuscaDiaria (o interruptor e a rotina de todo dia).
 module Carteira::Conector
   PROVIDER = 'agger'.freeze
   MODO_DE_VERDADE = 'http'.freeze

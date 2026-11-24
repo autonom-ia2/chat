@@ -74,6 +74,12 @@ class Autonomia::Guide::Registro
     }
   end
 
+  # #3158 — QUANTOS números da resposta nenhuma ferramenta do turno sustenta (`NumerosSemFonte`). Só a contagem,
+  # como no log: o número pode ser de cliente (CPF, telefone).
+  def numeros_sem_fonte(quantos)
+    @numeros_sem_fonte = quantos.to_i.positive? ? quantos.to_i : nil
+  end
+
   # #934 — o que a pessoa estava vendo: rota, recurso, ids que ela enxerga e total. Sem resumo nem filtro.
   def ver_tela(tela)
     @tela = tela.presence
@@ -85,7 +91,8 @@ class Autonomia::Guide::Registro
     ultimo = @custos.last || {}
     { 'modelo' => ultimo[:model], 'effort' => ultimo[:effort], 'rodadas' => @custos.size, 'ms' => @ms,
       'custo_usd' => @custos.sum { |item| item[:cost].to_f }.round(6), 'tokens' => tokens,
-      'chamadas' => @chamadas, **@decisoes, **({ 'tela' => @tela } if @tela).to_h, 'erro' => erro }
+      'chamadas' => @chamadas, **@decisoes, **({ 'tela' => @tela } if @tela).to_h,
+      **({ 'numeros_sem_fonte' => @numeros_sem_fonte } if @numeros_sem_fonte).to_h, 'erro' => erro }
   end
 
   private

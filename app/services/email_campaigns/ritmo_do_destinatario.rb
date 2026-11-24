@@ -11,8 +11,11 @@ module EmailCampaigns::RitmoDoDestinatario
 
   module_function
 
+  # #3099: com as duas versões, enquanto o resto espera a escolha, só quem caiu no teste (o resto fica `pending`, e a
+  # campanha `sending`, até CampaignJourney::DuasVersoes#mandar_resto!).
   def pendentes_na_vez(campaign, agora: Time.current)
-    campaign.email_campaign_recipients.pending.where('adiado_ate IS NULL OR adiado_ate <= ?', agora)
+    pendentes = campaign.email_campaign_recipients.pending.where('adiado_ate IS NULL OR adiado_ate <= ?', agora)
+    CampaignJourney::DuasVersoes.para(campaign).so_quem_recebe_agora(pendentes, coluna: :contact_id)
   end
 
   # `contato`: o de #contato, buscado uma vez por destinatário pelo motor e passado aos dois.

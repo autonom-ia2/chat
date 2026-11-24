@@ -35,6 +35,8 @@ class Autonomia::Automacao::PassoDeAcao
     # #2932 e #2934: chegam pelo Executor#passo_novo, que confere a flag dos passos novos antes.
     when 'repetir_lista' then ::Autonomia::Automacao::PassoRepetirLista.new(passo: passo, **).executar
     when 'consultar' then ::Autonomia::Automacao::PassoConsultar.new(passo: passo, **).executar
+    # #3100: "Dar carimbos ou pontos", também pelo Executor#passo_novo.
+    when ::Autonomia::Automacao::PassoDeDarCarimbos::TIPO then ::Autonomia::Automacao::PassoDeDarCarimbos.new(passo: passo, alvo: alvo, **).executar
     when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO
       ::Autonomia::Automacao::PassoDeConversaAoResponsavel.new(passo: passo, alvo: alvo, **).executar
     when ::Autonomia::Automacao::PassoDeRodizio::TIPO then ::Autonomia::Automacao::PassoDeRodizio.new(passo: passo, alvo: alvo, **).executar

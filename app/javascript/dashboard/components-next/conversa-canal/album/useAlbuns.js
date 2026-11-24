@@ -7,7 +7,7 @@
 // viu cada marcador pela 1ª vez (relógio do navegador), que limita a janela de um
 // relógio atrasado ou adiantado (janelaDoMarcador).
 import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useConversaDaTela } from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useFuso, usePele } from '../pele';
 import { agruparDaConversa } from './agruparAlbuns';
 import { agruparContatos } from '../midia/contatos';
@@ -57,7 +57,7 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
   // Muda quando uma janela fecha, só para a conta ser refeita; a hora usada é sempre
   // a de agora (uma mensagem nova também refaz a conta).
   const janelaFechou = ref(0);
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   // id do marcador -> quando esta tela o viu pela 1ª vez (segundos). Só cresce.
   const vistos = new Map();
   const vistoEm = id => {

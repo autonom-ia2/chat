@@ -69,6 +69,11 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
     raise Error.new('free_text_invalid', 'The free text cannot be sent', { reason: reason.to_s }) if reason
   end
 
+  # #3099 (D3): o modelo da versão 2 é outro modelo aprovado da caixa que pede as mesmas informações da versão 1.
+  def segunda_versao!(dados)
+    CampaignJourney::DuasVersoes::Segunda.whatsapp_cloud(dados, modelos: inbox.channel.message_templates, primeiro: template)
+  end
+
   def create_campaign_and_link!
     campaign = super
     CampaignFreeText.create!(account: @account, campaign: campaign, content: free_text) if free_text.present?

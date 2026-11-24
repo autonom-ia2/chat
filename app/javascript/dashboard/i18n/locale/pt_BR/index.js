@@ -26,6 +26,8 @@ import relacionamentosTrazer from './relacionamentosTrazer.json';
 import relacionamentosCarteira from './relacionamentosCarteira.json';
 import relacionamentosCompras from './relacionamentosCompras.json';
 import campanhaVendas from './campanhaVendas.json';
+import duasVersoes from './duasVersoes.json';
+import fidelidade from './fidelidade.json';
 import reenvioHorario from './reenvioHorario.json';
 import seusPosts from './seusPosts.json';
 import metaAdsComentariosIa from './metaAdsComentariosIa.json';
@@ -130,6 +132,8 @@ export default {
   ...relacionamentosCarteira,
   ...relacionamentosCompras,
   ...campanhaVendas,
+  ...duasVersoes,
+  ...fidelidade,
   ...reenvioHorario,
   ...seusPosts,
   ...metaAdsComentariosIa,

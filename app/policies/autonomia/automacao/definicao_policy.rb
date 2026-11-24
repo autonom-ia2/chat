@@ -22,6 +22,9 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def contar_lista? = gerenciar?
   def testar_consulta? = gerenciar?
   def consultas_prontas? = gerenciar?
+  # #3099: o resultado das duas versões da mensagem lê como o histórico; escolher a versão que fica muda a automação.
+  def duas_versoes? = ver?
+  def escolher_versao? = gerenciar?
   def custos? = ver?
   def custos_da_automacao? = ver?
   def do_card? = ver?

@@ -6,6 +6,8 @@
 # audience's extra columns, CampaignJourney::AudienceColumns). A person without a value and
 # without the campaign's default text for that token is skipped (cancelled) with "falta empresa"
 # or "falta <key>" — the same rule as the WhatsApp Oficial variables (B1b).
+#
+# #3099 (duas versões): who fell in version 2 gets its text and its default texts (#mensagem_da_versao).
 module CampaignJourney::WhatsappApiAudience
   MISSING_COMPANY_REASON = 'falta empresa'.freeze
   COMPANY = WhatsappApiCampaigns::TemplateRenderer::COMPANY_VARIABLE
@@ -13,9 +15,9 @@ module CampaignJourney::WhatsappApiAudience
   # Values of this contact for the campaign's per-person tokens, defaults applied:
   # [{ 'publico.vencimento' => '10/2026', 'contact.company' => 'sua empresa' }, ['vencimento']]
   # The second element lists what is still missing ('empresa' or the column key).
-  def self.resolve(campaign, link, contact)
-    tokens = WhatsappApiCampaigns::TemplateRenderer.variables_in(campaign.message_body)
-    defaults = link&.variable_defaults.to_h.compact_blank
+  def self.resolve(campaign, link, contact, body: campaign.message_body, defaults: link&.variable_defaults)
+    tokens = WhatsappApiCampaigns::TemplateRenderer.variables_in(body)
+    defaults = defaults.to_h.compact_blank
     found = column_values(tokens, link, contact)
     found[COMPANY] = WhatsappApiCampaigns::TemplateRenderer.company_name(contact) if tokens.include?(COMPANY)
     values = found.to_h { |token, value| [token, value.presence || defaults[token]] }
@@ -29,6 +31,19 @@ module CampaignJourney::WhatsappApiAudience
 
     row = CampaignJourney::AudienceColumns.row_values(link&.campaign_import, contact.id)
     columns.to_h { |key| [CampaignJourney::AudienceColumns.token(key), row[key]] }
+  end
+
+  # #3099: [texto, textos padrão] da versão desta pessoa. `duas_versoes`: quem passa por muitas pessoas guarda um só
+  # (ele lê as versões do teste uma vez).
+  def self.mensagem_da_versao(campaign, link, contact, duas_versoes: CampaignJourney::DuasVersoes.new(link))
+    return [campaign.message_body, link&.variable_defaults] unless duas_versoes.versao_2?(contact.id)
+
+    [duas_versoes.segunda['message_body'], duas_versoes.segunda['variable_defaults']]
+  end
+
+  def self.resolve_na_versao(campaign, link, contact, duas_versoes: CampaignJourney::DuasVersoes.new(link))
+    body, defaults = mensagem_da_versao(campaign, link, contact, duas_versoes: duas_versoes)
+    resolve(campaign, link, contact, body: body, defaults: defaults)
   end
 
   def self.missing_name(token)
@@ -68,8 +83,13 @@ module CampaignJourney::WhatsappApiAudience
     def skip_reason(contact)
       return CampaignJourney::AudienceContacts::CHANNEL_DISABLED_REASON if audience_link && !audience_whatsapp_on?
 
-      _values, missing = CampaignJourney::WhatsappApiAudience.resolve(@campaign, audience_link, contact)
+      _values, missing = CampaignJourney::WhatsappApiAudience.resolve_na_versao(@campaign, audience_link, contact,
+                                                                                duas_versoes: duas_versoes_do_publico)
       missing.any? ? CampaignJourney::WhatsappApiAudience.missing_reason(missing) : nil
+    end
+
+    def duas_versoes_do_publico
+      @duas_versoes_do_publico ||= CampaignJourney::DuasVersoes.new(audience_link)
     end
 
     def audience_link
@@ -90,11 +110,22 @@ module CampaignJourney::WhatsappApiAudience
     private
 
     def recipient_variables(recipient)
-      link = CampaignAudienceLink.for_campaign(@campaign)
-      return super unless link
+      return super unless delivery_link
 
-      values, _missing = CampaignJourney::WhatsappApiAudience.resolve(@campaign, link, recipient.contact)
+      values, _missing = CampaignJourney::WhatsappApiAudience.resolve_na_versao(@campaign, delivery_link, recipient.contact)
       super.merge(values)
+    end
+
+    def recipient_message_body(recipient)
+      return super unless delivery_link
+
+      CampaignJourney::WhatsappApiAudience.mensagem_da_versao(@campaign, delivery_link, recipient.contact).first
+    end
+
+    def delivery_link
+      return @delivery_link if defined?(@delivery_link)
+
+      @delivery_link = CampaignAudienceLink.for_campaign(@campaign)
     end
   end
 end

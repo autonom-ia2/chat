@@ -11,7 +11,8 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // `soEntendi` o diálogo só explica: um botão "Entendi" que fecha (sem confirmar).
 // Nenhum botão fica desligado por falta de algo; só `carregando` o desliga, ou
 // `desligado` quando o pedido não pode ser feito agora (#3062: a planilha
-// pedida há pouco, com o aviso dizendo por quê).
+// pedida há pouco, com o aviso dizendo por quê). `margemNoCelular` (opcional,
+// #3100) deixa 16 px de cada lado no celular; sem ele, o diálogo é o de sempre.
 defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
@@ -22,6 +23,7 @@ defineProps({
   carregando: { type: Boolean, default: false },
   desligado: { type: Boolean, default: false },
   soEntendi: { type: Boolean, default: false },
+  margemNoCelular: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirm']);
 
@@ -33,7 +35,12 @@ defineExpose({
 </script>
 
 <template>
-  <Dialog ref="dialogo" width="sm" @confirm="emit('confirm')">
+  <Dialog
+    ref="dialogo"
+    width="sm"
+    :mobile-margin="margemNoCelular"
+    @confirm="emit('confirm')"
+  >
     <TituloDoDialogo :titulo="titulo" :aviso="texto" />
     <slot />
     <template #footer>

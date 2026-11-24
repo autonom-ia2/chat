@@ -1,6 +1,6 @@
 <script setup>
 import { useFichaDoContato } from 'dashboard/composables/useFichaDoContato';
-import { computed, provide, ref, useId, watch } from 'vue';
+import { computed, nextTick, provide, ref, useId, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -199,6 +199,20 @@ const conversas = computed(() => {
     return card.value.linked_conversations;
   return card.value.conversation ? [card.value.conversation] : [];
 });
+// #3165 — a conversa lida ao lado na seção Conversas: a escolhida na lista ou, sem
+// escolha, a mais recente (a lista já vem da mais recente para a mais antiga).
+const conversaEscolhida = ref(null);
+const conversaVista = computed(
+  () =>
+    conversas.value.find(
+      conversa => conversa.display_id === conversaEscolhida.value
+    ) ||
+    conversas.value[0] ||
+    null
+);
+watch(cardId, () => {
+  conversaEscolhida.value = null;
+});
 
 // Conversão para o Facebook e o Instagram (MT-01): só a linha deste card.
 const conversao = useCardConversao({
@@ -237,6 +251,11 @@ const resumoConversa = useResumoConversa({
   ligada: iaLigada,
   aberta: computed(() => tela.value === 'conversas'),
 });
+
+// #3165: na seção Conversas, com conversa, a direita mostra a conversa (altura da tela).
+const lendoConversa = computed(
+  () => tela.value === 'conversas' && Boolean(conversaVista.value)
+);
 
 const irPara = destino => {
   pilha.value = [...pilha.value, tela.value];
@@ -603,6 +622,16 @@ const voltarDoHeroi = () => {
 // ——— Abrir, re-hidratar e foco (DS-02, TK-02) ———
 const conteudo = ref(null);
 const raiz = ref(null);
+// No celular a conversa fica embaixo da lista: tocar leva até ela.
+const TELA_LARGA = '(min-width: 1024px)';
+const verConversa = async numero => {
+  conversaEscolhida.value = numero;
+  if (window.matchMedia(TELA_LARGA).matches) return;
+  await nextTick();
+  raiz.value
+    ?.querySelector('[data-visor-conversa]')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 const { prender } = useFocoPreso({ raiz, mostrar: computed(() => props.show) });
 
 useCardAbertura({
@@ -749,9 +778,17 @@ defineExpose({
 
       <div ref="conteudo" class="min-h-0 flex-1 overflow-y-auto">
         <div
-          class="grid min-h-full grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_32rem]"
+          class="grid min-h-full grid-cols-[minmax(0,1fr)]"
+          :class="
+            lendoConversa
+              ? 'lg:h-full lg:grid-cols-[minmax(0,1fr)_36rem] 2xl:grid-cols-[minmax(0,1fr)_40rem]'
+              : 'lg:grid-cols-[minmax(0,1fr)_32rem]'
+          "
         >
-          <main class="flex min-w-0 flex-col gap-3 px-5 py-3 sm:px-8">
+          <main
+            class="flex min-w-0 flex-col gap-3 px-5 py-3 sm:px-8"
+            :class="{ 'lg:min-h-0 lg:overflow-y-auto': lendoConversa }"
+          >
             <template v-if="!editando">
               <CrmOpportunityForm
                 :key="`${route.params.accountId}:${initialContact?.id || 'new'}`"
@@ -898,6 +935,7 @@ defineExpose({
             <TelaConversas
               v-else-if="tela === 'conversas'"
               :conversas="conversas"
+              :vista="conversaVista?.display_id || null"
               :formato="formato"
               :carregando="isLoadingDetails"
               :resumo="{
@@ -910,6 +948,7 @@ defineExpose({
               :ia="iaLigada"
               :pode-ia="podeIa"
               @abrir="abrirConversa"
+              @ver="verConversa"
               @atualizar="resumoConversa.gerar"
             />
             <TelaRetornoNovo
@@ -1001,6 +1040,7 @@ defineExpose({
           <aside
             data-card-lado
             class="min-w-0 border-t border-n-weak bg-n-alpha-1 px-5 py-7 sm:px-8 lg:border-s lg:border-t-0 lg:px-5"
+            :class="{ 'lg:min-h-0 lg:py-5': lendoConversa }"
           >
             <CardLado
               :tela="tela"
@@ -1016,6 +1056,7 @@ defineExpose({
               :retorno="tela === 'retorno-novo' ? retorno.previa.value : null"
               :dono="donoNome"
               :reuniao="reuniao.reuniao.value"
+              :conversa="lendoConversa ? conversaVista : null"
               :criacao="editando ? null : criacao?.escolha || null"
               :funis="pipelines"
               :pode-mover="

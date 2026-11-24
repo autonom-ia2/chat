@@ -53,6 +53,14 @@ class Carteira::Conector::PessoaDoRegistro
     documento.present? && Relacionamentos::NumeroDeDocumento.new(documento).valido?
   end
 
+  # #3175: o seguro guardado com a referência do registro e do mesmo termo, ou nil. É o seguro do registro `igual`, que
+  # não aponta para ele (Carteira::Conector::PdfsPendentes).
+  def seguro_da_referencia(lido)
+    guardada = pela_referencia(lido.valor('ref'))
+    dados = guardada && dados_do(lido)
+    guardada if dados && mesmo_termo?(guardada, dados)
+  end
+
   private
 
   def dono_do(apolice, ja_na_carteira)

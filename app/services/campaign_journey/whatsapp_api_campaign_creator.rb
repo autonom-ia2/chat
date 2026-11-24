@@ -11,6 +11,9 @@
 # columns as {{publico.<key>}} (CampaignJourney::AudienceColumns). variable_defaults gives a text
 # per token used when the person has no value (company_default is kept as an alias of
 # variable_defaults['contact.company']).
+#
+# #3099: `duas_versoes` ({ criterio, divisao, espera_horas, segunda: { message_body, variable_defaults } }) liga as duas
+# versões; o texto da versão 2 passa pelas mesmas conferências de campos da versão 1.
 class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creator
   CHANNEL = 'whatsapp_api'.freeze
   MAX_DEFAULT_LENGTH = 1024
@@ -35,7 +38,7 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
       campaign = super
       link = CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import,
                                           variable_defaults: variable_defaults(campaign.message_body))
-      medir!(link)
+      medir!(link, segunda_versao(campaign, link))
       campaign
     end
   rescue Pundit::NotAuthorizedError
@@ -74,14 +77,17 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
   # refused with unknown_audience_column.
   def selected_body(template)
     body = template&.body.presence || permitted[:message_body].to_s
+    conferir_campos!(body)
+    body
+  end
+
+  def conferir_campos!(body)
     unknown_columns = WhatsappApiCampaigns::TemplateRenderer.variables_in(body)
                                                             .filter_map { |token| CampaignJourney::AudienceColumns.column_key(token) } - column_keys
     raise ArgumentError, "unknown_audience_column: #{unknown_columns.join(', ')}" if unknown_columns.any?
 
     unsupported = WhatsappApiCampaigns::TemplateRenderer.unsupported_variables_in(body, audience_keys: column_keys)
     raise ArgumentError, "unsupported_variables: #{unsupported.join(', ')}" if unsupported.present?
-
-    body
   end
 
   def campaign_attributes
@@ -134,8 +140,30 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
   end
 
   # #3098: a janela de compra e o grupo de controle, com o sorteio, antes do agendador ver a campanha.
-  def medir!(link)
+  # #3099: com as duas versões, o sorteio das versões também.
+  def medir!(link, segunda)
     escolhas = @params.permit(:janela_de_compra_dias, :grupo_de_controle_pct)
-    CampaignJourney::Medicao.new(link).aplicar!(escolhas) { CampaignJourney::Medicao.publico(link, 'whatsapp_api') }
+    CampaignJourney::Medicao.new(link).aplicar!(escolhas, duas_versoes: duas_versoes_params, segunda: segunda) do
+      CampaignJourney::Medicao.publico(link, 'whatsapp_api')
+    end
+  end
+
+  def duas_versoes_params
+    @params.permit(duas_versoes: [:criterio, :divisao, :espera_horas, { segunda: {} }]).to_h[:duas_versoes].presence
+  end
+
+  # A versão 2 conferida, ou nil sem as duas versões. Recusada: a transação volta e a campanha não fica criada.
+  def segunda_versao(campaign, link)
+    return if duas_versoes_params.nil?
+
+    CampaignJourney::DuasVersoes.conferir!(duas_versoes_params)
+    CampaignJourney::DuasVersoes::Segunda.whatsapp_api(
+      duas_versoes_params[:segunda].to_h, defaults: link.variable_defaults, primeiro: campaign.message_body,
+                                          conferir: ->(texto) { conferir_campos!(texto) }
+    )
+  rescue CampaignJourney::DuasVersoes::Invalida => e
+    raise CampaignJourney::CreatorError.new(e.code, 'The second version of the message cannot be used', e.details)
+  rescue ArgumentError => e
+    raise CampaignJourney::CreatorError.new("segunda_versao_#{error_code(e.message)}", e.message)
   end
 end

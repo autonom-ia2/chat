@@ -8,7 +8,8 @@ import { DIA_EM_MS } from './grupos';
 // regras daqui. O resumo de compras de uma pessoa:
 //   { quantas, ultima_em (segundos), intervalo_medio_dias (null com 1 compra),
 //     por_moeda: [{ moeda, total, quantas }] }
-export const VISOES = { CONVERSA: 'conversa', COMPRA: 'compra' };
+// #3168 — `MEUS`: os grupos que a pessoa guardou ("Meus grupos").
+export const VISOES = { CONVERSA: 'conversa', COMPRA: 'compra', MEUS: 'meus' };
 
 export const FAIXAS_PADRAO = Object.freeze({
   campeao_compras: 4,

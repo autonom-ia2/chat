@@ -9,6 +9,10 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useEventListener } from '@vueuse/core';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useMapGetter } from 'dashboard/composables/store';
+import {
+  useConversaDaTela,
+  useSoLeitura,
+} from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -73,7 +77,7 @@ const SEM_EMAIL = {
 };
 
 export const useConversaDeEmail = () => {
-  const conversa = useMapGetter('getSelectedChat');
+  const conversa = useConversaDaTela();
   const caixaPorId = useMapGetter('inboxes/getInbox');
   const { currentAccount, isCloudFeatureEnabled } = useAccount();
   const { uiSettings, updateUISettings } = useUISettings();
@@ -128,7 +132,12 @@ export const useConversaDeEmail = () => {
 
   // Quem só lê a conversa (conversation_view, #1800) não vê Responder, Encaminhar, Nota,
   // Spam, Lixeira nem Excluir: a mesma regra da main (o servidor recusa do mesmo jeito).
-  const podeOperar = useCanOperateConversation(conversa);
+  const podeOperarNoPainel = useCanOperateConversation(conversa);
+  // #3165: fora da tela da conversa (o card do CRM) a conversa é só para ler.
+  const soLeitura = useSoLeitura();
+  const podeOperar = computed(
+    () => !soLeitura.value && podeOperarNoPainel.value
+  );
 
   const contexto = {
     ligado,

@@ -1,10 +1,16 @@
 <script setup>
-import { computed, useId } from 'vue';
+import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { attributeDate } from 'dashboard/helper/attributeDate';
 import { temValor } from '../../ficha/atributos';
+import { useIdioma } from '../../ficha/idioma';
+import {
+  exemploDaData,
+  textoDaData,
+  valorDaData,
+} from '../../ficha/dataDoCampo';
 import CampoDeTexto from './CampoDeTexto.vue';
 
 // #3075 — um campo personalizado na gaveta, com o controle do tipo dele:
@@ -13,10 +19,11 @@ import CampoDeTexto from './CampoDeTexto.vue';
 //  - número: campo de número (sobe como número). O que o navegador não
 //    consegue ler como número é ignorado: o valor só fica vazio quando o campo
 //    está vazio de verdade;
-//  - data: o campo de data do navegador, como o resto da ficha (sobe como
-//    "AAAA-MM-DD", o formato que a ficha antiga grava). A data gravada em outro
-//    formato (por importação, por exemplo) aparece como está, num campo de
-//    texto: o campo de data não a mostraria, e ela se perderia sem ninguém ver;
+//  - data (#3082): escrita no formato do idioma do painel ("dd/mm/aaaa" em
+//    português), e não no do navegador; o botão "Calendário" abre o calendário
+//    do navegador. Sobe como "AAAA-MM-DD", o formato que a ficha grava. A data
+//    gravada em outro formato (por importação, por exemplo) aparece como está,
+//    para não se perder sem ninguém ver;
 //  - lista e "sim ou não": a escolha da casa (ChoiceSelect), sem <select>.
 // "Limpar" (só na data, na lista e no "sim ou não", onde não dá para apagar
 // escrevendo) esvazia o campo. Quando o campo tinha valor e ficou vazio, a
@@ -29,12 +36,20 @@ const props = defineProps({
   valor: { type: [String, Number, Boolean], default: '' },
   valorInicial: { type: [String, Number, Boolean], default: '' },
   erro: { type: String, default: '' },
+  // #3168 — a mensagem de erro já escrita, para quem usa o campo fora da
+  // gaveta da ficha ("Escreva o dia." em "Mais filtros"). Vale sobre `erro`.
+  textoDoErro: { type: String, default: '' },
+  // #3168 — o exemplo de dentro do campo de data ("Ex.: 25/12/2026"), para
+  // quem não quer o formato ("dd/mm/aaaa") como exemplo.
+  exemploDoCampo: { type: String, default: '' },
 });
 const emit = defineEmits(['mudar']);
 
 const { t } = useI18n();
 const id = useId();
-const ga = chave => t(`RELACIONAMENTOS_FICHA.GAVETA.${chave}`);
+const idioma = useIdioma();
+const ga = (chave, params) =>
+  t(`RELACIONAMENTOS_FICHA.GAVETA.${chave}`, params);
 
 const ehEscolha = computed(() =>
   ['list', 'checkbox'].includes(props.campo.tipo)
@@ -48,20 +63,42 @@ const opcoes = computed(() =>
     : props.campo.opcoes.map(opcao => ({ value: opcao, label: opcao }))
 );
 
-// A data que o campo de data consegue mostrar ('' se não há ou não serve).
-const dataDoCampo = computed(() =>
-  props.campo.tipo === 'date' ? attributeDate(props.valor) : ''
-);
-const dataEmOutroFormato = computed(
-  () =>
-    props.campo.tipo === 'date' && temValor(props.valor) && !dataDoCampo.value
-);
-const ehData = computed(
-  () => props.campo.tipo === 'date' && !dataEmOutroFormato.value
-);
+const ehData = computed(() => props.campo.tipo === 'date');
 const temLimpar = computed(
   () => (ehEscolha.value || ehData.value) && temValor(props.valor)
 );
+
+// A data em "AAAA-MM-DD" para o calendário ('' quando o texto não é uma data).
+const dataDoCalendario = computed(() =>
+  ehData.value ? attributeDate(props.valor) : ''
+);
+const exemplo = computed(() =>
+  exemploDaData(idioma.value, {
+    day: ga('ATRIBUTO.DATA_DIA'),
+    month: ga('ATRIBUTO.DATA_MES'),
+    year: ga('ATRIBUTO.DATA_ANO'),
+  })
+);
+const calendario = ref(null);
+// O calendário do navegador abre por um campo de data escondido. O navegador
+// que não sabe abri-lo assim (Safari e Firefox antigos) fica sem o botão: a
+// data se escreve no campo.
+const temCalendario =
+  typeof HTMLInputElement !== 'undefined' &&
+  typeof HTMLInputElement.prototype.showPicker === 'function';
+const abrirCalendario = () => calendario.value?.showPicker();
+
+// Enquanto a pessoa escreve, o campo mostra o que ela escreveu: arrumar o
+// texto a cada tecla ("3/8/1985" virando "03/08/1985") jogaria o cursor para o
+// fim. A data arrumada aparece quando ela sai do campo.
+const textoEscrito = ref(null);
+const sairDoCampo = () => {
+  textoEscrito.value = null;
+};
+const mudarDeFora = valor => {
+  textoEscrito.value = null;
+  emit('mudar', valor);
+};
 
 const PELO_TIPO = {
   link: {
@@ -73,13 +110,21 @@ const PELO_TIPO = {
   number: { type: 'number', inputmode: 'decimal', step: 'any' },
 };
 const atributosDoCampo = computed(() => {
-  if (ehData.value) return { type: 'date' };
+  if (ehData.value)
+    return {
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: props.exemploDoCampo || exemplo.value,
+    };
   return PELO_TIPO[props.campo.tipo] ?? { type: 'text' };
 });
 
 const textoNoCampo = computed(() => {
+  if (ehData.value && textoEscrito.value !== null) return textoEscrito.value;
   if (!temValor(props.valor)) return '';
-  return ehData.value ? dataDoCampo.value : String(props.valor);
+  return ehData.value
+    ? textoDaData(props.valor, idioma.value)
+    : String(props.valor);
 });
 
 // O número vem do próprio campo: com letra no meio o navegador entrega '' e
@@ -89,20 +134,37 @@ const aoDigitarNumero = evento => {
   if (alvo.validity?.badInput) return;
   emit('mudar', alvo.value === '' ? '' : Number(alvo.value));
 };
-const ouvintes = computed(() =>
-  props.campo.tipo === 'number' ? { onInput: aoDigitarNumero } : {}
-);
+const ouvintes = computed(() => {
+  if (props.campo.tipo === 'number') return { onInput: aoDigitarNumero };
+  if (ehData.value) return { onBlur: sairDoCampo };
+  return {};
+});
 const aoEscrever = texto => {
   if (props.campo.tipo === 'number') return;
-  emit('mudar', texto);
+  if (!ehData.value) {
+    emit('mudar', texto);
+    return;
+  }
+  textoEscrito.value = texto;
+  emit('mudar', valorDaData(texto, idioma.value));
 };
 
 const vaiSair = computed(
   () => temValor(props.valorInicial) && !temValor(props.valor)
 );
-const ajuda = computed(() => (vaiSair.value ? ga('ATRIBUTO.VAI_SAIR') : ''));
-const mensagem = computed(() => (props.erro ? ga(`ERRO.${props.erro}`) : ''));
-const voltar = () => emit('mudar', props.valorInicial);
+// A data diz como se escreve (o exemplo do campo some ao digitar e o leitor
+// de tela não o lê).
+const ajuda = computed(() => {
+  if (vaiSair.value) return ga('ATRIBUTO.VAI_SAIR');
+  if (ehData.value && !props.erro && !props.textoDoErro)
+    return ga('ATRIBUTO.DATA_ASSIM', { formato: exemplo.value });
+  return '';
+});
+const mensagem = computed(() => {
+  if (props.textoDoErro) return props.textoDoErro;
+  return props.erro ? ga(`ERRO.${props.erro}`, { formato: exemplo.value }) : '';
+});
+const voltar = () => mudarDeFora(props.valorInicial);
 </script>
 
 <template>
@@ -161,22 +223,52 @@ const voltar = () => emit('mudar', props.valorInicial);
       v-bind="{ ...atributosDoCampo, ...ouvintes }"
       @update:model-value="aoEscrever"
     >
-      <template v-if="temLimpar" #acao>
-        <Button
-          data-relacionamentos="limpar-atributo"
-          slate
-          ghost
-          type="button"
-          icon="i-lucide-eraser"
-          class="!h-11 -my-2 -me-3 shrink-0"
-          :label="ga('ATRIBUTO.LIMPAR')"
-          :aria-label="
-            t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LIMPAR_O', {
-              campo: campo.rotulo,
-            })
-          "
-          @click="emit('mudar', '')"
-        />
+      <template v-if="temLimpar || ehData" #acao>
+        <div class="flex items-center shrink-0 -my-2 -me-3">
+          <template v-if="ehData && temCalendario">
+            <Button
+              data-relacionamentos="calendario-do-atributo"
+              slate
+              ghost
+              type="button"
+              icon="i-lucide-calendar-days"
+              class="!h-11 shrink-0"
+              :label="ga('ATRIBUTO.CALENDARIO')"
+              :aria-label="
+                ga('ATRIBUTO.CALENDARIO_DE', {
+                  campo: campo.rotulo,
+                })
+              "
+              @click="abrirCalendario"
+            />
+            <input
+              ref="calendario"
+              data-relacionamentos="calendario-escondido"
+              type="date"
+              tabindex="-1"
+              aria-hidden="true"
+              class="sr-only"
+              :value="dataDoCalendario"
+              @change="evento => mudarDeFora(evento.target.value)"
+            />
+          </template>
+          <Button
+            v-if="temLimpar"
+            data-relacionamentos="limpar-atributo"
+            slate
+            ghost
+            type="button"
+            icon="i-lucide-eraser"
+            class="!h-11 shrink-0"
+            :label="ga('ATRIBUTO.LIMPAR')"
+            :aria-label="
+              t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LIMPAR_O', {
+                campo: campo.rotulo,
+              })
+            "
+            @click="mudarDeFora('')"
+          />
+        </div>
       </template>
     </CampoDeTexto>
     <Button

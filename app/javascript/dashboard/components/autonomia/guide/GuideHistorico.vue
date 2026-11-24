@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import GuideConversas from './GuideConversas.vue';
 import GuideFeitos from './GuideFeitos.vue';
@@ -7,14 +7,19 @@ import GuideFeitos from './GuideFeitos.vue';
 // #861 — o histórico do Guia, em duas abas: as conversas anteriores e o que
 // ele fez na conta (#855). Abas próprias, no visual do TabBar da casa, porque
 // o alvo de toque do TabBar é 32 px e o painel pede 44.
-defineProps({
+const props = defineProps({
   conversaAtual: {
     type: Number,
     default: null,
   },
+  // #3184 — "Mudanças que o Guia fez", no menu, abre direto nesta aba.
+  abaInicial: {
+    type: String,
+    default: 'conversas',
+  },
 });
 
-const emit = defineEmits(['abrir', 'apagou']);
+const emit = defineEmits(['abrir', 'apagou', 'aba']);
 
 const { t } = useI18n();
 
@@ -23,7 +28,9 @@ const ABAS = [
   { id: 'feitos', rotulo: () => t('AUTONOMIA_GUIDE.DONE.LIST_TITLE') },
 ];
 
-const ativa = ref('conversas');
+const ativa = ref(props.abaInicial);
+// O título do painel acompanha a aba (#3184).
+watch(ativa, aba => emit('aba', aba));
 const botoes = ref([]);
 
 // Setas trocam de aba, como o padrão de abas do WAI-ARIA.

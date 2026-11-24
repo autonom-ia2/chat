@@ -338,7 +338,7 @@ onMounted(() => {
           />
           <span
             v-if="arquivo.estado === 'subindo'"
-            class="absolute i-svg-spinner size-4"
+            class="absolute i-lucide-loader-circle animate-spin size-4"
             aria-hidden="true"
           />
         </span>
@@ -400,12 +400,12 @@ onMounted(() => {
         type="button"
         :disabled="voz !== 'gravando' && !(voz === 'esperando' && !isBusy)"
         :aria-label="$t('AUTONOMIA_GUIDE.VOICE.SEND')"
-        class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
+        class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-n-blue-11 text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
         @click="enviarGravacao"
       >
         <span
           v-if="voz === 'finalizando'"
-          class="i-svg-spinner size-5"
+          class="i-lucide-loader-circle animate-spin size-5"
           aria-hidden="true"
         />
         <i v-else class="i-ph-paper-plane-right-fill size-5" />
@@ -425,7 +425,7 @@ onMounted(() => {
         type="button"
         :disabled="isBusy"
         :aria-label="$t('AUTONOMIA_GUIDE.FILE.ATTACH')"
-        class="absolute ltr:left-1 rtl:right-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-lg text-n-slate-11 hover:text-n-blue-11 focus-visible:outline-2 focus-visible:outline focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-60"
+        class="absolute ltr:left-1 rtl:right-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full text-n-slate-11 hover:text-n-blue-11 focus-visible:outline-2 focus-visible:outline focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-60"
         @click="escolherArquivo"
       >
         <i class="i-lucide-paperclip" />
@@ -435,8 +435,8 @@ onMounted(() => {
         v-model="message"
         :readonly="textoTravado"
         :aria-busy="isBusy ? 'true' : 'false'"
-        :placeholder="$t('CAPTAIN.COPILOT.SEND_MESSAGE')"
-        class="w-full reset-base bg-n-alpha-3 ltr:pl-12 ltr:pr-14 rtl:pl-14 rtl:pr-12 py-3 text-sm border border-n-weak rounded-lg focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
+        :placeholder="$t('AUTONOMIA_GUIDE.PLACEHOLDER')"
+        class="w-full reset-base bg-n-solid-1 ltr:pl-12 ltr:pr-14 rtl:pl-14 rtl:pr-12 py-3.5 text-[0.9375rem] leading-6 border border-n-strong rounded-[1.625rem] focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
         rows="1"
         @input="handleInput"
         @paste="colar"
@@ -448,7 +448,7 @@ onMounted(() => {
         type="button"
         :disabled="isBusy"
         :aria-label="$t('AUTONOMIA_GUIDE.VOICE.START')"
-        class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
+        class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full bg-n-blue-11 text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
         @click="gravar"
       >
         <i class="i-lucide-mic size-5" />
@@ -457,10 +457,10 @@ onMounted(() => {
         v-else
         :disabled="envioTravado || algumSubindo"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.SEND')"
-        class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
+        class="absolute ltr:right-1 rtl:left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-full bg-n-blue-11 text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
         type="submit"
       >
-        <i class="i-ph-arrow-up-bold size-5" />
+        <i class="i-ph-paper-plane-right-fill size-5" />
       </button>
     </form>
 

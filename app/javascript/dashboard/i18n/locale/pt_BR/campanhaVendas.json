@@ -37,6 +37,7 @@
       "POUCOS": "Ainda não dá para comparar: poucas pessoas ficaram sem receber.",
       "SO_CONTAGEM": "O valor das compras fica escondido para você. Quem cuida da conta pode liberar.",
       "NINGUEM_FECHADO": "Ninguém que recebeu comprou nos {dias} dias.",
+      "NINGUEM_RECEBEU": "Ninguém recebeu esta campanha até agora, então ainda não há compras para contar.",
       "UM_POUCO_MAIS": "Quem recebeu comprou mais que quem ficou sem receber.",
       "POUCAS_COMPRAS": "Ainda não dá para ter certeza: poucas compras para comparar.",
       "DE_CADA": "De cada {escala} que receberam, {n} compraram. | De cada {escala} que receberam, {n} comprou. | De cada {escala} que receberam, {n} compraram.",

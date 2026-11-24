@@ -3,7 +3,10 @@ import { computed, reactive } from 'vue';
 import Message from './Message.vue';
 import { MESSAGE_TYPES } from './constants.js';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
-import { useMapGetter } from 'dashboard/composables/store.js';
+import {
+  useConversaDaTela,
+  useSoLeitura,
+} from 'dashboard/components-next/conversa-canal/conversaDaTela';
 import MessageApi from 'dashboard/api/inbox/message.js';
 import SeparadorDeDia from '../conversa-canal/SeparadorDeDia.vue';
 import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
@@ -87,7 +90,7 @@ const isHidden = message =>
 // desenhar. Sem a pele, ele some como as outras escondidas. #1831: o marcador entra como
 // balão do contato (sequência, álbum e tela), pelo paraOBalao.
 const peleDaLista = usePele();
-const currentChat = useMapGetter('getSelectedChat');
+const currentChat = useConversaDaTela();
 const contatoDaConversa = computed(() => currentChat.value?.meta?.sender);
 const temAlbumDoWaha = atributos => {
   const album = atributos?.waha_album ?? atributos?.wahaAlbum;
@@ -95,6 +98,8 @@ const temAlbumDoWaha = atributos => {
 };
 // #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
 const emailNovo = useEmailDaConversa().ligado;
+// #3165: quem só lê a conversa (o card do CRM) não vê as ações de responder do e-mail.
+const soLeitura = useSoLeitura();
 // #2079/#2113: conversa do Instagram com a cara do Direct (sem a pele do WhatsApp).
 const instagram = useInstagramDaConversa().ligado;
 const allMessages = computed(() => {
@@ -284,7 +289,7 @@ const getInReplyToMessage = parentMessage => {
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
       <VistoDoInstagram v-if="instagram && message.id === vistoInstagram" />
     </template>
-    <AcoesDoEmail v-if="emailNovo && allMessages.length" />
+    <AcoesDoEmail v-if="emailNovo && allMessages.length && !soLeitura" />
     <slot name="after" />
     <BotaoDeDescer
       v-if="pele"

@@ -166,6 +166,12 @@
       "file": "campanhaVendas.json"
     },
     {
+      "file": "duasVersoes.json"
+    },
+    {
+      "file": "fidelidade.json"
+    },
+    {
       "file": "reenvioHorario.json"
     }
   ],

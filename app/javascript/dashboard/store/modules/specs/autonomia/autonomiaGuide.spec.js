@@ -258,6 +258,47 @@ describe('autonomiaGuide store — conversa guardada', () => {
     );
   });
 
+  // Conserto pós-deploy do #3144: o turno em que o Guia mexeu na conta volta
+  // com o cartão e sem "Tentar de novo" — repetir faria tudo outra vez.
+  it('falha e retida em que o Guia já fez algo voltam com o cartão, sem repetir', () => {
+    const feito = { id: 9, passos: [{ acao: 'criar_contato', ok: true }] };
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({
+            status: 'failed',
+            resposta: null,
+            fora_do_ar: true,
+            execucao: feito,
+          }),
+          turno({
+            pedido_id: 'p2',
+            status: 'retido',
+            resposta: null,
+            execucao: feito,
+          }),
+        ],
+      },
+      { ...avisos, fezSemResposta: 'FIZ' }
+    );
+
+    expect(store.messages[1]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ content: 'FIZ' }),
+        execucao: feito,
+        repetir: null,
+      })
+    );
+    expect(store.messages[3]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ content: 'FIZ' }),
+        execucao: feito,
+        repetir: null,
+      })
+    );
+  });
+
   it('a resposta que chegou depois de mensagens novas fica antes delas', () => {
     store.addUserMessage('cria três etiquetas');
     const tardia = store.addUserMessage('e mais uma');
@@ -395,6 +436,41 @@ describe('autonomiaGuide store — conversa guardada', () => {
       }),
     ]);
     expect(store.arquivosPendentes().map(item => item.id)).toEqual([esperando]);
+  });
+
+  // #3158 — o gráfico do relatório volta ao reabrir a conversa, nos três
+  // desfechos: o número veio da ferramenta, não do modelo.
+  it('os gráficos do turno voltam na resposta pronta, retida e com falha', () => {
+    const graficos = [
+      {
+        id: '1',
+        modo: 'serie',
+        titulo: 'Conversas por dia',
+        barras: [{ rotulo: '01/10', valor: 3 }],
+      },
+    ];
+    store.hidratar(
+      {
+        id: 1,
+        turnos: [
+          turno({ graficos }),
+          turno({ pedido_id: 'p2', status: 'retido', graficos }),
+          turno({ pedido_id: 'p3', status: 'failed', graficos }),
+          turno({ pedido_id: 'p4' }),
+        ],
+      },
+      avisos
+    );
+
+    const respostas = store.messages.filter(
+      m => m.message_type === 'assistant'
+    );
+    expect(respostas.slice(0, 3).map(m => m.graficos)).toEqual([
+      graficos,
+      graficos,
+      graficos,
+    ]);
+    expect(respostas[3].graficos).toEqual([]);
   });
 
   it('"Nova conversa" esquece a conversa guardada', () => {
