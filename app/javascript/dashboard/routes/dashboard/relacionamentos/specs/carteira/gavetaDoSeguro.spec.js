@@ -370,14 +370,29 @@ describe('o que a gaveta mostra', () => {
     expect(document.body.textContent).not.toContain('.xlsx');
   });
 
-  it('seguro que não veio de planilha diz só quando chegou', async () => {
+  // #3175 — "Como chegou" diz a porta e a data.
+  it.each([
+    ['conector', 'Chegou pelo Agger, em 23/10'],
+    ['pdf', 'Chegou por PDF, em 23/10'],
+    ['manual', 'Cadastrado à mão, em 23/10'],
+  ])('seguro de origem %s diz por onde chegou', async (tipo, frase) => {
     const w = await abrirDoServidor({
       ...DO_SERVIDOR,
-      origem: { tipo: 'manual', arquivo: null, em: CHEGOU_EM },
+      origem: { tipo, arquivo: null, em: CHEGOU_EM },
+    });
+
+    expect(dado(w, 'origem')).toContain(frase);
+    expect(dado(w, 'origem')).not.toContain('planilha');
+  });
+
+  it('origem que a tela não conhece diz só quando chegou', async () => {
+    const w = await abrirDoServidor({
+      ...DO_SERVIDOR,
+      origem: { tipo: 'origem_de_amanha', arquivo: null, em: CHEGOU_EM },
     });
 
     expect(dado(w, 'origem')).toContain('Chegou em 23/10');
-    expect(dado(w, 'origem')).not.toContain('planilha');
+    expect(dado(w, 'origem')).not.toContain('ORIGEM_DE_AMANHA');
   });
 
   it('seguro sem número não mostra o copiar', async () => {

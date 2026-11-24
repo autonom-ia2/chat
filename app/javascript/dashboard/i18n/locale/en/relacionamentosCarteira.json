@@ -244,6 +244,9 @@
         "BONUS": "Bonus class",
         "ORIGEM": "How it arrived",
         "POR_PLANILHA": "Arrived from a spreadsheet, on {data}",
+        "POR_AGGER": "Arrived from Agger, on {data}",
+        "POR_PDF": "Arrived from a PDF, on {data}",
+        "A_MAO": "Added by hand, on {data}",
         "CHEGOU_EM": "Arrived on {data}",
         "NAO_INFORMADO": "Not informed"
       },
@@ -359,7 +362,17 @@
         "PROPOSTA_PRONTA": "The renewal proposal is ready.",
         "PROPOSTA_ENVIADA": "The renewal proposal was sent to the client.",
         "PROPOSTA_ENVIADA_SOZINHA": "The renewal proposal went out to the client on its own.",
-        "DADOS_LIDOS_PDF": "Insured details read from the saved PDF, for the quote."
+        "DADOS_LIDOS_PDF": "Insured details read from the saved PDF, for the quote.",
+        "CHEGOU_AGGER": "Arrived from Agger.",
+        "PDF_LIDO": "PDF read. What was blank was filled in."
+      },
+      "PDF_LIDO": {
+        "NADA": "PDF read. Nothing was blank to fill in.",
+        "NAO_E_APOLICE": "The saved PDF does not look like a policy. Nothing changed in this policy.",
+        "NAO_DEU": "Could not read the saved PDF. Nothing changed in this policy."
+      },
+      "DO_AGGER": {
+        "CHEGOU_DE_NOVO": "Updated from Agger."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
