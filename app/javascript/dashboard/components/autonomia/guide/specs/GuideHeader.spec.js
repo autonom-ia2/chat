@@ -100,6 +100,22 @@ describe('GuideHeader (#3184)', () => {
     document.removeEventListener('keydown', noDocumento);
   });
 
+  it('clique na borda do menu: o foco fica no menu e o Esc ainda é dele', async () => {
+    const noDocumento = vi.fn();
+    document.addEventListener('keydown', noDocumento);
+    const wrapper = montar();
+    await abrirMenu(wrapper);
+    const menu = wrapper.get('[role="menu"]');
+
+    menu.element.focus();
+    expect(document.activeElement).toBe(menu.element);
+    await menu.trigger('keydown', { key: 'Escape' });
+
+    expect(noDocumento).not.toHaveBeenCalled();
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+    document.removeEventListener('keydown', noDocumento);
+  });
+
   it('Esc com o menu fechado segue para o painel fechar o Guia', async () => {
     const noDocumento = vi.fn();
     document.addEventListener('keydown', noDocumento);
