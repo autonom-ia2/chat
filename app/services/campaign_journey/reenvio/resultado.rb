@@ -38,6 +38,9 @@ class CampaignJourney::Reenvio::Resultado
   def resultado_de(nova)
     return if nova.nil?
 
+    # Na conta antes de achar: WhatsApp Oficial e SMS são achados pelo display_id, que se repete entre contas.
+    return sem_a_campanha_nova(nova) unless nova.account_id == @account.id
+
     finder = CampaignJourney::ResultFinder.new(@account)
     case nova
     when EmailCampaign then finder.find!(CampaignJourney::ResultFinder::EMAIL, nova.id)
@@ -45,6 +48,10 @@ class CampaignJourney::Reenvio::Resultado
     else finder.find!(CampaignJourney::ResultFinder.channel_of(nova).to_s, nova.display_id)
     end
   rescue ActiveRecord::RecordNotFound
+    sem_a_campanha_nova(nova)
+  end
+
+  def sem_a_campanha_nova(nova)
     Rails.logger.warn("[CampaignJourney::Reenvio] resultado sem a campanha nova #{nova.class.name}##{nova.id} na conta #{@account.id}")
     nil
   end

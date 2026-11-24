@@ -143,7 +143,8 @@ RSpec.describe 'Campaign journey results API — segunda mensagem (#3101)', :agg
   describe 'E-mail' do
     it 'counts delivered e-mails as received' do
       primeira = create(:email_campaign, account: account, name: 'Novidades', status: :sent)
-      nova = create(:email_campaign, account: account, name: 'Novidades · segunda mensagem', status: :sent)
+      nova = create(:email_campaign, account: account, sender_identity: primeira.sender_identity, name: 'Novidades · segunda mensagem',
+                                    status: :sent)
       create(:email_campaign_recipient, email_campaign: nova, email: 'ana@alfa.com.br', name: 'Ana', contact: ana, status: :delivered,
                                         sent_at: 1.hour.ago)
       create(:email_campaign_recipient, email_campaign: nova, email: 'bia@beta.com.br', name: 'Bia', status: :bounced, sent_at: 1.hour.ago)
