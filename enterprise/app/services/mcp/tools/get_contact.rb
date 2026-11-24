@@ -19,7 +19,7 @@ class Mcp::Tools::GetContact < Mcp::Tools::Base
 
     respond(contact_summary(contact).merge(
               labels: contact.label_list,
-              custom_attributes: contact.custom_attributes,
+              custom_attributes: Relationships::ChavesInternas.sem_internas(contact.custom_attributes),
               additional_attributes: contact.additional_attributes,
               company_id: contact.try(:company_id),
               conversations: conversations.map { |conversation| conversation_summary(conversation) },

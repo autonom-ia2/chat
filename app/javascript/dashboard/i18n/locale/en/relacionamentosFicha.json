@@ -256,7 +256,12 @@
       "ESCOLHER": "Choose profile fields",
       "NENHUM_NA_FICHA": "No field shows on this profile yet.",
       "SEM_CAMPOS_PESSOA": "Create fields to write down what matters to your business, like the birthday or who referred them.",
-      "SEM_CAMPOS_EMPRESA": "Create fields to write down what matters to your business, like the number of employees."
+      "SEM_CAMPOS_EMPRESA": "Create fields to write down what matters to your business, like the number of employees.",
+      "CONHECIDOS": {
+        "CARGO": "Job title",
+        "NOTA_NO_GOOGLE": "Google rating",
+        "AVALIACOES_NO_GOOGLE": "Google reviews"
+      }
     },
     "ORIGEM": {
       "TITULO": "Where they came from",

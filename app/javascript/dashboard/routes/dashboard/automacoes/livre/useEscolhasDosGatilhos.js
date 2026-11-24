@@ -11,7 +11,7 @@ import {
 import { textosDasFaixas } from 'dashboard/routes/dashboard/relacionamentos/lista/textosDasFaixas';
 import AttributeAPI from 'dashboard/api/attributes';
 import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
+import { semChavesInternas } from 'dashboard/helper/chavesInternas';
 
 // #2499 — o que os campos do gatilho de card mostram: os funis e as etapas de
 // cada funil (agrupadas pelo funil), das mesmas APIs que o CRM usa. Os nomes
@@ -108,6 +108,8 @@ export function useEscolhasDosGatilhos() {
   // G32: as páginas de agendamento, para o filtro dos gatilhos de reunião.
   const paginas = ref([]);
   const caixas = useMapGetter('inboxes/getInboxes');
+  // #3176: as chaves internas (WAHA, controle da Prospecção) não viram gatilho.
+  const chavesInternas = useMapGetter('attributes/getChavesInternas');
   const faixasDeCompra = ref({ ...FAIXAS_PADRAO });
 
   const carregarFunis = async () => {
@@ -124,7 +126,7 @@ export function useEscolhasDosGatilhos() {
 
   const carregarCampos = async () => {
     const { data } = await AttributeAPI.getAttributesByModel();
-    definicoes.value = semAtributosInternosDoWhatsapp(data || []);
+    definicoes.value = semChavesInternas(data || [], chavesInternas.value);
   };
 
   const carregarPaginas = async () => {

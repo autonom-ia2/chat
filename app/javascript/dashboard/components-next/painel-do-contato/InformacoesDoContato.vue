@@ -6,6 +6,8 @@
 // com "Atributo atualizado". Quem só vê usa o FieldEditor em leitura; quem
 // edita (contact_manage), o mesmo CustomAttribute de sempre, gravando pelo
 // contacts/update, que vale em toda conta.
+// #3176 — depois delas, as informações conhecidas sem definição (`conhecidas`:
+// cargo, nota e avaliações no Google), só leitura, com o mesmo nome da ficha.
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -17,6 +19,7 @@ const props = defineProps({
   definicoes: { type: Array, required: true },
   contact: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
+  conhecidas: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
@@ -82,6 +85,19 @@ const copiar = async valor => {
         :record="contact"
         entity="contact"
       />
+    </li>
+    <li
+      v-for="informacao in conhecidas"
+      :key="informacao.chave"
+      data-informacao-conhecida
+      class="flex flex-col gap-1 px-4 py-3 text-sm"
+    >
+      <span class="min-w-0 break-words font-medium text-n-slate-12">
+        {{ t(informacao.rotulo) }}
+      </span>
+      <span class="min-w-0 break-words text-n-slate-11">
+        {{ informacao.valor }}
+      </span>
     </li>
   </ul>
 </template>

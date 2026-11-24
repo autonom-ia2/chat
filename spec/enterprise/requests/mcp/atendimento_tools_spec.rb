@@ -107,6 +107,24 @@ RSpec.describe 'MCP tools de atendimento', type: :request do
                                                              custom_attributes: { 'plano' => 'ouro' })
     end
 
+    # #3176: as chaves internas (ids da WAHA, controle da Prospecção) são do sistema. MOTIVO: o app conectado trocaria o
+    # chat id e a WAHA acharia o contato errado.
+    it 'hides the internal keys of a contact and refuses to write them', :aggregate_failures do
+      contact.update!(custom_attributes: { 'plano' => 'ouro', 'waha_whatsapp_chat_id' => '5511900000000@c.us',
+                                           'autonomia_prospecting_lead_id' => 7 })
+
+      expect(structured('get_contact', { contact_id: contact.id })['custom_attributes']).to eq('plano' => 'ouro')
+
+      result = call_mcp_tool('update_contact', { contact_id: contact.id, custom_attributes: { waha_whatsapp_chat_id: 'x@c.us' } },
+                             access_token)
+      expect(result['isError']).to be(true)
+      expect(contact.reload.custom_attributes['waha_whatsapp_chat_id']).to eq('5511900000000@c.us')
+
+      created = call_mcp_tool('create_contact', { name: 'Novo', custom_attributes: { autonomia_prospecting_lead_id: 1 } }, access_token)
+      expect(created['isError']).to be(true)
+      expect(account.contacts.where(name: 'Novo')).to be_empty
+    end
+
     it 'refuses labels that do not exist in the account' do
       result = call_mcp_tool('update_contact', { contact_id: contact.id, labels: ['inventada'] }, access_token)
 

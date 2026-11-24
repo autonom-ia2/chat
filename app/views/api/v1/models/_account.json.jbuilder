@@ -55,3 +55,6 @@ rescue StandardError
   false
 end)
 json.cache_keys @account.cache_keys
+# #3176 — as chaves de custom_attributes que são do sistema (WAHA, controle da Prospecção): o painel as esconde de toda
+# tela. A lista é a do servidor (Relationships::ChavesInternas); o painel não tem cópia.
+json.chaves_internas Relationships::ChavesInternas::LISTA

@@ -307,6 +307,7 @@ en:
       pessoa_so_no_card: 'Team member fields exist only on cards.'
       contato_so_no_card: 'Contact fields exist only on cards.'
       contato_em_uso: 'This Contact field is in use by the automation %{automacoes} to find the linked contact. Turn the automation off, or choose another field in it, before changing the type or deleting this field.'
+      campo_interno: 'This field is used by the system to find the contact (WhatsApp or Prospecting). It cannot be deleted, and its key, type and where it belongs cannot change. You can still change its name and description.'
     mfa:
       already_enabled: MFA is already enabled
       not_enabled: MFA is not enabled

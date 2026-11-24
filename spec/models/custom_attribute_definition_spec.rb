@@ -191,4 +191,63 @@ RSpec.describe CustomAttributeDefinition do
       expect(definicao.destroy).to be_truthy
     end
   end
+
+  describe 'chave interna (#3176)' do
+    let(:recusa) { I18n.t('errors.custom_attribute_definition.campo_interno') }
+
+    def campo(chave, modelo: :contact_attribute)
+      create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_model: modelo,
+                                           attribute_display_type: :text)
+    end
+
+    # MOTIVO: sem a definição da WAHA a busca dela deixa de filtrar e pode achar o contato errado.
+    it 'a definição de uma chave interna não é apagada', :aggregate_failures do
+      definicao = campo('waha_whatsapp_chat_id')
+
+      # Um objeto novo, como o DELETE da tela.
+      apagar = described_class.find(definicao.id)
+      expect(apagar.destroy).to be(false)
+      expect(apagar.errors[:base]).to eq([recusa])
+      expect(described_class.exists?(definicao.id)).to be(true)
+    end
+
+    # MOTIVO: trocar chave, tipo ou modelo quebra o filtro da WAHA e o vínculo da Prospecção; o nome e a descrição mudam.
+    it 'não troca de chave, de tipo nem de modelo; o nome e o "Para que serve" mudam', :aggregate_failures do
+      definicao = campo('autonomia_prospecting_lead_id')
+
+      expect(definicao.update(attribute_key: 'lead')).to be(false)
+      expect(definicao.errors[:base]).to eq([recusa])
+      expect(definicao.reload.update(attribute_display_type: :number)).to be(false)
+      expect(definicao.reload.update(attribute_model: :conversation_attribute)).to be(false)
+      expect(definicao.reload.update(attribute_display_name: 'Lead', attribute_description: 'Controle da Prospecção.')).to be(true)
+      expect(definicao.reload.attribute_key).to eq('autonomia_prospecting_lead_id')
+    end
+
+    # MOTIVO: a trava é só das internas; a definição comum continua livre, mesmo com chave parecida.
+    it 'as outras definições continuam livres', :aggregate_failures do
+      comum = campo('waha_whatsapp_outra')
+      placa = campo('placa')
+
+      expect(comum.update(attribute_key: 'outra', attribute_display_type: :number)).to be(true)
+      expect(placa.destroy).to be_truthy
+    end
+
+    # MOTIVO: a conta apagada leva as definições junto (destroy_async roda depois que a conta saiu do banco).
+    it 'sem a conta, a definição interna sai junto' do
+      definicao = campo('waha_whatsapp_lid')
+      sem_conta = described_class.find(definicao.id)
+      allow(sem_conta).to receive(:account).and_return(nil)
+
+      expect(sem_conta.destroy).to be_truthy
+    end
+
+    # MOTIVO: o escopo que vai para o Guia, as IAs e a importação não traz as internas.
+    it 'visiveis tira as definições das chaves internas' do
+      campo('waha_whatsapp_jid')
+      campo('autonomia_prospecting_provider')
+      placa = campo('placa')
+
+      expect(account.custom_attribute_definitions.visiveis).to contain_exactly(placa)
+    end
+  end
 end

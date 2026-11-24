@@ -1,7 +1,9 @@
 # #3082 (PR B) — o que as IAs recebem dos campos personalizados de uma pessoa ou de uma empresa.
 #
-# - `valores`: o que está gravado, menos os campos apagados (guardados escondidos, Relationships::CamposGuardados). A
-#   chave sem definição que nunca foi campo (gravada por n8n, importação ou API) continua: a ficha também a mostra.
+# - `valores`: o que está gravado, menos os campos apagados (guardados escondidos, Relationships::CamposGuardados) e as
+#   chaves internas (#3176, Relationships::ChavesInternas: os ids da WAHA e o controle da Prospecção), que não dizem
+#   nada à IA. A chave sem definição que nunca foi campo (gravada por n8n, importação ou API) continua: a ficha também a
+#   mostra.
 # - `significados`: para cada chave com definição, o nome que a conta deu ao campo e o "Para que serve"
 #   (attribute_description), que a tela avisa que a IA lê. Sem isso a IA recebia só a chave crua ("cf_2").
 class Relationships::CamposParaIa
@@ -12,10 +14,11 @@ class Relationships::CamposParaIa
   end
 
   def valores(atributos, modelo)
-    return atributos.to_h if @account.nil?
+    visiveis = Relationships::ChavesInternas.sem_internas(atributos)
+    return visiveis if @account.nil?
 
     guardadas = chaves_guardadas(modelo)
-    atributos.to_h.reject { |chave, _valor| guardadas.include?(chave.to_s) }
+    visiveis.reject { |chave, _valor| guardadas.include?(chave.to_s) }
   end
 
   def significados(chaves, modelo)
@@ -36,7 +39,7 @@ class Relationships::CamposParaIa
 
   def definicoes(modelo)
     @definicoes ||= {}
-    @definicoes[modelo] ||= @account.custom_attribute_definitions.where(attribute_model: modelo).index_by(&:attribute_key)
+    @definicoes[modelo] ||= @account.custom_attribute_definitions.visiveis.where(attribute_model: modelo).index_by(&:attribute_key)
   end
 
   def chaves_guardadas(modelo)

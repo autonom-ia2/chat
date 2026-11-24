@@ -51,7 +51,7 @@ RSpec.describe 'Autonomia prospecting lead adopt owner', type: :request do
     expect(lead.decision_linkedin).to be_nil
     expect(lead.metadata['decision_adoption']).to include('name' => 'BRUNO LIMA', 'previous_name' => 'ANA SOUZA', 'adopted_by_id' => admin.id)
     expect(lead.contact).to have_attributes(name: 'BRUNO LIMA')
-    expect(lead.contact.additional_attributes['job_title']).to eq('SOCIO')
+    expect(lead.contact.custom_attributes['job_title']).to eq('SOCIO')
     expect(lead.contact.company).to have_attributes(name: 'Clinica Sorriso', account_id: account.id)
   end
 
@@ -63,7 +63,7 @@ RSpec.describe 'Autonomia prospecting lead adopt owner', type: :request do
 
     expect(lead.reload.contact_id).to eq(contact_id)
     expect(lead.contact.name).to eq('BRUNO LIMA')
-    expect(lead.contact.additional_attributes['job_title']).to eq('SOCIO')
+    expect(lead.contact.custom_attributes['job_title']).to eq('SOCIO')
   end
 
   it 'diz que o contato virou a pessoa, e o lead traz o nome do contato real' do

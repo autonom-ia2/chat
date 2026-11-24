@@ -24,10 +24,11 @@ class Crm::Ai::AttributeSchemaBuilder
 
   # Prefixo vazio (default) = todos os campos customizados de contato, conversa e card entram no schema. O campo de
   # pessoa da equipe (G62) e o do tipo contato (decisão 16) ficam de fora: quem é a pessoa ou o contato ligado a equipe
-  # escolhe, a IA não adivinha pela conversa.
+  # escolhe, a IA não adivinha pela conversa. As chaves internas (#3176, Relationships::ChavesInternas: WAHA e controle
+  # da Prospecção) também: são do sistema, a IA não grava nelas.
   def definitions
     @definitions ||= begin
-      scope = @account.custom_attribute_definitions.where.not(attribute_display_type: %i[pessoa contato])
+      scope = @account.custom_attribute_definitions.visiveis.where.not(attribute_display_type: %i[pessoa contato])
                       .where(attribute_model: %i[contact_attribute conversation_attribute card_attribute]).to_a
       @prefix.present? ? scope.select { |definition| definition.attribute_key.to_s.start_with?(@prefix) } : scope
     end

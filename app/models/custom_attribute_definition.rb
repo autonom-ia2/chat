@@ -33,6 +33,9 @@ class CustomAttributeDefinition < ApplicationRecord
   }.freeze
 
   scope :with_attribute_model, ->(attribute_model) { attribute_model.presence && where(attribute_model: attribute_model) }
+  # #3176: sem as definições das chaves internas (Relationships::ChavesInternas). É o que vai para o Guia, as IAs e a
+  # importação; quem precisa da lista inteira (a WAHA, a tela de configuração) lê sem o escopo.
+  scope :visiveis, -> { where.not(attribute_key: Relationships::ChavesInternas::LISTA) }
   validates :attribute_display_name, presence: true
   before_validation :normalize_attribute_fields
 
@@ -48,6 +51,8 @@ class CustomAttributeDefinition < ApplicationRecord
   validate :contato_so_no_card
   # O campo do tipo contato que uma automação ligada lê não muda de tipo nem é apagado (decisão 16).
   include CampoContatoEmUso
+  # A definição de uma chave interna (WAHA, controle da Prospecção) não é apagada nem troca de chave, tipo ou modelo (#3176).
+  include CampoInternoProtegido
 
   # card_attribute (#1146): campos próprios de cada card do CRM.
   enum :attribute_model, { conversation_attribute: 0, contact_attribute: 1, company_attribute: 2, card_attribute: 3 }
