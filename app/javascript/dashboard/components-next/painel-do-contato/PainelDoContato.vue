@@ -128,8 +128,7 @@ const linhas = computed(() =>
     },
     {
       tipo: 'informacoes',
-      count:
-        listas.informacoes.value.length + listas.conhecidas.value.length,
+      count: listas.informacoes.value.length + listas.conhecidas.value.length,
       texto: n => t('PAINEL_DO_CONTATO.LISTAS.INFORMACOES', { count: n }),
       so: props.podeVerContatos,
     },

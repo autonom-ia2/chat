@@ -14,7 +14,7 @@
 # PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
   attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro, :turno_id, :tarefa,
-              :pedido_id
+              :revisao, :pedido_id
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
@@ -122,6 +122,12 @@ class Autonomia::Guide::Contexto
   # {id, status}` na resposta) e busca o resto em `GET tarefas/:id`. A última vale.
   def tarefa_planejada(tarefa)
     @tarefa = { 'id' => tarefa.id, 'status' => tarefa.status }
+  end
+
+  # #3158 (B8b) — a revisão de conversas que o Guia começou neste turno: a tela mostra o cartão dela (`revisao:
+  # {id, status}` na resposta) e acompanha em `GET guide/revisoes/:id`.
+  def revisao_iniciada(revisao)
+    @revisao = { 'id' => revisao.id, 'status' => revisao.status }
   end
 
   # Até 5 telas por turno, na ordem em que o modelo chamou `mostrar_tela`, sem

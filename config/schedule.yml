@@ -366,6 +366,12 @@ autonomia_guide_tarefas_vigia_job:
   class: 'Autonomia::Guide::TarefasVigiaJob'
   queue: scheduled_jobs
 
+# #3158 (B8b) — retoma a revisão de conversas do Guia que ficou sem batimento.
+autonomia_guide_revisoes_vigia_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::Guide::RevisoesVigiaJob'
+  queue: scheduled_jobs
+
 # executed every day at 04:40; apaga os arquivos anexados na conversa com o Guia depois que o link
 # deles venceu (1 dia), quando nenhuma pergunta consegue mais lê-los (#857).
 autonomia_guide_limpar_arquivos_job:

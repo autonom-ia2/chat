@@ -61,7 +61,9 @@ module Autonomia::Agents::Tools::Registry
     # #936 — o Guia planeja um trabalho grande: receita, amostra e o botão Começar para a pessoa.
     Autonomia::Agents::Tools::Native::GuiaTarefa,
     # #3158 — os números da tela Relatórios, com gráfico quando a pessoa pede.
-    Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento
+    Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento,
+    # #3158 (B8b) — lê até 300 conversas com IA e agrupa os motivos.
+    Autonomia::Agents::Tools::Native::GuiaRevisarConversas
   ].freeze
 
   TOOLS = (DE_ATENDIMENTO + DO_GUIA).freeze

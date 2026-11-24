@@ -40,6 +40,7 @@ import GuideHistorico from './GuideHistorico.vue';
 import GuideMemoria from './GuideMemoria.vue';
 import GuideAnotei from './GuideAnotei.vue';
 import GuideTarefa from './GuideTarefa.vue';
+import GuideRevisao from './GuideRevisao.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import { useAvisosDoGuia } from './useAvisosDoGuia';
 import { useFraseDaEtapa } from './useFraseDaEtapa';
@@ -575,7 +576,10 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
   // Aí não tem "Tentar de novo": o que ele fez está no cartão, com o desfazer,
   // e o aviso diz que fez — em vez de convidar a pedir outra vez.
   const execucao = data.execucao || null;
-  const fez = fezAlgo(execucao);
+  // #3158 (B8b) — a revisão de conversas que o turno começou também conta:
+  // repetir começaria outra, paga.
+  const revisao = data.revisao || null;
+  const fez = fezAlgo(execucao) || Boolean(revisao);
   const repetir = fez ? null : pergunta || ultimaPergunta();
   const aviso = chave => (fez ? t('AUTONOMIA_GUIDE.DONE_NO_REPLY') : t(chave));
   if (data.status !== PRONTO) {
@@ -584,6 +588,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       content: aviso('AUTONOMIA_GUIDE.ERROR'),
       repetir,
       execucao,
+      revisao,
     });
     contarOQueFez(execucao);
   } else if (data.available && data.text) {
@@ -599,6 +604,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       lembrancas: data.lembrancas || null,
       tarefa: data.tarefa || null,
       graficos: data.graficos || null,
+      revisao,
       pedidoId,
     });
     contarOQueFez(execucao);
@@ -620,6 +626,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       tarefa: data.tarefa || null,
       // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
       graficos: data.graficos || null,
+      revisao,
       pedidoId,
       repetir,
     });
@@ -631,6 +638,7 @@ const entregarResposta = (data, pedidoId, pergunta = null) => {
       antesDosPedidos,
       content: aviso('AUTONOMIA_GUIDE.UNAVAILABLE'),
       execucao,
+      revisao,
       repetir,
     });
     contarOQueFez(execucao);
@@ -1420,6 +1428,12 @@ const classeDoPainel = computed(() =>
                 v-if="item.tarefa"
                 class="ms-9"
                 :tarefa-id="item.tarefa.id"
+              />
+              <!-- #3158 (B8b) — a revisão de conversas: andamento e, no fim, os motivos. -->
+              <GuideRevisao
+                v-if="item.revisao"
+                class="ms-9"
+                :revisao-id="item.revisao.id"
               />
               <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
               <GuideAnotei

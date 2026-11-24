@@ -11,8 +11,9 @@ module Autonomia
       # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
       # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
       # `graficos` (#3158): os gráficos que a `relatorio_de_atendimento` montou, com os números da ferramenta.
+      # `revisao` (#3158, B8b): a revisão de conversas começada no turno; vai também na retida, porque gasta.
       Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
-                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, :tarefa, :graficos, keyword_init: true)
+                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, :tarefa, :graficos, :revisao, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -128,7 +129,7 @@ module Autonomia
         contexto.conferir_numeros(text, sanitized_history.pluck(:content) + [@message])
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
                    artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
-                   tarefa: contexto.tarefa, graficos: contexto.graficos.presence,
+                   tarefa: contexto.tarefa, graficos: contexto.graficos.presence, revisao: contexto.revisao,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -147,8 +148,11 @@ module Autonomia
         ctx = ::Autonomia::Guide::Cabecalho.call(account: @account, role: @account_user&.role.presence || 'agent',
                                                  route_context: @route_context, route_params: @route_params,
                                                  account_user: @account_user)
-        ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{diagnostic_block(diagnostics)}", @message)
+        ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{bloco_revisao}#{diagnostic_block(diagnostics)}", @message)
       end
+
+      # #3158 (B8b) — a revisão de conversas desta pessoa que ainda está lendo (#3143).
+      def bloco_revisao = ::Autonomia::Guide::Revisoes::Aviso.bloco(@account, @user)
 
       # #933 — o que a pessoa e a corretora já ensinaram, como DADO. Fica aqui, na pergunta, e não
       # na instrução: a instrução é o prefixo que o provedor guarda em cache, e mudaria a cada anotação.
@@ -318,7 +322,7 @@ module Autonomia
 
       def unavailable(execucao = nil)
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: false, escalate: false, execucao: execucao, graficos: nil)
+                   available: false, escalate: false, execucao: execucao, graficos: nil, revisao: @contexto&.revisao)
       end
 
       # O Guia está no ar, mas o modelo não devolveu resposta (o portão não retém mais
@@ -330,7 +334,7 @@ module Autonomia
       def retido(execucao = nil, acao: nil, navs: [])
         Result.new(text: nil, navigation: navs.first, navigations: navs, grounded: false, confidence: nil,
                    available: true, escalate: false, retido: true, execucao: execucao, acao: acao,
-                   graficos: contexto.graficos.presence)
+                   graficos: contexto.graficos.presence, revisao: contexto.revisao)
       end
 
       def preparing

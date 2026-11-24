@@ -164,6 +164,7 @@ const addAssistantMessage = ({
   aviso = null,
   tarefa = null,
   graficos = null,
+  revisao = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -198,6 +199,9 @@ const addAssistantMessage = ({
     // #3158 — os gráficos do relatório, com os números da ferramenta. O balão
     // põe cada um no lugar do marcador `[grafico:<id>]`.
     graficos: Array.isArray(graficos) ? [...graficos] : [],
+    // #3158 (B8b) — a revisão de conversas começada neste turno: o cartão
+    // acompanha pelo id e mostra os motivos no fim.
+    revisao,
     // A pergunta que o "Tentar de novo" manda outra vez, quando a resposta não
     // veio (falha, Guia fora do ar ou resposta retida) e o Guia não fez nada.
     repetir,
@@ -271,10 +275,11 @@ const definirConversa = id => {
 
 const conversaAtual = () => state.conversaId;
 
-// O turno que não trouxe resposta: se o Guia mexeu na conta, diz isso e não
-// oferece repetir; senão, o aviso de sempre com o "Tentar de novo".
+// O turno que não trouxe resposta: se o Guia mexeu na conta ou começou uma
+// revisão de conversas (#3158, paga), diz isso e não oferece repetir; senão, o
+// aviso de sempre com o "Tentar de novo".
 const semResposta = (turno, aviso, avisos, pergunta) =>
-  fezAlgo(turno.execucao)
+  fezAlgo(turno.execucao) || turno.revisao
     ? { content: avisos.fezSemResposta, repetir: null }
     : { content: aviso, repetir: pergunta };
 
@@ -292,6 +297,7 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
       execucao: turno.execucao,
       tarefa: turno.tarefa || null,
       graficos: turno.graficos || null,
+      revisao: turno.revisao || null,
       pedidoId: turno.pedido_id,
       aviso: turno.aviso_id ? { id: turno.aviso_id } : null,
     };
@@ -307,6 +313,8 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
       tarefa: turno.tarefa || null,
       // #3158 — o número veio da ferramenta, não do modelo: o gráfico fica.
       graficos: turno.graficos || null,
+      // #3158 (B8b) — a revisão começou e gasta mesmo sem texto: o cartão fica.
+      revisao: turno.revisao || null,
       pedidoId: turno.pedido_id,
       // O Guia mexeu na conta: o cartão mostra, e repetir faria duas vezes.
       ...semResposta(turno, avisos.retido, avisos, pergunta),
@@ -316,6 +324,7 @@ const respostaDoTurno = (turno, avisos, pergunta = turno.pergunta) => {
     return {
       execucao: turno.execucao || null,
       graficos: turno.graficos || null,
+      revisao: turno.revisao || null,
       ...semResposta(
         turno,
         turno.fora_do_ar ? avisos.indisponivel : avisos.falhou,
