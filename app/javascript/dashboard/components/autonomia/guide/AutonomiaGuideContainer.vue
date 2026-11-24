@@ -12,6 +12,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useLarguraDoGuia } from './useLarguraDoGuia';
+import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
@@ -42,7 +44,6 @@ import GuideUserMessage from './GuideUserMessage.vue';
 import { useAvisosDoGuia } from './useAvisosDoGuia';
 import { useFraseDaEtapa } from './useFraseDaEtapa';
 import GuideResposta from './GuideResposta.vue';
-import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 // V1 — global "Guia da Plataforma" widget. Reuses the copilot presentational pieces but is NOT
@@ -151,10 +152,20 @@ const gravandoVoz = ref(false);
 const vendoHistorico = ref(false);
 // #933 — "O que eu sei" ocupa o lugar da conversa enquanto aberto.
 const vendoMemoria = ref(false);
+// #3184 — por onde o histórico abriu: "Conversas anteriores" ou "Mudanças que
+// o Guia fez". Decide a aba e o título.
+const abaDoHistorico = ref('conversas');
 
 const alternarHistorico = () => {
   vendoMemoria.value = false;
+  abaDoHistorico.value = 'conversas';
   vendoHistorico.value = !vendoHistorico.value;
+};
+
+const abrirFeitos = () => {
+  vendoMemoria.value = false;
+  abaDoHistorico.value = 'feitos';
+  vendoHistorico.value = true;
 };
 
 const alternarMemoria = () => {
@@ -164,8 +175,10 @@ const alternarMemoria = () => {
 
 const tituloDoPainel = computed(() => {
   if (vendoMemoria.value) return t('AUTONOMIA_GUIDE.MEMORY.TITLE');
+  if (vendoHistorico.value && abaDoHistorico.value === 'feitos')
+    return t('AUTONOMIA_GUIDE.HEADER.CHANGES');
   if (vendoHistorico.value) return t('AUTONOMIA_GUIDE.HISTORY.TITLE');
-  return t('AUTONOMIA_GUIDE.TITLE');
+  return t('AUTONOMIA_GUIDE.HEADER.NAME');
 });
 // #861 — reabrindo a conversa guardada. O esqueleto só aparece se demorar:
 // abrir rápido não pisca uma tela de carregamento à toa.
@@ -209,6 +222,25 @@ const showPanel = computed(() => {
   if (props.embutido) return isEnabled.value;
   return isEnabled.value && isPanelOpen.value && !telaTemGuiaEmbutido.value;
 });
+
+// #3184 — abrir recolhe o menu e o Guia fica com o espaço devolvido. O Guia
+// avisa o menu (menuEGuia.js); o embutido mora dentro de outra tela e não avisa.
+const { estilo: estiloDoPainel } = useLarguraDoGuia({
+  embutido: props.embutido,
+  larguraDaTela: windowWidth,
+});
+if (!props.embutido) {
+  watch(
+    showPanel,
+    aberto => {
+      menuEGuia.guiaAberto.value = aberto;
+    },
+    { immediate: true }
+  );
+  onBeforeUnmount(() => {
+    menuEGuia.guiaAberto.value = false;
+  });
+}
 
 const hasMessages = computed(() => messages.length > 0);
 
@@ -1241,7 +1273,9 @@ watch(
 const classeDoPainel = computed(() =>
   props.embutido
     ? 'bg-n-surface-2 h-full w-full overflow-hidden flex rounded-xl border border-n-weak'
-    : 'bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex focus:outline-none'
+    : // #3184 — celular (abaixo de 768 px): tela cheia, por cima. Do tablet
+      // para cima: coluna ao lado, com a largura de useLarguraDoGuia.
+      'bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full transition-transform duration-300 ease-in-out md:static md:shrink-0 ltr:border-l rtl:border-r border-n-weak shadow-lg md:shadow-none flex focus:outline-none'
 );
 </script>
 
@@ -1254,6 +1288,7 @@ const classeDoPainel = computed(() =>
     :tabindex="embutido ? undefined : -1"
     :aria-label="$t('AUTONOMIA_GUIDE.A11Y.PANEL')"
     :class="classeDoPainel"
+    :style="estiloDoPainel"
   >
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
@@ -1264,6 +1299,7 @@ const classeDoPainel = computed(() =>
         :vendo-memoria="vendoMemoria"
         @reset="resetConversation"
         @historico="alternarHistorico"
+        @feitos="abrirFeitos"
         @memoria="alternarMemoria"
         @close="closePanel"
       />
@@ -1271,6 +1307,8 @@ const classeDoPainel = computed(() =>
       <div v-if="vendoHistorico" class="flex-1 flex px-4 py-4 overflow-y-auto">
         <GuideHistorico
           :conversa-atual="store.conversaAtual()"
+          :aba-inicial="abaDoHistorico"
+          @aba="abaDoHistorico = $event"
           @abrir="abrirDoHistorico"
           @apagou="conversaApagada"
         />
@@ -1290,7 +1328,7 @@ const classeDoPainel = computed(() =>
         aria-live="polite"
         :aria-busy="ocupado ? 'true' : 'false'"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.LOG')"
-        class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
+        class="flex-1 flex px-4 py-4 overflow-y-auto items-start bg-n-slate-2"
       >
         <!-- #861 — reabrindo a conversa guardada: dois balões de esqueleto. -->
         <div
@@ -1326,13 +1364,13 @@ const classeDoPainel = computed(() =>
         </div>
         <div
           v-else-if="hasMessages"
-          class="space-y-6 flex-1 flex flex-col w-full"
+          class="space-y-5 flex-1 flex flex-col w-full"
         >
           <template v-for="(item, index) in messages" :key="item.id">
             <GuideUserMessage
               v-if="item.message_type === 'user'"
               :item="item"
-              :destaque="embutido"
+              destaque
               @tentar-de-novo="tentarVozDeNovo(item)"
             />
             <div v-else class="flex flex-col gap-2 w-full">
@@ -1345,18 +1383,11 @@ const classeDoPainel = computed(() =>
                 <span class="i-lucide-bell-ring size-3" aria-hidden="true" />
                 {{ $t('AUTONOMIA_GUIDE.AVISOS.SELO') }}
               </span>
-              <div
-                :class="
-                  embutido
-                    ? 'self-start max-w-[92%] rounded-2xl ltr:rounded-bl-md rtl:rounded-br-md border border-n-weak bg-n-solid-1 px-4 py-3 shadow-sm'
-                    : ''
-                "
-              >
+              <div class="flex flex-col w-full">
                 <!-- #3158 — com gráfico do relatório, cada um no lugar do marcador. -->
                 <GuideResposta
                   :message="item.message"
                   :graficos="item.graficos || []"
-                  :is-last-message="index === messages.length - 1"
                   :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
                 />
                 <!-- A resposta não veio: um toque manda a mesma pergunta de
@@ -1374,28 +1405,43 @@ const classeDoPainel = computed(() =>
                   icon="i-lucide-rotate-ccw"
                   slate
                   faded
-                  class="mt-2 min-h-11"
+                  class="self-start mt-2 ms-9 min-h-11"
                   @click="tentarDeNovo(item)"
                 />
               </div>
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
-              <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
+              <GuideExecucao
+                v-if="item.execucao"
+                class="ms-9"
+                :execucao="item.execucao"
+              />
               <!-- #936 — o trabalho grande planejado neste turno: amostra, andamento e relatório. -->
-              <GuideTarefa v-if="item.tarefa" :tarefa-id="item.tarefa.id" />
+              <GuideTarefa
+                v-if="item.tarefa"
+                class="ms-9"
+                :tarefa-id="item.tarefa.id"
+              />
               <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
               <GuideAnotei
                 v-for="lembranca in item.lembrancas || []"
                 :key="lembranca.id"
+                class="ms-9"
                 :lembranca="lembranca"
                 @esqueceu="store.esquecerLembranca(item.id, $event)"
               />
               <!-- Ação que não tem volta: a pessoa lê o que vai acontecer, com
                    os valores, e só então confirma. Nada executa antes disso. -->
+              <!-- #3184 — cartão próprio, âmbar, diferente dos botões de pergunta:
+                   aqui a pessoa decide mudar algo na conta. -->
               <div
                 v-if="item.acao"
-                class="rounded-lg border border-n-weak bg-n-alpha-1 p-3 flex flex-col gap-2"
+                data-cartao-acao
+                class="ms-9 rounded-xl border-2 border-n-amber-7 bg-n-amber-2 p-4 flex flex-col gap-2"
               >
-                <p class="mb-0 text-sm break-words text-n-slate-12">
+                <p class="mb-0 text-sm font-semibold text-n-amber-12">
+                  {{ $t('AUTONOMIA_GUIDE.ACTION_CARD.TITLE') }}
+                </p>
+                <p class="mb-0 text-base break-words text-n-slate-12">
                   {{ item.acao.descricao.frase }}
                 </p>
                 <!-- O pedido literal, sempre visível: a frase acima pode
@@ -1430,6 +1476,16 @@ const classeDoPainel = computed(() =>
                 >
                   {{ item.acao.descricao.aviso }}
                 </p>
+                <!-- #3184 — só chega aqui o que o desfazer não alcança (o resto o
+                     Guia faz direto, com desfazer por 5 dias). Dizer isso antes
+                     do "Sim" é o que torna a decisão informada. -->
+                <p
+                  v-if="mostraBotoes(item.acaoEstado)"
+                  data-sem-desfazer
+                  class="mb-0 text-sm font-medium text-n-amber-12"
+                >
+                  {{ $t('AUTONOMIA_GUIDE.ACTION_CARD.NO_UNDO') }}
+                </p>
                 <!-- Cada estado tem o seu próprio ramo, nomeado. A primeira
                      versão usava `v-else` para "cancelada", então o estado
                      "executando" caía nele: quem clicava em Confirmar lia
@@ -1438,7 +1494,9 @@ const classeDoPainel = computed(() =>
                   v-if="item.acaoEstado === 'executando'"
                   class="flex items-center gap-2 mb-0 text-sm text-n-slate-11"
                 >
-                  <span class="i-svg-spinner size-4 shrink-0" />
+                  <span
+                    class="i-lucide-loader-circle animate-spin size-4 shrink-0"
+                  />
                   {{ $t('AUTONOMIA_GUIDE.ACTION.RUNNING') }}
                 </p>
                 <p
@@ -1460,12 +1518,12 @@ const classeDoPainel = computed(() =>
                 </p>
                 <div
                   v-if="mostraBotoes(item.acaoEstado)"
-                  class="flex flex-wrap gap-2"
+                  class="flex flex-col gap-2 mt-1"
                 >
                   <Button
                     :label="$t('AUTONOMIA_GUIDE.ACTION.CONFIRM')"
                     :disabled="item.acaoEstado === 'executando'"
-                    class="min-h-11"
+                    class="w-full min-h-12"
                     blue
                     @click="confirmarAcao(item)"
                   />
@@ -1473,9 +1531,9 @@ const classeDoPainel = computed(() =>
                     v-if="item.acaoEstado !== 'cancelada'"
                     :label="$t('AUTONOMIA_GUIDE.ACTION.CANCEL')"
                     :disabled="item.acaoEstado === 'executando'"
-                    class="min-h-11"
+                    class="w-full min-h-12 bg-n-solid-1"
                     slate
-                    faded
+                    outline
                     @click="store.marcarAcao(item.id, 'cancelada')"
                   />
                 </div>
@@ -1488,7 +1546,7 @@ const classeDoPainel = computed(() =>
                    já diz "Ir para", repetir isso num título de seção seria redundante — revisão
                    #637); só os links de artigo ganham título, porque "Ler: {título}" sozinho não
                    deixa óbvio que a lista inteira é "para ler depois". -->
-              <div v-if="layoutMultiplo(item)" class="flex flex-col gap-3">
+              <div v-if="layoutMultiplo(item)" class="flex flex-col gap-3 ms-9">
                 <div
                   v-if="telasValidas(item).length"
                   class="flex flex-wrap gap-2"
@@ -1540,7 +1598,7 @@ const classeDoPainel = computed(() =>
                 v-else-if="
                   telasValidas(item).length || (item.artigos || []).length
                 "
-                class="flex flex-wrap gap-2"
+                class="flex flex-wrap gap-2 ms-9"
               >
                 <!-- O rótulo vinha do título do fluxo, escrito para o manual
                      e longo demais para um painel estreito: ele estourava a
@@ -1576,7 +1634,7 @@ const classeDoPainel = computed(() =>
           <div
             v-if="mostraRespostasRapidas"
             data-respostas-rapidas
-            class="flex flex-wrap gap-2"
+            class="flex flex-wrap gap-2 ms-9"
           >
             <button
               v-for="resposta in respostasRapidas"
@@ -1593,25 +1651,58 @@ const classeDoPainel = computed(() =>
               {{ resposta.rotulo }}
             </button>
           </div>
-          <CopilotLoader
+          <!-- #3184 — a etapa escrita, num cartão do Guia: "Lendo os relatórios
+               da conta…". Sem as bolinhas de "digitando", que são de gente. -->
+          <div
             v-if="ocupado && !transcrevendo"
-            :label="fraseDaEtapa || $t('AUTONOMIA_GUIDE.THINKING')"
-          />
+            data-etapa
+            role="status"
+            class="flex items-start gap-2 w-full"
+          >
+            <span
+              class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-sparkles size-4" />
+            </span>
+            <p
+              class="flex flex-1 items-center gap-3 mb-0 min-w-0 rounded-xl border border-dashed border-n-strong bg-n-solid-1 px-4 py-3 text-[0.9375rem] text-n-slate-11"
+            >
+              <span
+                class="i-lucide-loader-circle animate-spin size-4 shrink-0"
+                aria-hidden="true"
+              />
+              {{ fraseDaEtapa || $t('AUTONOMIA_GUIDE.THINKING') }}
+            </p>
+          </div>
         </div>
         <div
           v-else-if="!abrindoConversa"
-          class="flex-1 flex flex-col gap-3 px-1 py-2"
+          class="flex-1 flex flex-col gap-3 w-full"
         >
-          <h3 class="text-base font-medium text-n-slate-12 leading-7">
-            {{ $t('AUTONOMIA_GUIDE.TITLE') }}
-          </h3>
-          <p class="text-sm text-n-slate-11 leading-6">
-            {{ introducao || $t('AUTONOMIA_GUIDE.KICK_OFF') }}
-          </p>
-          <div class="flex flex-col gap-2 mt-2">
+          <!-- #3184 — a primeira fala é do Guia: o que ele faz, num cartão dele. -->
+          <div class="flex items-start gap-2 w-full" data-boas-vindas>
+            <span
+              class="grid place-content-center size-7 mt-1 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-sparkles size-4" />
+            </span>
+            <div
+              class="flex flex-col flex-1 gap-1 min-w-0 rounded-xl border border-n-weak bg-n-solid-1 px-4 py-3"
+            >
+              <h3 class="mb-0 text-base font-semibold text-n-slate-12">
+                {{ $t('AUTONOMIA_GUIDE.WELCOME_TITLE') }}
+              </h3>
+              <p class="mb-0 text-base leading-relaxed text-n-slate-12">
+                {{ introducao || $t('AUTONOMIA_GUIDE.KICK_OFF') }}
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 ms-9">
             <p
               v-if="sugestoesDaTela.length"
-              class="mb-0 text-xs font-medium text-n-slate-11"
+              class="mb-0 text-sm font-medium text-n-slate-11"
             >
               {{ $t('AUTONOMIA_GUIDE.SUGGESTIONS_THIS_SCREEN') }}
             </p>
@@ -1620,7 +1711,7 @@ const classeDoPainel = computed(() =>
               :key="i"
               data-sugestao
               :disabled="ocupado || gravandoVoz"
-              class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              class="text-left text-[0.9375rem] font-medium text-n-blue-11 bg-n-solid-1 ring-1 ring-inset ring-n-blue-6 hover:bg-n-blue-2 rounded-xl px-4 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               @click="sendMessage(suggestion.pergunta)"
             >
               {{ suggestion.rotulo }}
@@ -1629,7 +1720,7 @@ const classeDoPainel = computed(() =>
         </div>
       </div>
 
-      <div class="mx-3 mt-px mb-2">
+      <div class="px-3 pt-2 pb-3 border-t border-n-weak bg-n-solid-1">
         <GuideEtiquetaTela
           :tela="telaAtual"
           :oculta="semTelaNaProxima"

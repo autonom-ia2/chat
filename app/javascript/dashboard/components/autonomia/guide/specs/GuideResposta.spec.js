@@ -129,11 +129,19 @@ describe('GuideResposta', () => {
       },
     });
 
-  it('sem gráfico, é a mensagem de sempre', () => {
+  it('sem gráfico, o texto vem num cartão do Guia (#3184)', () => {
     const wrapper = montar({ message: { content: 'São 3.' } });
 
-    expect(wrapper.find('[data-mensagem-de-sempre]').text()).toBe('São 3.');
+    expect(wrapper.findAll('[data-trecho]').map(item => item.text())).toEqual([
+      'São 3.',
+    ]);
     expect(wrapper.find('[data-grafico]').exists()).toBe(false);
+  });
+
+  it('marcador de gráfico que não veio não aparece como texto', () => {
+    const wrapper = montar({ message: { content: 'São 3. [grafico:1]' } });
+
+    expect(wrapper.text()).not.toContain('[grafico:');
   });
 
   it('com gráfico, desenha no lugar do marcador e o que sobrou vai para o fim', () => {

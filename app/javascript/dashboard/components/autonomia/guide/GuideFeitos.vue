@@ -26,7 +26,7 @@ onMounted(async () => {
 <template>
   <div class="flex flex-col gap-3 w-full">
     <p v-if="carregando" class="flex items-center gap-2 mb-0 text-n-slate-11">
-      <span class="i-svg-spinner size-4 shrink-0" />
+      <span class="i-lucide-loader-circle animate-spin size-4 shrink-0" />
       {{ $t('AUTONOMIA_GUIDE.DONE.LOADING') }}
     </p>
     <p v-else-if="falhou" class="mb-0 text-n-ruby-11">

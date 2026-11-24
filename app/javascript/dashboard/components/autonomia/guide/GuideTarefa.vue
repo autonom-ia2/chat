@@ -168,7 +168,10 @@ onBeforeUnmount(() => {
       class="flex items-center gap-2 mb-0 text-sm text-n-slate-11"
       role="status"
     >
-      <span class="i-svg-spinner size-4 shrink-0" aria-hidden="true" />
+      <span
+        class="i-lucide-loader-circle animate-spin size-4 shrink-0"
+        aria-hidden="true"
+      />
       {{ $t('AUTONOMIA_GUIDE.TASK.LOADING') }}
     </p>
 

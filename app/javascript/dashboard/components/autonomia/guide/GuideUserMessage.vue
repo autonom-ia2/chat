@@ -26,6 +26,10 @@ const documentos = computed(() =>
   (props.item.anexos || []).filter(anexo => !comPrevia(anexo))
 );
 const voz = computed(() => props.item.voz);
+// #3184 — só o áudio: a moldura azul fica fina em volta do tocador.
+const soAudio = computed(
+  () => voz.value && !props.item.texto && !(props.item.anexos || []).length
+);
 </script>
 
 <template>
@@ -34,7 +38,10 @@ const voz = computed(() => props.item.voz);
       class="flex flex-col gap-2 max-w-[85%] min-w-0 rounded-2xl ltr:rounded-br-md rtl:rounded-bl-md"
       :class="
         destaque
-          ? 'bg-n-brand px-4 py-3 text-base leading-relaxed text-white'
+          ? [
+              'bg-n-blue-11 text-base leading-relaxed text-white',
+              soAudio ? 'p-1' : 'px-4 py-3',
+            ]
           : 'bg-n-alpha-2 px-3 py-2 text-n-slate-12'
       "
     >
@@ -72,19 +79,28 @@ const voz = computed(() => props.item.voz);
           <span class="truncate min-w-0">{{ documento.nome }}</span>
         </li>
       </ul>
-      <div v-if="voz" class="flex flex-col gap-1 w-64 max-w-full min-w-0">
+      <!-- #3184 — no balão azul, o tocador e a transcrição ficam num cartão
+           claro: o tempo e o texto em cinza sumiam sobre o azul. -->
+      <div
+        v-if="voz"
+        class="flex flex-col gap-1 w-64 max-w-full min-w-0"
+        :class="destaque ? 'rounded-xl bg-n-solid-1 p-2 text-n-slate-12' : ''"
+      >
         <span class="sr-only">{{ $t('AUTONOMIA_GUIDE.VOICE.NOTE') }}</span>
         <GuideVoz :src="voz.url" :duracao="voz.duracao" />
         <p
           v-if="voz.estado === 'transcrevendo'"
-          class="flex items-center gap-1 mb-0 text-xs text-n-slate-11"
+          class="flex items-center gap-1 mb-0 text-sm text-n-slate-11"
         >
-          <span class="i-svg-spinner size-3 shrink-0" aria-hidden="true" />
+          <span
+            class="i-lucide-loader-circle animate-spin size-3 shrink-0"
+            aria-hidden="true"
+          />
           {{ $t('AUTONOMIA_GUIDE.VOICE.TRANSCRIBING') }}
         </p>
         <p
           v-else-if="voz.estado === 'pronta'"
-          class="mb-0 text-xs leading-5 text-n-slate-11 break-words whitespace-pre-wrap"
+          class="mb-0 text-sm leading-6 text-n-slate-11 break-words whitespace-pre-wrap"
         >
           {{ voz.texto }}
         </p>
