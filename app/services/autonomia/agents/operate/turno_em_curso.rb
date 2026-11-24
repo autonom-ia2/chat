@@ -34,7 +34,8 @@ module Autonomia::Agents::Operate::TurnoEmCurso
     ::Autonomia::Agents::AgenteSoInforma.ligada?(account) || ::Autonomia::Agents::Tools::ConsultaNoTurno.ligada?(account)
   end
 
-  # O teto real de um turno, das configurações: a maior janela de debounce, a maior espera do assunto, a maior chamada de
+  # O teto real de um turno, das configurações: a maior janela de espera (a do debounce ou, com as opções da paridade da
+  # conversa, a espera pela fala anterior mais a fila: EsperaDaFala), a maior espera do assunto, a maior chamada de
   # IA (a Lia: RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma
   # conta do QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente com pronta: o
   # prazo das rodadas dele, #2918) e a cadeia de pedaços.
@@ -44,7 +45,9 @@ module Autonomia::Agents::Operate::TurnoEmCurso
     ia = [lia, ::Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA, ::Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS,
           ::Crm::Ai::ResponsesClient::REQUEST_TIMEOUT].max
     cadeia = ::Autonomia::Agents::Config::HUMANIZE[:max_total_delay_ms] / 1000
-    ::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS + ::Autonomia::Agents::Operate::EsperaDoAssunto::TETO + (ia + cadeia).seconds
+    espera = ::Autonomia::Agents::Operate::EsperaDaFala
+    janela = [::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS, espera::ESPERA_MAXIMA + espera::TETO_DA_FILA].max
+    janela + ::Autonomia::Agents::Operate::EsperaDoAssunto::TETO + (ia + cadeia).seconds
   end
 
   def abrir(conversation_id, message_id)
