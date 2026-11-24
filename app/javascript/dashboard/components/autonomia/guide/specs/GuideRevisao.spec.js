@@ -202,6 +202,9 @@ describe('GuideRevisao', () => {
       'AUTONOMIA_GUIDE.REVISAO.DESFECHO.PARADA:{"lidas":120,"lidos":120,"limite":214,"total":214}'
     );
     expect(parada.find('[data-conclusao]').exists()).toBe(false);
+    // Quem pediu para parar não vê convite a continuar (mockup c2).
+    expect(parada.text()).toContain('AUTONOMIA_GUIDE.REVISAO.PARADA_FRASE');
+    expect(parada.text()).not.toContain('LER_FALTAM');
 
     AutonomiaGuideAPI.revisao.mockResolvedValueOnce({
       data: revisao({ status: 'falhou', motivo: 'sem_chave', lidas: 0 }),
@@ -212,6 +215,59 @@ describe('GuideRevisao', () => {
       'AUTONOMIA_GUIDE.REVISAO.DESFECHO.SEM_CHAVE'
     );
     expect(semChave.text()).not.toContain('LER_FALTAM');
+  });
+
+  it('com conversas que não abriram, diz o que mais pesou e quantas ficaram de fora', async () => {
+    AutonomiaGuideAPI.revisao.mockResolvedValue({
+      data: revisao({
+        status: 'concluida',
+        lidas: 210,
+        falhas: 4,
+        faltam: 0,
+        categorias,
+      }),
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-conclusao]').text()).toContain('CONCLUSAO_TRES');
+    expect(wrapper.text()).toContain(
+      'AUTONOMIA_GUIDE.REVISAO.CONCLUSAO_PARCIAL:{"falhas":4}'
+    );
+  });
+
+  it('abre as conversas de um motivo aos poucos e fecha a lista', async () => {
+    const muitas = Array.from({ length: 25 }, (_, k) => ({
+      numero: 100 + k,
+      motivo: `m${k}`,
+    }));
+    AutonomiaGuideAPI.revisao.mockResolvedValue({
+      data: revisao({
+        status: 'concluida',
+        lidas: 214,
+        faltam: 0,
+        categorias: [{ nome: 'Demora', conversas: muitas }],
+      }),
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    await wrapper.find('button[aria-expanded="false"]').trigger('click');
+    expect(wrapper.findAll('a')).toHaveLength(10);
+    const verMais = wrapper
+      .findAll('button')
+      .find(item => item.text().includes('VER_MAIS'));
+    expect(verMais.text()).toContain('{"quantas":15}');
+
+    await verMais.trigger('click');
+    expect(wrapper.findAll('a')).toHaveLength(25);
+    expect(wrapper.text()).not.toContain('VER_MAIS');
+
+    await wrapper
+      .findAll('button')
+      .find(item => item.text().includes('MOTIVOS.FECHAR'))
+      .trigger('click');
+    expect(wrapper.findAll('a')).toHaveLength(0);
   });
 
   it('para de buscar quando a revisão não existe mais (4xx)', async () => {

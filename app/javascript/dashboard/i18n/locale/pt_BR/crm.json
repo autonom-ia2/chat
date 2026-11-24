@@ -4842,18 +4842,19 @@
       "TENTAR_DE_NOVO": "Tentar de novo",
       "LENDO": "Lendo conversas: {lidas} de {limite}",
       "PROGRESSO": "Andamento da revisão",
-      "PODE_FECHAR": "Pode fechar o painel e seguir trabalhando. Para parar, é só escrever aqui.",
+      "PODE_FECHAR": "Pode fechar o painel e seguir trabalhando. Para parar, escreva pare aqui embaixo.",
       "DESFECHO": {
         "CONCLUIDA": "Revisão concluída: {lidas} de {limite}",
         "PARADA": "Revisão parada: {lidos} de {limite}",
         "NO_MAXIMO": "Li o máximo de uma vez: {lidos} de {total}",
-        "FALHOU": "A revisão parou por um erro. O que já foi lido fica abaixo.",
-        "SEM_CHAVE": "A revisão parou: a conta está sem chave de IA."
+        "FALHOU": "A revisão parou por um problema. O que já foi lido está abaixo. Para tentar de novo, peça aqui no Guia.",
+        "SEM_CHAVE": "A revisão parou: a conta está sem a chave de IA. Peça a quem cuida da conta para conectar a chave de IA."
       },
-      "CONCLUSAO_UM": "Pronto. O que mais pesou foi {primeiro}.",
-      "CONCLUSAO_DOIS": "Pronto. O que mais pesou foi {primeiro}, seguido de {segundo}.",
-      "CONCLUSAO_TRES": "Pronto. O que mais pesou foi {primeiro}, seguido de {segundo} e {terceiro}.",
-      "CONCLUSAO_PARCIAL": "Li {lidas} conversas; {falhas} não abriram agora.",
+      "CONCLUSAO_UM": "Pronto. O motivo que mais pesou: {primeiro}.",
+      "CONCLUSAO_DOIS": "Pronto. Os motivos que mais pesaram: {primeiro} e {segundo}.",
+      "CONCLUSAO_TRES": "Pronto. Os motivos que mais pesaram: {primeiro}, {segundo} e {terceiro}.",
+      "CONCLUSAO_PARCIAL": "Não consegui abrir {falhas} conversas. Elas ficaram de fora deste resultado.",
+      "PARADA_FRASE": "Parei. Li {lidos} de {total}. Os motivos até aqui:",
       "FALTAM_PERGUNTA": "Li {lidas} de {total}. Faltam {faltam}. Quer que eu leia as que faltam?",
       "LER_FALTAM": "Ler as {faltam} que faltam",
       "CONTINUAR_FALHOU": "Não consegui continuar agora. Tente de novo.",
@@ -4865,7 +4866,10 @@
         "NAO_ABRIRAM": "{lidas} lidas, {falhas} não abriram agora",
         "TOQUE": "Toque num motivo para ver as conversas.",
         "OUTROS": "Outros motivos",
-        "CONVERSA": "Conversa {numero}"
+        "CONVERSA": "Conversa {numero}",
+        "MOSTRANDO": "Mostrando {vistas} de {total}",
+        "VER_MAIS": "Ver mais {quantas}",
+        "FECHAR": "Fechar a lista"
       }
     },
     "AVISOS": {

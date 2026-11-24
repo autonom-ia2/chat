@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
+import Button from 'dashboard/components-next/button/Button.vue';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
 
 // #3158 (B8b) — os motivos da revisão de conversas, do mais comum ao menos.
-// Tocar num motivo abre a lista das conversas dele, cada uma com o link.
+// Tocar num motivo abre a lista das conversas dele, cada uma com o link: as 10
+// primeiras, e mais 20 a cada toque em "Ver mais" (um motivo pode ter 300).
 const props = defineProps({
   revisao: {
     type: Object,
@@ -16,6 +18,9 @@ const props = defineProps({
 const { t } = useI18n();
 const accountId = useMapGetter('getCurrentAccountId');
 const aberto = ref(null);
+const PRIMEIRAS = 10;
+const A_MAIS = 20;
+const vistas = ref(PRIMEIRAS);
 
 const categorias = computed(() => props.revisao.categorias || []);
 const maior = computed(() =>
@@ -57,7 +62,20 @@ const largura = categoria =>
 
 const alternar = indice => {
   aberto.value = aberto.value === indice ? null : indice;
+  vistas.value = PRIMEIRAS;
 };
+
+const fechar = () => {
+  aberto.value = null;
+};
+
+const verMais = () => {
+  vistas.value += A_MAIS;
+};
+
+const aMostrar = categoria => categoria.conversas.slice(0, vistas.value);
+const faltamVer = categoria =>
+  Math.min(A_MAIS, categoria.conversas.length - vistas.value);
 
 const linkDaConversa = numero =>
   frontendURL(conversationUrl({ accountId: accountId.value, id: numero }));
@@ -90,7 +108,7 @@ const linkDaConversa = numero =>
       <li v-for="(categoria, indice) in categorias" :key="indice">
         <button
           type="button"
-          class="w-full min-h-11 py-2 flex flex-col gap-1 text-left"
+          class="w-full min-h-11 px-0 py-2 flex flex-col gap-1 text-left rounded-lg hover:bg-n-alpha-1"
           :aria-expanded="aberto === indice ? 'true' : 'false'"
           :aria-controls="`revisao-${revisao.id}-motivo-${indice}`"
           @click="alternar(indice)"
@@ -99,7 +117,7 @@ const linkDaConversa = numero =>
             <span class="flex-1 min-w-0 break-words">{{
               nome(categoria)
             }}</span>
-            <span class="font-medium tabular-nums">
+            <span class="font-semibold tabular-nums">
               {{ categoria.conversas.length }}
             </span>
             <span
@@ -122,16 +140,16 @@ const linkDaConversa = numero =>
         <ul
           v-if="aberto === indice"
           :id="`revisao-${revisao.id}-motivo-${indice}`"
-          class="flex flex-col gap-1 m-0 mb-2 p-0 list-none"
+          class="flex flex-col gap-1 m-0 ml-1 mb-3 pl-3 border-l-2 border-n-weak list-none"
         >
           <li
-            v-for="conversa in categoria.conversas"
+            v-for="conversa in aMostrar(categoria)"
             :key="conversa.numero"
             class="text-sm"
           >
             <router-link
               :to="linkDaConversa(conversa.numero)"
-              class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2 hover:bg-n-alpha-2"
+              class="flex min-h-11 items-start gap-2 rounded-lg -mx-2 px-2 py-2 hover:bg-n-alpha-2"
             >
               <span class="text-n-blue-11 tabular-nums">
                 {{
@@ -144,6 +162,39 @@ const linkDaConversa = numero =>
                 {{ conversa.motivo }}
               </span>
             </router-link>
+          </li>
+          <li class="flex flex-col gap-2 pt-1">
+            <p class="mb-0 text-xs text-n-slate-11 tabular-nums">
+              {{
+                t('AUTONOMIA_GUIDE.REVISAO.MOTIVOS.MOSTRANDO', {
+                  vistas: aMostrar(categoria).length,
+                  total: categoria.conversas.length,
+                })
+              }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                v-if="faltamVer(categoria) > 0"
+                sm
+                slate
+                faded
+                class="min-h-11"
+                :label="
+                  t('AUTONOMIA_GUIDE.REVISAO.MOTIVOS.VER_MAIS', {
+                    quantas: faltamVer(categoria),
+                  })
+                "
+                @click="verMais"
+              />
+              <Button
+                sm
+                slate
+                faded
+                class="min-h-11"
+                :label="t('AUTONOMIA_GUIDE.REVISAO.MOTIVOS.FECHAR')"
+                @click="fechar"
+              />
+            </div>
           </li>
         </ul>
       </li>

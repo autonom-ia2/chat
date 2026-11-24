@@ -95,12 +95,12 @@ const desfecho = computed(() => {
 const categorias = computed(() => revisao.value?.categorias || []);
 
 // A frase de quem terminou: o que mais pesou, em até três motivos, cada um
-// em negrito. Com conversas que não abriram, diz quantas.
+// em negrito, numa lista depois de dois-pontos (o nome vem da IA, com
+// qualquer gênero). As conversas que não abriram aparecem numa linha abaixo.
 const NOMES_DA_CONCLUSAO = ['primeiro', 'segundo', 'terceiro'];
 const conclusao = computed(() => {
   const r = revisao.value;
   if (status.value !== 'concluida' || r.faltam > 0) return null;
-  if (r.falhas > 0) return { parcial: true };
   const nomes = categorias.value
     .filter(c => !c.outros)
     .map(c => c.nome)
@@ -258,27 +258,42 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-if="revisao && !andando">
-      <p v-if="conclusao?.parcial" class="mb-0 text-sm text-n-slate-12">
+      <p
+        v-if="status === 'parada' && categorias.length"
+        class="mb-0 text-sm leading-6 text-n-slate-12"
+      >
         {{
-          t('AUTONOMIA_GUIDE.REVISAO.CONCLUSAO_PARCIAL', {
-            lidas: revisao.lidas,
-            falhas: revisao.falhas,
+          t('AUTONOMIA_GUIDE.REVISAO.PARADA_FRASE', {
+            lidos: revisao.lidas + revisao.falhas,
+            total: revisao.total,
           })
         }}
       </p>
       <I18nT
-        v-else-if="conclusao"
+        v-if="conclusao"
         :keypath="conclusao.chave"
         tag="p"
         scope="global"
-        class="mb-0 text-sm text-n-slate-12"
+        class="mb-0 text-sm leading-6 text-n-slate-12"
       >
         <template v-for="item in conclusao.nomes" :key="item.slot" #[item.slot]>
           <strong class="font-semibold">{{ item.nome }}</strong>
         </template>
       </I18nT>
-      <template v-if="revisao.faltam > 0 && status !== 'falhou'">
-        <p class="mb-0 text-sm text-n-slate-12">
+      <p
+        v-if="status === 'concluida' && revisao.falhas > 0"
+        class="mb-0 text-sm leading-6 text-n-slate-12"
+      >
+        {{
+          t('AUTONOMIA_GUIDE.REVISAO.CONCLUSAO_PARCIAL', {
+            falhas: revisao.falhas,
+          })
+        }}
+      </p>
+      <!-- Só no limite de 300: quem pediu para parar não vê convite a
+      continuar (mockup c2). -->
+      <template v-if="status === 'concluida' && revisao.faltam > 0">
+        <p class="mb-0 text-sm leading-6 text-n-slate-12">
           {{
             t('AUTONOMIA_GUIDE.REVISAO.FALTAM_PERGUNTA', {
               lidas: revisao.lidas + revisao.falhas,
