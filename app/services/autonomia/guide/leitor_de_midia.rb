@@ -1,7 +1,7 @@
 # Transforma um arquivo em texto para o Guia ler (#857): documento, áudio ou imagem.
 #
 # Cada tipo usa a peça que a plataforma já tem:
-# - documento (PDF, Word, Excel, CSV, texto, JSON): os extratores da base de conhecimento;
+# - documento (PDF, Word, Excel, PowerPoint, CSV, texto, JSON): os extratores da base de conhecimento;
 # - áudio: o mesmo transcritor da IA do CRM;
 # - imagem: o mesmo leitor de imagem da IA do CRM, pedindo TODO o texto visível — um contrato
 #   fotografado tem que chegar inteiro, não como legenda de uma frase.
@@ -17,6 +17,7 @@ class Autonomia::Guide::LeitorDeMidia
     'application/pdf' => 'pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
     'text/plain' => 'txt',
     'text/csv' => 'txt',
     'text/markdown' => 'md',

@@ -1,6 +1,10 @@
 import { nextTick, ref, watch } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
+import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
+import { useAlert } from 'dashboard/composables';
+import GuideComposer from 'dashboard/components/autonomia/guide/GuideComposer.vue';
+import CopilotHeader from '../CopilotHeader.vue';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { menuEGuia } from 'dashboard/components-next/sidebar/menuEGuia';
@@ -36,6 +40,11 @@ vi.mock('dashboard/composables/store', () => ({
 vi.mock('dashboard/api/autonomiaCopilot', () => ({
   default: { listAgents: vi.fn(), chat: vi.fn() },
 }));
+vi.mock('dashboard/api/autonomiaGuide', () => ({
+  default: { enviarArquivo: vi.fn(), transcrever: vi.fn() },
+}));
+URL.createObjectURL = vi.fn(() => 'blob:previa');
+URL.revokeObjectURL = vi.fn();
 
 const mountCopilot = async () => {
   const wrapper = mount(AutonomiaCopilotContainer, {
@@ -186,7 +195,7 @@ describe('AutonomiaCopilotContainer', () => {
       expect(wrapper.find('[data-resposta]').text()).toContain('Lia');
     });
 
-    it('o campo diz a quem se pergunta e não tem clipe', async () => {
+    it('o campo diz a quem se pergunta e tem clipe (#3198)', async () => {
       wrapper = await mountCopilot();
 
       expect(wrapper.get('textarea').attributes('placeholder')).toBe(
@@ -196,7 +205,7 @@ describe('AutonomiaCopilotContainer', () => {
         wrapper
           .find('button[aria-label="AUTONOMIA_GUIDE.FILE.ATTACH"]')
           .exists()
-      ).toBe(false);
+      ).toBe(true);
     });
 
     it('uma sugestão manda o pedido num toque', async () => {
@@ -312,6 +321,184 @@ describe('AutonomiaCopilotContainer', () => {
       expect(updateUISettings).toHaveBeenCalledWith({
         is_autonomia_copilot_panel_open: false,
       });
+    });
+  });
+
+  // #3198 — a equipe manda arquivo e áudio ao copiloto, como no Guia.
+  describe('arquivos e voz', () => {
+    const composer = () => wrapper.findComponent(GuideComposer);
+    const anexar = async nome => {
+      composer().vm.$emit(
+        'anexar',
+        new File(['x'], nome, { type: 'application/pdf' })
+      );
+      await flushPromises();
+    };
+    // Como no gravador de verdade: o composer avisa `gravando` antes de entregar o áudio, e a
+    // gravação continua ligada no momento da entrega.
+    const gravar = async () => {
+      composer().vm.$emit('gravando', true);
+      await nextTick();
+      composer().props('onEnviarVoz')({
+        audio: new Blob(['x'], { type: 'audio/webm' }),
+        duracao: 3,
+      });
+      composer().vm.$emit('gravando', false);
+      await flushPromises();
+    };
+
+    beforeEach(() => {
+      AutonomiaCopilotAPI.chat.mockResolvedValue({
+        data: { available: true, text: 'Feito.' },
+      });
+    });
+
+    it('o arquivo sobe pelo Guia e vai com cada pergunta do assunto', async () => {
+      AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+        data: { signed_id: 'assinado-1', nome: 'apolice.pdf' },
+      });
+      wrapper = await mountCopilot();
+
+      await anexar('apolice.pdf');
+      await send(wrapper.find('textarea'), 'O que diz a apólice?');
+      await send(wrapper.find('textarea'), 'E a vigência?');
+
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenNthCalledWith(
+        1,
+        42,
+        expect.objectContaining({ arquivos: ['assinado-1'] })
+      );
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenNthCalledWith(
+        2,
+        42,
+        expect.objectContaining({ arquivos: ['assinado-1'] })
+      );
+      expect(useAutonomiaCopilotStore().messages[0].anexos).toHaveLength(1);
+    });
+
+    it('só o arquivo, sem texto, vai com a frase padrão', async () => {
+      AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+        data: { signed_id: 'assinado-1' },
+      });
+      wrapper = await mountCopilot();
+
+      await anexar('apolice.pdf');
+      composer().props('onSend')('');
+      await flushPromises();
+
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({
+          message: 'AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE',
+        })
+      );
+    });
+
+    it('arquivo recusado vira aviso com o motivo e não vai na pergunta', async () => {
+      AutonomiaGuideAPI.enviarArquivo.mockRejectedValue({
+        response: { data: { error: 'Esse tipo de arquivo não é aceito.' } },
+      });
+      wrapper = await mountCopilot();
+
+      await anexar('planilha.numbers');
+      await send(wrapper.find('textarea'), 'Leia');
+
+      expect(useAlert).toHaveBeenCalledWith(
+        'Esse tipo de arquivo não é aceito.'
+      );
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ arquivos: [] })
+      );
+    });
+
+    it('o áudio vira texto e só então o agente é chamado', async () => {
+      AutonomiaGuideAPI.transcrever.mockResolvedValue({
+        data: { texto: 'Qual o próximo passo?' },
+      });
+      wrapper = await mountCopilot();
+
+      await gravar();
+
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ message: 'Qual o próximo passo?' })
+      );
+      const [voz] = useAutonomiaCopilotStore().messages;
+      expect(voz.voz.estado).toBe('pronta');
+      expect(voz.voz.texto).toBe('Qual o próximo passo?');
+    });
+
+    it('a transcrição falhou: o balão mostra o erro e nada é pedido', async () => {
+      AutonomiaGuideAPI.transcrever.mockResolvedValue({ data: { texto: '' } });
+      wrapper = await mountCopilot();
+
+      await gravar();
+
+      expect(AutonomiaCopilotAPI.chat).not.toHaveBeenCalled();
+      expect(useAutonomiaCopilotStore().messages[0].voz.estado).toBe('erro');
+      expect(wrapper.find('textarea').attributes('readonly')).toBeUndefined();
+    });
+
+    it('com gravação no campo, o texto espera e avisa', async () => {
+      wrapper = await mountCopilot();
+
+      composer().vm.$emit('gravando', true);
+      await nextTick();
+      const aceitou = composer().props('onSend')('Resuma');
+
+      expect(aceitou).toBe(false);
+      expect(AutonomiaCopilotAPI.chat).not.toHaveBeenCalled();
+      expect(useAlert).toHaveBeenCalledWith(
+        'AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'
+      );
+    });
+
+    it('trocar de agente no meio da transcrição destrava o indicador', async () => {
+      let transcrever;
+      AutonomiaGuideAPI.transcrever.mockReturnValue(
+        new Promise(resolve => {
+          transcrever = resolve;
+        })
+      );
+      AutonomiaCopilotAPI.listAgents.mockResolvedValue({
+        data: {
+          agents: [
+            { id: 7, name: 'Lia' },
+            { id: 8, name: 'Bruno' },
+          ],
+        },
+      });
+      AutonomiaCopilotAPI.chat.mockReturnValue(new Promise(() => {}));
+      wrapper = await mountCopilot();
+
+      await gravar();
+      wrapper
+        .findComponent(CopilotHeader)
+        .vm.$emit('trocar', { id: 8, name: 'Bruno' });
+      await flushPromises();
+      transcrever({ data: { texto: 'atrasado' } });
+      await flushPromises();
+      await send(wrapper.find('textarea'), 'Nova pergunta');
+
+      expect(wrapper.text()).toContain('AUTONOMIA_COPILOT.THINKING');
+    });
+
+    it('"Novo assunto" esquece os arquivos', async () => {
+      AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+        data: { signed_id: 'assinado-1' },
+      });
+      wrapper = await mountCopilot();
+      await anexar('apolice.pdf');
+      await send(wrapper.find('textarea'), 'Leia');
+
+      await wrapper.get('[data-novo-assunto]').trigger('click');
+      await send(wrapper.find('textarea'), 'Outra coisa');
+
+      expect(AutonomiaCopilotAPI.chat).toHaveBeenLastCalledWith(
+        42,
+        expect.objectContaining({ arquivos: [] })
+      );
     });
   });
 });

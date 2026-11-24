@@ -50,12 +50,15 @@ class AutonomiaCopilotAPI extends ApiClient {
 
   // V2.3 — one chat turn against the selected agent.
   // history: [{ role: 'user' | 'assistant', content }]
-  chat(conversationId, { agentId, message, history } = {}) {
+  // #3198 — arquivos: signed_ids of the files attached in the thread (uploaded through the Guia's
+  // endpoint, AutonomiaGuideAPI.enviarArquivo).
+  chat(conversationId, { agentId, message, history, arquivos = [] } = {}) {
     return pollAiRequest(
       axios.post(`${this.url}/conversations/${conversationId}/copilot/chat`, {
         agent_id: agentId,
         message,
         history,
+        arquivos,
       })
     );
   }

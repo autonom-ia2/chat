@@ -4844,7 +4844,9 @@
       "SUMMARY": "Resuma esta conversa",
       "NEXT_STEP": "Qual é o próximo passo?",
       "DRAFT": "Escreva uma resposta para o cliente"
-    }
+    },
+    "FILE_LIMIT": "O copiloto lê até {max} arquivos por assunto. Toque em Novo assunto para enviar outros.",
+    "VOICE_WAITING": "Áudio pronto. Ele vai assim que o agente terminar de responder."
   },
   "AUTONOMIA_GUIDE": {
     "GRAFICO": {

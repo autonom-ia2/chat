@@ -14,6 +14,7 @@ module Autonomia
             'pdf'  => Pdf,
             'xlsx' => Xlsx,
             'docx' => Docx,
+            'pptx' => Pptx,
             'foto' => Foto
           }.freeze
 

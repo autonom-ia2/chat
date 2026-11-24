@@ -12,6 +12,7 @@ module Autonomia
     # invalid/unconfigured.
     class ConversationChat
       MAX_MESSAGES = 30
+      ANEXADO_PELA_EQUIPE = 'anexado pela equipe no copiloto, não pelo cliente'.freeze
       MAX_TRANSCRIPT = 8000
 
       # Untrusted-data framing for the transcript block fed to the agent.
@@ -30,8 +31,11 @@ module Autonomia
                        'Se eu puder te apoiar em outra coisa, pode contar.'.freeze
 
       # history: Array<{ role: 'user'|'assistant', content: String }> (the local widget thread)
-      def initialize(conversation:, agent_id:, message:, history: [])
+      # arquivos: signed_ids of the files the operator attached in the widget (#3198), uploaded through the Guia's
+      # endpoint (Autonomia::Guide::Arquivos: only blobs of this account resolve).
+      def initialize(conversation:, agent_id:, message:, history: [], arquivos: [])
         @conversation = conversation
+        @arquivos = Array(arquivos)
         @agent_id = agent_id
         # C1 (custo): teto na mensagem autoral do operador — texto colado gigante não infla o prompt.
         @message = Autonomia::Agents::Config.truncate_text(message, Autonomia::Agents::Config::MAX_QUERY_CHARS)
@@ -49,7 +53,7 @@ module Autonomia
         # Retriever preserva o começo e cortaria a pergunta real fora do embedding. O retrieval
         # usa só a pergunta do atendente; o LLM continua recebendo a query composta inteira.
         result = Autonomia::Agents::Copilot.new(
-          agent: agent, message: operator_query, history: @history, retrieval_query: @message
+          agent: agent, message: operator_query, history: @history, retrieval_query: @message, documents: documentos
         ).suggest
         chat_result(result)
       rescue StandardError => e
@@ -77,6 +81,16 @@ module Autonomia
 
       def account
         @account ||= conversation.account
+      end
+
+      # The document fence (PromptParts::Documentos) says the files came from the customer; the name says who really
+      # attached them, so the agent does not put the team's file in the customer's mouth. The mark goes first: the
+      # fence cuts the name at 120 characters.
+      def documentos
+        return [] if @arquivos.empty?
+
+        Autonomia::Guide::Arquivos.new(account: account).ler(@arquivos)
+                                  .map { |doc| doc.merge(name: "(#{ANEXADO_PELA_EQUIPE}) #{doc[:name]}") }
       end
 
       # Only the account's own team copilots (internal/both, never a system agent nor a helper of another agent).

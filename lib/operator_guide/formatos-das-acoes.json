@@ -12199,7 +12199,7 @@
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:17",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:16",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:64"
     ],
     "sem_corpo": false
   },
@@ -12208,6 +12208,9 @@
       "agent_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
+      },
+      "arquivos": {
+        "tipo": "lista"
       },
       "history": {
         "campos": {
@@ -12225,9 +12228,10 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:41",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:40",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:64"
     ],
     "sem_corpo": false
   },
