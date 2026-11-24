@@ -93,6 +93,15 @@ const fecharEDevolverFoco = () => {
   devolverFoco();
 };
 
+// #3195 — com o menu aberto, o Esc é dele: para aqui, senão chega ao ouvinte
+// do painel (AutonomiaGuideContainer) e fecha o Guia inteiro. Com o menu
+// fechado, segue: Esc fecha o Guia como sempre.
+const aoApertarEsc = evento => {
+  if (!menuAberto.value) return;
+  evento.stopPropagation();
+  fecharEDevolverFoco();
+};
+
 const alternarMenu = async () => {
   menuAberto.value = !menuAberto.value;
   if (!menuAberto.value) return;
@@ -196,7 +205,7 @@ const mover = (evento, indice) => {
       <div
         v-on-clickaway="fecharMenu"
         class="relative shrink-0"
-        @keydown.esc="fecharEDevolverFoco"
+        @keydown.esc="aoApertarEsc"
       >
         <Button
           ref="gatilho"

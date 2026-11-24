@@ -86,6 +86,31 @@ describe('GuideHeader (#3184)', () => {
     expect(document.activeElement).toBe(wrapper.get('[data-mais]').element);
   });
 
+  // #3195 — o painel fecha com Esc por um ouvinte no documento. Com o menu
+  // aberto, o Esc é do menu: não pode chegar lá e fechar o Guia inteiro.
+  it('Esc com o menu aberto não fecha o Guia', async () => {
+    const noDocumento = vi.fn();
+    document.addEventListener('keydown', noDocumento);
+    const wrapper = montar();
+    await abrirMenu(wrapper);
+
+    await itens(wrapper)[0].trigger('keydown', { key: 'Escape' });
+
+    expect(noDocumento).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', noDocumento);
+  });
+
+  it('Esc com o menu fechado segue para o painel fechar o Guia', async () => {
+    const noDocumento = vi.fn();
+    document.addEventListener('keydown', noDocumento);
+    const wrapper = montar();
+
+    await wrapper.get('[data-mais]').trigger('keydown', { key: 'Escape' });
+
+    expect(noDocumento).toHaveBeenCalledTimes(1);
+    document.removeEventListener('keydown', noDocumento);
+  });
+
   it('Tab sai do menu e fecha', async () => {
     const wrapper = montar();
     await abrirMenu(wrapper);
