@@ -36,6 +36,12 @@ const props = defineProps({
   valor: { type: [String, Number, Boolean], default: '' },
   valorInicial: { type: [String, Number, Boolean], default: '' },
   erro: { type: String, default: '' },
+  // #3168 — a mensagem de erro já escrita, para quem usa o campo fora da
+  // gaveta da ficha ("Escreva o dia." em "Mais filtros"). Vale sobre `erro`.
+  textoDoErro: { type: String, default: '' },
+  // #3168 — o exemplo de dentro do campo de data ("Ex.: 25/12/2026"), para
+  // quem não quer o formato ("dd/mm/aaaa") como exemplo.
+  exemploDoCampo: { type: String, default: '' },
 });
 const emit = defineEmits(['mudar']);
 
@@ -105,7 +111,11 @@ const PELO_TIPO = {
 };
 const atributosDoCampo = computed(() => {
   if (ehData.value)
-    return { type: 'text', inputmode: 'numeric', placeholder: exemplo.value };
+    return {
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: props.exemploDoCampo || exemplo.value,
+    };
   return PELO_TIPO[props.campo.tipo] ?? { type: 'text' };
 });
 
@@ -146,13 +156,14 @@ const vaiSair = computed(
 // de tela não o lê).
 const ajuda = computed(() => {
   if (vaiSair.value) return ga('ATRIBUTO.VAI_SAIR');
-  if (ehData.value && !props.erro)
+  if (ehData.value && !props.erro && !props.textoDoErro)
     return ga('ATRIBUTO.DATA_ASSIM', { formato: exemplo.value });
   return '';
 });
-const mensagem = computed(() =>
-  props.erro ? ga(`ERRO.${props.erro}`, { formato: exemplo.value }) : ''
-);
+const mensagem = computed(() => {
+  if (props.textoDoErro) return props.textoDoErro;
+  return props.erro ? ga(`ERRO.${props.erro}`, { formato: exemplo.value }) : '';
+});
 const voltar = () => mudarDeFora(props.valorInicial);
 </script>
 

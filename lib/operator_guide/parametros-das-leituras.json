@@ -2411,6 +2411,7 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#index",
     "parametros": [
       "busca",
+      "condicoes",
       "filtros",
       "grupo",
       "ordem",
@@ -2467,6 +2468,7 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",
     "parametros": [
       "busca",
+      "condicoes",
       "filtros",
       "grupo",
       "ordem",
@@ -2477,6 +2479,7 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#todas",
     "parametros": [
       "busca",
+      "condicoes",
       "filtros",
       "grupo",
       "ordem",

@@ -1709,6 +1709,53 @@ pt_BR:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
     guide:
+      relatorio:
+        titulo: '%{metrica} por %{por}'
+        titulo_de: '%{titulo}, %{quem}'
+        formato_dia: '%d/%m'
+        formato_mes: '%m/%Y'
+        e: ' e '
+        metricas:
+          conversations_count: 'Conversas'
+          incoming_messages_count: 'Mensagens recebidas'
+          outgoing_messages_count: 'Mensagens enviadas'
+          resolutions_count: 'Conversas resolvidas'
+          avg_first_response_time: 'Tempo da primeira resposta (minutos)'
+          avg_resolution_time: 'Tempo de resolução (minutos)'
+          reply_time: 'Tempo de resposta (minutos)'
+          bot_resolutions_count: 'Resolvidas pelo robô'
+          bot_handoffs_count: 'Passadas do robô para uma pessoa'
+        por:
+          conta: 'conta'
+          agente: 'pessoa'
+          caixa: 'caixa'
+          etiqueta: 'etiqueta'
+          time: 'time'
+          dia: 'dia'
+          semana: 'semana'
+          mes: 'mês'
+        unidades:
+          years:
+            one: '%{count} ano'
+            other: '%{count} anos'
+          months:
+            one: '%{count} mês'
+            other: '%{count} meses'
+          weeks:
+            one: '%{count} semana'
+            other: '%{count} semanas'
+          days:
+            one: '%{count} dia'
+            other: '%{count} dias'
+          hours:
+            one: '%{count} hora'
+            other: '%{count} horas'
+          minutes:
+            one: '%{count} minuto'
+            other: '%{count} minutos'
+          seconds:
+            one: '%{count} segundo'
+            other: '%{count} segundos'
       done: 'Pronto, feito.'
       failed: 'Não consegui fazer isso agora.'
       unknown_action: 'Isto o Guia não faz.'

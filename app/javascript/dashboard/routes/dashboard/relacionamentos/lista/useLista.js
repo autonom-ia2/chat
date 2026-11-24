@@ -24,6 +24,8 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // Empresas não tem. Trocar de aba volta para a ordem da aba nova.
 // #3100 — `filtrosIniciais`: a lista já abre filtrada (o "Ver quem está perto
 // do prêmio" da Fidelidade chega com ?fidelidade=perto).
+// #3168 — `mudarConsulta` troca de uma vez o que vier de grupo, busca, ordem e
+// filtros (um grupo guardado reaplicado) com uma leitura só.
 export const useLista = ({
   fonte,
   aba,
@@ -214,6 +216,18 @@ export const useLista = ({
     mudarOrdem: nova => mudar(ordem, nova),
     mudarFiltros: novos => {
       filtros.value = { ...filtrosVazios, ...novos };
+      return recomecarRecontando();
+    },
+    mudarConsulta: ({
+      grupo: novoGrupo = grupo.value,
+      busca: novaBusca = busca.value,
+      ordem: novaOrdem = ordem.value,
+      filtros: novosFiltros = filtros.value,
+    }) => {
+      grupo.value = novoGrupo;
+      busca.value = novaBusca;
+      ordem.value = novaOrdem;
+      filtros.value = { ...filtrosVazios, ...novosFiltros };
       return recomecarRecontando();
     },
     limparFiltros: () => {

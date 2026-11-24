@@ -1178,6 +1178,8 @@ describe('GavetaDeFiltros', () => {
           compras: '',
           totalAcima: '',
           fidelidade: '',
+          condicoes: [],
+          juntar: 'todas',
         },
       ],
     ]);

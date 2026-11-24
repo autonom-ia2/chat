@@ -1,5 +1,7 @@
 import { DIA_EM_MS } from '../fonte/grupos';
 import { diasSemComprar } from '../fonte/gruposDeCompra';
+import { JUNTAR } from './informacoes';
+import { pessoaPassaNasCondicoes } from './condicoesNaDemo';
 
 // #2894 — "Mais filtros" da lista de pessoas: empresa, etiqueta, cidade e
 // quando chegou. Vazio ('') quer dizer "qualquer".
@@ -15,6 +17,10 @@ export const FILTROS_VAZIOS = Object.freeze({
   // #3100 — o cartão fidelidade: perto do prêmio ou cartão completo. Só o
   // servidor sabe o saldo: a lista da demonstração não filtra por ele.
   fidelidade: '',
+  // #3168 — "Por outra informação": as linhas (lista/informacoes.js) e se a
+  // pessoa precisa ter todas ou pelo menos uma.
+  condicoes: Object.freeze([]),
+  juntar: JUNTAR.TODAS,
 });
 
 export const FIDELIDADE = { PERTO: 'perto', COMPLETO: 'completo' };
@@ -51,9 +57,13 @@ const DIAS_DO_PERIODO = {
 export const preenchido = valor =>
   valor !== '' && valor !== null && valor !== undefined;
 
+// #3168 — cada linha de "Por outra informação" conta 1; "juntar" não conta.
+const FORA_DA_CONTAGEM = ['condicoes', 'juntar'];
+
 export const contarFiltros = (filtros = {}) =>
-  Object.keys(FILTROS_VAZIOS).filter(chave => preenchido(filtros[chave]))
-    .length;
+  Object.keys(FILTROS_VAZIOS).filter(
+    chave => !FORA_DA_CONTAGEM.includes(chave) && preenchido(filtros[chave])
+  ).length + (filtros.condicoes?.length ?? 0);
 
 const mesmaEmpresa = (pessoa, empresa) =>
   String(pessoa.company_id) === String(empresa);
@@ -95,7 +105,10 @@ export const pessoaPassaNosFiltros = (
   if (preenchido(cidade) && pessoa.additional_attributes?.city !== cidade) {
     return false;
   }
-  return !preenchido(chegouEm) || chegouNoPeriodo(pessoa, chegouEm, agora);
+  if (preenchido(chegouEm) && !chegouNoPeriodo(pessoa, chegouEm, agora)) {
+    return false;
+  }
+  return pessoaPassaNasCondicoes(pessoa, filtros, agora);
 };
 
 // #3078 — "Mais filtros" da aba Empresas: cidade e quando chegou (a lista

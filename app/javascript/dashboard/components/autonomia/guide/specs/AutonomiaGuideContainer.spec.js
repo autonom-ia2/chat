@@ -814,6 +814,73 @@ describe('AutonomiaGuideContainer', () => {
     expect(wrapper.find('[data-anotei]').exists()).toBe(false);
   });
 
+  // #3158 — o gráfico do relatório entra na resposta no lugar do marcador, e
+  // aparece também na resposta retida: o número veio da ferramenta.
+  describe('gráfico do relatório', () => {
+    const GRAFICO = {
+      id: '1',
+      modo: 'ranking',
+      titulo: 'Conversas resolvidas por pessoa',
+      medida: 'Conversas resolvidas',
+      de: '2026-10-01',
+      ate: '2026-10-31',
+      barras: [{ rotulo: 'Ana Souza', valor: 128 }],
+    };
+
+    const montarComGrafico = () =>
+      mount(AutonomiaGuideContainer, {
+        attachTo: document.body,
+        global: {
+          mocks: { $t: key => key },
+          directives: { onClickOutside: {}, dompurifyHtml: {} },
+          stubs: {
+            GuideGrafico: {
+              name: 'GuideGrafico',
+              props: ['titulo'],
+              template: '<figure data-grafico>{{ titulo }}</figure>',
+            },
+          },
+        },
+      });
+
+    const responder = async data => {
+      pedidoAberto();
+      AutonomiaGuideAPI.resposta.mockResolvedValue({ data });
+      wrapper = montarComGrafico();
+      await perguntar(wrapper, 'quem resolveu mais em outubro?');
+      await esperarUmaBusca();
+      await flushPromises();
+    };
+
+    it('desenha o gráfico que veio com a resposta', async () => {
+      await responder({
+        status: 'done',
+        available: true,
+        text: 'A Ana resolveu mais. [grafico:1]',
+        graficos: [GRAFICO],
+      });
+
+      expect(wrapper.find('[data-grafico]').text()).toBe(
+        'Conversas resolvidas por pessoa'
+      );
+      expect(useAutonomiaGuideStore().messages.at(-1).graficos).toEqual([
+        GRAFICO,
+      ]);
+    });
+
+    it('mostra o gráfico também quando a resposta foi retida', async () => {
+      await responder({
+        status: 'done',
+        available: true,
+        retido: true,
+        text: null,
+        graficos: [GRAFICO],
+      });
+
+      expect(wrapper.find('[data-grafico]').exists()).toBe(true);
+    });
+  });
+
   it('opens "What I know" from the header in place of the conversation', async () => {
     wrapper = mountGuide();
     await flushPromises();

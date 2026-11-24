@@ -21238,6 +21238,7 @@
   "POST relacionamentos/pessoas/exportar": {
     "campos": {
       "busca": {},
+      "condicoes": {},
       "filtros": {
         "campos": {
           "chegou_em": {},
@@ -21258,8 +21259,8 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
     "modelo": "Account",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:42",
-      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:94"
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:45",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:97"
     ],
     "sem_corpo": false
   },

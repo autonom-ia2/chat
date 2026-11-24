@@ -16,6 +16,8 @@ import CampoDeBusca from './CampoDeBusca.vue';
 // da lista de contatos de hoje, agrupadas por campo e nos dois sentidos. Sem
 // eles, ficam as três de sempre. No celular o rótulo "Ordenar" fica só para o
 // leitor de tela, então o botão diz o que é: "Ordem: Nome, de A a Z".
+// #3168 — `podeGuardarGrupo`: ao lado de "Mais filtros", "Guardar como grupo"
+// (quem decide quando aparece é a tela). No celular ele ganha a última linha.
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -24,8 +26,14 @@ const props = defineProps({
   comFiltros: { type: Boolean, default: true },
   placeholder: { type: String, required: true },
   placeholderCurto: { type: String, default: '' },
+  podeGuardarGrupo: { type: Boolean, default: false },
 });
-const emit = defineEmits(['update:busca', 'update:ordem', 'abrirFiltros']);
+const emit = defineEmits([
+  'update:busca',
+  'update:ordem',
+  'abrirFiltros',
+  'guardarGrupo',
+]);
 
 const { t } = useI18n();
 const idDaOrdem = useId();
@@ -113,6 +121,17 @@ const rotuloDosFiltros = computed(() =>
       aria-haspopup="dialog"
       :label="rotuloDosFiltros"
       @click="emit('abrirFiltros')"
+    />
+    <Button
+      v-if="podeGuardarGrupo"
+      slate
+      faded
+      class="relative order-last w-full shrink-0 whitespace-nowrap md:order-none md:w-auto before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
+      icon="i-lucide-bookmark-plus"
+      data-relacionamentos="guardar-como-grupo"
+      aria-haspopup="dialog"
+      :label="t('RELACIONAMENTOS.LISTA.MEUS_GRUPOS.GUARDAR_COMO_GRUPO')"
+      @click="emit('guardarGrupo')"
     />
   </div>
 </template>

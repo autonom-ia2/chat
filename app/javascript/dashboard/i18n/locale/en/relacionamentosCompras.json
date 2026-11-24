@@ -57,9 +57,9 @@
       }
     },
     "LISTA": {
-      "VISAO": "Show groups by",
-      "CONVERSA": "Conversation",
-      "COMPRA": "Purchase",
+      "VISAO": "Show groups:",
+      "CONVERSA": "By conversation",
+      "COMPRA": "By purchase",
       "AJUSTAR": "Adjust groups",
       "COMPROU_HA": "Bought {quando}",
       "COMPRAS": "{count} time | {count} times",

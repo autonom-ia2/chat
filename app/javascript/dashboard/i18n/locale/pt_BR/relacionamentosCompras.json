@@ -57,9 +57,9 @@
       }
     },
     "LISTA": {
-      "VISAO": "Ver os grupos por",
-      "CONVERSA": "Conversa",
-      "COMPRA": "Compra",
+      "VISAO": "Mostrar os grupos:",
+      "CONVERSA": "Por conversa",
+      "COMPRA": "Por compra",
       "AJUSTAR": "Ajustar os grupos",
       "COMPROU_HA": "Comprou {quando}",
       "COMPRAS": "{count} vez | {count} vezes",
