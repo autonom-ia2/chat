@@ -879,6 +879,60 @@ describe('o histórico com a renovação e o "Exportar"', () => {
     );
   });
 
+  // #3175 — o seguro do Agger conta por onde chegou, o que o PDF completou e o
+  // que o Agger mudou, sem "Algo mudou neste seguro" e sem nome de pessoa no
+  // que o sistema fez sozinho.
+  it('o seguro do Agger: chegada, PDF lido e atualização, com o que mudou', () => {
+    const w = abrir({
+      itens: [
+        passo('chegou_de_novo', {
+          valores: { leitura: 31 },
+          mudancas: [{ campo: 'valor', antes: 2400, depois: 2600 }],
+        }),
+        passo('pdf_lido', {
+          valores: { leitura: 30 },
+          mudancas: [
+            { campo: 'valor', antes: null, depois: 2400 },
+            { campo: 'cep', antes_vazio: true },
+          ],
+        }),
+        passo('pdf_anexado', { valores: { leitura: 30 } }),
+        passo('chegou_agger', { quem: { nome: 'Bruna Teixeirão' } }),
+      ],
+    });
+    // O valor em reais leva espaço duro depois do "R$".
+    const [deNovo, lido, anexado, chegou] = frases(w).map(frase =>
+      frase.replaceAll('\u00a0', ' ')
+    );
+
+    expect(deNovo).toContain('Atualizado pelo Agger.');
+    expect(deNovo).toContain('era R$ 2.400,00, ficou R$ 2.600,00');
+    expect(lido).toContain('PDF lido. O que estava em branco foi completado.');
+    expect(lido).toContain('era não informado, ficou R$ 2.400,00');
+    expect(lido).toContain('CEP: mudou');
+    expect(anexado).not.toContain('Bruna');
+    expect(anexado).toContain('PDF guardado.');
+    expect(chegou).toContain('Chegou pelo Agger.');
+    expect(chegou).toContain('Bruna Teixeirão');
+    expect(w.text()).not.toContain('Algo mudou neste seguro.');
+    expect(w.text()).not.toContain('Chegou de novo por planilha.');
+  });
+
+  it.each([
+    [{ recusa: 'nao_e_apolice' }, null, 'não parece ser uma apólice'],
+    [{ recusa: 'nao_deu_para_ler' }, null, 'Não deu para ler o PDF guardado.'],
+    [{}, null, 'Não tinha nada em branco para completar.'],
+  ])(
+    'o PDF lido sem completar nada (%j) diz por quê',
+    (valores, mudancas, frase) => {
+      const [lido] = frases(
+        abrir({ itens: [passo('pdf_lido', { valores, mudancas })] })
+      );
+
+      expect(lido).toContain(frase);
+    }
+  );
+
   it('desfazer o resultado conta o que foi desfeito e quem desfez', () => {
     const w = abrir({
       itens: [

@@ -29,7 +29,10 @@ class Carteira::ApoliceEvento < ApplicationRecord
   # E8.1 (#3043): a cotação leu o PDF que já estava no seguro para achar os dados do segurado. `valores.vigencia` é a
   # vigência da leitura (uma por vigência); nenhum valor lido vai para a história.
   DA_E8 = %w[dados_lidos_pdf].freeze
-  TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6 + DA_E8).freeze
+  # #3175: o PDF que a busca no conector guardou foi lido e completou o que estava vazio (Carteira::Conector::LerPdf).
+  # `mudancas` é o que ele completou; `valores.recusa`, por que não deu para ler; `valores.leitura`, a busca.
+  DO_CONECTOR = %w[pdf_lido].freeze
+  TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6 + DA_E8 + DO_CONECTOR).freeze
 
   belongs_to :apolice, class_name: 'Carteira::Apolice', inverse_of: :eventos
   belongs_to :user, optional: true

@@ -8,6 +8,11 @@
 // quem não enxerga o card no quadro recebe o passo sem nada disso.
 // O passo que a tela não conhece (o servidor ganha passos antes dela) vira uma
 // frase neutra: o nome do passo nunca aparece cru.
+// #3175 — o seguro do Agger: "Chegou pelo Agger." e, quando o Agger o traz de
+// novo e muda algo, "Atualizado pelo Agger." (o passo é o mesmo da planilha,
+// `chegou_de_novo`; o do Agger leva a busca em `valores.leitura`). A leitura do
+// PDF que o Agger mandou (`pdf_lido`) diz se completou algo, se não havia o que
+// completar ou se não deu para ler.
 import { DESFECHOS, motivoTemNome } from './situacaoDaRenovacao';
 
 export const DETALHES = {
@@ -55,10 +60,16 @@ export const PASSOS_COM_FRASE = [
   // #3043 (E8.1) — a cotação leu o PDF guardado para achar os dados do
   // segurado. Nenhum valor lido vem no passo.
   'dados_lidos_pdf',
+  // #3175 — o seguro que chegou pelo Agger e o PDF dele lido na chegada.
+  'chegou_agger',
+  'pdf_lido',
 ];
 export const PASSO_SEM_NOME = 'PASSO_SEM_NOME';
 // Alguém desfez o "Renovou" ou o "Não renovou": `valores.anterior` diz qual.
 const DESFEZ = 'desfez_desfecho';
+const DE_NOVO = 'chegou_de_novo';
+const PDF_LIDO = 'pdf_lido';
+const NAO_E_APOLICE = 'nao_e_apolice';
 
 const DETALHE_DO_TIPO = {
   renovacao_card_nasceu: DETALHES.CUIDA,
@@ -76,9 +87,21 @@ const DETALHE_SERVE = {
 
 const semDetalhe = chave => ({ chave, detalhe: null, valor: null });
 
-export const fraseDoPasso = ({ tipo, valores }) => {
+const fraseDoPdfLido = ({ valores, mudancas }) => {
+  if (valores?.recusa === NAO_E_APOLICE) return 'PDF_LIDO.NAO_E_APOLICE';
+  if (valores?.recusa) return 'PDF_LIDO.NAO_DEU';
+  return mudancas?.length ? 'TIPOS.PDF_LIDO' : 'PDF_LIDO.NADA';
+};
+
+export const fraseDoPasso = ({ tipo, valores, mudancas }) => {
   if (!PASSOS_COM_FRASE.includes(tipo)) return semDetalhe(PASSO_SEM_NOME);
   const nome = tipo.toUpperCase();
+  if (tipo === PDF_LIDO) {
+    return semDetalhe(fraseDoPdfLido({ valores, mudancas }));
+  }
+  if (tipo === DE_NOVO && valores?.leitura) {
+    return semDetalhe('DO_AGGER.CHEGOU_DE_NOVO');
+  }
   if (tipo === DESFEZ) {
     return Object.values(DESFECHOS).includes(valores?.anterior)
       ? semDetalhe(`DESFEZ.${valores.anterior.toUpperCase()}`)

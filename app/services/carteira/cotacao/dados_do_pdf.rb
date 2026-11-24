@@ -13,8 +13,8 @@
 #   tentada de novo (segue com o que tem: a cotação para em "faltou dado" e a equipe é avisada, como sempre).
 #
 # O que grava: só as colunas dos cinco que estão vazias, relidas com o seguro travado (o que alguém escreveu no meio
-# fica). Nunca sobrescreve e nunca toca nas outras colunas do seguro. Só o que o leitor deu como certo (`campos`): o que
-# ele deixa "a confirmar" não entra por aqui. A história ganha só o passo da leitura, com a vigência: nenhum valor lido.
+# fica; #3175: o que foi corrigido à mão também). Nunca sobrescreve e nunca toca nas outras colunas do seguro. Só o que
+# o leitor deu como certo (`campos`): o que ele deixa "a confirmar" não entra por aqui. A história ganha só o passo da leitura, com a vigência: nenhum valor lido.
 #
 # Nada do PDF vai para log nem para argumento de job: quem chama roda no job da cotação, com o id do seguro.
 class Carteira::Cotacao::DadosDoPdf
@@ -64,23 +64,14 @@ class Carteira::Cotacao::DadosDoPdf
     end
   end
 
-  # Como a leitura de um item (Carteira::LerItem): o PDF num arquivo temporário, com OCR (estamos num job), e o CPF da
-  # pessoa (ou o CNPJ da empresa segurada) para escolher as páginas.
-  def ler
-    leitor = Carteira::Leitor.new(account: @account, ocr: true, cliente: @cliente)
-    segurado = @apolice.company || @apolice.contact
-    documento = Relacionamentos::Documentos.new(@account).ler(segurado)&.valor
-    @apolice.pdf.open { |arquivo| leitor.ler(arquivo.path, documento: documento, nome: segurado.name) }
-  rescue ActiveStorage::FileNotFoundError
-    Carteira::Leitor::Resultado.recusado(Carteira::Leitor::Resultado::NAO_DEU, motivo: :sem_arquivo)
+  # Só os vazios, relidos com o seguro travado (Carteira::Pdf::Completar). O que foi corrigido à mão fica.
+  def gravar(campos)
+    colunas = do_segurado(Carteira::DadosDoSegurado::COLUNAS)
+    Carteira::Pdf::Completar.new(@apolice, campos: colunas.map { |coluna| Carteira::Campos::COLUNAS.key(coluna) }).call(campos)
   end
 
-  # Só os vazios, relidos com o seguro travado.
-  def gravar(campos)
-    @apolice.with_lock(requires_new: true) do
-      vazios = do_segurado(Carteira::DadosDoSegurado::COLUNAS.select { |coluna| @apolice[coluna].nil? })
-      novos = campos.slice(*vazios.map(&:to_s)).compact
-      @apolice.update!(novos) if novos.any?
-    end
+  # O PDF do seguro, lido como a leitura de um item (Carteira::Leitor::DoSeguro).
+  def ler
+    Carteira::Leitor::DoSeguro.new(@apolice, cliente: @cliente).call
   end
 end
