@@ -53,6 +53,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     described_class.new(conversation: conversation, agent_inbox: agent_inbox, reply_to_message_id: ultima.id).perform
   end
 
+  # O pedido sem o item "Agora: …" (#3211, P6), que entra em todo turno: estes casos medem só as regras do turno.
+  def sem_agora(input)
+    input.reject { |item| item[:content].first[:text].start_with?('Agora:') }
+  end
+
   def itens(input)
     input.map { |item| [item[:role], item[:content].first[:text]] }
   end
@@ -156,7 +161,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     escreve(:outgoing, 'Olá!', sender: agent_bot)
     responder(escreve(:incoming, 'Tudo bem?'))
 
-    expect(pedidos.sole.map { |item| item[:role] }).not_to include('developer')
+    expect(sem_agora(pedidos.sole).map { |item| item[:role] }).not_to include('developer')
   end
 
   # Envios automáticos gravados em nome de uma pessoa (PessoaDaEquipe#envio_automatico?): a mesma moldura automática, a
@@ -173,7 +178,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       itens = itens(pedidos.sole)
       expect(itens).to include(['user', moldura.automatica('Sua reunião é amanhã às 10h.', marca)])
-      developer = pedidos.sole.filter_map { |item| item[:content].first[:text] if item[:role] == 'developer' }
+      developer = sem_agora(pedidos.sole).filter_map { |item| item[:content].first[:text] if item[:role] == 'developer' }
       expect(developer).to eq([moldura.regra_automatica(marca)])
     end
   end
@@ -196,7 +201,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       itens = itens(pedidos.sole)
       expect(itens).to include(['assistant', aviso])
-      expect(itens.map(&:first)).not_to include('developer')
+      expect(sem_agora(pedidos.sole).map { |item| item[:role] }).not_to include('developer')
     end
   end
 end

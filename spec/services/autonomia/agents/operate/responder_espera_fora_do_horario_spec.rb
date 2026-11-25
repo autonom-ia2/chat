@@ -55,8 +55,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     described_class.new(conversation: conversation, agent_inbox: agent_inbox, reply_to_message_id: ultima.id).perform
   end
 
+  # Os itens `developer` do pedido SEM o "Agora: …" (#3211, P6), que entra em todo turno e não é o que estes casos medem.
+  # O item Agora em si é coberto em prompt_builder_agora_spec.
   def developer(input)
     input.select { |item| item[:role] == 'developer' }.flat_map { |item| item[:content] }.pluck(:text)
+         .reject { |texto| texto.start_with?('Agora:') }
   end
 
   def contexto_esperado

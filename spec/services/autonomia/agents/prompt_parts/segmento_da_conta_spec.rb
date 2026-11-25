@@ -93,7 +93,11 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
       turno1 = Autonomia::Agents::PromptBuilder.new(agent: agent, query: 'Oi', history: [])
       turno2 = Autonomia::Agents::PromptBuilder.new(agent: agent, query: 'E o prazo?', history: history)
       expect(turno2.instructions).to eq(turno1.instructions)
-      expect(turno2.input.first).to eq(turno1.input.first)
+      # O que é estável entre turnos é o bloco do segmento. `input.first` não serve mais: o item "Agora" (#3211) vem logo
+      # antes da pergunta, então no turno sem histórico ele é o primeiro item.
+      segmento = described_class.mensagem(account, bloco)
+      expect(turno1.input.first).to eq(segmento)
+      expect(turno2.input.first).to eq(segmento)
     end
 
     it 'leaves the Guia (system agent) out' do
