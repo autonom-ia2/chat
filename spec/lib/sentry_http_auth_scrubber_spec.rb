@@ -295,6 +295,15 @@ RSpec.describe SentryHttpAuthScrubber do
                            'additional_attributes' => { 'cnpj' => '[FILTERED]' }, 'documento' => '[FILTERED]', 'busca' => '[FILTERED]')
   end
 
+  # #3211 — o login e a senha do corretor na seguradora (POST agents/:agent_id/acesso_da_seguradora).
+  it 'filters the insurer login and password (login, senha) from a JSON body' do
+    data = { body: JSON.generate(login: 'corretor.teste', senha: 's3nha-teste', hidden: true) }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('login' => '[FILTERED]', 'senha' => '[FILTERED]', 'hidden' => true)
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }
