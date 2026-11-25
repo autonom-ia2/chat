@@ -23,4 +23,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Faixas do
   it 'preço por pessoa na ordem das idades' do
     expect(described_class.precos_por_pessoa(plano, [45, 70, 90])).to eq(['120.0', '240.0', nil])
   end
+
+  it 'idade na data da saída' do
+    expect(described_class.idade_em(Date.new(1981, 3, 15), Date.new(2027, 2, 2))).to eq(45)
+    expect(described_class.idade_em(Date.new(1981, 2, 2), Date.new(2027, 2, 2))).to eq(46)
+  end
+
+  it 'mesma faixa por multiset, não pela ordem' do
+    expect(described_class.mesma_faixa?(plano, [45, 70], [71, 44])).to be(true)
+    expect(described_class.mesma_faixa?(plano, [45], [66])).to be(false)
+    expect(described_class.mesma_faixa?(plano, [45], [90])).to be(false)
+  end
+
+  it 'mesma faixa conta quantos caem em cada uma' do
+    expect(described_class.mesma_faixa?(plano, [45, 70], [45, 44])).to be(false)
+  end
 end

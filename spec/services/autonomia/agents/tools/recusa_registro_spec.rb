@@ -908,6 +908,46 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
       'detalhes_da_cotacao.rb#call#3' => {
         espera: { motivo: 'plano_inexistente', slug: 'detalhes_da_cotacao', faltando: 'codigos_dos_planos' },
         dispara: -> { detalhar_cotacao(['P9'], com_cotacao: true) }
+      },
+      # #3211: as recusas da proposta do Seguro Viagem; nenhuma chega à Universal.
+      'gerar_proposta_seguro_viagem.rb#call#1' => {
+        espera: { motivo: 'proposta_sem_conversa', slug: 'gerar_proposta_seguro_viagem', conversa: '-' },
+        dispara: -> { propor_viagem(proposta_de_viagem, entrega: nil) }
+      },
+      'gerar_proposta_seguro_viagem.rb#call#2' => {
+        espera: { motivo: 'so_cotacao', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: -> { propor_viagem(proposta_de_viagem, so_cotacao: true) }
+      },
+      'gerar_proposta_seguro_viagem.rb#call#3' => {
+        espera: { motivo: 'sem_cotacao', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: -> { propor_viagem(proposta_de_viagem, cotacao: nil) }
+      },
+      'gerar_proposta_seguro_viagem.rb#call#4' => {
+        espera: { motivo: 'recotar', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: -> { propor_viagem(proposta_de_viagem, cotacao: 2.days.ago) }
+      },
+      'gerar_proposta_seguro_viagem.rb#call#5' => {
+        espera: { motivo: 'plano_inexistente', slug: 'gerar_proposta_seguro_viagem', faltando: 'codigo_do_plano' },
+        dispara: -> { propor_viagem(proposta_de_viagem.merge(codigo_do_plano: 'P9')) }
+      },
+      'gerar_proposta_seguro_viagem.rb#conferir_e_propor#1' => {
+        espera: { motivo: 'pedido_invalido', slug: 'gerar_proposta_seguro_viagem', faltando: 'titular.cpf' },
+        dispara: -> { propor_viagem(proposta_de_viagem(cpf: '5299822472')) }
+      },
+      'gerar_proposta_seguro_viagem.rb#conferir_e_propor#2' => {
+        espera: { motivo: 'quantidade_de_viajantes', slug: 'gerar_proposta_seguro_viagem', faltando: 'demais_viajantes' },
+        dispara: lambda {
+          outro = { nome_completo: 'Ciclana de Teste', cpf: '11144477735', data_nascimento: '2014-07-01' }
+          propor_viagem(proposta_de_viagem.merge(demais_viajantes: [outro]))
+        }
+      },
+      'gerar_proposta_seguro_viagem.rb#conferir_e_propor#3' => {
+        espera: { motivo: 'recotar', slug: 'gerar_proposta_seguro_viagem', faltando: 'idades' },
+        dispara: -> { propor_viagem(proposta_de_viagem(data_nascimento: '1900-01-01')) }
+      },
+      'gerar_proposta_seguro_viagem.rb#conferir_e_propor#4' => {
+        espera: { motivo: 'cep_nao_encontrado', slug: 'gerar_proposta_seguro_viagem', faltando: 'titular.cep' },
+        dispara: -> { propor_viagem(proposta_de_viagem) }
       }
     }
   end
@@ -933,6 +973,35 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     end
     bound_para(Autonomia::Agents::Tools::Native::DetalhesDaCotacao)
       .execute({ 'name' => 'detalhes_da_cotacao', 'arguments' => { codigos_dos_planos: codigos }.to_json }, delivery: entrega)
+  end
+
+  # #3211: a proposta pelo `Bound`, com o acesso conferido e, quando `cotacao` é um instante, a cotação de um viajante
+  # de 45 anos criada nele. O endereço pelo CEP não sai (`buscar` nil): só a última recusa chega até ele.
+  def propor_viagem(argumentos, entrega: delivery, so_cotacao: false, cotacao: Time.current)
+    Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
+                                                  senha: 's3nha-teste', estado: 'ok',
+                                                  capacidades: { 'so_cotacao' => so_cotacao })
+    guardar_cotacao_de_viagem(cotacao) if cotacao
+    allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar).and_return(nil)
+    bound_para(Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem)
+      .execute({ 'name' => 'gerar_proposta_seguro_viagem', 'arguments' => argumentos.to_json }, delivery: entrega)
+  end
+
+  def guardar_cotacao_de_viagem(criada_em)
+    plano = { 'codigo' => 'P1', 'nome' => 'Plano', 'preco_total' => '100.0', 'idade_minima' => 0, 'idade_maxima' => 99,
+              'faixas' => [{ 'de' => 0, 'ate' => 99, 'valor' => '100.0' }] }
+    Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversation, agent: agent,
+                                               id_cotacao: 'c-1', planos: [plano], created_at: criada_em,
+                                               pedido: { 'data_saida' => viagem[:data_saida], 'idades' => [45] })
+  end
+
+  # Dados fictícios (o CPF tem dígito verificador válido); o titular tem 45 anos na saída de `viagem`.
+  def proposta_de_viagem(**troca)
+    nascimento = (Date.iso8601(viagem[:data_saida]) << ((45 * 12) + 6)).iso8601
+    titular = { nome_completo: 'Fulano de Teste', cpf: '52998224725', data_nascimento: nascimento,
+                email: 'fulano@exemplo.test', telefone: '11987654321', cep: '01310100', numero: '1000', complemento: nil }
+    { codigo_do_plano: 'P1', titular: titular.merge(troca), demais_viajantes: [],
+      contato_de_emergencia: { nome: 'Beltrana de Teste', telefone: '11912345678' } }
   end
 
   def viagem
