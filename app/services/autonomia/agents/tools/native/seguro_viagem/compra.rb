@@ -35,10 +35,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
     }
   end
 
-  # O preço guardado do plano (`'360.0'`) em BigDecimal; nil quando falta ou não é número. A ferramenta recusa o plano
-  # sem preço antes de montar a compra.
+  # O preço guardado do plano (`'360.0'`) em BigDecimal; nil quando falta, não é número, não é finito (NaN, Infinity)
+  # ou não passa de zero. A ferramenta recusa o plano sem preço antes de montar a compra.
   def preco(plano)
-    BigDecimal(plano['preco_total'].to_s, exception: false)
+    valor = BigDecimal(plano['preco_total'].to_s, exception: false)
+    valor if valor&.finite? && valor.positive?
   end
 
   # O link de pagamento do carrinho. Sem código: nil.

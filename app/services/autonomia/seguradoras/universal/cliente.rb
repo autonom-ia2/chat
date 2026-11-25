@@ -5,10 +5,13 @@
 # o corpo da compra traz CPF e o cabeçalho traz a senha do corretor.
 class Autonomia::Seguradoras::Universal::Cliente
   BASE_URL = 'https://api-br.universal-assistance.com'.freeze
-  # O Setup roda dentro da requisição da tela (conferir o acesso, abaixo do Rack::Timeout de 15 s): abertura + leitura
-  # dele somam 12 s, e o GET não se repete sozinho (`max_retries = 0`; o Net::HTTP repetiria uma vez o GET que estourou
-  # a leitura, dobrando a espera). As outras chamadas rodam no turno do agente, em job.
-  ABERTURA = 4
+  # O Setup roda dentro da requisição da tela (conferir o acesso, abaixo do Rack::Timeout de 15 s). O `open_timeout` do
+  # Net::HTTP vale para a conexão TCP e para o handshake SSL juntos, então o pior caso sem resposta do Setup é
+  # ABERTURA + LEITURA (3 + 8 = 11 s). O `read_timeout` vale por leitura, não pelo total: uma resposta que pinga devagar
+  # pode passar disso. `max_retries = 0` vale para todas as chamadas, não só para o Setup: o Net::HTTP repetiria uma vez
+  # um GET que estourou a leitura (Setup e destinos), dobrando a espera; os POST ele já não repete. As outras chamadas
+  # rodam no turno do agente, em job.
+  ABERTURA = 3
   LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40 }.freeze
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze

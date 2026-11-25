@@ -59,6 +59,24 @@ RSpec.describe Autonomia::Agents::Contratados::BaseEmDiaJob do
     expect(Rails.logger).not_to have_received(:warn)
   end
 
+  it 'confere a aptidão por conta e por modelo, não só por conta' do
+    modelos = Autonomia::Agents::Contratados::MODELOS
+    stub_const('Autonomia::Agents::Contratados::MODELOS', modelos.merge('outro_modelo' => modelos.fetch('seguro_viagem_universal')))
+    primeiro = contratado(nil)
+    segundo = contratado(nil)
+    consultados = []
+    allow(Autonomia::Agents::Contratados).to receive(:disponivel?).and_wrap_original do |original, conta, modelo|
+      consultados << [conta.id, modelo]
+      original.call(conta, modelo)
+    end
+    segundo.update!(config: segundo.config.merge('contratado' => marca.merge('modelo' => 'outro_modelo')))
+
+    described_class.perform_now
+
+    expect(consultados).to contain_exactly([account.id, 'seguro_viagem_universal'], [account.id, 'outro_modelo'])
+    expect(semear).to have_been_enqueued.with(primeiro.id)
+  end
+
   it 'está no cron de hora em hora' do
     agenda = YAML.load_file(Rails.root.join('config/schedule.yml'))
     expect(agenda['autonomia_contratados_base_em_dia_job']).to eq(

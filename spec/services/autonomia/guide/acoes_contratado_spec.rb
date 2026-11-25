@@ -12,8 +12,13 @@ RSpec.describe Autonomia::Guide::Acoes do
 
   it 'gravar o login da seguradora é só na tela: fora do catálogo e do formato, com o caminho da tela', :aggregate_failures do
     expect(described_class::SO_NA_TELA).to include(gravar_acesso => 'acesso_da_seguradora')
+    rotas_de_escrita = Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)
+    # Catálogo ou lista vazios passariam no `not_to include`: a chave some e o spec continua verde. Por isso cada um
+    # precisa ter conteúdo, e o `contratar` prova que o catálogo é o de verdade.
+    expect(guia.catalogo).to include(contratar)
+    expect(rotas_de_escrita).not_to be_empty
     expect(guia.catalogo).not_to include(gravar_acesso)
-    expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include(gravar_acesso)
+    expect(rotas_de_escrita).not_to include(gravar_acesso)
     I18n.with_locale(:pt_BR) do
       expect { guia.conferir!(gravar_acesso, { 'agent_id' => 1, 'login' => 'corretor.teste', 'senha' => 's3nha-teste' }) }
         .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.only_on_screen.acesso_da_seguradora'))

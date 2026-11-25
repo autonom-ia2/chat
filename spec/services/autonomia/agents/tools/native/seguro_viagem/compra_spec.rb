@@ -73,6 +73,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
     expect(described_class.preco(plano.merge('preco_total' => nil))).to be_nil
     expect(described_class.preco(plano.merge('preco_total' => ''))).to be_nil
     expect(described_class.preco(plano.merge('preco_total' => 'abc'))).to be_nil
+    %w[NaN Infinity -Infinity 0 0.0 -5].each do |invalido|
+      expect(described_class.preco(plano.merge('preco_total' => invalido))).to be_nil
+    end
   end
 
   it 'link de pagamento pelo código do carrinho' do

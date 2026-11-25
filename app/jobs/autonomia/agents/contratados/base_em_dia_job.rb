@@ -8,7 +8,9 @@ class Autonomia::Agents::Contratados::BaseEmDiaJob < ApplicationJob
   def perform
     aptas = {}
     desatualizados.includes(:account).find_each do |agente|
-      apta = aptas.fetch(agente.account_id) { aptas[agente.account_id] = conta_apta?(agente) }
+      # A aptidão depende do modelo (`disponivel?`): a chave do cache é conta e modelo, não só a conta.
+      chave = [agente.account_id, agente.marca_do_contratado['modelo']]
+      apta = aptas.fetch(chave) { aptas[chave] = conta_apta?(agente) }
       Autonomia::Agents::Contratados::SemearBaseJob.perform_later(agente.id) if apta
     end
   end
