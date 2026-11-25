@@ -1518,3 +1518,11 @@
   enabled: false
   premium: true
   column: feature_flags_ext_2
+# Seguro Viagem Universal (#3211): o agente pronto que cota e emite proposta de seguro viagem. Nasce ligada para conta
+# nova; nas contas que já existem a Orquestração liga depois do piloto. Posição 61 da feature_flags_ext_2
+# (1 << 60 = 1152921504606846976), logo depois da captain_mcp_servers (60); sobram 2 posições na ext_2 e a próxima flag
+# do fork que não couber vai para a feature_flags_ext_3. spec/models/account_spec.rb confere o bit.
+- name: agente_seguro_viagem_universal
+  display_name: Agentes › pronto Seguro Viagem Universal
+  enabled: true
+  column: feature_flags_ext_2

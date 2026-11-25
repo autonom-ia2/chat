@@ -386,7 +386,9 @@ RSpec.describe Account do
         feature_stripe_integration: 18_014_398_509_481_984, feature_mobile_voice_push: 36_028_797_018_963_968,
         feature_auto_translate: 72_057_594_037_927_936, feature_copilot_workflows: 144_115_188_075_855_872,
         # Upgrade 4.20.1 (#3120): the next 2 upstream flags, off, at positions 59–60.
-        feature_shopify_custom_apps: 288_230_376_151_711_744, feature_captain_mcp_servers: 576_460_752_303_423_488
+        feature_shopify_custom_apps: 288_230_376_151_711_744, feature_captain_mcp_servers: 576_460_752_303_423_488,
+        # #3211: agente_seguro_viagem_universal depois dela, 61 (1 << 60), no fim da ext_2.
+        feature_agente_seguro_viagem_universal: 1_152_921_504_606_846_976
       )
     end
 
