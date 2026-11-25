@@ -70,6 +70,23 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
     end
   end
 
+  describe '.janela_maxima' do
+    let(:debounce) { Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS }
+
+    it 'sem agente ou com as opções desligadas: a maior janela de debounce de sempre', :aggregate_failures do
+      expect(espera.janela_maxima(nil)).to eq(debounce)
+      expect(espera.janela_maxima(agent)).to eq(debounce)
+    end
+
+    it 'com a espera pela fala, cobre a espera máxima; com a fila, soma o teto da fila', :aggregate_failures do
+      liga!('conversa_em_fila')
+      expect(espera.janela_maxima(agent)).to eq(debounce + described_class::TETO_DA_FILA)
+
+      liga!('conversa_espera_a_fala')
+      expect(espera.janela_maxima(agent)).to eq(described_class::ESPERA_MAXIMA + described_class::TETO_DA_FILA)
+    end
+  end
+
   describe '.na_fila?' do
     it 'outro turno falando: fila' do
       liga!('conversa_em_fila')

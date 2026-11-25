@@ -47,10 +47,27 @@ RSpec.describe Autonomia::Agents::Operate::FalaEmCurso do
     expect(fala.ocupada_por_outro?(42, 8)).to be(false)
   end
 
-  it 'fim previsto: 160 ms ± 20% por caractere', :aggregate_failures do
-    fim = fala.prever_fim!(42, 'a' * 100)
+  it 'fim previsto: 160 ms ± 20% por caractere, gravado com o turno', :aggregate_failures do
+    fim = fala.prever_fim!(42, 7, 'a' * 100)
     expect(fim).to be_between(12.8.seconds.from_now, 19.2.seconds.from_now)
     expect(fala.fim_previsto(42)).to be_within(0.001.seconds).of(fim)
+    expect(Redis::Alfred.get(fala.chave_do_fim(42))).to eq("7:#{(fim.to_f * 1000).round}")
+  end
+
+  # #3211 (revisão final F4): a cadeia que para antes do 1º pedaço apaga o fim do seu turno, e só o dele.
+  it 'esquecer o fim apaga só o fim do próprio turno', :aggregate_failures do
+    fala.prever_fim!(42, 7, 'oi')
+
+    expect(fala.esquecer_o_fim(42, 8)).to be(false)
+    expect(fala.fim_previsto(42)).to be_present
+
+    expect(fala.esquecer_o_fim(42, 7)).to be(true)
+    expect(fala.fim_previsto(42)).to be_nil
+  end
+
+  it 'esquecer o fim sem fim gravado ou sem id: nada' do
+    expect(fala.esquecer_o_fim(42, 7)).to be(false)
+    expect(fala.esquecer_o_fim(42, nil)).to be(false)
   end
 
   it 'fim previsto tem teto de 150 s' do
@@ -67,6 +84,15 @@ RSpec.describe Autonomia::Agents::Operate::FalaEmCurso do
     expect { fala.ocupar(42, 7) }.not_to raise_error
     expect(fala.ocupada_por_outro?(42, 8)).to be(false)
     expect(fala.fim_previsto(42)).to be_nil
-    expect(fala.prever_fim!(42, 'oi')).to be_nil
+    expect(fala.prever_fim!(42, 7, 'oi')).to be_nil
+  end
+
+  # #3211 (revisão final F3): só a falha do Redis é engolida; erro de código sobe, não vira "ninguém falando".
+  it 'erro que não é do Redis sobe', :aggregate_failures do
+    allow(Redis::Alfred).to receive(:get).and_raise(NoMethodError)
+    allow(Redis::Alfred).to receive(:set).and_raise(NoMethodError)
+    expect { fala.ocupada_por_outro?(42, 8) }.to raise_error(NoMethodError)
+    expect { fala.ocupar(42, 7) }.to raise_error(NoMethodError)
+    expect { fala.fim_previsto(42) }.to raise_error(NoMethodError)
   end
 end

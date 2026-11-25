@@ -113,6 +113,41 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
     expect(marca_da_fala).to be_nil
   end
 
+  # Revisão final F4 (P1): a cadeia parou antes do 1º pedaço sem postar (aqui, mensagem nova): não houve fala, e o fim
+  # previsto do turno some, para a rajada seguinte não esperar por nada. O fim de outro turno fica.
+  describe 'fim previsto da fala (P1)' do
+    def fim_gravado = Redis::Alfred.get(fala.chave_do_fim(conversation.id))
+
+    it 'parou no 1º pedaço sem postar: o fim deste turno some' do
+      liga!('conversa_espera_a_fala')
+      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      pedaco!(0) # para por turno_mudou: o turno é o da m2
+      expect(fim_gravado).to be_nil
+    end
+
+    it 'o fim de outro turno fica' do
+      liga!('conversa_espera_a_fala')
+      fala.prever_fim!(conversation.id, m2.id, 'Outra fala.')
+      pedaco!(0)
+      expect(fim_gravado).to start_with("#{m2.id}:")
+    end
+
+    it 'o 1º pedaço saiu: o fim fica' do
+      liga!('conversa_espera_a_fala')
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      pedaco!(0)
+      expect(respostas.pluck(:content)).to eq(['Primeira parte da resposta.'])
+      expect(fim_gravado).to start_with("#{m1.id}:")
+    end
+
+    it 'sem a opção: o fim não é tocado' do
+      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      pedaco!(0)
+      expect(fim_gravado).to start_with("#{m1.id}:")
+    end
+  end
+
   it 'exceção no pedaço propaga e solta a fala' do
     conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
     fala.ocupar(conversation.id, m1.id)

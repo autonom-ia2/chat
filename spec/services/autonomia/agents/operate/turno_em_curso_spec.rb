@@ -15,9 +15,28 @@ RSpec.describe Autonomia::Agents::Operate::TurnoEmCurso do
     expect(described_class.teto_do_turno).to be > Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS
   end
 
-  it 'o teto do turno cobre a espera da fala e a fila' do
+  # #3211: com as opções da paridade desligadas (ou sem agente), o teto é exatamente o de antes; só o agente com elas
+  # ligadas ganha a janela da espera pela fala e da fila.
+  it 'sem as opções da paridade, o teto do turno é o de sempre', :aggregate_failures do
+    runner = Autonomia::Agents::Specialists::Runner
+    lia = Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA * (runner::SEGUNDOS_DE_FERRAMENTA + runner::SEGUNDOS_POR_CHAMADA)
+    ia = [lia, Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA, Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS,
+          Crm::Ai::ResponsesClient::REQUEST_TIMEOUT].max
+    cadeia = Autonomia::Agents::Config::HUMANIZE[:max_total_delay_ms] / 1000
+    de_sempre = Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS + Autonomia::Agents::Operate::EsperaDoAssunto::TETO +
+                (ia + cadeia).seconds
+
+    expect(described_class.teto_do_turno).to eq(de_sempre)
+    expect(described_class.teto_do_turno(Autonomia::Agents::Agent.new(config: {}))).to eq(de_sempre)
+  end
+
+  it 'com a espera pela fala e a fila, o teto do turno cobre as duas' do
     espera = Autonomia::Agents::Operate::EsperaDaFala
-    expect(described_class.teto_do_turno).to be >= espera::ESPERA_MAXIMA + espera::TETO_DA_FILA
+    agente = Autonomia::Agents::Agent.new(config: { 'conversa_espera_a_fala' => true, 'conversa_em_fila' => true })
+
+    minimo = espera::ESPERA_MAXIMA + espera::TETO_DA_FILA + Autonomia::Agents::Operate::EsperaDoAssunto::TETO
+
+    expect(described_class.teto_do_turno(agente)).to be >= minimo
   end
 
   # #2918: a composição, não só o valor de hoje (o termo da Lia é maior e esconderia a falta do termo das prontas).
@@ -35,6 +54,14 @@ RSpec.describe Autonomia::Agents::Operate::TurnoEmCurso do
     described_class.abrir(conversa, 2)
     expect(Redis::Alfred.get(chave)).to eq('2')
     expect(described_class.em_curso?(conversa)).to be(true)
+  end
+
+  it 'abre com o teto do agente: com a fila ligada, maior que o de sempre', :aggregate_failures do
+    agente = Autonomia::Agents::Agent.new(config: { 'conversa_em_fila' => true })
+    described_class.abrir(conversa, 1, agente)
+
+    expect(Redis::Alfred.ttl(chave)).to be_within(5).of(described_class.teto_do_turno(agente).to_i)
+    expect(described_class.teto_do_turno(agente)).to be > described_class.teto_do_turno
   end
 
   it 'renova só a marca do próprio turno (uma cadeia velha não prolonga nem sobrescreve a nova)', :aggregate_failures do

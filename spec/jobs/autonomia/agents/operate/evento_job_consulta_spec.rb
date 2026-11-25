@@ -93,7 +93,7 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
     expect(Autonomia::Agents::AgenteSoInforma.ligada?(account)).to be(false)
     run = consulta('{"status":"enviado"}')
     reply_job = Autonomia::Agents::Operate::ReplyJob.new
-    reply_job.send(:abrir_turno, conversation, 77) # a mensagem do cliente que abriu o turno da consulta
+    reply_job.send(:abrir_turno, conversation, agent_inbox, 77) # a mensagem do cliente que abriu o turno da consulta
 
     described_class.new.perform(run.id, 'consulta_concluida')
 

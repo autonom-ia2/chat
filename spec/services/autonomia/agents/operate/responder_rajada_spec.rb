@@ -102,14 +102,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(perguntas.sole).to eq('e pra 2 pessoas?')
   end
 
-  it 'grava o fim previsto da fala ao responder' do
+  it 'grava o fim previsto da fala ao responder, com o turno', :aggregate_failures do
     liga!('conversa_espera_a_fala')
-    settle_direto(escreve('oi'))
+    mensagem = escreve('oi')
+    settle_direto(mensagem)
 
     fim = fala.fim_previsto(conversation.id)
 
     # 'Claro, te ajudo.' = 16 caracteres; folga de 10 ms para o arredondamento em milissegundos.
     expect(fim).to be_between(Time.current + ((16 * 0.128) - 0.01).seconds, Time.current + ((16 * 0.192) + 0.01).seconds)
+    expect(Redis::Alfred.get(fala.chave_do_fim(conversation.id))).to start_with("#{mensagem.id}:")
   end
 
   it 'silêncio não grava fim previsto' do

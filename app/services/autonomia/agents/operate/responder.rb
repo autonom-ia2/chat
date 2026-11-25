@@ -651,12 +651,13 @@ module Autonomia
         end
 
         # #3211 (P1): grava quando a fala deve terminar, para a rajada seguinte esperar por ela. Só quando houve fala: a
-        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava.
+        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para
+        # antes do 1º pedaço apaga o fim dele (ChunkedDeliveryJob).
         def prever_o_fim_da_fala(result, outcome)
           return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
           return unless @cadeia_agendada || outcome.message.present?
 
-          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, result.reply)
+          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, result.reply)
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só

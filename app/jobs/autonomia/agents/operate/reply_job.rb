@@ -80,7 +80,7 @@ module Autonomia
         def trigger(conversation, agent_inbox, message_id)
           espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: conversation.id)
           stamp_debounce(conversation, message_id, espera)
-          abrir_turno(conversation, message_id)
+          abrir_turno(conversation, agent_inbox, message_id)
           self.class.set(wait: espera).perform_later(conversation.id, message_id, 'settle')
         end
 
@@ -135,7 +135,7 @@ module Autonomia
         def ocupar_a_fala(conversation, agent_inbox, message_id)
           return unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent_inbox.agent)
 
-          ::Autonomia::Agents::Operate::FalaEmCurso.ocupar(conversation.id, message_id)
+          ::Autonomia::Agents::Operate::FalaEmCurso.ocupar(conversation.id, message_id, agent_inbox.agent)
         end
 
         # Solta sem olhar a opção: desligada no meio do turno, a marca ficaria presa e todo turno novo esperaria o teto da
@@ -200,11 +200,12 @@ module Autonomia
 
         # #2154 (flag `agente_so_informa`): o turno começa na mensagem do cliente, para a IA de Atribuição não entregar a
         # conversa enquanto o agente responde (Operate::TurnoEmCurso). A mensagem mais nova toma a marca. #1430: também
-        # com a consulta em segundo plano, para o resultado dela não passar na frente da fala do turno.
-        def abrir_turno(conversation, message_id)
+        # com a consulta em segundo plano, para o resultado dela não passar na frente da fala do turno. #3211: o teto é o
+        # do agente (com as opções da paridade desligadas, o de sempre).
+        def abrir_turno(conversation, agent_inbox, message_id)
           return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
-          ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, message_id)
+          ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, message_id, agent_inbox.agent)
         end
 
         # O settle de um turno que já não tem quem responda (uma pessoa assumiu, o agente saiu) solta a marca dele.

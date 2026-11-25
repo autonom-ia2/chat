@@ -20,7 +20,7 @@ module Autonomia
         # MEDIUM, junto do `ReplyJob` (Rodrigo, 23/09/2026): a entrega em pedaços é a mesma resposta ao cliente,
         # e na `low` ela esperava atrás das consultas de cotação.
         queue_as :medium
-        Paridade = ::Autonomia::Agents::ParidadeDaConversa
+        FalaDaCadeia = ::Autonomia::Agents::Operate::FalaDaCadeia
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
           @turno_segue = @fala_segue = false
@@ -77,7 +77,9 @@ module Autonomia
         # A cadeia parou (o pedaço não foi postado; `posted` só vem sem motivo). A troca de dono pode refazer o turno, a
         # pessoa que respondeu deixa o rastro e (#2154) o cliente que escreveu depois de algum pedaço de uma fala que
         # avisou que vai chamar alguém não impede a avaliação da Atribuição. Os outros motivos só encerram.
+        # #3211 (P1): parada antes do 1º pedaço sem postar apaga o fim previsto da fala deste turno (FalaDaCadeia.parou).
         def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
+          FalaDaCadeia.parou(conversation.id, agent_inbox.agent, reply_to_message_id, index) { chunk_posted?(conversation, reply_to_message_id, 0) }
           case motivo
           when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
           when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
@@ -105,19 +107,15 @@ module Autonomia
         # `ja_postado` vem antes de `pessoa_respondeu`: o retry de um pedaço que já entrou não é silêncio da pessoa.
         # `pessoa_respondeu` (#1669, só com a Fase 2): uma pessoa da equipe respondeu a mensagem do cliente antes deste
         # pedaço; o resto da cadeia não sai. A IA segue na conversa e responde a próxima mensagem do cliente.
+        # #3211: o turno ainda é este? Do 2º pedaço em diante, com `conversa_entrega_inteira` (+ fila), a fala já começou e mensagem
+        # nova não a corta: vale sem olhar o stamp (FalaDaCadeia.comecada?). O 1º pedaço sempre confere. Elegibilidade,
+        # `ja_postado` e `pessoa_respondeu` seguem conferidos em todo pedaço.
         def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
-          return :turno_mudou unless turno_vale?(conversation, agent_inbox, reply_to_message_id, index)
+          return :turno_mudou unless FalaDaCadeia.comecada?(agent_inbox.agent, index) || current_turn?(conversation, reply_to_message_id)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
           return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
 
           :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
-        end
-
-        # O turno ainda é este? Do 2º pedaço em diante, com `conversa_entrega_inteira` (+ fila), a fala já começou e mensagem
-        # nova não a corta: vale sem olhar o stamp. O 1º pedaço sempre confere. Elegibilidade, `ja_postado` e
-        # `pessoa_respondeu` seguem conferidos em todo pedaço (motivo_da_parada).
-        def turno_vale?(conversation, agent_inbox, reply_to_message_id, index)
-          (index.positive? && Paridade.entrega_inteira?(agent_inbox.agent)) || current_turn?(conversation, reply_to_message_id)
         end
 
         # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou: o log e
@@ -169,8 +167,7 @@ module Autonomia
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           renovar_o_turno(conversation, reply_to_message_id)
-          # #3211 (`conversa_em_fila`): a fala continua no próximo pedaço; renova a marca de quem fala, só se é deste turno.
-          ::Autonomia::Agents::Operate::FalaEmCurso.renovar(conversation.id, reply_to_message_id) if Paridade.em_fila?(agent_inbox.agent)
+          FalaDaCadeia.renovar(conversation.id, agent_inbox.agent, reply_to_message_id) # #3211 (P2): a fala segue no próximo pedaço
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
         end
