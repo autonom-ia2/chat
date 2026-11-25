@@ -13,6 +13,10 @@ RSpec.describe Autonomia::Agents::Contratados::DadosDaCorretora do
     enable_test_encryption!
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
+    # O agente nasce pelo Contratar, que exige a chave de IA da própria conta; a de mentira não passa pelo provedor.
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
   end
 
   def trocar(alvo = agente, **mudancas)
