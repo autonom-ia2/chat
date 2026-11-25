@@ -8,7 +8,9 @@ module Autonomia
       #
       # GUARDAS A CADA CHUNK (espelham o "Pre Text Gate Eval" do n8n):
       #   - TURN-TOKEN: se chegou uma mensagem NOVA do cliente durante a entrega (o stamp de debounce
-      #     do ReplyJob mudou), ABORTA o resto — o agente não "fala sozinho"; o novo settle responde.
+      #     do ReplyJob mudou), ABORTA o resto — o agente não "fala sozinho"; o novo settle responde. Com a opção
+      #     `conversa_entrega_inteira` (#3211, só com a fila), só o 1º pedaço confere o turno: depois que a fala começou,
+      #     mensagem nova não a corta (o turno novo espera na fila).
       #   - ELEGIBILIDADE FRESCA: se um humano assumiu (deixou de pending/atribuiu), para e limpa typing.
       #   - IDEMPOTÊNCIA por (reply_to_message_id, chunk_index) via token composto em content_attributes:
       #     retry do Sidekiq nunca duplica um pedaço.
@@ -20,19 +22,28 @@ module Autonomia
         queue_as :medium
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
+          @turno_segue = false
           conversation = Conversation.find_by(id: conversation_id)
-          return if conversation.blank?
+          entregar(conversation, agent_inbox_id, reply_to_message_id, chunks, index, meta) if conversation.present?
+        ensure
+          # #3211: a cadeia é dona da marca da fala (o ReplyJob a deixa quando agenda pedaços). Solta em toda saída: parada
+          # por qualquer motivo, último pedaço, retorno antecipado e exceção. Não depende da opção (ela pode ter sido
+          # desligada entre ocupar e soltar); só o próprio turno solta (compare-and-delete). Com o próximo pedaço agendado,
+          # a marca fica (e foi renovada em schedule_next).
+          ::Autonomia::Agents::Operate::FalaEmCurso.soltar(conversation_id, reply_to_message_id) unless @turno_segue
+        end
+
+        private
+
+        def entregar(conversation, agent_inbox_id, reply_to_message_id, chunks, index, meta)
           return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox_id)
           return if agent_inbox.blank? || agent_inbox.agent.blank?
 
-          @turno_segue = false
           deliver(conversation, agent_inbox, reply_to_message_id, Array(chunks), index.to_i, meta || {})
           soltar_o_turno(conversation, reply_to_message_id) unless @turno_segue
         end
-
-        private
 
         def deliver(conversation, agent_inbox, reply_to_message_id, chunks, index, meta)
           typing = ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: conversation, agent_inbox: agent_inbox)
@@ -91,11 +102,19 @@ module Autonomia
         # `pessoa_respondeu` (#1669, só com a Fase 2): uma pessoa da equipe respondeu a mensagem do cliente antes deste
         # pedaço; o resto da cadeia não sai. A IA segue na conversa e responde a próxima mensagem do cliente.
         def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
-          return :turno_mudou unless current_turn?(conversation, reply_to_message_id)
+          return :turno_mudou unless turno_vale?(conversation, agent_inbox, reply_to_message_id, index)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
           return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
 
           :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
+        end
+
+        # O turno ainda é este? Do 2º pedaço em diante, com `conversa_entrega_inteira` (+ fila), a fala já começou e mensagem
+        # nova não a corta: vale sem olhar o stamp. O 1º pedaço sempre confere. Elegibilidade, `ja_postado` e
+        # `pessoa_respondeu` seguem conferidos em todo pedaço (motivo_da_parada).
+        def turno_vale?(conversation, agent_inbox, reply_to_message_id, index)
+          (index.positive? && ::Autonomia::Agents::ParidadeDaConversa.entrega_inteira?(agent_inbox.agent)) ||
+            current_turn?(conversation, reply_to_message_id)
         end
 
         # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou: o log e
@@ -147,6 +166,8 @@ module Autonomia
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           renovar_o_turno(conversation, reply_to_message_id)
+          # #3211 (`conversa_em_fila`): a fala continua no próximo pedaço; renova a marca de quem fala, só se é deste turno.
+          FalaEmCurso.renovar(conversation.id, reply_to_message_id) if ParidadeDaConversa.em_fila?(agent_inbox.agent)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
         end
