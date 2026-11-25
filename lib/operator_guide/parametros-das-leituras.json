@@ -128,6 +128,10 @@
     "controller": "api/v1/accounts/autonomia/agents#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/acesso_da_seguradora": {
+    "controller": "api/v1/accounts/autonomia/agents/acesso_da_seguradora#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/ajuda": {
     "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
     "parametros": []
@@ -262,6 +266,10 @@
   },
   "autonomia/canais_ocupados": {
     "controller": "api/v1/accounts/autonomia/canais_ocupados#index",
+    "parametros": []
+  },
+  "autonomia/contratados": {
+    "controller": "api/v1/accounts/autonomia/contratados#index",
     "parametros": []
   },
   "autonomia/conversations/:conversation_id/copilot/agents": {
