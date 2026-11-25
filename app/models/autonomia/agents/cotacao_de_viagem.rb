@@ -1,0 +1,53 @@
+# == Schema Information
+#
+# Table name: autonomia_cotacoes_de_viagem
+#
+#  id                 :bigint           not null, primary key
+#  pedido             :jsonb            not null
+#  planos             :jsonb            not null
+#  proposta           :jsonb
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  autonomia_agent_id :bigint           not null
+#  conversation_id    :bigint           not null
+#  id_cotacao         :string           not null
+#
+# Indexes
+#
+#  index_autonomia_cotacoes_de_viagem_on_account_id             (account_id)
+#  index_autonomia_cotacoes_de_viagem_on_autonomia_agent_id     (autonomia_agent_id)
+#  index_autonomia_cotacoes_de_viagem_on_conversation_id_and_id (conversation_id,id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id) ON DELETE => cascade
+#  fk_rails_...  (conversation_id => conversations.id) ON DELETE => cascade
+#
+# A cotação de viagem de uma conversa (#3211). `pedido` guarda os nossos parâmetros já conferidos (destinos, datas,
+# idades, motivo) e, em 'universal', o pedido enviado à seguradora; `planos` é a lista devolvida; `proposta` fica nula
+# até a proposta sair. Sem callbacks: quem grava é o serviço da cotação.
+class Autonomia::Agents::CotacaoDeViagem < ApplicationRecord
+  self.table_name = 'autonomia_cotacoes_de_viagem'
+
+  belongs_to :account
+  belongs_to :conversation
+  belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id, inverse_of: false
+
+  def self.ultima_da_conversa(conversation_id)
+    where(conversation_id: conversation_id).order(:id).last
+  end
+
+  def plano(codigo)
+    planos.to_a.find { |plano| plano['codigo'] == codigo }
+  end
+
+  def do_dia?(fuso)
+    created_at.in_time_zone(fuso).to_date == fuso.today
+  end
+
+  def idades
+    pedido.to_h['idades'].to_a
+  end
+end
