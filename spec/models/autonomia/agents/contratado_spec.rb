@@ -50,6 +50,7 @@ RSpec.describe Autonomia::Agents::Contratado do
     agente = criar_contratado
     agente.agent_type = 'custom'
     expect(agente).not_to be_valid
+    expect(agente.errors[:agent_type]).to be_present
   end
 
   it 'não passa a atender sem acesso ok' do

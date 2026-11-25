@@ -21,8 +21,8 @@ RSpec.describe Autonomia::Agents::Agent do
   end
 
   it 'agente comum continua sem instrução mantida' do
-    comum = described_class.create!(account: account, name: 'Ana', agent_type: 'sdr')
+    comum = described_class.create!(account: account, name: 'Ana', agent_type: 'sdr', instruction: 'instrução da Ana')
     expect(comum.instrucao_mantida?).to be(false)
-    expect(comum.instrucao_do_sistema).to eq(comum.instruction)
+    expect(comum.instrucao_do_sistema).to eq('instrução da Ana')
   end
 end

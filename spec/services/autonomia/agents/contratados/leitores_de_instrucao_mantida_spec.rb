@@ -173,7 +173,20 @@ RSpec.describe 'Leitores de Agent#instrucao_mantida? com o agente contratado' do
       expect(Crm::Ai::FatosDaConversa.send(:agente_protegido?, account.id, vinculo_lia.agent_bot_id)).to be(true)
     end
 
-    it 'promessa: o CRM cumpre a promessa do contratado e não a da Lia' do
+    it 'promessa (handoff_executor.rb:110): o CRM cumpre a promessa do contratado e não a da Lia' do
+      allow(Crm::Ai::FatosDaConversa).to receive_messages(ligada?: true, promessa?: true)
+      # O próprio leitor: o executor com o card, o pedido e o dono ativo da conversa (o vínculo do agente) já postos.
+      promessa = lambda do |vinculo|
+        executor = Crm::Ai::HandoffExecutor.allocate
+        executor.instance_variable_set(:@card, instance_double(Crm::Card, account: account))
+        executor.instance_variable_set(:@handoff, {})
+        executor.instance_variable_set(:@dono_ativo, vinculo)
+        executor.send(:promessa_a_cumprir?)
+      end
+
+      expect(promessa.call(vinculo_contratado)).to be(true)
+      expect(promessa.call(vinculo_lia)).to be(false)
+      expect(promessa.call(vincular(comum))).to be(true)
       expect(contratado.protegido_no_crm?).to be(false)
       expect(lia.protegido_no_crm?).to be(true)
     end
