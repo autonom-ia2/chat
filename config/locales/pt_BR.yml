@@ -2224,6 +2224,9 @@ pt_BR:
     teste:
       foto_animada: "Mande uma foto parada. Foto animada não dá para ler."
       foto_muitas: "Mande até %{max} fotos por pergunta."
+    # #3211 — o agente pronto contratado do catálogo.
+    contratados:
+      acesso_pendente: "Este agente só atende depois que o login da seguradora for conferido. Cadastre o login da seguradora na página do agente e espere a conferência."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

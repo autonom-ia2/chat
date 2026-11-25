@@ -7,7 +7,7 @@
 #    cliente espera resposta). Mensagens seguidas do cliente antes de o atendimento falar não respondem à equipe.
 # 2. A fala pública do nosso agente de IA relê o card em foco (Crm::Conversations::CardEmFoco), com a espera da equipe
 #    e no máximo MAX_AVALIACOES_DO_ROBO_POR_DIA por card. Não contam: follow-up e Agendamento (envio automático), robô
-#    de fora, nota privada, envio que falhou e o agente protegido (o de cotação, `instrucao_mantida?`).
+#    de fora, nota privada, envio que falhou e o agente protegido (só a Lia, o de cotação: `protegido_no_crm?`).
 # 3. A passagem para pessoa que o nosso assistente prometeu ao cliente e ninguém cumpriu é honrada pela IA do CRM
 #    (Crm::Ai::HandoffExecutor), mesmo com o agente dono da conversa, exceção à regra do #1673. Problema resolvido
 #    depois da promessa não passa. Nunca com o agente protegido.
@@ -116,10 +116,11 @@ module Crm::Ai::FatosDaConversa
     Crm::Ai::PapelDaMensagem.de(message, robos: robos) == 'platform_agent' && !agente_protegido?(message.account_id, message.sender_id)
   end
 
-  # O agente cuja instrução é mantida pela Autonom.ia (o de cotação) fica fora das duas pontas da F1.
+  # O agente protegido no CRM (só a Lia, o de cotação: `Agent#protegido_no_crm?`) fica fora das duas pontas da F1. O agente
+  # contratado do catálogo (#3211) tem a instrução mantida, mas aqui conta como qualquer agente (Rodrigo, 24/11).
   def agente_protegido?(account_id, agent_bot_id)
     Autonomia::Agents::AgentInbox.where(account_id: account_id, agent_bot_id: agent_bot_id).includes(:agent)
-                                 .any? { |vinculo| vinculo.agent&.instrucao_mantida? }
+                                 .any? { |vinculo| vinculo.agent&.protegido_no_crm? }
   end
 
   # O agente protegido está no nome de uma conversa do card ainda não resolvida (está atendendo). A IA do CRM não fecha o

@@ -1132,6 +1132,9 @@ en:
     teste:
       foto_animada: 'Send a still photo. An animated photo cannot be read.'
       foto_muitas: 'Send up to %{max} photos per question.'
+    # #3211 — the ready-made agent hired from the catalog.
+    contratados:
+      acesso_pendente: 'This agent can only answer after its insurer login is checked. Save the insurer login on the agent page and wait for the check.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'
