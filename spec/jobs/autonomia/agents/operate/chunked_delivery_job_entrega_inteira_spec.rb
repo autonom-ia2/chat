@@ -104,4 +104,20 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
     expect(Redis::Alfred.ttl(fala.chave_ocupada(conversation.id)))
       .to be_between(1, Autonomia::Agents::Operate::TurnoEmCurso::TTL_DA_CADEIA.to_i)
   end
+
+  it 'troca de dono no 1º pedaço solta a fala, refeito o turno ou não' do
+    conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+    trocar_dono!(espelho_area)
+    fala.ocupar(conversation.id, m1.id)
+    pedaco!(0)
+    expect(marca_da_fala).to be_nil
+  end
+
+  it 'exceção no pedaço propaga e solta a fala' do
+    conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+    fala.ocupar(conversation.id, m1.id)
+    allow(Messages::MessageBuilder).to receive(:new).and_raise(StandardError, 'falha no envio')
+    expect { pedaco!(0) }.to raise_error(StandardError, 'falha no envio')
+    expect(marca_da_fala).to be_nil
+  end
 end

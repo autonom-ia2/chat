@@ -20,17 +20,21 @@ module Autonomia
         # MEDIUM, junto do `ReplyJob` (Rodrigo, 23/09/2026): a entrega em pedaços é a mesma resposta ao cliente,
         # e na `low` ela esperava atrás das consultas de cotação.
         queue_as :medium
+        Paridade = ::Autonomia::Agents::ParidadeDaConversa
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
-          @turno_segue = false
+          @turno_segue = @fala_segue = false
           conversation = Conversation.find_by(id: conversation_id)
           entregar(conversation, agent_inbox_id, reply_to_message_id, chunks, index, meta) if conversation.present?
         ensure
           # #3211: a cadeia é dona da marca da fala (o ReplyJob a deixa quando agenda pedaços). Solta em toda saída: parada
-          # por qualquer motivo, último pedaço, retorno antecipado e exceção. Não depende da opção (ela pode ter sido
-          # desligada entre ocupar e soltar); só o próprio turno solta (compare-and-delete). Com o próximo pedaço agendado,
-          # a marca fica (e foi renovada em schedule_next).
-          ::Autonomia::Agents::Operate::FalaEmCurso.soltar(conversation_id, reply_to_message_id) unless @turno_segue
+          # por qualquer motivo (inclusive troca de dono, mesmo com o turno refeito: o settle refeito ocupa de novo e solta
+          # a sua), último pedaço, retorno antecipado e exceção. Só fica quando o próximo pedaço foi agendado
+          # (@fala_segue, renovada em schedule_next). Não depende da opção (ela pode ter sido desligada entre ocupar e
+          # soltar); só o próprio turno solta (compare-and-delete). Trade-off na exceção: soltar deixa um turno na fila falar
+          # enquanto o Sidekiq refaz o pedaço (janela estreita); não soltar prenderia a marca até o TTL se as tentativas
+          # acabarem, e todo turno novo esperaria até 150 s.
+          ::Autonomia::Agents::Operate::FalaEmCurso.soltar(conversation_id, reply_to_message_id) unless @fala_segue
         end
 
         private
@@ -113,8 +117,7 @@ module Autonomia
         # nova não a corta: vale sem olhar o stamp. O 1º pedaço sempre confere. Elegibilidade, `ja_postado` e
         # `pessoa_respondeu` seguem conferidos em todo pedaço (motivo_da_parada).
         def turno_vale?(conversation, agent_inbox, reply_to_message_id, index)
-          (index.positive? && ::Autonomia::Agents::ParidadeDaConversa.entrega_inteira?(agent_inbox.agent)) ||
-            current_turn?(conversation, reply_to_message_id)
+          (index.positive? && Paridade.entrega_inteira?(agent_inbox.agent)) || current_turn?(conversation, reply_to_message_id)
         end
 
         # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou: o log e
@@ -167,7 +170,7 @@ module Autonomia
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           renovar_o_turno(conversation, reply_to_message_id)
           # #3211 (`conversa_em_fila`): a fala continua no próximo pedaço; renova a marca de quem fala, só se é deste turno.
-          FalaEmCurso.renovar(conversation.id, reply_to_message_id) if ParidadeDaConversa.em_fila?(agent_inbox.agent)
+          ::Autonomia::Agents::Operate::FalaEmCurso.renovar(conversation.id, reply_to_message_id) if Paridade.em_fila?(agent_inbox.agent)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
         end
@@ -195,7 +198,7 @@ module Autonomia
         # #2154 (flag `agente_so_informa`, Operate::TurnoEmCurso): o próximo pedaço vai sair; a marca do turno é renovada
         # ANTES de agendá-lo, só se ainda é deste turno (compare-and-expire), e o turno segue na cadeia.
         def renovar_o_turno(conversation, reply_to_message_id)
-          @turno_segue = true
+          @turno_segue = @fala_segue = true # só schedule_next chama: o próximo pedaço vai ser agendado, a marca fica com a cadeia
           return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(conversation.id, reply_to_message_id)
