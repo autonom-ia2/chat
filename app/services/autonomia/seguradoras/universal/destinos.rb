@@ -1,6 +1,7 @@
 # Os países que a Universal atende, guardados por um dia: a lista muda pouco e a cotação a consulta a cada pedido.
 # Guarda só a sigla do país em maiúsculas. Quando a Universal não responde, `siglas` devolve nil e a falha não fica
-# guardada; quem chama não barra a cotação por isso, a própria Universal recusa o destino que não atende.
+# guardada. Lista vazia conta como falha: com ela toda sigla seria inválida por um dia inteiro. Quem chama não
+# barra a cotação por isso; a própria Universal recusa o destino que não atende.
 module Autonomia::Seguradoras::Universal::Destinos
   CHAVE = 'autonomia:universal:destinos:v1'.freeze
   VALIDADE = 1.day
@@ -25,7 +26,8 @@ module Autonomia::Seguradoras::Universal::Destinos
     destinos = cliente.destinos
     return nil unless destinos.is_a?(Array)
 
-    destinos.filter_map { |destino| destino['siglaPais'].to_s.upcase.presence if destino.is_a?(Hash) }.uniq
+    siglas = destinos.filter_map { |destino| destino['siglaPais'].to_s.upcase.presence if destino.is_a?(Hash) }.uniq
+    siglas.presence
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro
     nil
   end

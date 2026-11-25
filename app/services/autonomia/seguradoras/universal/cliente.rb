@@ -10,7 +10,8 @@ class Autonomia::Seguradoras::Universal::Cliente
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
-  FALHAS_DE_REDE = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED].freeze
+  FALHAS_DE_REDE = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError,
+                    OpenSSL::SSL::SSLError, Net::HTTPBadResponse].freeze
 
   class Erro < StandardError
     attr_reader :codigo, :mensagem_da_seguradora

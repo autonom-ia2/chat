@@ -59,7 +59,25 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirAcesso do
   end
 
   it 'trocar o login refaz a conferência e não cria segunda linha' do
-    2.times { described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call }
+    described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
+    stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 401)
+    acesso = described_class.new(agent: contratado, login: 'outro.corretor', senha: 'outra-senha').call
     expect(Autonomia::Agents::AcessoDaSeguradora.where(autonomia_agent_id: contratado.id).count).to eq(1)
+    expect(acesso).to have_attributes(login: 'outro.corretor', login_dica: 'ou•••or', estado: 'recusado')
+  end
+
+  it 'recusado depois de ok zera as capacidades' do
+    described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
+    stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 401)
+    acesso = described_class.new(agent: contratado, login: 'outro.corretor', senha: 'y').call
+    expect(acesso.capacidades).to eq({})
+    expect(acesso.so_cotacao?).to be(false)
+    expect(acesso.tarifa_acordo?).to be(false)
+  end
+
+  it 'queda de conexão no meio não levanta' do
+    stub_request(:get, "#{base}/v1/Emissor/Setup").to_raise(Errno::ECONNRESET)
+    expect(described_class.new(agent: contratado, login: 'x1x1x', senha: 'y').call)
+      .to have_attributes(estado: 'nao_conferido', motivo: 'indisponivel')
   end
 end

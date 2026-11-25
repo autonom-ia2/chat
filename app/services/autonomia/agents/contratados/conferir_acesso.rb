@@ -34,7 +34,7 @@ class Autonomia::Agents::Contratados::ConferirAcesso
     setup = Autonomia::Seguradoras::Universal::Cliente.new(login: @login, senha: @senha).setup
     { estado: 'ok', motivo: nil, conferido_em: Time.current, capacidades: capacidades_de(setup) }
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
-    { estado: ESTADO_POR_CODIGO.fetch(e.codigo, ESTADO_PADRAO), motivo: e.codigo, conferido_em: Time.current }
+    { estado: ESTADO_POR_CODIGO.fetch(e.codigo, ESTADO_PADRAO), motivo: e.codigo, conferido_em: Time.current, capacidades: {} }
   end
 
   def capacidades_de(setup)

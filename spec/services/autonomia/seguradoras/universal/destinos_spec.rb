@@ -39,6 +39,14 @@ RSpec.describe Autonomia::Seguradoras::Universal::Destinos do
     expect(described_class.validas?(%w[BR], cliente)).to eq([true, []])
   end
 
+  it 'lista vazia conta como falha e não fica no cache' do
+    stub_request(:get, "#{base}/v1/destinos").to_return(status: 200, body: '[]')
+    expect(described_class.siglas(cliente)).to be_nil
+    expect(described_class.validas?(%w[PT], cliente)).to eq([true, []])
+    stub_destinos
+    expect(described_class.siglas(cliente)).to eq(Set['BR', 'PT', 'ES'])
+  end
+
   it 'API fora: siglas nil, validas? não barra e a falha não fica no cache' do
     stub_request(:get, "#{base}/v1/destinos").to_timeout
     expect(described_class.siglas(cliente)).to be_nil
