@@ -1842,6 +1842,108 @@ Fonte: Condições Gerais (PDF), p. 64.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 65.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante indenização em caso de roubo ou furto qualificado, total ou parcial, do conteúdo de um ou mais volumes da bagagem de mão do Segurado, ou a destruição total ou parcial do conteúdo desses volumes em consequência da tentativa de roubo ou furto qualificado, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais, desde que:
+
+a) O evento coberto tenha ocorrido no interior da(s) aeronave(s) utilizada(s) em todo o trajeto da viagem, incluindo voos intermediários e conexões;
+
+b) O segurado tenha feito a reclamação oficial à empresa transportadora e preenchido informe de irregularidade antes de deixar o local de desembarque;
+
+c) O segurado viaje na condição de passageiro em avião de linha aérea regular.
+
+1.2. A cobertura garante exclusivamente o conteúdo das bagagens, ou seja, não abrange o volume externo (malas, bolsas, mochilas, pastas e afins).
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 65 a 66.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+2.1. Extravio ou danos ao volume exterior da bagagem, como malas, bolsas, mochilas, sacolas, caixas, pastas e similares;
+
+2.2. Extravio ou danos aos volumes despachados e entregues à empresa transportadora;
+
+2.3. O confisco ou apreensão da bagagem por parte da Alfândega ou de qualquer outra autoridade governamental;
+
+2.4. Vícios próprios da bagagem, derrame ou vazamento de líquidos, roeduras, ou qualquer outro dano, mesmo que total, causado por traça, inseto ou mofo, cuja causa não seja comprovadamente consequente de tentativa de roubo ou furto qualificado da respectiva bagagem de mão;
+
+2.5. Danos preexistentes ao conteúdo das bagagens e de prévio conhecimento do Segurado antes do embarque;
+
+2.6. Animais, dinheiro, cheques, títulos, selos, coleções, documentos de qualquer espécie, metais preciosos e suas ligas, pedras preciosas ou semipreciosas, bijuterias, joias, relógios, peles, obras de arte e quaisquer objetos de valor estimativo;
+
+2.7. Esquecimento e furto simples;
+
+2.8. Bagagens de pilotos, membros da tripulação, funcionários ou pessoas que tenham interesses na empresa transportadora.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 66.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 66.
+
+Não será aplicada franquia nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 66.
+
+5.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado, independentemente da quantidade de volumes e do valor da bagagem do Segurado.
+
+5.2. Para fins de determinação do Capital Segurado, na liquidação dos sinistros, será considerada como data do evento a data da reclamação oficial feita pelo Segurado à empresa transportadora.
+
+5.3. O valor da indenização será calculado pela descrição dos bens reclamados e seus valores, declarados pelo Segurado na ocorrência do sinistro e em Boletim de Ocorrência Policial. Adicionalmente, caso necessário, a indenização incluirá as despesas com o atendimento médico para a obtenção de uma nova prescrição de remédios de uso contínuo.
+
+5.4. O pagamento da indenização será realizado em dinheiro, não havendo, sob nenhuma hipótese, indenização por meio de reposição de bens.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 66.
+
+O beneficiário desta cobertura será o próprio Segurado.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 66 a 67.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada da Carta de reclamação assinada pelo Segurado, descrevendo a ocorrência e discriminando o(s) item(ns) da bagagem de mão que tenha(m) sido objeto de roubo ou furto qualificado, com respectivo(s) valor(es);
+
+7.4. Cópia digitalizada do RIB – Registro de Irregularidade de Bagagem, para ocorrências com empresas aéreas;
+
+7.5. Cópia digitalizada do Boletim de Ocorrência Policial ou de órgão oficial responsável;
+
+7.6. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte do trecho onde ocorreu o roubo ou furto qualificado.;
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 8. LOCALIZAÇÃO DA BAGAGEM
+
+Fonte: Condições Gerais (PDF), p. 67.
+
+Caso a bagagem seja localizada e recuperada, total ou parcialmente, poderá o Segurado aceitar a devolução desta, devendo, neste caso, restituir proporcionalmente à Seguradora o valor já indenizado.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 9. SUB-ROGAÇÃO DE DIREITOS
+
+Fonte: Condições Gerais (PDF), p. 67.
+
+A Seguradora, pelo pagamento da indenização, cujo recibo valerá como instrumento de cessão, ficará sub-rogada em todos os direitos e ações do Segurado contra aqueles que por atos, fatos ou omissões, tenham causado os prejuízos indenizados ou para eles concorrido, podendo exigir do Segurado, em qualquer tempo, os documentos hábeis para o exercício desses direitos.
+
+### Condições Especiais Cobertura Adicional de Bagagem de Mão - Roubo ou Furto Qualificado em Viagens Aéreas — 10. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 67.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
 ### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Plus Reasons — 1. RISCOS COBERTOS
 
 Fonte: Condições Gerais (PDF), p. 68 a 69.
@@ -2026,6 +2128,180 @@ Fonte: Condições Gerais (PDF), p. 73.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 74 a 75.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante o pagamento de indenização das despesas não reembolsáveis por cancelamento da viagem segurada, decorrente dos eventos abaixo, desde que ocorridos após a compra da viagem segurada e que impossibilitem o início da mesma, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais, sendo: Quando o titular precisar cancelar sua viagem, por qualquer motivo (exceto nos casos listados na cláusula 4), a seguradora assumirá o reembolso dos valores não recuperados por pagamentos antecipados realizados para a contratação de serviços turísticos, de acordo com as Condições Gerais relacionadas ao tour ou serviços adquiridos. Para esta prestação será aplicada uma franquia ou dedutível, que ficará a cargo do titular e estará indicada na tabela de benefícios do produto contratado.
+
+a) Cancelamento de viagem: a anulação definitiva da contratação dos Serviços Turísticos pelo titular, antes da data de início da viagem ou da data de início da vigência do bilhete (o que ocorrer primeiro).
+
+b) Serviços turísticos: limita-se a serviços de transporte comercial (aéreo, marítimo, fluvial, terrestre), hospedagem contratada, excursões e/ou ingressos para espetáculos e/ou eventos, comprados antes da data de emissão do bilhete, por meio de um ou mais prestadores.
+
+c) O bilhete da seguradora deve ter sido emitido na mesma data em que foi realizado o primeiro pagamento (total ou parcial) dos serviços turísticos contratados, comprovável por meio de recibo oficial da agência ou fatura, conforme o caso, ou até no prazo máximo de 72 horas após essa data, e sempre que exista um prazo mínimo de 15 (quinze) dias corridos antes da data de início da viagem ou da data de início da vigência do bilhete, o que ocorrer primeiro. O número de dias de vigência do bilhete, incluindo a prestação do Cancelamento por Qualquer Motivo, deve ser, no mínimo, igual à duração da viagem, comprovável através das datas de ida e volta dos bilhetes aéreos, estadias em hotéis, etc.
+
+d) O titular deve comunicar a seguradora de forma clara o cancelamento da viagem, imediatamente e no máximo até 48 horas após o ocorrido que motivou o cancelamento.
+
+e) O titular deve comunicar a seguradora o cancelamento da viagem no máximo até 48 horas antes do início da vigência do bilhete.
+
+f) Somente serão autorizados reembolsos para o cancelamento definitivo da viagem; não poderão se beneficiar desta prestação aqueles titulares que adiarem e/ou reprogramarem os serviços contratados.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 2. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 75.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 3. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 75.
+
+3.1. Montante da franquia: a franquia a cargo do cliente é calculada aplicando o percentual indicado de limite segurado não recuperado pelo Titular, tal como previsto no ponto 3.1) da presente cláusula. Se o percentual não estiver indicado no bilhete de seguro, considera-se que é de 25%
+
+a) Montante do limite segurado: o montante do limite segurado é calculado a partir do montante total das despesas não recuperadas, deduzido do montante correspondente à franquia acima definida e até o limite da indenização máxima fixado no bilhete de segurado. O valor do seguro viagem não será reembolsado para o segurado, uma vez que ele utiliza do seguro viagem para reembolsar a cobertura contratada. Quando as faturas apresentadas pelo segurado não indicarem valores por pessoa, mas sim o valor total dos serviços contratados para todos os viajantes, a seguradora procederá à divisão desse valor pelo número total de passageiros, independentemente de algum deles ter direito a um valor diferente;
+
+b) Isenção da franquia: A franquia não se aplica exclusivamente nos casos em que o segurado tenha de cancelar a sua viagem por qualquer um dos seguintes motivos:
+
+I) Morte ou doença grave do Titular ou do cônjuge, filho(s), enteado(s), deste, que provoque hospitalização ou exija repouso absoluto, inibindo a deambulação ou gerando um estado de prostração no doente que impossibilite o segurado de iniciar a viagem. Para o efeito, será exigida uma anamnese e estudos de diagnóstico que fundamentem esse repouso;
+
+II) Morte ou hospitalização do pai ou da mãe do segurado devido a acidente ou doença grave de caráter súbito e agudo. Para o efeito, é necessária uma história clínica e estudos de diagnóstico que justifiquem o quadro;
+
+III) ) Quarentena médica que afete o segurado, justificada por um profissional médico ou autoridade competente, desde que tal quarentena tenha sido declarada após a data de contratação dos serviços pelo segurado e cujo período de cessação seja posterior à data de início da viagem do segurado (data que deve coincidir com a data do bilhete de seguro).
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 4. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 76 a 77.
+
+4.1. Não será devido o reembolso da presente prestação:
+
+4.1.1. Quando o cancelamento da viagem ocorrer como consequência da participação do titular em atividades criminosas, alcoolismo, drogadição, uso de medicamentos sem prescrição médica, tentativas de suicídio, autodestruição, lesões auto-infligidas ou qualquer tentativa disso;
+
+4.1.2. Quando o motivo do cancelamento for a não prestação do serviço turístico contratado devido a força maior ou catástrofes climáticas. A seguir são listados, a título exemplificativo, sem que isso implique limitação, alguns exemplos: problemas climáticos, erupções vulcânicas, tsunamis, catástrofes, terremotos, sismos, inundações, tempestades, conflitos bélicos, guerra internacional ou guerra civil (declarada ou não), rebeliões, distúrbios internos, etc.
+
+4.1.3. Na contratação de produtos anuais para múltiplas viagens.
+
+4.1.4. Quando, no momento da contratação do serviço, não estiverem definidas as datas de início e fim da viagem e do bilhete.
+
+4.1.5. Para estadias que excedam 90 dias consecutivos por viagem.
+
+4.1.6. Quando o Titular do bilhete tiver 75 anos ou mais no momento da contratação do serviço de Cancelamento por Qualquer Motivo (salvo outra indicação no bilhete).
+
+4.1.6. Dos valores dos bilhetes de avião (ou outros serviços) quando o titular os tenha adquirido através do resgate de milhas, pontos e outros programas de benefícios conceitualmente semelhantes.
+
+4.1.7. A contratação de outros serviços, de qualquer natureza, que o Titular tenha contratado após a emissão do bilhete da cobertura Cancelamento Any Reason.
+
+4.1.8. Fica desde já estabelecido que a cobertura de Cancelamento Any Reason não é cumulativa com as coberturas de Cancelamento Plus Reason e Cancelamento de Viagem, sendo aplicado apenas um deles por evento.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 77 a 78.
+
+5.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da ocorrência que deu origem ao sinistro, sendo:
+
+a) A data de falecimento, da internação hospitalar, do acidente ou da determinação médica do Segurado ou da pessoa cujo falecimento, acidente ou doença, nos termos do item 1.1 destas Condições Especiais, tenha motivado o cancelamento da viagem; ou
+
+b) A data de recebimento da notificação em juízo improrrogável para o Segurado, ou por pessoa que iria acompanhar o Segurado na viagem, comparecer perante a Justiça; ou
+
+c) A data da declaração de autoridade sanitária competente deixando o Segurado em quarentena.
+
+d) A data do incêndio, explosão, queda de raio, roubo, alagamento ou vendaval na residência habitual ou no local de trabalho; ou
+
+e) A data de ocorrência do roubo de documentos, registrada em Boletim de Ocorrência Policial; ou
+
+f) A data de recebimento da convocação para realização de prova ou de nomeação para posse de cargo público; ou
+
+g) A data de negativa de concessão de visto no Brasil ou de negativa de permissão para entrada no país de destino da viagem; ou
+
+h) A data de diagnóstico médico de estado de risco na gravidez, de internação ou de consulta por ocorrência de complicações na gravidez ou do aborto; ou
+
+i) A data de demissão involuntária;; ou da comunicação de alteração de posto ou local de trabalho; ou da comunicação formal do traslado de local do trabalho; ou da comunicação
+
+formal do cancelamento de férias; ou do evento ocorrido no local de trabalho do segurado que exija sua presença.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 78.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 78 a 80.
+
+7.1. Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+7.2. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado ou por seu representante, em caso de falecimento ou impossibilidade do mesmo, juntamente com os dados bancários;
+
+7.3. Carta de penalização emitida pela Agência de Viagens e/ou operador turístico, companhia aérea, marítima ou a quem corresponda, acompanhada da política de cancelamento incluída pela referida Agência e/ou operador no contrato assinado pelo Titular;
+
+7.4. Qualquer outra informação e/ou documentação que a seguradora possa exigir a este respeito;
+
+7.5. Cópias digitalizadas dos documentos do Segurado e do Beneficiário: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias;
+
+7.6. Descrição da ocorrência, datada e assinada pelo Segurado ou seu representante, no caso de falecimento ou impossibilidade médica do mesmo;
+
+7.7. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.8. Cópia digitalizada de documentos que comprovem o pagamento do valor referente à viagem segurada e das despesas e/ou multas decorrentes do cancelamento, remarcação ou transferência da mesma, devidamente confirmadas pelos fornecedores do serviço, sendo:
+
+a) Cópia digitalizada de documentos que comprovem o pagamento do valor referente à viagem segurada e das despesas e/ou multas decorrentes do cancelamento, remarcação ou transferência da mesma, devidamente confirmadas pelos fornecedores do serviço, sendo
+
+b) Viagem Marítima: documento emitido pela empresa marítima;
+
+c) Viagem Aérea + Terrestre: cópia do contrato onde consta a descrição do pacote adquirido e valor da viagem e carta da agência de viagens em papel timbrado e com assinatura do responsável informando o valor da multa.
+
+d) Contrato de prestação de serviço dos organizadores de viagem, que devem prever multas em caso de cancelamento, conforme determinação legal.
+
+7.9. Cópia digitalizada de comprovante da relação familiar do Segurado com a pessoa cujo falecimento ou internação hospitalar tenha motivado o cancelamento da viagem;
+
+7.10. Cópia digitalizada da Certidão de Óbito do Segurado ou da pessoa cujo falecimento tenha motivado o cancelamento da viagem;
+
+7.11. Cópias digitalizadas dos Relatórios e exames médicos que atestem a impossibilidade de viagem do Segurado ou de pessoa que tenha motivado o cancelamento da viagem, por doença, acidente, gravidez, parto, aborto e complicações decorrentes de parto ou aborto, devidamente datados e assinados pelo médico assistente, com a indicação do CRM do mesmo;
+
+7.12. Cópia digitalizada do Prontuário do hospital e relatório do médico assistente que comprove a doença ou lesão da pessoa cuja internação hospitalar tenha motivado o cancelamento da viagem;
+
+7.13. Cópia digitalizada da intimação ou convocação judicial e do processo judicial que tenha motivado o cancelamento da viagem;
+
+7.14. Cópia da declaração da autoridade de saúde que decretou a quarentena imposta ao segurado e que impediu a viagem;
+
+7.15. Cópia digitalizada do Boletim de Ocorrência em caso de danos ao imóvel residencial, acompanhado de comprovante de propriedade ou posse do mesmo, ou ao local de trabalho do Segurado;
+
+7.16. Cópia digitalizada do Boletim de Ocorrência em caso de roubo de documento, bem como cópia dos novos documentos emitidos, como visto se for o caso;
+
+7.17. Cópia digitalizada da rescisão do contrato de trabalho em caso de desemprego involuntário;
+
+7.18. Cópia digitalizada da Declaração e outros comprovantes emitidos pela empresa em caso de: incorporação a novo posto de trabalho, cancelamento justificado de férias, prorrogação de contrato de trabalho, traslado involuntário do local de trabalho, (cópia de comprovante de residência atual, cópia do comunicado do empregador indicando o local de destino ou região da nova moradia e cópia da carteira profissional com o registro da transferência);
+
+7.19. Cópia digitalizada do Comprovante de marcação de prova para concurso público;
+
+7.20. Cópia digitalizada do Diário Oficial com a nomeação para cargo concursado;
+
+7.21. Cópia digitalizada do comprovante da convocação do Tribunal Regional Eleitoral para trabalho em eleições;
+
+7.22. Cópia digitalizada do passaporte com o visto negado;
+
+7.23. Cópia digitalizada do Relatório médico com diagnóstico e motivo de urgência em caso de chamada inesperada para intervenção cirúrgica;
+
+7.24. Cópia digitalizada do comprovante emitido pelo Cartório em caso de cancelamento de cerimônia matrimonial;
+
+7.25. Cópia digitalizada da Certidão de Casamento com averbação de divórcio em caso de separação ou divórcio do Segurado;
+
+7.26. Cópia digitalizada do comprovante emitido pela escola ou universidade para agendamento de prova substitutiva e/ou recuperação escolar do Segurado ou parente de primeiro grau ou cônjuge;
+
+7.27. Cópia digitalizada do comprovante emitido pela escola ou universidade confirmando a mudança na data de provas, trabalhos ou apresentações, com a justificativa das mudanças;
+
+7.28. Em caso de cancelamento de viagem de pessoa que acompanharia o Segurado, deverá ser entregue cópia digitalizada de carta esclarecendo o motivo do cancelamento acompanhada dos documentos citados nos demais itens desta cláusula, quando aplicáveis.
+
+### Condições Especiais Cobertura Adicional de Cancelamento de Viagem – Any Reasons — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 80.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais
+
 ### Condições Especiais Cobertura Adicional de Interrupção de Viagem — 1. RISCOS COBERTOS
 
 Fonte: Condições Gerais (PDF), p. 81 a 82.
@@ -2153,6 +2429,1739 @@ Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condiçõe
 ### Condições Especiais Cobertura Adicional de Interrupção de Viagem — 8. RATIFICAÇÃO
 
 Fonte: Condições Gerais (PDF), p. 85.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 86 a 87.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante o pagamento de indenização das despesas não reembolsáveis por interrupção forçada da viagem segurada, incluindo remarcação ou aquisição de passagem de volta, classe econômica ou convencional, para o local de início da viagem, decorrente dos eventos abaixo, comunicadas após o início da viagem e que impossibilitem a continuidade da mesma, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais, sendo:
+
+a) Falecimento, por causa natural ou acidental, doença ou acidente pessoal que impossibilite, por determinação médica, o início da viagem do Segurado ou de seu cônjuge, pais, irmãos, filhos ou sogro (a);
+
+b) Doença ou acidente pessoal que impossibilite a viagem por determinação médica, no caso do Segurado, ou que exija internação hospitalar de forma repentina e aguda por mais de 3 (três) dias no caso do seu cônjuge, de seus pais, filhos, irmãos, sogros ou da pessoa responsável pela custódia de dependentes do Segurado durante a
+
+c) Atendimento a convocação judicial improrrogável, desde que o recebimento da referida notificação seja posterior a contratação da viagem e/ou serviços turísticos;
+
+d) Danos graves ocasionados por incêndio, explosão, queda de raio, roubo, alagamento ou vendaval na residência habitual do Segurado ou na empresa onde seja sócio ou empregado e sua presença seja imperativamente necessária;
+
+e) Declaração de uma autoridade sanitária competente deixando o Segurado em quarentena, desde que a declaração seja posterior a contratação da viagem e/ou serviços turísticos
+
+f) Desemprego involuntário do segurado que mantém vínculo empregatício com pessoa jurídica, através de contrato de trabalho formalizado pela Carteira Profissional (CPTS) e recebem pagamentos periódicos consecutivos, sendo esta a forma principal de seus rendimentos.;
+
+g) Complicação na gravidez ou aborto espontâneo; excluindo-se quaisquer complicações a partir do sétimo mês de gravidez;
+
+h) Carta de cancelamento de férias emitida pela empresa do segurado que mantém vínculo empregatício com pessoa jurídica, através de contrato de trabalho formalizado pela Carteira Profissional (CPTS) e recebem pagamentos periódicos consecutivos, sendo esta a forma principal de seus rendimentos.;
+
+i) Convocação repentina ou remarcação de datas de concursos públicos e provas vestibulares; ou convocação como membro de mesa eleitoral;
+
+j) Nomeação para cargo concursado;
+
+k) Roubo de documentação que impossibilite o segurado de seguir sua viagem,;
+
+l) Visto negado para destinos onde o mesmo seja emitido na entrada do país, desde que o Segurado tenha tomado as providências necessárias dentro dos prazos e forma estabelecidos para concedê-los;
+
+m) Traslado forçado de trabalho, com deslocamento superior a 3 (três) meses, do segurado que mantém vínculo empregatício com pessoa jurídica, através de contrato de trabalho formalizado pela Carteira Profissional (CPTS) e recebem pagamentos periódicos consecutivos, sendo esta a forma principal de seus rendimentos;
+
+n) Prejuízos graves no local de trabalho do segurado que mantém vínculo empregatício com pessoa jurídica, através de contrato de trabalho formalizado pela Carteira Profissional (CPTS) e recebem pagamentos periódicos consecutivos, sendo esta a forma principal de seus rendimentos, e que torne a presença do mesmo imperativa;
+
+o) Avaria ou acidente no veículo de propriedade do segurado ou de seu cônjuge, que impeça o segurado de iniciar sua viagem;
+
+p) Separação/divórcio do segurado de forma inesperada e desde que os trâmites oficiais para legalização da separação/divórcio ocorra após a data de aquisição do seguro viagem;;
+
+q) Mudança de datas de apresentação de defesa de teses de mestrado e doutorado por determinação da Instituição de Ensino e comprovadas oficialmente através de emissão de documento.
+
+1.2. Estão abrangidas por esta cobertura as despesas não reembolsáveis com passagens, aluguéis de veículos, hospedagem, serviços ou ingressos de shows, eventos esportivos, parques, museus, exposições e outras atrações da mesma natureza, respeitado o limite do Capital Segurado.
+
+1.3. As despesas não reembolsáveis serão calculadas conforme normas dos fornecedores, tais como taxas de cancelamento ou remarcação, como no caso de passagens aéreas. Para cálculo das despesas proporcionais ao período total de estadia que não permitam nenhum reembolso ou desconto por parte do prestador de serviços ou da operadora de turismo, o valor total das mesmas será dividido pelo número de dias da viagem e multiplicado pelo número de dias não usufruídos, limitado o limite do Capital Segurado
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 2. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 88.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 3. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 88.
+
+4. Esta cobertura estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 5. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 88 a 89.
+
+5.1. Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+5.1.1. Tratamentos estéticos, check-ups, contraindicações de viagens anteriores à contratação da viagem segurada, vacinações, impossibilidade de realizar tratamentos médicos planejados no destino da viagem e interrupção voluntária da gravidez;
+
+5.1.2. Cirurgias plásticas e suas consequências, incluindo-se aquelas derivadas de problemas congênitos. Estão cobertas as cirurgias plásticas restauradoras decorrentes de Acidente Pessoal coberto ocorrido no período de cobertura do Seguro;
+
+5.1.3. Hospitalizações quando o paciente não estiver sob cuidados de médicos legalmente habilitados;
+
+5.1.4. Demissão por justa causa;
+
+5.1.5. Adesão a Programas de Demissão Voluntários incentivados pelo empregador do Segurado;
+
+5.1.6. Estagiários e Contratos de Trabalho Temporário em geral.
+
+5.1.7. Passaporte ou visto com prazo inferior aos prazos legais;
+
+5.1.8. A falta de visto de entrada ao país de destino em que seja requisito para imigração;
+
+5.1.9. Cancelamento e ou | alterações | de | serviços | motivados | pelo | fornecedor
+
+(Operadora/Agência);
+
+5.1.10. Cancelamento de um voo fretado;
+
+5.1.11. A não apresentação, por qualquer motivo, dos documentos indispensáveis em toda viagem, tais como passaporte, visto, taxas consulares, notas, carnês ou certidões de vacinação;
+
+5.1.12. Despesas que não sejam diretamente impostas pelas empresas aéreas, de hotelaria, turismo e demais fornecedores dos serviços da viagem segurada;
+
+5.1.13. Doenças preexistentes, que sejam conhecidas do Segurado antes da compra do bilhete e que tenham sido a causa da solicitação do reembolso;
+
+5.1.14. Eventos que mesmo que perturbem ou impeçam alguma programação da viagem iniciada, não provoquem a interrupção da mesma, ou seja, não provoquem o retorno antecipado do Segurado;
+
+5.1.15. Acidentes ou doenças que tenham ocorrido com parente, antes da compra do bilhete de seguro;
+
+5.1.16. Interrupção motivada por condição climática não correspondente a expectativa do segurado.
+
+5.2. Estão excluídas da cobertura desta garantia as internações em instituições do tipo abaixo relacionados:
+
+5.2.1. Instituição para atendimento de deficientes mentais, ou seja, uma instituição primordialmente dedicada ao tratamento de enfermidades psiquiátricas, incluindo subnormalidades; ou ainda o departamento psiquiátrico de um hospital;
+
+5.2.2. Local para idosos, casas de descanso, asilos e assemelhados;
+
+5.2.3. Clínicas ou local para recuperação de viciados em álcool e drogas;
+
+5.2.4. Instituições de saúde hidroterápica ou clínica de método curativos naturais; casa de saúde para convalescentes; unidade especial de Hospital usada primordialmente como um lugar para viciados em drogas ou álcool, ou como uma instituição de saúde para convalescentes ou para reabilitação; clinicas de emagrecimento e SPA.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 6. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 89 a 90.
+
+6.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+6.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da ocorrência que deu origem ao sinistro, relacionado ao Segurado ou ao seu acompanhante, sendo:
+
+6.2.1. A data de falecimento, da internação hospitalar, do acidente ou da determinação médica do Segurado ou da pessoa cujo falecimento, acidente ou doença, nos termos do item 1.1 destas Condições Especiais, tenha motivado a interrupção da viagem; ou
+
+6.2.2. A data de recebimento da notificação em juízo improrrogável para comparecer perante a Justiça; ou
+
+6.2.3. A data da declaração de autoridade sanitária competente deixando o Segurado em quarentena.
+
+6.2.4. A data do incêndio, explosão, queda de raio, roubo, alagamento ou vendaval na residência habitual ou no local de trabalho; A data do incêndio, explosão, queda de raio, roubo, alagamento ou vendaval na residência habitual ou no local de trabalho; ou
+
+6.2.5. A data de ocorrência do roubo de documentos ou bagagens, registrada em Boletim de Ocorrência Policial; ou
+
+6.2.6. A data de recebimento da convocação para realização de prova ou de nomeação para posse de cargo público; ou
+
+6.2.7. A data de negativa de concessão de visto no Brasil ou de negativa de permissão para entrada no país de destino da viagem; ou
+
+6.2.8. A data do relatório médico com agendamento para intervenção cirúrgica; ou
+
+6.2.9. A data de demissão involuntária; ou da comunicação formal de admissão em novo emprego; ou da comunicação de alteração de posto ou local de trabalho; ou da comunicação formal de prorrogação do contrato de trabalho; ou da comunicação formal do traslado de local do trabalho; ou da comunicação formal do cancelamento de férias; ou da alteração ou cancelamento de data de reunião de trabalho.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 7. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 90.
+
+7.1. O beneficiário desta cobertura será o próprio Segurado.
+
+7.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 8. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 90 a 92.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+8.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado ou por seu representante, em caso de falecimento ou impossibilidade do mesmo, juntamente com os dados bancários;
+
+8.2. Cópias digitalizadas dos documentos do Segurado e do Beneficiário: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+8.3. Descrição da ocorrência, datada e assinada pelo Segurado ou por seu representante, no caso de falecimento ou impossibilidade médica do mesmo;
+
+8.4. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+8.5. Cópia digitalizada de documentos que comprovem o pagamento do valor referente à viagem segurada e das despesas decorrentes da interrupção da mesma, devidamente confirmadas pelos fornecedores do serviço;
+
+8.6. Cópia digitalizada de comprovante da relação familiar ou empregatícia do Segurado com a pessoa cujo falecimento ou internação hospitalar tenha motivado a interrupção da viagem;
+
+8.7. Cópia digitalizada da Certidão de Óbito do Segurado ou da pessoa cujo falecimento tenha motivado a interrupção da viagem;
+
+8.8. Cópias digitalizadas dos Relatórios e exames médicos que atestem a impossibilidade da continuidade da viagem do Segurado ou de pessoa que tenha motivado a interrupção da viagem, por doença, acidente, gravidez, parto, aborto e complicações decorrentes de parto ou aborto, devidamente datados e assinados pelo médico assistente, com a indicação do CRM do mesmo;
+
+8.9. Cópia digitalizada do Prontuário do hospital e relatório do médico assistente que comprove a doença ou lesão da pessoa cuja internação hospitalar tenha motivado a interrupção da viagem;
+
+8.10. Cópia digitalizada da intimação ou convocação e do processo judicial que tenha motivado a interrupção da viagem;
+
+8.11. Cópia da declaração da autoridade de saúde que decretou a quarentena imposta ao segurado e que impediu a viagem;
+
+8.12. Cópia digitalizada do Boletim de Ocorrência em caso de danos ao imóvel residencial, acompanhado de comprovante de propriedade ou posse do mesmo, ou ao local de trabalho do Segurado;
+
+8.13. Cópia digitalizada do Boletim de Ocorrência em caso de roubo de documento ou de bagagem;
+
+8.14. Cópia da rescisão do contrato de trabalho em caso de desemprego involuntário;
+
+8.15. Cópia digitalizada da Declaração e outros comprovantes emitidos pela empresa em caso de: incorporação a novo posto de trabalho, cancelamento justificado de férias, prorrogação de contrato de trabalho, traslado involuntário do local de trabalho, (cópia de comprovante de residência atual, cópia do comunicado do empregador indicando o local de destino ou região da nova moradia e cópia da carteira profissional com o registro da transferência);
+
+8.16. Cópia digitalizada do Comprovante de marcação de prova para concurso público;
+
+8.17. Cópia digitalizada do Diário Oficial com a nomeação para cargo concursado;
+
+8.18. Cópia digitalizada do Comprovante da convocação do Tribunal Regional Eleitoral para trabalho em eleições;
+
+8.19. Cópia digitalizada do passaporte com o visto negado, em caso de não admissão ou recusa de entrada no país de destino;
+
+8.20. Cópia digitalizada do Relatório médico com diagnóstico e motivo de urgência em caso de chamada inesperada para intervenção cirúrgica;
+
+8.21. Comprovante emitido pelo Cartório em caso de cancelamento de cerimônia matrimonial;
+
+8.22. Cópia digitalizada da Certidão de Casamento com averbação de divórcio em caso de separação ou divórcio do Segurado;
+
+8.23. Cópia digitalizada do comprovante emitido pela escola ou universidade para agendamento de prova substitutiva e/ou recuperação escolar do Segurado ou parente de primeiro grau ou cônjuge;
+
+8.24. Cópia digitalizada do Comprovante emitido pela escola ou universidade confirmando a mudança na data de provas, trabalhos ou apresentações, com a justificativa das mudanças;
+
+8.25. Em caso de interrupção de viagem de pessoa que acompanhava o Segurado, deverá ser entregue carta esclarecendo o motivo da interrupção acompanhada dos documentos citados nos demais itens desta cláusula, quando aplicáveis.
+
+### Condições Especiais Cobertura Adicional de Interrupção de Viagem - Master — 9. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 92.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 93.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médicas, hospitalares e/ou odontológicas efetuadas pelo Segurado para seu atendimento até a estabilização do quadro de urgência ou emergência, sob orientação médica, ocasionado por acidente pessoal ocorrido durante o período de viagem nacional e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.1.1. Viagem nacional é definida neste contrato de seguro como aquela realizada entre a cidade de domicílio do segurado e uma distância mínima igual ou superior a 50 (cinquenta) quilômetros.
+
+1.1.2. Viagens entre a cidade de domicílio do segurado e uma distância inferior a 50 (cinquenta) quilômetros não serão consideradas cobertas para efeito deste contrato.
+
+1.2. Estão cobertas as despesas com o atendimento por especialistas, exames complementares, internações e cirurgias, desde que imperativas para que o Segurado possa prosseguir viagem ou retornar ao local de origem da viagem segurada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 93 a 94.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídas desta cobertura as despesas decorrentes de:
+
+2.1. Continuidade do tratamento após o atendimento emergencial que possibilite ao Segurado seguir viagem ou controle de tratamentos anteriores;
+
+2.2. Doenças desencadeadas ou agravadas pelo acidente, bem como as doenças infecciosas e parasitárias transmitidas por picadas de insetos;
+
+2.3. Danos médicos;
+
+2.4. Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos diretamente pelo acidente;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. Aparelhos que se referem a órteses de qualquer natureza e a próteses de caráter permanente;
+
+2.7. Fraturas patológicas, entendidas como aquelas nas quais um osso é quebrado através de uma área enfraquecida por uma doença, por um grau de esforço que teria deixado intacto o osso normal, tais como tumores ósseos, metástases ósseas e doenças do metabolismo;
+
+2.8. Compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 94.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 94.
+
+Não será aplicada franquia nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 94.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data do acidente que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas, hospitalares e odontológicas até o limite do capital contratado.
+
+5.4. Se houver a contratação simultânea desta cobertura com as coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e Despesas Odontológicas em viagem nacional (DO-VN), os capitais segurados se acumulam para fins de indenização.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 94.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 94 a 95.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas dos Laudos e exames relacionados com a lesão coberta, realizados para atendimento emergencial do Segurado;
+
+7.6. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.7. Cópia digitalizada do Laudo do exame toxicológico e de teor alcoólico, quando realizado;
+
+7.8. Cópias digitalizadas dos Comprovantes das despesas cobertas.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem Nacional (DMHO-A-VN) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 95.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 96.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médicas, hospitalares e/ou odontológicas efetuadas pelo Segurado para seu atendimento até a estabilização do quadro de urgência ou emergência, sob orientação médica, ocasionado por acidente pessoal ocorrido durante o período de viagem ao exterior e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Estão cobertas as despesas com o atendimento por especialistas, exames complementares, internações e cirurgias, desde que imperativas para que o Segurado possa prosseguir viagem ou retornar ao local de origem da viagem segurada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 96.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídas desta cobertura as despesas decorrentes de:
+
+2.1. Continuidade do tratamento após o atendimento emergencial que possibilite ao Segurado seguir viagem ou controle de tratamentos anteriores;
+
+2.2. Doenças desencadeadas ou agravadas pelo acidente, bem como as doenças infecciosas e parasitárias transmitidas por picadas de insetos;
+
+2.3. Danos médicos;
+
+2.4. Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos diretamente pelo acidente;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. Aparelhos que se referem a órteses de qualquer natureza e a próteses de caráter permanente;
+
+2.7. Fraturas patológicas, entendidas como aquelas nas quais um osso é quebrado através de uma área enfraquecida por uma doença, por um grau de esforço que teria deixado intacto o osso normal, tais como tumores ósseos, metástases ósseas e doenças do metabolismo;
+
+2.8. Compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 96 a 97.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 97.
+
+Não será aplicada franquia nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 97.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data do acidente que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas, hospitalares e odontológicas até o limite do capital contratado.
+
+5.4. Se houver a contratação simultânea desta cobertura com as coberturas de Despesas Médico-Hospitalares em viagem ao Exterior (DMH-VE) e Despesas Odontológicas em viagem ao exterior (DO-VE), os capitais segurados se acumulam para fins de indenização.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 97.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 97 a 98.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM ou equivalente no exterior, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas dos Laudos e exames relacionados com a lesão coberta, realizados para atendimento emergencial do Segurado;
+
+7.6. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.7. Cópia digitalizada do Laudo do exame toxicológico e de teor alcoólico, quando realizado;
+
+7.8. Cópias digitalizadas dos comprovantes de pagamento das despesas cobertas.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas por Acidente em Viagem ao Exterior (DMHO-A-VE) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 98.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 1. RISCOS COBERTOS (parte 1 de 2)
+
+Fonte: Condições Gerais (PDF), p. 99 a 103.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médico-hospitalares complementares do Segurado, ou seja, as despesas efetuadas pelo Segurado para seu atendimento não cobertas pela cobertura de Despesas Médico-Hospitalares em viagem nacional (DMH-VN), desde que realizadas sob orientação médica, ocasionadas por acidente pessoal ou enfermidade súbita e aguda ocorrida durante o período de viagem nacional e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.1.1. Viagem nacional é definida neste contrato de seguro como aquela realizada entre a cidade de domicílio do segurado e uma distância mínima igual ou superior a 50 (cinquenta) quilômetros.
+
+1.1.2. Viagens entre a cidade de domicílio do segurado e uma distância inferior a 50 (cinquenta) quilômetros não serão consideradas cobertas para efeito deste contrato.
+
+1.2. Estão excluídos desta cobertura os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas.
+
+1.3. Estão cobertos, até o limite do Capital Segurado contratado para esta cobertura, as despesas relacionadas à estabilização do quadro clínico do Segurado, em casos de emergência ou urgência, que lhe permita continuar viagem ou retornar ao local de sua residência, não havendo cobertura para a continuidade e o controle de tratamentos anteriores, medicamentos, check-up e extensão de receitas.
+
+1.4. No caso do Segurado ter direito ao reembolso das despesas médicas de qualquer outra fonte ou seguro, a seguradora reembolsará a diferença entre o valor das despesas e o valor a que o Segurado tiver direito a reembolso, limitado ao Capital Segurado desta garantia
+
+1.5. Para efeito do disposto neste item, considera-se:
+
+a) Emergência: situação onde o Segurado esteja em circunstância que exige uma cirurgia ou intervenção médica imediata, pois existe risco de morte; e
+
+b) Urgência: situação onde o Segurado necessita de atendimento, não caracterizado como risco imediato de morte, podendo assim aguardar o atendimento de casos emergenciais, conforme critério estabelecido pelo estabelecimento médico em que o cliente estiver sendo atendido.
+
+2. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. Os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas;
+
+2.2. A continuidade e o controle de tratamentos anteriores, check-up e extensão de receitas;
+
+2.3. Danos médicos;
+
+2.4. | Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos | diretamente
+
+pelo acidente ou pela doença súbita;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. A compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+2.7. Todo e qualquer tipo de tratamento eletivo e/ou rotineiro;
+
+2.8. Aparelhos que se referem a órteses de qualquer natureza e as próteses de caráter permanente, salvo as próteses pela perda de dentes naturais e as despesas com reparos ou substituições de próteses odontológicas, desde que em decorrência de traumatismo;
+
+2.9. Diabetes, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.10. Doenças hematológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.11. Doenças mentais, incluindo neuroses, psicoses, ou quaisquer doenças psicológicas, e suas consequências.
+
+2.12. Doenças neurológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.13. Doenças sexualmente transmissíveis incluindo HIV.
+
+2.14. Estados de convalescença (após alta médica) quando retornar ao país de origem, e as despesas de acompanhantes;
+
+2.15. Insuficiência Renal ou hemodiálise, suas complicações ou consequencias, ainda que não diagnosticado antes do início da viagem;
+
+2.16. Medicinas alternativas, como, acupuntura, homeopatia, digitopuntura e quiropraxia, flor de bach ou terapia com floral;
+
+2.17. Parto programado e tratamentos voluntários para a gravidez
+
+2.18. Quaisquer doenças Cardíacas Crônicas, suas complicações ou consequências, de conhecimento ou não do Segurado, ainda que não diagnosticado antes do início da viagem;
+
+2.19. Qualquer pressão arterial ou hipertensão, e suas complicações ou consequências;
+
+2.20. Qualquer procedimento cirúrgico a que o Segurado tenha sido submetido num período de 90 (noventa) dias anteriores a contratação do seguro, ainda que o mesmo se encontre em alta médica definitiva;
+
+2.21. Qualquer tipo de câncer ou tratamento oncológicos, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.22. Qualquer tipo de transplante a que o Segurado tenha sido submetido num período de 180 (cento e oitenta) dias anteriores a contratação do seguro, incluindo, mas não limitado a transplante em viagem segurada;
+
+2.23. Recém-nascidos, inclusive pré-maturo, durante a viagem segurada;
+
+2.24. Tratamento de gravidez, inclusive o fornecimento de serviços relacionados ao diagnóstico e tratamento de infertilidade ou outros problemas relacionados com a fertilidade, Controle de natalidade, incluindo intervenções cirúrgicas e dispositivos para tal fim, Abortos induzidos, gastos médicos e de qualquer outro tipo relacionados ao recém-nascido (quando o parto e suas consequências não ocorram diretamente de acidente pessoal);
+
+2.25. Tratamento ou Controle de Pré-natal, quando voluntários;
+
+2.26. Da prática dos esportes e atividades listadas a seguir:
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 1. RISCOS COBERTOS (parte 2 de 2)
+
+Fonte: Condições Gerais (PDF), p. 99 a 103.
+
+a. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos; b. “Rafting” com grau de dificuldade 4 ou acima; c. Acrobacia circense; d. Asa delta ou parapente; e. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição; f. Aviação Esportiva; g. Caça ou tiro esportivo; h. Caminhadas ou passeios acima de 3.000 metros de altitude; i. Disputas ou campeonatos interescolares ou acadêmicos; j. Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+
+k. Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada; l. Esportes de luta, como, por exemplo, boxe e artes marciais; m. Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs; n. Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado; o. Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem; p. Paraquedismo, “skydiving” ou “ bungee jumping”; q. Passeios a cavalo, equitação, polo e outras atividades equestres; r. Práticas ou Passeio de Balão. Qualquer atividade que envolva armas; s. Rugby; t. Scuba Diving; u. Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”; v. Velejar em alto-mar; w. Viagens para áreas remotas ou particularmente perigosas, com ou sem guia.
+
+3. CARÊNCIA Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+4. FRANQUIA A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções: Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 103.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da efetiva utilização do serviço médico e/ou hospitalar que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas e hospitalares até o limite do capital contratado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 103.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 103 a 104.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas do laudo médico e/ou odontológico do profissional responsável pelo atendimento, atestando a ocorrência do evento coberto e especificando a descrição da patologia e procedimentos realizados.;
+
+7.7. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.8. Cópia digitalizada do Laudo do exame toxicológico e de teor alcoólico, quando realizado;
+
+7.9. Cópias digitalizadas dos Comprovantes das despesas cobertas, incluindo Nota Fiscal e comprovante detalhado dos gastos efetuados;
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 104.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 105.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médico-hospitalares complementares do Segurado, ou seja, as despesas efetuadas pelo Segurado para seu atendimento não cobertas pela cobertura de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE), desde que realizadas sob orientação médica, ocasionadas por acidente pessoal ou enfermidade súbita e aguda ocorrida durante o período de viagem ao exterior e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Estão excluídos desta cobertura os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas.
+
+1.3. Estão cobertos, até o limite do Capital Segurado contratado para esta cobertura, as despesas relacionadas à estabilização do quadro clínico do Segurado, em casos de emergência ou urgência, que lhe permita continuar viagem ou retornar ao local de sua residência, não havendo cobertura para a continuidade e o controle de tratamentos anteriores, medicamentos, check-up e extensão de receitas.
+
+1.4. No caso do Segurado ter direito ao reembolso das despesas médicas de qualquer outra fonte ou seguro, a seguradora reembolsará a diferença entre o valor das despesas e o valor a que o Segurado tiver direito a reembolso, limitado ao Capital Segurado desta garantia
+
+1.5. Para efeito do disposto neste item, considera-se:
+
+a) Emergência: situação onde o Segurado esteja em circunstância que exige uma cirurgia ou intervenção médica imediata, pois existe risco de morte; e
+
+b) Urgência: situação onde o Segurado necessita de atendimento, não caracterizado como risco imediato de morte, podendo assim aguardar o atendimento em casos emergenciais, conforme critério estabelecido pelo estabelecimento médico em que o cliente estiver sendo atendido.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 105 a 108.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. Os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas;
+
+2.2. A continuidade e o controle de tratamentos anteriores, check-up e extensão de receitas;
+
+2.3. Danos médicos;
+
+2.4. Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos diretamente pelo acidente ou pela doença súbita;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. Aparelhos que se referem a órteses de qualquer natureza e a próteses de caráter permanente;
+
+2.7. A compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+2.8. Todo e qualquer tipo de tratamento eletivo e/ou rotineiro;
+
+2.9. Aparelhos que se referem a órteses de qualquer natureza e as próteses de caráter permanente, salvo as próteses pela perda de dentes naturais e as despesas com reparos ou substituições de próteses odontológicas, desde que em decorrência de traumatismo;
+
+2.10. Diabetes, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.11. Doenças hematológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.12. Doenças mentais, incluindo neuroses, psicoses, ou quaisquer doenças psicológicas, e suas consequências.
+
+2.13. Doenças neurológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.14. Doenças sexualmente transmissíveis incluindo HIV.
+
+2.15. Estados de convalescença (após alta médica) quando retornar ao país de origem, e as despesas de acompanhantes;
+
+2.16. Insuficiência Renal ou hemodiálise, suas complicações ou consequencias, ainda que não diagnosticado antes do início da viagem;
+
+2.17. Medicinas alternativas, como, acupuntura, homeopatia, digitopuntura e quiropraxia, flor de bach ou terapia com floral;
+
+2.18. Parto programado e tratamentos voluntários para a gravidez
+
+2.19. Quaisquer doenças Cardíacas Crônicas, suas complicações ou consequências, de conhecimento ou não do Segurado, ainda que não diagnosticado antes do início da viagem;
+
+2.20. Qualquer pressão arterial ou hipertensão, e suas complicações ou consequências;
+
+2.21. Qualquer procedimento cirúrgico a que o Segurado tenha sido submetido num período de 90 (noventa) dias anteriores a contratação do seguro, ainda que o mesmo se encontre em alta médica definitiva;
+
+2.22. Qualquer tipo de câncer ou tratamento oncológicos, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.23. Qualquer tipo de transplante a que o Segurado tenha sido submetido num período de 180 (cento e oitenta) dias anteriores a contratação do seguro, incluindo, mas não limitado a transplante em viagem segurada;
+
+2.24. Recém-nascidos, inclusive pré-maturo, durante a viagem segurada;
+
+2.25. Tratamento de gravidez, inclusive o fornecimento de serviços relacionados ao diagnóstico e tratamento de infertilidade ou outros problemas relacionados com a fertilidade, Controle de natalidade, incluindo intervenções cirúrgicas e dispositivos para tal fim, Abortos induzidos, gastos médicos e de qualquer outro tipo relacionados ao recém-nascido (quando o parto e suas consequências não ocorram diretamente de acidente pessoal);
+
+2.26. Tratamento ou Controle de Pré-natal, quando voluntários;
+
+2.27. Da prática dos esportes e atividades listadas a seguir:
+
+2.28. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos;
+
+2.29. “Rafting” com grau de dificuldade 4 ou acima;
+
+2.30. Acrobacia circense;
+
+2.31. Asa delta ou parapente;
+
+2.32. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição;
+
+2.33. Aviação Esportiva;
+
+2.34. Caça ou tiro esportivo;
+
+2.35. Caminhadas ou passeios acima de 3.000 metros de altitude;
+
+a) Disputas ou campeonatos interescolares ou acadêmicos;
+
+b) Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+
+c) Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada;
+
+d) Esportes de luta, como, por exemplo, boxe e artes marciais;
+
+e) Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs;
+
+f) Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das
+
+exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado;
+
+g) Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem;
+
+h) Paraquedismo, “skydiving” ou “ bungee jumping”;
+
+i) Passeios a cavalo, equitação, polo e outras atividades equestres;
+
+j) Práticas ou Passeio de Balão. Qualquer atividade que envolva armas;
+
+k) Rugby;
+
+l) Scuba Diving;
+
+m) Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”;
+
+n) Velejar em alto-mar;
+
+o) Viagens para áreas remotas ou particularmente perigosas, com ou sem guia
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 108.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 108 a 109.
+
+A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 109.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da efetiva utilização do serviço médico e/ou hospitalar que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas e hospitalares até o limite do capital contratado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 109.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 109 a 110.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM ou equivalente no exterior, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas dos laudos e exames relacionados com a lesão ou a doença súbita coberta, realizados para atendimento emergencial do Segurado;
+
+7.6. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.7. Cópia digitalizada do laudo médico e/ou odontológico do profissional responsável pelo atendimento, atestando a ocorrência do evento coberto e especificando a descrição da patologia e procedimentos realizados.;
+
+7.8. Cópias digitalizadas dos Comprovantes das despesas cobertas incluindo Nota Fiscal e comprovante detalhado dos gastos efetuados.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 110.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 1. RISCOS COBERTOS (parte 1 de 2)
+
+Fonte: Condições Gerais (PDF), p. 111 a 113.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante ao Segurado a extensão dos riscos abrangidos pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN) aos eventos decorrentes de acidente pessoal ou enfermidade súbita e aguda ocasionados pela prática amadora dos esportes cobertos até a estabilização do quadro de urgência ou emergência.
+
+1.2. Para fins da presente extensão de cobertura, consideram‐se modalidades de esportes cobertos:
+
+Acrobacias | Caminhadas - até 6.000 metros | Escalada - interior
+Aeróbica | Camping - até 3.000 metros | Esgrima
+Air guitar | Campo de tiro / tiro desportivo | Espeleologia
+Andar a pé até 6.000 metros - em rotas conhecidas - sem | Canoa polinésia - interiores ou águas | Espeleologia - passeios / atração
+cobertura onde equipamento de escalada seja necessário | costeiras | turística
+Andar com pernas de pau | Canoagem | Esqui / Snowboard - dry slope
+
+Esqui / Snowboard - em uma pista
+
+Artes marciais - Judô, Karatê | Canoagem marítima
+
+ou parque dentro de um resort Esqui / Snowboard - terreno no
+
+Artes marciais - Kickboxing | Canyon swing | interior do resort, excluindo
+
+acrobacias
+
+Artes marciais - sem contato | Canyoning | Esqui Alpino
+
+Esqui aquático - com os pés
+
+Artes marciais - Treinamento | Capoeira
+
+descalços
+
+Atividades equestres | Ciclismo | Esqui aquático - excluindo saltos
+
+Ciclismo - incidente de viagem; passeio
+
+Atletismo | independente; turnê organizada, até | Esqui na areia
+
+4.000 metros de altitude Esquiar - cross country / esqui
+
+Badminton | Corfebol
+
+nórdico em trilhas marcadas
+
+Ballet / Balé Clássico | Corrida - até distância da maratona | Esquiar - snow blading
+Balonismo | Corrida - até distância da meia maratona | Frisbee
+
+Corrida de montanha - sem equipamento
+
+Basquetebol | Futebol
+
+de escalada Corrida de resistência ao ar livre - maior
+
+Beisebol | Futebol americano
+
+ou igual a ultra distância Corrida de resistência ao ar livre - menor
+
+Boating - águas costeiras (em white water) | Ginástica
+
+que ultra distância
+
+Boating - além de 3 milhas náuticas | Corridas de obstáculo | Golfe
+Boliche | Cricket | Handebol
+Boliche - gramado / dez pinos | Croquet | Hockey (campo)
+Bowling | Curling | Hóquei no gelo
+
+Dança - balé, baile de salão, capoeira,
+
+Buggy em dunas | Hóquei sobre patins
+
+salsa, dança interpretativa
+
+Caiaque - águas internas e costeiras até 3 milhas náuticas, | Hunting / Caça Desportiva -
+
+Dardos
+
+classes 1-5 | Excluindo Big Game
+Caiaque (além de 3 milhas náuticas) | Dragon boating | Iatismo - águas costeiras
+Caiaque (mar) | Empinar pipa | Iatismo - fora de águas costeiras
+
+Caiaque em corredeira - interior / águas costeiras até 3 milhas
+
+Equitação | Jet boat
+
+náuticas, classes 1-3 Equitação - adestramento, salto,
+
+Caminhada em geleiras | Jet ski
+
+eventing Equitação - lazer / passeio / Jogos de
+
+Caminhada pela floresta/mata - até 6.000 metros | Kart
+
+Guerra - jogos on-line
+
+Caminhadas | Escalada - boulder | Tênis de mesa
+Kite Boarding | Quad bike | Tiro ao pombo de argila
+Kite Boarding - em terra | Queimada | Tiro com arco / Arco e flecha
+Kite Boarding - na água | Rafting / Cave tubing | Tough Mudder
+Kite buggy | Rafting em corredeira - classes 1-3 | Trampolim acrobático
+
+Treinamento com pesos /
+
+Kite surf | Raquetebol
+
+Musculação - powerlifting Treinamento da ginástica /
+
+Kite wing - terra, água | Remo
+
+academia Remo - águas interiores / costeiras - sem
+
+Lacrosse | Treino de fitness
+
+corredeiras Trekking até 6.000 metros - em rotas conhecidas - sem cobertura
+
+Lutas medievais simulação | River boarding - classes 1-3
+
+onde equipamento de escalada seja necessário
+
+Mergulho - até 50 metros | Rounders | Trenós puxados por cães
+
+Mergulho - curso para aprender a mergulhar / mergulho com
+
+Rugby - league / union | Tubing em rios
+
+instrutor qualificado
+
+Mergulho com uso de Snorkel | Safari | Tubing na neve
+
+Natação - piscina; local fechado, águas internas e costeiras até 3
+
+Safari Aéreo | Tuk Tuk - como passageiro
+
+milhas náuticas
+
+Netball | Sandboard | Ultimate frisbee
+Orientação | Sinuca | Vela - além de 3 milhas náuticas
+Skateboarding - rampa / half pipe / Skate | Vela - interior / águas costeiras até
+
+Outward Bound
+
+Park / street | 3 milhas náuticas
+Paintball | Skidoos | Via ferrata
+
+Voar (como passageiro em um Skijöring / esqui arrastado por cavalo ou
+
+Passageiro em voo comercial agendado | avião ou helicóptero licenciado
+
+cães regulares ou fretados) Voar (como passageiro em uma
+
+Passeios de Banana Boat | Sledding / tobogã
+
+aeronave de pequeno porte)
+
+Passeios de camelo ou elefante | Snow mobiling | Voleibol
+Passeios de Segway | Snow rafting | Wake skating
+Passeios de trenó | Softball | Wakeboarding - excluindo saltos
+Patinação | Squash | Windsurf
+
+Windsurf - águas internas e
+
+Patinação in-line | Stand up paddle surf
+
+costeiras até 3 milhas náuticas Yoga - na sala de aula, sozinho, em
+
+Patinação no gelo - ao ar livre | Stoolball
+
+casa
+
+Patinação no gelo - interior | Surf Terrestre | Yoga - professor
+Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar | Surfboat | Zip line
+Pesca em alto mar | Surfe | Zorbing
+Pesca Esportiva com anzol | Tchoukball | Tênis
+
+Pólo aquático
+
+1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e/ou de Despesas Odontológicas em viagem nacional (DO-VN). No caso de evento ocasionado pela prática amadora de um dos esportes cobertos, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 1. RISCOS COBERTOS (parte 2 de 2)
+
+Fonte: Condições Gerais (PDF), p. 111 a 113.
+
+2. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. A prática de esporte profissional, independente do Segurado exercer também ou não outra atividade profissional;
+
+2.2. Despesas com salvamento em mar, montanhas e zonas desabitadas ou ainda em países em estados de guerra ou com instabilidade política notória, que acarrete risco à vida e à saúde da população ou daqueles que ingressem no país.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 113.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 113 a 114.
+
+A Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 114.
+
+O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 114.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 114.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os mesmos documentos previstos nas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) ou de Despesas Odontológicas em viagem nacional (DO-VN).
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 114.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 1. RISCOS COBERTOS (parte 1 de 2)
+
+Fonte: Condições Gerais (PDF), p. 115 a 117.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante ao Segurado a extensão dos riscos abrangidos pelas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE) aos eventos decorrentes de acidente pessoal ou enfermidade súbita e aguda ocasionados pela prática amadora dos esportes cobertos, até a estabilização do quadro de urgência ou emergência.
+
+1.2. Para fins da presente extensão de cobertura, consideram‐se modalidades de esportes cobertos:
+
+Acrobacias | Caminhadas - até 6.000 metros | Escalada - interior
+Aeróbica | Camping - até 3.000 metros | Esgrima
+Air guitar | Campo de tiro / tiro desportivo | Espeleologia
+Andar a pé até 6.000 metros - em rotas conhecidas - sem | Canoa polinésia - interiores ou águas | Espeleologia - passeios / atração
+cobertura onde equipamento de escalada seja necessário | costeiras | turística
+Andar com pernas de pau | Canoagem | Esqui / Snowboard - dry slope
+
+Esqui / Snowboard - em uma pista
+
+Artes marciais - Judô, Karatê | Canoagem marítima
+
+ou parque dentro de um resort Esqui / Snowboard - terreno no
+
+Artes marciais - Kickboxing | Canyon swing | interior do resort, excluindo
+
+acrobacias
+
+Artes marciais - sem contato | Canyoning | Esqui Alpino
+
+Esqui aquático - com os pés
+
+Artes marciais - Treinamento | Capoeira
+
+descalços
+
+Atividades equestres | Ciclismo | Esqui aquático - excluindo saltos
+
+Ciclismo - incidente de viagem; passeio
+
+Atletismo | independente; turnê organizada, até | Esqui na areia
+
+4.000 metros de altitude Esquiar - cross country / esqui
+
+Badminton | Corfebol
+
+nórdico em trilhas marcadas
+
+Ballet / Balé Clássico | Corrida - até distância da maratona | Esquiar - snow blading
+Balonismo | Corrida - até distância da meia maratona | Frisbee
+
+Corrida de montanha - sem equipamento
+
+Basquetebol | Futebol
+
+de escalada Corrida de resistência ao ar livre - maior
+
+Beisebol | Futebol americano
+
+ou igual a ultra distância Corrida de resistência ao ar livre - menor
+
+Boating - águas costeiras (em white water) | Ginástica
+
+que ultra distância
+
+Boating - além de 3 milhas náuticas | Corridas de obstáculo | Golfe
+Boliche | Cricket | Handebol
+Boliche - gramado / dez pinos | Croquet | Hockey (campo)
+Bowling | Curling | Hóquei no gelo
+
+Dança - balé, baile de salão, capoeira,
+
+Buggy em dunas | Hóquei sobre patins
+
+salsa, dança interpretativa
+
+Caiaque - águas internas e costeiras até 3 milhas náuticas, | Hunting / Caça Desportiva -
+
+Dardos
+
+classes 1-5 | Excluindo Big Game
+Caiaque (além de 3 milhas náuticas) | Dragon boating | Iatismo - águas costeiras
+Caiaque (mar) | Empinar pipa | Iatismo - fora de águas costeiras
+
+Caiaque em corredeira - interior / águas costeiras até 3 milhas
+
+Equitação | Jet boat
+
+náuticas, classes 1-3 Equitação - adestramento, salto,
+
+Caminhada em geleiras | Jet ski
+
+eventing Equitação - lazer / passeio / Jogos de
+
+Caminhada pela floresta/mata - até 6.000 metros | Kart
+
+Guerra - jogos on-line
+
+Caminhadas | Escalada - boulder | Tênis de mesa
+Kite Boarding | Quad bike | Tiro ao pombo de argila
+Kite Boarding - em terra | Queimada | Tiro com arco / Arco e flecha
+Kite Boarding - na água | Rafting / Cave tubing | Tough Mudder
+Kite buggy | Rafting em corredeira - classes 1-3 | Trampolim acrobático
+
+Treinamento com pesos /
+
+Kite surf | Raquetebol
+
+Musculação - powerlifting Treinamento da ginástica /
+
+Kite wing - terra, água | Remo
+
+academia Remo - águas interiores / costeiras - sem
+
+Lacrosse | Treino de fitness
+
+corredeiras Trekking até 6.000 metros - em rotas conhecidas - sem cobertura
+
+Lutas medievais simulação | River boarding - classes 1-3
+
+onde equipamento de escalada seja necessário
+
+Mergulho - até 50 metros | Rounders | Trenós puxados por cães
+
+Mergulho - curso para aprender a mergulhar / mergulho com
+
+Rugby - league / union | Tubing em rios
+
+instrutor qualificado
+
+Mergulho com uso de Snorkel | Safari | Tubing na neve
+
+Natação - piscina; local fechado, águas internas e costeiras até 3
+
+Safari Aéreo | Tuk Tuk - como passageiro
+
+milhas náuticas
+
+Netball | Sandboard | Ultimate frisbee
+Orientação | Sinuca | Vela - além de 3 milhas náuticas
+Skateboarding - rampa / half pipe / Skate | Vela - interior / águas costeiras até
+
+Outward Bound
+
+Park / street | 3 milhas náuticas
+Paintball | Skidoos | Via ferrata
+
+Voar (como passageiro em um Skijöring / esqui arrastado por cavalo ou
+
+Passageiro em voo comercial agendado | avião ou helicóptero licenciado
+
+cães regulares ou fretados)
+
+Voar (como passageiro em uma
+
+Passeios de Banana Boat | Sledding / tobogã
+
+aeronave de pequeno porte)
+
+Passeios de camelo ou elefante | Snow mobiling | Voleibol
+Passeios de Segway | Snow rafting | Wake skating
+Passeios de trenó | Softball | Wakeboarding - excluindo saltos
+Patinação | Squash | Windsurf
+
+Windsurf - águas internas e
+
+Patinação in-line | Stand up paddle surf
+
+costeiras até 3 milhas náuticas Yoga - na sala de aula, sozinho, em
+
+Patinação no gelo - ao ar livre | Stoolball
+
+casa
+
+Patinação no gelo - interior | Surf Terrestre | Yoga - professor
+Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar | Surfboat | Zip line
+Pesca em alto mar | Surfe | Zorbing
+Pesca Esportiva com anzol | Tchoukball | Tênis
+
+Pólo aquático
+
+1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e/ou de Despesas Odontológicas em viagem ao exterior (DO-VE). No caso de evento ocasionado pela prática amadora de um dos esportes cobertos, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 1. RISCOS COBERTOS (parte 2 de 2)
+
+Fonte: Condições Gerais (PDF), p. 115 a 117.
+
+3. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+3.1. A prática de esporte profissional, independente do Segurado exercer também ou não outra atividade profissional;
+
+3.2. Despesas com salvamento em mar, montanhas e zonas desabitadas ou ainda em países em estados de guerra ou com instabilidade política notória, que acarrete risco à vida e à saúde da população ou daqueles que ingressem no país.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 4. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 117.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 5. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 117 a 118.
+
+A Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 6. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 118.
+
+O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 7. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 118.
+
+7.1. O beneficiário desta cobertura será o próprio Segurado.
+
+7.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 8. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 118.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os mesmos documentos previstos nas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) ou de Despesas Odontológicas em viagem ao exterior (DO-VE).
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 118.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 119.
+
+1.2. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médico-hospitalares e/ou Odontológicas complementares do Segurado, ou seja, as despesas não cobertas pela cobertura de Despesas Médicas e/ou Hospitalares em viagem nacional (DMH em viagem nacional) ou pela cobertura de Despesas Odontológicas em viagem nacional (DO em viagem nacional) desde que realizadas sob orientação médica, ocasionadas por acidente pessoal ou enfermidade súbita e aguda ocorrida durante o período de viagem ao exterior e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.3. Estão cobertos os casos de emergência ou urgência, e não de rotina ou programado. A partir da 33ª (trigésima terceira) semana de gestação, estará coberto exclusivamente o atendimento decorrente de acidente pessoal.
+
+1.4. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e/ou de Despesas Odontológicas em viagem nacional (DO-VN). No caso de evento relacionado à gravidez da Segurada, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 2. RISCOS EXCLUÍDOS (parte 1 de 2)
+
+Fonte: Condições Gerais (PDF), p. 119 a 123.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. Os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas;
+
+2.2. A continuidade e o controle de tratamentos anteriores, check-up e extensão de receitas;
+
+2.3. Danos médicos;
+
+2.4. Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos diretamente pelo acidente ou pela doença súbita;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. A compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+2.7. Todo e qualquer tipo de tratamento eletivo e/ou rotineiro;
+
+2.8. Aparelhos que se referem a órteses de qualquer natureza e as próteses de caráter permanente, salvo as próteses pela perda de dentes naturais e as despesas com reparos ou substituições de próteses odontológicas, desde que em decorrência de traumatismo;
+
+2.9. Diabetes, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.10. Doenças hematológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.11. Doenças mentais, incluindo neuroses, psicoses, ou quaisquer doenças psicológicas, e suas consequências.
+
+2.12. Doenças neurológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.13. Doenças sexualmente transmissíveis incluindo HIV.
+
+2.14. Estados de convalescença (após alta médica) quando retornar ao país de origem, e as despesas de acompanhantes;
+
+2.15. Insuficiência Renal ou hemodiálise, suas complicações ou consequencias, ainda que não diagnosticado antes do início da viagem;
+
+2.16. Medicinas alternativas, como, acupuntura, homeopatia, digitopuntura e quiropraxia, flor de bach ou terapia com floral;
+
+2.17. Parto programado e tratamentos voluntários para a gravidez
+
+2.18. Quaisquer doenças Cardíacas Crônicas, suas complicações ou consequências, de conhecimento ou não do Segurado, ainda que não diagnosticado antes do início da viagem;
+
+2.19. Qualquer pressão arterial ou hipertensão, e suas complicações ou consequências;
+
+2.20. Qualquer procedimento cirúrgico a que o Segurado tenha sido submetido num período de 90 (noventa) dias anteriores a contratação do seguro, ainda que o mesmo se encontre em alta médica definitiva;
+
+2.21. Qualquer tipo de câncer ou tratamento oncológicos, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.22. Qualquer tipo de transplante a que o Segurado tenha sido submetido num período de 180 (cento e oitenta) dias anteriores a contratação do seguro, incluindo, mas não limitado a transplante em viagem segurada;
+
+2.23. Recém-nascidos, inclusive pré-maturo, durante a viagem segurada;
+
+2.24. Tratamento de gravidez, inclusive o fornecimento de serviços relacionados ao diagnóstico e tratamento de infertilidade ou outros problemas relacionados com a fertilidade, Controle de natalidade, incluindo intervenções cirúrgicas e dispositivos para tal fim, Abortos induzidos, gastos médicos e de qualquer outro tipo relacionados ao recém-nascido (quando o parto e suas consequências não ocorram diretamente de acidente pessoal);
+
+2.25. Tratamento ou Controle de Pré-natal, quando voluntários;
+
+2.26. Da prática dos esportes e atividades listadas a seguir:
+
+a. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos;
+
+b. “Rafting” com grau de dificuldade 4 ou acima;
+
+c. Acrobacia circense;
+
+d. Asa delta ou parapente;
+
+e. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição;
+
+f. Aviação Esportiva;
+
+g. Caça ou tiro esportivo;
+
+h. Caminhadas ou passeios acima de 3.000 metros de altitude;
+
+i. Disputas ou campeonatos interescolares ou acadêmicos;
+
+j. Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+
+k. Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada;
+
+l. Esportes de luta, como, por exemplo, boxe e artes marciais;
+
+m. Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs;
+
+n. Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado;
+
+o. Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem;
+
+p. Paraquedismo, “skydiving” ou “ bungee jumping”;
+
+q. Passeios a cavalo, equitação, polo e outras atividades equestres;
+
+r. Práticas ou Passeio de Balão. Qualquer atividade que envolva armas;
+
+s. Rugby;
+
+t. Scuba Diving;
+
+u. Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”;
+
+v. Velejar em alto-mar;
+
+w. Viagens para áreas remotas ou particularmente perigosas, com ou sem guia.
+
+3. CARÊNCIA Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 2. RISCOS EXCLUÍDOS (parte 2 de 2)
+
+Fonte: Condições Gerais (PDF), p. 119 a 123.
+
+4. FRANQUIA A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções: Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 123.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da efetiva utilização do serviço médico e/ou hospitalar e/ou odontológico que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas e hospitalares e/ou odontológicas até o limite do capital contratado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 123.
+
+6.1 | O beneficiário desta cobertura será o próprio Segurado.
+6.2 | No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a
+
+quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 123 a 124.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas do laudo médico e/ou odontológico do profissional responsável pelo atendimento, atestando a ocorrência do evento coberto e especificando a descrição da patologia e procedimentos realizados.;
+
+7.6. Cópia digitalizada do Boletim de Ocorrência Policial, se houver;
+
+7.7. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.8. Cópia digitalizada do Laudo do exame toxicológico e de teor alcoólico, quando realizado;
+
+7.9. Cópias digitalizadas dos Comprovantes das despesas cobertas, incluindo Nota Fiscal e comprovante detalhado dos gastos efetuados;
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 124.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 124 a 125.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médico-hospitalares e/ou Odontológicas complementares do Segurado, ou seja, as despesas não cobertas pela cobertura de Despesas Médicas e/ou Hospitalares em viagem ao exterior (DMH em viagem ao exterior) ou pela cobertura de Despesas Odontológicas em viagem ao exterior (DO em viagem ao exterior). desde que realizadas sob orientação médica, ocasionadas por acidente pessoal ou enfermidade súbita e aguda ocorrida durante o período de viagem ao exterior e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Estão excluídos desta cobertura os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas.
+
+1.3. Estão cobertos, até o limite do Capital Segurado contratado para esta cobertura, as despesas relacionadas à estabilização do quadro clínico do Segurado, em casos de
+
+emergência ou urgência, que lhe permita continuar viagem ou retornar ao local de sua residência, não havendo cobertura para a continuidade e o controle de tratamentos anteriores, medicamentos, check-up e extensão de receitas.
+
+1.4. No caso do Segurado ter direito ao reembolso das despesas médicas e/ou Odontológicas de qualquer outra fonte ou seguro, a seguradora reembolsará a diferença entre o valor das despesas e o valor a que o Segurado tiver direito a reembolso, limitado ao Capital Segurado desta garantia
+
+1.5. Para efeito do disposto neste item, considera-se:
+
+c) Emergência: situação onde o Segurado esteja em circunstância que exige uma cirurgia ou intervenção médica imediata, pois existe risco de morte; e
+
+d) Urgência: situação onde o Segurado necessita de atendimento, não caracterizado como risco imediato de morte, podendo assim aguardar o atendimento em casos emergenciais, conforme critério estabelecido pelo estabelecimento médico em que o cliente estiver sendo atendido.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 125 a 128.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. Os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas;
+
+2.2. A continuidade e o controle de tratamentos anteriores, check-up e extensão de receitas;
+
+2.3. Danos médicos;
+
+2.4. Tratamento clínico, cirúrgico ou medicamentoso ou exames não exigidos diretamente pelo acidente ou pela doença súbita;
+
+2.5. Estados de convalescença (após a alta médica) e as despesas de acompanhantes;
+
+2.6. Aparelhos que se referem a órteses de qualquer natureza e a próteses de caráter permanente;
+
+2.7. A compra de medicamentos, exceto quando ministrados diretamente pela clínica ou hospital durante o atendimento emergencial.
+
+2.8. Todo e qualquer tipo de tratamento eletivo e/ou rotineiro;
+
+2.9. Aparelhos que se referem a órteses de qualquer natureza e as próteses de caráter permanente, salvo as próteses pela perda de dentes naturais e as despesas com reparos ou substituições de próteses odontológicas, desde que em decorrência de traumatismo;
+
+2.10. Diabetes, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.11. Doenças hematológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.12. Doenças mentais, incluindo neuroses, psicoses, ou quaisquer doenças psicológicas, e suas consequências.
+
+2.13. Doenças neurológicas, complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.14. Doenças sexualmente transmissíveis incluindo HIV.
+
+2.15. Estados de convalescença (após alta médica) quando retornar ao país de origem, e as despesas de acompanhantes;
+
+2.16. Insuficiência Renal ou hemodiálise, suas complicações ou consequencias, ainda que não diagnosticado antes do início da viagem;
+
+2.17. Medicinas alternativas, como, acupuntura, homeopatia, digitopuntura e quiropraxia, flor de bach ou terapia com floral;
+
+2.18. Parto programado e tratamentos voluntários para a gravidez
+
+2.19. Quaisquer doenças Cardíacas Crônicas, suas complicações ou consequências, de conhecimento ou não do Segurado, ainda que não diagnosticado antes do início da viagem;
+
+2.20. Qualquer pressão arterial ou hipertensão, e suas complicações ou consequências;
+
+2.21. Qualquer procedimento cirúrgico a que o Segurado tenha sido submetido num período de 90 (noventa) dias anteriores a contratação do seguro, ainda que o mesmo se encontre em alta médica definitiva;
+
+2.22. Qualquer tipo de câncer ou tratamento oncológicos, suas complicações ou consequências, ainda que não diagnosticado antes do início da viagem;
+
+2.23. Qualquer tipo de transplante a que o Segurado tenha sido submetido num período de 180 (cento e oitenta) dias anteriores a contratação do seguro, incluindo, mas não limitado a transplante em viagem segurada;
+
+2.24. Recém-nascidos, inclusive pré-maturo, durante a viagem segurada;
+
+2.25. Tratamento de gravidez, inclusive o fornecimento de serviços relacionados ao diagnóstico e tratamento de infertilidade ou outros problemas relacionados com a fertilidade, Controle de natalidade, incluindo intervenções cirúrgicas e dispositivos para tal fim, Abortos induzidos, gastos médicos e de qualquer outro tipo relacionados ao recém-nascido (quando o parto e suas consequências não ocorram diretamente de acidente pessoal);
+
+2.26. Tratamento ou Controle de Pré-natal, quando voluntários;
+
+2.27. Da prática dos esportes e atividades listadas a seguir:
+
+2.28. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos;
+
+2.29. “Rafting” com grau de dificuldade 4 ou acima;
+
+2.30. Acrobacia circense;
+
+2.31. Asa delta ou parapente;
+
+2.32. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição;
+
+2.33. Aviação Esportiva;
+
+2.34. Caça ou tiro esportivo;
+
+2.35. Caminhadas ou passeios acima de 3.000 metros de altitude;
+
+p) Disputas ou campeonatos interescolares ou acadêmicos;
+
+q) Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+
+r) Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada;
+
+s) Esportes de luta, como, por exemplo, boxe e artes marciais;
+
+t) Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs;
+
+u) Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado;
+
+v) Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem;
+
+w) Paraquedismo, “skydiving” ou “ bungee jumping”;
+
+x) Passeios a cavalo, equitação, polo e outras atividades equestres;
+
+y) Práticas ou Passeio de Balão. Qualquer atividade que envolva armas;
+
+z) Rugby;
+
+aa) Scuba Diving;
+
+bb) Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”;
+
+cc) Velejar em alto-mar;
+
+dd) Viagens para áreas remotas ou particularmente perigosas, com ou sem guia
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 128.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 128.
+
+A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem ao Exterior (DMH-C-VE) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 128.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para fins de determinação do Capital Segurado desta cobertura, na liquidação dos sinistros, será considerada como data do evento a data da efetiva utilização do serviço médico e/ou hospitalar e/ou Odontológico que deu origem ao Sinistro coberto.
+
+5.3. Pela mesma ocorrência, somente serão pagas despesas médicas e hospitalares e/ou Odontológicas até o limite do capital contratado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 128 a 129.
+
+6.1. O beneficiário desta cobertura será o próprio Segurado.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 129.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM ou equivalente no exterior, com o diagnóstico detalhado e descrição do tratamento;
+
+7.5. Cópias digitalizadas dos laudos e exames relacionados com a lesão ou a doença súbita coberta, realizados para atendimento emergencial do Segurado;
+
+7.6. Cópia digitalizada do Boletim de Ocorrência Policial, se houver;
+
+7.7. Cópia digitalizada da Carteira Nacional de Habilitação do Segurado, em caso de acidente com veículo que estivesse sendo dirigido pelo mesmo;
+
+7.8. Cópia digitalizada do laudo médico e/ou odontológico do profissional responsável pelo atendimento, atestando a ocorrência do evento coberto e especificando a descrição da patologia e procedimentos realizados.;
+
+7.9. Cópias digitalizadas dos Comprovantes das despesas cobertas incluindo Nota Fiscal e comprovante detalhado dos gastos efetuados.
+
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem ao Exterior (DMHO-C-VE) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 129.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 130.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante à Segurada gravida até a 32ª (trigésima segunda) semana de gestação a extensão dos riscos abrangidos pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN) aos eventos decorrentes de acidente pessoal ou enfermidade súbita e aguda relacionados à gravidez.
+
+1.2. Estão cobertos os casos de emergência ou urgência, e não de rotina ou programado. A partir da 33ª (trigésima terceira) semana de gestação, estará coberto exclusivamente o atendimento decorrente de acidente pessoal.
+
+1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e/ou de Despesas Odontológicas em viagem nacional (DO-VN). No caso de evento relacionado à gravidez da Segurada, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 130.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. As despesas com atendimentos e tratamentos de rotina ou programados.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 130.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 131.
+
+A Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 131.
+
+O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 131.
+
+6.1. O beneficiário desta cobertura será a própria Segurada.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 131.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os mesmos documentos previstos nas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) ou de Despesas Odontológicas em viagem nacional (DO-VN).
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Gestantes (DMHO-G-VN) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 132.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 133.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante à Segurada gravida até a 32ª (trigésima segunda) semana de gestação a extensão dos riscos abrangidos pelas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE) aos eventos decorrentes de acidente pessoal ou enfermidade súbita e aguda relacionados à gravidez.
+
+1.2. Estão cobertos os casos de emergência ou urgência, e não de rotina ou programado. A partir da 33ª (trigésima terceira) semana de gestação, estará coberto exclusivamente o atendimento decorrente de acidente pessoal.
+
+1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE), de Despesas Odontológicas em viagem ao exterior (DO-VE) e de Despesas Médico-Hospitalares Complementares em viagem ao exterior (DMH-C-VE). No caso de evento relacionado à gravidez da Segurada, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 133.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. As despesas com atendimentos e tratamentos de rotina ou programados.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 133.
+
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 134.
+
+A Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 134.
+
+O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 134.
+
+6.1. O beneficiário desta cobertura será a própria Segurada.
+
+6.2. No caso de falecimento do Segurado, o ressarcimento das despesas devidas será feito a quem comprovar ter se responsabilizado pelo pagamento destas ou ao beneficiário do Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 134.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os mesmos documentos previstos nas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) ou de Despesas Odontológicas em viagem ao exterior (DO-VE).
+
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Gestantes (DMHO-G-VE) — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 135.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
@@ -2539,6 +4548,86 @@ Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condiçõe
 ### Condições Especiais Cobertura Adicional de Atraso de Voo — 8. RATIFICAÇÃO
 
 Fonte: Condições Gerais (PDF), p. 146.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 147.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante o reembolso das despesas com alimentação, deslocamento (aeroporto ao hotel ou do hotel ao aeroporto), hospedagem do Segurado e remarcação da passagem, caso o mesmo perca conexão aérea internacional em virtude de atraso por parte de companhia transportadora filiada à IATA (International Air Transport Association), por período superior a 6 (seis) horas em relação ao horário de chegada do voo inicial, até que consiga o próximo voo disponível em classe econômica à conexão perdida, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais, e desde que:
+
+a) O atraso tenha sido motivado por condição climática adversa questão trabalhista que interfira na partida ou chegada de um voo, queda de energia ou quebra súbita da aeronave;
+
+b) O Segurado viaje na condição de passageiro em avião de linha aérea regular, mediante cobrança de tarifa de transporte e emissão de tíquete de embarque, excluindo-se, desta cobertura, os voos fretados;
+
+c) O Segurado tenha feito reclamação formal à empresa aérea responsável.
+
+d) A remarcação de passagem será feita, sempre que houver disponibilidade, na mesma classe adquirida pelo segurado. Não havendo disponibilidade da mesma classe para o voo mais próximo oferecido pela companhia aérea, será marcada classe econômica.
+
+e) Existindo disponibilidade da companhia aérea em voo não será mais devido o pagamento de hospedagem, alimentação ou qualquer outra despesa decorrente de perda de conexão.
+
+1.2. Quando a conexão não for com a mesma companhia aérea ou não tiver sido emitida no mesmo bilhete, o tempo mínimo entre a chegada prevista do voo anterior e o horário de partida do voo de conexão deverá ser compatível com o tempo necessário para desembarque, retirada de bagagem, procedimentos de segurança e imigração, deslocamento entre terminais do aeroporto da conexão, check in e despacho de bagagem no voo de conexão, devendo ter, para fins desta cobertura, o mínimo de 8 (oito) horas.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 147 a 148.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+2.1. Atraso de voo fretado;
+
+2.2. Atraso que tenha tido divulgação pública e antecipada, exceto nos casos em que o atraso gere despesas adicionais inevitáveis com alimentação, deslocamento e hospedagem;
+
+2.3. Perda de conexão decorrente do Segurado não ter se apresentado a tempo para o check in ou embarque, tendo o voo anterior chegado a tempo no aeroporto de conexão.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 148.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 148.
+
+Será de 6 (seis) horas de atraso em relação ao horário de chegada expresso em bilhete aéreo. Quando a conexão não for com a mesma companhia aérea ou não tiver sido emitida no mesmo bilhete, o tempo mínimo entre a chegada prevista do voo anterior e o horário de partida do voo de conexão deverá ser de no mínimo de 8 (oito) horas.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 148.
+
+5.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado ao Segurado.
+
+5.2. Para efeito de cobertura e determinação do Capital Segurado, considera-se como data do evento a data do voo em atraso que deu origem ao sinistro coberto.
+
+5.3. A indenização será o valor das despesas comprovadas pelo Segurado, deduzidas do valor assumido pela companhia aérea responsável, limitada ao Capital Segurado contratado.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 148.
+
+O beneficiário desta cobertura será o próprio Segurado.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 148 a 149.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia do bilhete aéreo do trecho onde houve o atraso, bilhete da conexão perdida e o comprovante de remarcação de outro voo;
+
+7.4. Cópia digitalizada do Comunicado emitido pela empresa aérea sobre o atraso de voo;
+
+7.5. Cópia digitalizada das Notas fiscais ou recibos de todas as despesas realizadas e do valor reembolsado ou aceito pela companhia aérea responsável.
+
+### Condições Especiais Cobertura Adicional de Despesas com Perda de Conexão Aérea em Viagem ao Exterior — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 149.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
@@ -3270,6 +5359,524 @@ Fonte: Condições Gerais (PDF), p. 172.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 173.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante uma indenização ao segurado por prejuízos decorrentes de Roubo, Furto Qualificado e Dano(s) Acidental(ais), de produtos eletroeletrônicos portáteis novos, adquiridos através de cartão de débito, crédito ou cartão pré-pago para viagem, durante o período de Viagem Segurada, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Esta cobertura garante indenização pelos eventuais danos materiais causados aos bens, desde que a perda seja total, exclusivamente durante a prática ou tentativa de roubo ou furto qualificado, ocorridos durante a Viagem Segurada.
+
+1.3. 4.3. A indenização para esta garantia está limitada ao valor da Importância Segurada e eventos ocorridos no período de Viagem Segurada constante do Bilhete de Seguro.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 2. DEFINIÇÕES
+
+Fonte: Condições Gerais (PDF), p. 173.
+
+2.1. Dano(s) Acidental(ais): dano seja causado por imprudência ou culpa de terceiros, ou por ato involuntário do segurado, membros de sua família, empregados e/ou prepostos do mesmo.
+
+2.2. Furto Qualificado: Para fins desta cobertura, será considerado Furto Qualificado apenas a hipóteses definidas no inciso I do parágrafo 4º do Artigo 155 do Código Penal Brasileiro: subtração de coisa alheia com destruição ou rompimento de obstáculo à subtração dos bens segurados. Ocorre quando o agente inutiliza, desfaz, desmancha, arrebenta, rasga, fende, corta ou deteriora um obstáculo, tais como trincos, portas, janelas, fechaduras, que visam impedir a subtração. Portanto, para a caracterização do furto qualificado, é necessário que tenha havido a destruição ou rompimento do obstáculo existente para se atingir o bem, e não a destruição do próprio bem.
+
+2.3. Furto Simples: subtração de bens móveis, cujo meio empregado não tenha sido mediante destruição ou rompimento de obstáculos, com abuso de confiança, ou mediante fraude, escalada ou destreza, com emprego de chave falsa ou utilização de vias que não sejam as entradas normais do local onde se encontram os referidos bens.
+
+2.4. Perda Total : é caracterizada quando o valor de recuperação/conserto do bem ultrapassar 70% (setenta por cento) do valor constante da Nota Fiscal do mesmo.
+
+2.5. Roubo: subtração dos bens segurados, mediante ameaça ou violência, agressão física, emprego de narcótico ou assalto a mão armada.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 3. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 173 a 174.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+3.1. O extravio, desaparecimento ou furto sem destruição de obstáculos, tais como portas e fechaduras;
+
+3.2. O confisco ou apreensão de bens por parte da Alfândega ou de qualquer outra autoridade governamental;
+
+3.3. Bens que não sejam enquadrados como produto eletrônico portátil, tais como joias e relógios.
+
+3.4. Ato intencional ou negligência do Segurado;
+
+3.5. Danos pelos quais seja responsável o fabricante ou provedor dos bens segurados, seja legal ou contratualmente;
+
+3.6. Desgaste natural;
+
+3.7. Quaisquer atos da natureza;
+
+3.8. Quando o roubo é concomitante com o crime de abuso de confiança;
+
+3.9. Prejuízos ocorridos fora do período da Viagem Segurada;
+
+3.10. Roubo ou furto de quaisquer acessórios isoladamente ou conjuntamente;
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 4. BENS NÃO COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 174.
+
+4.1. Bens comprados para revenda;
+
+4.2. Bens enquanto sob o cuidado de terceiros (transportadoras, correios, etc;
+
+4.3. Bens não adquiridos através do cartão(ões) descrito(s) na cláusula 3;
+
+4.4. Bens usados e/ou reformados;
+
+4.5. Bens comprados mediante extorsão e/ou sem o consentimento do segurado;
+
+4.6. Softwares de qualquer natureza, bem como quaisquer dados armazenados em bens cobertos;
+
+4.7. Bens provenientes de comércio e transportes ilícitos e contrabando;
+
+4.8. Bens de terceiros, que não pertençam ao segurado, e pessoas que com ele residam, mesmo que comprados com o cartão segurado;
+
+4.9. Equipamentos e materiais para uso industrial tais como: materiais de construção e equipamentos de engenharia.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 1. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 174.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 2. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 175.
+
+2.1. Esta cobertura estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 3. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 175.
+
+3.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado, independentemente da quantidade de produtos adquiridos e respectivos valores.
+
+3.2. Para fins de determinação do Capital Segurado, na liquidação dos sinistros, será considerada como data do evento a data do roubo ou furto qualificado com rompimento de obstáculos.
+
+3.3. Para cálculo da indenização será utilizado o valor de aquisição do bem declarado pelo Segurado na ocorrência do sinistro e em Boletim de Ocorrência Policial e comprovado mediante apresentação da nota de compra e da cópia da fatura do cartão de crédito ou débito, descontada a franquia e observado o limite do Capital Segurado.
+
+3.4. O pagamento da indenização será realizado em dinheiro, não havendo, sob nenhuma hipótese, indenização por meio de reposição de bens.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 4. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 175.
+
+O beneficiário desta cobertura será o próprio Segurado ou aquele que comprovar o pagamento das despesas no cartão de crédito ou débito, desde que seja Segurado.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 5. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 175 a 176.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+5.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+5.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+5.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+5.4. Carta de reclamação assinada pelo Segurado, descrevendo a ocorrência e discriminando o(s) produto(s) eletrônico(s) portátil(eis) que tenha(m) sido objeto de roubo ou furto qualificado, com respectivo(s) valor(es);
+
+5.5. Cópia digitalizada do Boletim de Ocorrência Policial ou de órgão oficial responsável;
+
+5.6. Cópia digitalizada da Nota ou cupom fiscal de compra e cópia digitalizada da fatura do cartão de crédito ou débito com o valor da compra.
+
+5.7. Demonstrativo original ou fatura da compra através do cartão contendo o item adquirido mostrando de forma legível a data da compra e o valor;
+
+5.8. Orçamento detalhando os danos e respectivos valores para reposição ou reparos nos casos de Danos Acidentais.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 6. LOCALIZAÇÃO DE BENS
+
+Fonte: Condições Gerais (PDF), p. 176.
+
+Caso os bens reclamados sejam recuperados, total ou parcialmente, poderá o Segurado aceitar sua devolução, devendo, neste caso, restituir proporcionalmente à Seguradora o valor já indenizado.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 7. SUB-ROGAÇÃO DE DIREITOS
+
+Fonte: Condições Gerais (PDF), p. 176.
+
+A Seguradora, pelo pagamento da indenização, cujo recibo valerá como instrumento de cessão, ficará sub-rogada em todos os direitos e ações do Segurado contra aqueles que por atos, fatos ou omissões, tenham causado os prejuízos indenizados ou para eles concorrido, podendo exigir do Segurado, em qualquer tempo, os documentos hábeis para o exercício desses direitos.
+
+### Condições Especiais Cobertura Adicional de Compra Protegida em Viagem — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 176.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 177.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante o reembolso do Valor da Franquia que o Segurado estiver responsável a pagar por força de contrato de locação em caso de acidente com o Veículo alugado em seu nome, desde que o acidente tenha ocorrido durante o período da Viagem Segurada, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais, sendo que:
+
+1.1.1. Tenha havido indenização em excesso à franquia pelo seguro do veículo alugado;
+
+1.1.2. O motorista envolvido em acidente com o veículo alugado pelo Segurado tenha sido designado como motorista autorizado no contrato de locação;
+
+1.1.3. A renovação simultânea de períodos contínuos ou alternados de locação estão cobertos, desde que novo contrato de locação seja firmado e esteja vigente na data do sinistro;
+
+1.1.4. Esta cobertura garante a franquia de um único veículo de quatro rodas locado pelo Segurado, para o transporte de até 9 (nove) passageiros, por período de locação;
+
+1.1.5. A cobertura não é fornecida onde seja proibida por lei, como seguros obrigatórios locais.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 2. BENS E RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 177 a 178.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+2.1. Perdas e danos que não estejam cobertos pelo seguro do veículo alugado;
+
+2.2. Veículos que não sejam de quatro rodas e destinados ao transporte usual de passageiros em vias públicas, tais como caminhões, pick-ups, off-roads, veículos para camping, trailers, limusines, carros antigos, quadriciclos e motocicletas;
+
+2.3. Acidentes ocorridos quando o Segurado estiver infringindo o contrato de locação, inclusive causados por motoristas não autorizados no contrato de locação, mau uso e negligência;
+
+2.4. Perdas e danos que estejam cobertos pelo contrato de locação do veículo.
+
+2.5. Casos de Perda Total
+
+2.6. Acidentes ocorridos com motorista sob ação de álcool, drogas ou entorpecentes ;
+
+2.7. Acidentes ocorridos com o veículo em participações de “rachas” ou corridas de velocidade;
+
+2.8. Acidentes ocorridos com condutor não reconhecido pelo contrato de locação;
+
+2.9. Veículos danificados antes do acidente.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 178.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 178.
+
+4.1. Esta cobertura estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
+
+A | 0%
+B | 5%
+C | 10%
+D | 15%
+E | 20%
+F | 25%
+G | 30%
+H | 35%
+I | 40%
+
+.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 178.
+
+5.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado.
+
+5.2. Para fins de determinação do Capital Segurado, na liquidação dos sinistros, será considerada como data do evento a data da ocorrência do sinistro.
+
+5.3. O pagamento da indenização será realizado em dinheiro.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 178.
+
+O beneficiário desta cobertura será o próprio Segurado.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 178 a 179.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Cópia digitalizada do Contrato de Locação do automóvel com informações do valor da franquia em caso de colisão;
+
+7.5. Cópia digitalizada da carteira Nacional de Habilitação do motorista do automóvel alugado na ocasião do acidente;
+
+7.6. Cópia digitalizada do CRLV - Certificado de Registro e Licenciamento de Veículos do automóvel alugado;
+
+7.7. Cópia digitalizada do Laudo do exame toxicológico e de teor alcoólico, quando realizado;
+
+7.8. Cópia digitalizada do Laudo de necropsia do condutor em caso de morte, se houver;
+
+7.9. Cópia digitalizada do Boletim de Ocorrência Policial ou de órgão oficial responsável;
+
+7.10. Cópia digitalizada do Orçamento da oficina com o valor do conserto do automóvel.
+
+7.11. Comprovante de pagamento do valor da Franquia do Veículo pelo segurado junto à Locadora do veículo.
+
+7.12. Formulário de vistoria do veículo preenchido e assinado na contratação da locação;
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 8. SUB-ROGAÇÃO DE DIREITOS
+
+Fonte: Condições Gerais (PDF), p. 179.
+
+8.1. Ao pagar a indenização, a Seguradora sub-roga-se, até o limite do valor despendido com a indenização e gastos incorridos com a mesma, em todos os direitos e ações que competirem ao Segurado contra o autor do dano.
+
+8.2. Fica o Segurado obrigado a facilitar os meios necessários ao exercício da sub-rogação.
+
+8.3. Salvo dolo, a sub-rogação não tem lugar se o dano foi causado pelo cônjuge do Segurado, seus descendentes ou ascendentes, consanguíneos ou afins.
+
+8.4. É ineficaz qualquer ato do Segurado que diminua ou extinga, em prejuízo da Seguradora, os direitos a sub-rogação.
+
+### Condições Especiais Cobertura Adicional de Franquia de Automóvel Alugado — 9. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 179.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 180.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante indenização em caso de incêndio, que atinja a residência habitual do Segurado durante sua ausência, no período de viagem, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Estão cobertos também:
+
+1.2.1. Os danos materiais e as despesas decorrentes de providências tomadas para a mitigação das consequências do evento segurado, bem como para o eventual desentulho do local;
+
+1.2.2. Desmoronamento resultante de risco coberto;
+
+1.2.3. Despesas necessárias para recomposição de documentos de uso pessoal e talões de cheques destruídos por sinistro coberto.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 2. BENS SEGURÁVEIS
+
+Fonte: Condições Gerais (PDF), p. 180.
+
+2.1. O presente seguro garantirá o imóvel de moradia habitual do Segurado e/ou seu respectivo conteúdo, na medida do interesse ou responsabilidade do mesmo como proprietário e/ou inquilino.
+
+2.2. O imóvel corresponde à construção principal e seus anexos e dependências, tais como edículas, garagem e lavanderia, (excetuando-se alicerces, fundações e terreno), inclusive instalações elétricas, hidráulicas e de combate a incêndio, elevadores e benfeitorias que integrem as estruturas da construção.
+
+2.3. O conteúdo corresponde aos bens de propriedade do Segurado e de seus familiares que regularmente constituem e guarnecem a moradia apontada no seguro, tais como móveis, utensílios e aparelhos eletroeletrônicos de uso residencial devidamente comprovados por apresentação de Notas Fiscais dos bens reclamados.
+
+2.4. Os imóveis segurados e/ou que tenham seus conteúdos segurados deverão ser normalmente ocupados com moradia habitual do Segurado.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 3. BENS E RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 180 a 183.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro estão, também, expressamente excluídos desta cobertura:
+
+3.1. árvores, jardins e qualquer tipo de paisagismo;
+
+3.2. plantação ou vegetação;
+
+3.3. animais de qualquer espécie;
+
+3.4. aviões, trailers, embarcações, motonetas, motocicletas e similares, inclusive suas peças, componentes, acessórios e objetos neles instalados, depositados ou que deles
+
+3.5. imóveis e quaisquer dependências construídas total ou parcialmente de madeira, permitindo-se assoalhos, pisos, forros e revestimentos de madeira, desde que com finalidade decorativa, assentados ou colocados sobre paredes de concreto ou alvenaria e lajes. Permite-se também, travejamento de madeira, desde que sob cobertura de material incombustível;
+
+3.6. dinheiro de qualquer espécie, cheques, títulos, papel moeda, moedas, bilhetes de loteria, ações, pedras brutas de qualquer tipo, pedras lapidadas, selos, moeda cunhada e quaisquer outros papéis que representem valor;
+
+3.7. quaisquer objetos de valor estimativo, exceto no que disser respeito ao material intrínseco;
+
+3.8. tapetes raros, tapeçarias, quadros, objetos de arte, antiguidades, cerâmicas, porcelanas, coleções valiosas, objetos de cristal e vinhos especiais;
+
+3.9. objetos de uso pessoal de empregados;
+
+3.10. explosivos e Armas de fogo de qualquer tipo;
+
+3.11. bebidas, cosméticos, comestíveis, remédios e perfumes;
+
+3.12. softwares de qualquer natureza, bem como os dados armazenados em bens cobertos;
+
+3.13. máquinas, aparelhos, instrumentos e demais utensílios usados com finalidade profissional, bem como mercadorias destinadas à venda;
+
+3.14. bens de terceiros, mesmo que em poder do segurado;
+
+3.15. bens provenientes de comércio e transportes ilícitos e contrabando;
+
+3.16. manuscritos, modelos, moldes, livros de contabilidade, debuxos (esboços) e croquis;
+
+3.17. fios, enrolamentos, lâmpadas, válvulas, chaves, circuitos, ou seja, quaisquer bens que possuam vida útil curta;
+
+3.18. automóveis, motocicletas e similares pertencentes ao Segurado e/ou de pessoas que com ele residam, inclusive as suas peças, os componentes e acessórios neles instalados e somente para veículos que não possuam seguro no ramo específico de Auto e que estejam constantes no(s) local (is) Segurado(s); as peças, objetos e acessórios nele instalados não possuem cobertura;
+
+3.19. equipamentos e ferramentas próprios à lavoura;
+
+3.20. bens importados cuja origem e/ou aquisição não possam ser comprovadas, ou que não tenham a respectiva documentação de importação;bens fora de uso e/ou sucata;
+
+3.21. peles, artigos de ouro, prata, platina, pedras preciosas e metais preciosos;
+
+3.22. equipamentos portáteis, incluindo notebooks, netbooks, laptops, palmtops, telefone celular, pager, aparelhos de MP3 e MP4 e outras variedades, IPOD’s, IPAD's e outras modalidades de Tablets, receptores GPS, transmissores portáteis e similares, exceto se declarado em relação de bens na data de contratação do seguro;
+
+3.23. equipamentos de telefonia celular rural, inclusive seus acessórios e instalações;
+
+3.24. jóias e relógios;
+
+3.25. bens do segurado em locais não especificados no bilhete;
+
+3.26. imóveis tombados pelo patrimônio municipal, estadual, federal ou mundial;
+
+3.27. imóveis sem regularização junto a prefeitura.
+
+3.28. .
+
+3.29. Vício intrínseco, má qualidade, desgaste natural ou pelo uso, deterioração gradativa, umidade, mofo, roeduras ou estragos por animais daninhos ou pragas, desarranjo mecânico, fadiga, cavitação, corrosão de origem mecânica, térmica ou química, oxidação, erosão, incrustação, poeira e fuligem;
+
+3.30. Quaisquer falhas ou defeitos preexistentes à data de início de vigência das coberturas contratadas e que já eram do conhecimento do segurado ou de seus prepostos;
+
+3.31. Queimadas em zona rural e urbana;
+
+3.32. Danos Elétricos;
+
+3.33. Imóveis desabitados, em construção, em reconstrução, alteração estrutural ou reformas (quando esta reforma exigir a desocupação temporária do imóvel e/ou que haja comprometimento na segurança do imóvel), inclusive os materiais de construção destinados à essa utilização;
+
+3.34. Quaisquer áreas coletivas de condomínios e edifícios;
+
+3.35. Imóvel e seu conteúdo que não esteja sendo utilizado para fim exclusivamente residencial, mesmo que no imóvel funcione atividade comercial informal;
+
+3.36. Local de risco que não seja o especificado no bilhete de seguro;
+
+3.37. Imóvel de veraneio ou fim de semana, chácaras, sítios, fazendas, residências de construção inferior ou mista;
+
+3.38. Imóveis coletivos (repúblicas, pensões, asilos e similares);
+
+3.39. Danos causados durante a restauração e/ou reparos dos objetos da residência segurada;
+
+3.40. Queda e/ou quebra, amassamento ou arranhadura, salvo se decorrente de evento coberto pelo bilhete de seguro, devidamente caracterizado.
+
+3.41. Furacões, ciclones, tsunamis, terremotos, maremotos, deslizamento de terra, desmoronamento, alagamento, inundação, enchentes, tremor de terra, erupções vulcânicas e outras convulsões da natureza, exceto se contratada a cobertura específica para um dos eventos aqui mencionados;
+
+3.42. Atos de autoridade pública, salvo para evitar propagação de danos cobertos por este seguro;
+
+3.43. Curto-circuito, sobrecarga na rede elétrica, inclusive em conseqüência de queda de raio fora do terreno do imóvel, que cause perdas ou danos a fios, lâmpadas, chaves, fusíveis e quaisquer aparelhos e/ou componentes elétricos ou eletrônicos.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 4. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 183.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 5. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 183.
+
+Não será aplicada franquia nesta cobertura.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 6. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 183.
+
+6.1. O Capital Segurado para esta Cobertura será definido no Bilhete e representa o valor máximo a ser indenizado.
+
+6.2. Para fins de determinação do Capital Segurado, na liquidação dos sinistros, será considerada como data do evento a data da ocorrência do sinistro.
+
+6.3. O pagamento da indenização será realizado em dinheiro, não havendo, sob nenhuma hipótese, indenização por meio de reposição de bens.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 7. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 183.
+
+O beneficiário desta cobertura será o próprio Segurado.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 8. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 183 a 184.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura deverão ser entregues à Seguradora os seguintes documentos:
+
+8.1. Formulário Aviso de Sinistro, fornecido pela Seguradora, o qual deverá ser preenchido pelo Segurado, juntamente com os dados bancários;
+
+8.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+8.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+8.4. Carta de reclamação datada e assinada pelo Segurado, descrevendo a ocorrência e discriminando os bens atingidos por sinistro coberto;
+
+8.5. Cópia digitalizada do Boletim de Ocorrência Policial ou de órgão oficial responsável;
+
+8.6. Cópia digitalizada de 3 (três) orçamentos para reparo ou reposição dos bens sinistrados, com discriminação individual de marca, modelo e valor.
+
+8.7. Cópia digitalizada das Notas fiscais dos bens declarados como furtados, roubados ou destruídos da residência do Segurado.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 9. CONCORRÊNCIA DE APÓLICES OU BILHETES
+
+Fonte: Condições Gerais (PDF), p. 184 a 185.
+
+9.1. O Segurado que, na vigência do contrato, pretender obter novo seguro sobre os mesmos bens e contra os mesmos riscos, deverá comunicar sua intenção, previamente, por escrito, a todas as sociedades seguradoras envolvidas, SOB PENA DE PERDA DE DIREITO.
+
+9.2. O prejuízo total relativo a qualquer sinistro amparado por esta cobertura será constituído pela soma das seguintes parcelas:
+
+a) Despesas de salvamento comprovadamente efetuadas pelo segurado durante e/ou após a ocorrência do sinistro;
+
+b) Valor referente aos danos materiais comprovadamente causados pelo segurado e/ou por terceiros na tentativa de minorar o dano ou salvar a coisa;
+
+c) Danos sofridos pelos bens segurados.
+
+9.3. A indenização relativa a qualquer sinistro não poderá exceder, em hipótese alguma, o valor do prejuízo vinculado à cobertura considerada.
+
+9.4. Na ocorrência de sinistro contemplado por coberturas concorrentes, ou seja, que garantam os mesmos interesses contra os mesmos riscos, em apólices distintas, a distribuição de responsabilidade entre as sociedades seguradoras envolvidas deverá obedecer às seguintes disposições:
+
+I. Será calculada a indenização individual de cada cobertura como se o respectivo contrato fosse o único vigente, considerando-se, quando for o caso, franquias, participações obrigatórias do Segurado, limite máximo de Indenização da cobertura e cláusulas de rateio;
+
+II. Será calculada a “indenização individual ajustada” de cada cobertura, na forma abaixo indicada:
+
+a) Se, para uma determinada apólice, for verificado que a soma das indenizações correspondentes às diversas coberturas abrangidas pelo sinistro é maior que seu respectivo limite máximo de garantia, a indenização individual de cada cobertura será recalculada, determinando-se, assim, a respectiva indenização individual ajustada. Para efeito deste recálculo, as indenizações individuais ajustadas relativas às coberturas que não apresentem concorrência com outras apólices serão as maiores possíveis, observados os respectivos prejuízos e limites máximos de indenização. O valor restante do limite máximo de garantia da apólice será distribuído entre as coberturas concorrentes, observados os prejuízos e os limites máximos de indenização destas coberturas.
+
+b) Caso contrário, a “indenização individual ajustada” será a indenização individual, calculada de acordo com o inciso I deste item.
+
+III. Será definida a soma das indenizações individuais ajustadas das coberturas concorrentes de diferentes apólices, relativas aos prejuízos comuns, calculadas de acordo com o inciso II deste item;
+
+IV. Se a quantia a que se refere o inciso III deste item for igual ou inferior ao prejuízo vinculado à cobertura concorrente, cada sociedade seguradora envolvida participará com a respectiva indenização individual ajustada, assumindo o Segurado a responsabilidade pela diferença, se houver;
+
+V. Se a quantia estabelecida no inciso III for maior que o prejuízo vinculado à cobertura concorrente, cada sociedade seguradora envolvida participará com percentual do prejuízo correspondente à razão entre a respectiva indenização individual ajustada e a quantia estabelecida naquele inciso.
+
+9.5. A sub-rogação relativa a salvados operar-se-á na mesma proporção da cota de participação de cada sociedade seguradora na indenização paga.
+
+9.6. Salvo disposição em contrário, a sociedade seguradora que tiver participado com a maior parte da indenização ficará encarregada de negociar os salvados e repassar a quota-parte, relativa ao produto desta negociação, às demais participantes.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 10. SALVADOS
+
+Fonte: Condições Gerais (PDF), p. 185 a 186.
+
+10.1. Ocorrido um sinistro que atinja bens garantidos pela Apólice, o Segurado não poderá fazer o abandono dos salvados e deverá tomar desde logo todas as providências cabíveis no sentido de protegê-los e de minorar os prejuízos.
+
+10.2. No caso de sinistro indenizado pelo valor total ou reposição do bem, a propriedade do bem segurado passa automaticamente para a Seguradora, não podendo o Segurado dispor dos mesmos sem expressa autorização desta.
+
+10.3. A Seguradora poderá, de comum acordo com o Segurado, tomar providências para o melhor aproveitamento dos salvados, ficando, no entanto, entendido e concordado que quaisquer
+
+medidas tomadas pela Seguradora não implicarão o reconhecimento da obrigação de indenizar os danos ocorridos.
+
+10.4. Uma vez constatada a necessidade de indenização integral, fica automaticamente a Seguradora autorizada a remover o salvado, sem prejuízo da boa guarda e preservação do bem.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 11. SUB-ROGAÇÃO DE DIREITOS
+
+Fonte: Condições Gerais (PDF), p. 186.
+
+11.1. Ao pagar a indenização, a Seguradora sub-roga-se, até o limite do valor despendido com a indenização e gastos incorridos com a mesma, em todos os direitos e ações que competirem ao Segurado contra o autor do dano.
+
+11.2. Fica o Segurado obrigado a facilitar os meios necessários ao exercício da sub-rogação.
+
+11.3. Salvo dolo, a sub-rogação não tem lugar se o dano foi causado pelo cônjuge do Segurado, seus descendentes ou ascendentes, consanguíneos ou afins.
+
+11.4. É ineficaz qualquer ato do Segurado que diminua ou extingua, em prejuízo da Seguradora, os direitos a sub-rogação.
+
+### Condições Especiais Cobertura Adicional de Incêndio na Residência Durante Viagem — 12. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 186.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
 ### Condições Especiais Cobertura de Despesas Médicas E Hospitalares Por Covid-19 Plus — 1. RISCOS COBERTOS
 
 Fonte: Condições Gerais (PDF), p. 187.
@@ -3357,5 +5964,381 @@ Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condiçõe
 ### Condições Especiais Cobertura de Despesas Médicas E Hospitalares Por Covid-19 Plus — 8. RATIFICAÇÃO
 
 Fonte: Condições Gerais (PDF), p. 189.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 190.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização em caso de Internação Hospitalar do Segurado por um período mínimo de 48 horas devido a COVID-19 ocorrida durante o período de viagem, previamente determinado e uma vez constatada a saída do Segurado de sua cidade ou país de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.2. Estão cobertas as viagens cujos destinos estejam a mais de 50 quilômetros da cidade de domicílio do segurado.
+
+1.3. Para esta cobertura será utilizada a seguinte definição:
+
+a) COVID-19: Doença por coronavírus causada pelo vírus SARS-CoV-2 (síndrome respiratória aguda grave coronavírus 2), também conhecida como 2019 novo coronavírus.
+
+b) Médico qualificado: um médico ou especialista registrado ou licenciado para exercer a medicina de acordo com as leis do país em que pratica, exceto: uma pessoa segurada, ou um parceiro da pessoa segurada ou um membro da família da pessoa segurada.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 190 a 191.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. não relacionados a COVID-19;
+
+2.2. gastos com Testes de COVID-19;
+
+2.3. quando a COVID-19 tenha sido atestada antes do início de vigência do Bilhete de Seguro;
+
+2.4. quando o Segurado não estiver sob cuidados de médicos qualificados;
+
+2.5. tratamentos clínicos ou cirúrgicos que configurem ato ilícito ou anti-ético;
+
+2.6. tratamentos experimentais e medicamentos não reconhecidos pela Autoridade de Saúde;
+
+2.7. que envolva viagem especificamente para obter tratamento médico, odontológico ou cosmético;
+
+2.8. viagem quando o segurado foi aconselhado a não viajar por um médico qualificado;
+
+2.9. internação hospitalar não solicitada pelo médico qualificado responsável pelo tratamento;
+
+2.10. despesas médicas e hospitalares não relacionadas a COVID-19.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 191.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 191.
+
+Aplicável para internações hospitalares de no mínimo 48 horas em hospitais e em espaços definidos pelo Governo do país como espaços para o tratamento da COVID-19 (exemplo: Hospitais de campana).
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 191.
+
+5.1 O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2 Para efeito de cálculo da indenização, será considerada como data do evento, para efeito de determinação do capital segurado, às 48 horas de internação por diagnóstico de COVID-19.
+
+5.3 Pela mesma ocorrência, somente serão pagas despesas médicas e hospitalares por COVID-19 até o limite do capital contratado.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 191.
+
+O beneficiário desta cobertura será o próprio Segurado ou será aquele que comprovar ter se responsabilizado pelo pagamento das Despesas com a internação do segurado por COVID-19.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 191 a 192.
+
+7.1. Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.2. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser, preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.3. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.4. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.5. Cópia digitalizada do Relatório do Médico Responsável, datado e assinado e com a indicação do CRM ou equivalente no exterior, com o diagnóstico detalhado e descrição do tratamento;
+
+7.6. Prontuário Médico atestando a hospitalização por COVID-19, fornecido pelo médico responsável pelo tratamento
+
+7.7. Teste Positivo da COVID-19;
+
+7.8. Original e Cópia da(s) nota(s) fiscal(is), emitida(s) pela Instituição Hospitalar, se houver. Poderá ser aceito, a critério da Seguradora, outro documento que comprove a hospitalização, tal como declaração do hospital, desde que este seja um documento comprobatório para fins legais..
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem Plus — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 192.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 193.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização, em caso de Quarentena / prorrogação obrigatória de viagem devido a diagnóstico de COVID-19 ou sintomas, ocorrida durante o período de viagem, previamente determinado e uma vez constatada a saída do Segurado de sua cidade ou país de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.1.1. Estão cobertas as viagens cujos destinos estejam a mais de 100 quilômetros da cidade de domicílio do segurado.
+
+1.2. Este benefício é limitado a quarentenas impostas ao segurado por ordem de um médico qualificado no caso do segurado apresentar sintomas de COVID-19 ou ser diagnosticado com COVID-19. Este benefício não cobre nenhuma outra quarentena, como quarentenas impostas pelo governo ou agências de saúde. Este benefício também não se aplica a bebês de colo.
+
+1.3. Para esta cobertura será utilizada a seguinte definição:
+
+a) COVID-19: Doença por coronavírus causada pelo vírus SARS-CoV-2 (síndrome respiratória aguda grave coronavírus 2), também conhecida como 2019 novo coronavírus.
+
+b) Cruzeiro : Uma viagem marítima ou fluvial de mais de 3 dias de duração total, em que o transporte e a acomodação são principalmente em um navio de passageiros oceânico ou fluvial.
+
+c) Médico qualificado: um médico ou especialista registrado ou licenciado para exercer a medicina de acordo com as leis do país em que pratica, exceto: uma pessoa segurada, ou um parceiro da pessoa segurada ou um membro da família da pessoa segurada.
+
+d) Quarentena: Restrição de movimento de uma pessoa segurada por ordem de um médico qualificado devido a um diagnóstico COVID-19.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 193 a 194.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. não relacionados a COVID-19;
+
+2.2. gastos com Testes de COVID-19;
+
+2.3. quando a COVID-19 tenha sido atestada antes do início de vigência do Bilhete de Seguro;
+
+2.4. quando o Segurado não estiver sob cuidados de médicos qualificados;
+
+2.5. tratamentos clínicos ou cirúrgicos que configurem ato ilícito ou anti-ético;
+
+2.6. tratamentos experimentais e medicamentos não reconhecidos pela Autoridade de Saúde;
+
+2.7. que envolva viagem especificamente para obter tratamento médico, odontológico ou cosmético;
+
+2.8. viagem quando o segurado foi aconselhado a não viajar por um médico qualificado;
+
+2.9. quando existir um cruzeiro envolvido na viagem
+
+2.10. quarentena ou prorrogação de viagem não solicitada pelo médico qualificado responsável pelo tratamento;
+
+2.11. quarentena de forma ampla (exemplo: quarentena por declaração governamental).
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 194.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 194.
+
+Não será aplicada franquia nesta cobertura.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 194.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para efeito de cálculo da indenização, será considerada como data do evento quando da liquidação de sinistros a data da determinação de quarentena pelo médico qualificado.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 194.
+
+O beneficiário desta cobertura será o próprio Segurado ou será aquele que comprovar ter se responsabilizado pelo pagamento das Despesas com a prorrogação obrigatória da viagem do segurado por COVID-19.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 195.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser, preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Teste Positivo da COVID-19;
+
+7.5. Prontuário Médico atestando a necessidade de Quarentena ou prorrogação da viagem por COVID-19, fornecido pelo médico responsável pelo tratamento;
+
+7.6. Relatório ou laudo preenchido pelo profissional habilitado que prestou o atendimento, com as especificações técnicas e diagnósticos;
+
+7.7. Original e Cópia da(s) nota(s) fiscal(is) em caso de internação, emitida(s) pela Instituição Hospitalar, se houver. Poderá ser aceito, a critério da Seguradora, outro documento que comprove a hospitalização, tal como declaração do hospital, desde que este seja um documento comprobatório para fins legais.
+
+### Condições Especiais Cobertura de Quarentena / Prorrogação Obrigatória De Viagem Devido A Diagnóstico De Covid Ou Sintomas Durante A Viagem — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 195.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 196.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização , em caso de Internação Hospitalar do Segurado por um período mínimo de 48 horas devido a COVID-19, ocorrida durante o período de viagem, previamente determinado e uma vez constatada a saída do Segurado de sua cidade ou país de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.1.1. Estão cobertas as viagens cujos destinos estejam a mais de 100 quilômetros da cidade de domicílio do segurado.
+
+1.2. Para esta cobertura será utilizada a seguinte definição:
+
+e) COVID-19: Doença por coronavírus causada pelo vírus SARS-CoV-2 (síndrome respiratória aguda grave coronavírus 2), também conhecida como 2019 novo coronavírus.
+
+f) Cruzeiro : Uma viagem marítima ou fluvial de mais de 3 dias de duração total, em que o transporte e a acomodação são principalmente em um navio de passageiros oceânico ou fluvial.
+
+g) Médico qualificado: um médico ou especialista registrado ou licenciado para exercer a medicina de acordo com as leis do país em que pratica, exceto: uma pessoa segurada, ou um parceiro da pessoa segurada ou um membro da família da pessoa segurada.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 196 a 197.
+
+2.1. Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.2. não relacionados a COVID-19;
+
+2.3. gastos com Testes de COVID-19;
+
+2.4. quando a COVID-19 tenha sido atestada antes do início de vigência do Bilhete de Seguro;
+
+2.5. quando o Segurado não estiver sob cuidados de médicos qualificados;
+
+2.6. tratamentos clínicos ou cirúrgicos que configurem ato ilícito ou anti-ético;
+
+2.7. tratamentos experimentais e medicamentos não reconhecidos pela Autoridade de Saúde;
+
+2.8. que envolva viagem especificamente para obter tratamento médico, odontológico ou cosmético;
+
+2.9. viagem quando o segurado foi aconselhado a não viajar por um médico qualificado;
+
+2.10. quando existir um cruzeiro envolvido na viagem
+
+2.11. internação hospitalar não solicitada pelo médico qualificado responsável pelo tratamento.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 197.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 197.
+
+Aplicável para internações hospitalares de no mínimo 48 horas em hospitais ou em espaços definidos pelo Governo do país como espaços para a hospitalização para o tratamento da COVID-19 (exemplo: Hospitais de campana).
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 197.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para efeito de cálculo da indenização, será considerada como data do evento, para efeito de determinação do capital segurado, às 48 horas de internação por diagnóstico de COVID-
+
+19.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 197.
+
+O beneficiário desta cobertura será o próprio Segurado ou será aquele que comprovar ter se responsabilizado pelo pagamento das Despesas com a prorrogação obrigatória da viagem do segurado por COVID-19.
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 197 a 198.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser, preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Teste Positivo da COVID-19;
+
+7.5. Prontuário Médico atestando a hospitalização por COVID-19, fornecido pelo médico responsável pelo tratamento;
+
+7.6. Relatório ou laudo preenchido pelo profissional habilitado que prestou o atendimento, com as especificações técnicas e diagnósticos;
+
+7.7. Original e Cópia da(s) nota(s) fiscal(is), emitida(s) pela Instituição Hospitalar. Poderá ser aceito, a critério da Seguradora, outro documento que comprove a hospitalização, tal como declaração do hospital, desde que este seja um documento comprobatório para fins legais..
+
+### Condições Especiais Cobertura de Hospitalização Devido Diagnóstico De Covid 19 Durante Viagem — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 198.
+
+Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 1. RISCOS COBERTOS
+
+Fonte: Condições Gerais (PDF), p. 199.
+
+1.1. Se ratificada no Bilhete, esta cobertura garante a indenização limitada ao valor do capital segurado, na forma de reembolso ou de prestação de serviço(s), das despesas com a liberação e transporte do corpo ou restos mortais do segurado do local da ocorrência do evento coberto até o domicílio ou local do sepultamento, incluindo-se nestas despesas todos os procedimentos e objetos imprescindíveis ao translado do corpo ou restos mortais em caso de Morte do segurado por COVID-19, ocorrida durante o período de viagem, previamente determinado e uma vez constatada a saída do Segurado de sua cidade ou país de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
+
+1.1.1. Entende-se por Translado de Corpo o transporte do corpo ou restos mortais do segurado do local da ocorrência do evento coberto até o domicílio ou local do sepultamento.
+
+1.2. Para esta cobertura será utilizada a seguinte definição:
+
+h) COVID-19: Doença por coronavírus causada pelo vírus SARS-CoV-2 (síndrome respiratória aguda grave coronavírus 2), também conhecida como 2019 novo coronavírus.
+
+i) Cruzeiro : Uma viagem marítima ou fluvial de mais de 3 dias de duração total, em que o transporte e a acomodação são principalmente em um navio de passageiros oceânico ou fluvial.
+
+j) Médico qualificado: um médico ou especialista registrado ou licenciado para exercer a medicina de acordo com as leis do país em que pratica, exceto: uma pessoa segurada, ou um parceiro da pessoa segurada ou um membro da família da pessoa segurada.
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 199 a 200.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+
+2.1. não relacionados a COVID-19;
+
+2.2. gastos com Testes de COVID-19;
+
+2.3. quando a COVID-19 tenha sido atestada antes do início de vigência do Bilhete de Seguro;
+
+2.4. quando o Segurado não estiver sob cuidados de médicos qualificados;
+
+2.5. tratamentos clínicos ou cirúrgicos que configurem ato ilícito ou anti-ético;
+
+2.6. tratamentos experimentais e medicamentos não reconhecidos pela Autoridade de Saúde;
+
+2.7. que envolva viagem especificamente para obter tratamento médico, odontológico ou cosmético;
+
+2.8. viagem quando o segurado foi aconselhado a não viajar por um médico qualificado;
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 3. CARÊNCIA
+
+Fonte: Condições Gerais (PDF), p. 200.
+
+Não será aplicada carência nesta cobertura.
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 200.
+
+Não será aplicada carência nesta cobertura
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 5. CAPITAL SEGURADO
+
+Fonte: Condições Gerais (PDF), p. 200.
+
+5.1. O Capital Segurado para esta cobertura será definido no Bilhete e representa o valor máximo a ser indenizado pela Seguradora.
+
+5.2. Para efeito de cálculo da indenização, a data do evento quando da liquidação de sinistros será considerada a data da morte do segurado por COVID-19.
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 6. BENEFICIÁRIO
+
+Fonte: Condições Gerais (PDF), p. 200.
+
+O beneficiário desta cobertura será aquele que comprovar ter se responsabilizado pelo pagamento das Despesas com o translado do corpo do segurado em caso de morte por COVID-19.
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 7. DOCUMENTOS PARA REGULAÇÃO DE SINISTROS
+
+Fonte: Condições Gerais (PDF), p. 200.
+
+Em complemento à cláusula 16. PROCEDIMENTOS EM CASO DE SINISTRO das Condições Gerais deste seguro, para análise de sinistro desta cobertura, deverão ser entregues à Seguradora os seguintes documentos:
+
+7.1. Formulário Aviso de Sinistro fornecido pela Seguradora, o qual deverá ser, preenchido pelo Segurado, juntamente com os dados bancários;
+
+7.2. Cópias digitalizadas dos documentos do Segurado: Carteira de identidade, CPF e comprovante de endereço (conta de luz, água, gás ou telefone fixo, com prazo máximo de 90 (noventa) dias);
+
+7.3. Cópia digitalizada do histórico de passagens ida e volta, bem como cópia dos bilhetes aéreos ou do meio de transporte da viagem segurada;
+
+7.4. Certidão de Óbito do Segurado com causa morte por COVID-19;
+
+7.5. Nota fiscal de todas as despesas com o traslado
+
+### Condições Especiais Cobertura de Translado De Corpo Por Covid - 19 Plus — 8. RATIFICAÇÃO
+
+Fonte: Condições Gerais (PDF), p. 201.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
