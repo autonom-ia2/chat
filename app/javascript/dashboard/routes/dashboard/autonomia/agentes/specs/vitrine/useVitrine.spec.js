@@ -14,7 +14,10 @@ const api = vi.hoisted(() => ({
 vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({ default: api }));
 
 const LISTA = {
-  fontes: [{ chave: 'cep', consultas: 2 }, { chave: 'cnpj', consultas: 1 }],
+  fontes: [
+    { chave: 'cep', consultas: 2 },
+    { chave: 'cnpj', consultas: 1 },
+  ],
   incluidas: [
     {
       id: 31,
