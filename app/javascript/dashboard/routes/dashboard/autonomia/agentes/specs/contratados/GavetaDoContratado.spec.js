@@ -9,9 +9,10 @@ vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   return { useMapGetter: () => computed(() => false) };
 });
+const papel = vi.hoisted(() => ({ admin: true }));
 vi.mock('dashboard/composables/useAdmin', async () => {
   const { computed } = await import('vue');
-  return { useAdmin: () => ({ isAdmin: computed(() => true) }) };
+  return { useAdmin: () => ({ isAdmin: computed(() => papel.admin) }) };
 });
 const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
@@ -60,6 +61,7 @@ const montarGaveta = props =>
 
 describe('GavetaDoContratado (#3211)', () => {
   beforeEach(() => {
+    papel.admin = true;
     api.salvarDados.mockResolvedValue({ data: agente() });
   });
 
@@ -133,9 +135,37 @@ describe('GavetaDoContratado (#3211)', () => {
     expect(wrapper.emitted('fechar')).toBeUndefined();
     wrapper.unmount();
   });
+
+  // O nome do agente não aparece nesta gaveta: a recusa dele não pode sumir sem mensagem.
+  it('shows at the top a refusal of a field this drawer does not show', async () => {
+    api.salvarDados.mockRejectedValue(
+      Object.assign(new Error('422'), {
+        response: {
+          status: 422,
+          data: { error: 'x', code: 'nome_agente', campo: 'nome_agente' },
+        },
+      })
+    );
+    const wrapper = montarGaveta();
+    no('[data-salvar-corretora]').click();
+    await flushPromises();
+
+    expect(no('[data-erro-do-formulario]').textContent).toContain(
+      'AGENTS.CONTRATADOS.ERRO.NOME_AGENTE'
+    );
+    expect(
+      no('[data-campo="nome_corretora"]').getAttribute('aria-invalid')
+    ).toBe('false');
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    wrapper.unmount();
+  });
 });
 
 describe('ContratadoNaPagina (#3211)', () => {
+  beforeEach(() => {
+    papel.admin = true;
+  });
+
   const montarBloco = props =>
     mount(ContratadoNaPagina, {
       props: { agente: agente(), nome: 'Bia', podeGerenciar: true, ...props },
@@ -204,6 +234,23 @@ describe('ContratadoNaPagina (#3211)', () => {
     expect(wrapper.get('[data-aviso-recusado]').text()).toContain(
       'AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.TITULO'
     );
+  });
+
+  // O acesso ao portal é só do administrador: quem gerencia sem ser administrador não abre uma gaveta sem saída.
+  it('keeps the access buttons for administrators only', () => {
+    papel.admin = false;
+    const wrapper = montarBloco({
+      agente: agente({ ...OK, estado: 'recusado', motivo: 'acesso_recusado' }),
+    });
+
+    expect(wrapper.find('[data-alterar-acesso-pagina]').exists()).toBe(false);
+    expect(wrapper.get('[data-aviso-recusado]').find('button').exists()).toBe(
+      false
+    );
+    expect(wrapper.get('[data-so-admin-pagina]').text()).toContain(
+      'AGENTS.CONTRATADOS.ACESSO.SO_ADMIN'
+    );
+    expect(wrapper.find('[data-alterar-corretora]').exists()).toBe(true);
   });
 
   it('says the access is still missing before the first check', () => {

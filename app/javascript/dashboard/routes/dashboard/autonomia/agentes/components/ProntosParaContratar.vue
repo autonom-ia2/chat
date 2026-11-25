@@ -18,6 +18,7 @@ const { t } = useI18n();
 
 <template>
   <section
+    v-if="modelos.length"
     data-contratados
     aria-labelledby="contratados-titulo"
     class="flex flex-col gap-4"

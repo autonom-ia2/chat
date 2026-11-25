@@ -286,6 +286,47 @@ describe('AcessoDaSeguradoraForm (#3211)', () => {
     wrapper.unmount();
   });
 
+  it('hides the password again after any answer and on "Alterar"', async () => {
+    api.conferirAcesso.mockRejectedValue(new Error('Network Error'));
+    const wrapper = montar();
+    no('[data-mostrar-senha]').click();
+    await nextTick();
+    expect(no('[data-acesso-senha]').getAttribute('type')).toBe('text');
+    await preencher();
+    await conferir();
+    expect(no('[data-acesso-senha]').getAttribute('type')).toBe('password');
+    expect(no('[data-mostrar-senha]').getAttribute('aria-pressed')).toBe(
+      'false'
+    );
+    wrapper.unmount();
+
+    const conferido = montar(OK);
+    no('[data-alterar-acesso]').click();
+    await nextTick();
+    no('[data-mostrar-senha]').click();
+    await nextTick();
+    await preencher();
+    api.conferirAcesso.mockResolvedValue({
+      data: { ...OK, estado: 'recusado', motivo: 'acesso_recusado' },
+    });
+    await conferir();
+    expect(no('[data-acesso-senha]').getAttribute('type')).toBe('password');
+    conferido.unmount();
+  });
+
+  it('drops the red ring once the new password is being typed', async () => {
+    const wrapper = montar(
+      { ...OK, estado: 'recusado', motivo: 'acesso_recusado' },
+      { emConfiguracao: false }
+    );
+    expect(no('[data-acesso-senha]').getAttribute('aria-invalid')).toBe('true');
+    await digitar('[data-acesso-senha]', 'n');
+    expect(no('[data-acesso-senha]').getAttribute('aria-invalid')).toBe(
+      'false'
+    );
+    wrapper.unmount();
+  });
+
   it('opens on the refusal when Universal refused the access later (the page notice)', () => {
     const wrapper = montar(
       { ...OK, estado: 'recusado', motivo: 'acesso_recusado' },

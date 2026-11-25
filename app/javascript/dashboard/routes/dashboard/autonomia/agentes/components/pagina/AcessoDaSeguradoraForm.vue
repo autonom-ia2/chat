@@ -6,7 +6,9 @@ import ContratadosAPI from 'dashboard/api/autonomia/contratados';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
+import CampoErro from '../CampoErro.vue';
 import { erroDoContratado } from '../../utils/contratado';
+import { CLASSE_DO_CAMPO, anelDoCampo } from '../../utils/campo';
 
 // #3211 (Tarefa 28) — o passo 2 do agente contratado: o login e a senha do portal da Universal (mockup aprovado,
 // estados 05 a 11 e 16). Monta a própria gaveta, porque o botão do rodapé muda com o estado: "Conferir acesso" com
@@ -35,6 +37,8 @@ const editando = ref(false);
 const login = ref('');
 const senha = ref('');
 const mostrarSenha = ref(false);
+// A pessoa já começou a digitar a senha nova depois de uma recusa: o anel vermelho sai.
+const senhaNova = ref(false);
 const conferindo = ref(false);
 // Os campos que estavam vazios no último envio; saem quando a pessoa escreve neles.
 const faltando = ref([]);
@@ -88,7 +92,9 @@ const erroDe = campo => {
 };
 const loginInvalido = computed(() => Boolean(erroDe('login')));
 const senhaInvalida = computed(
-  () => Boolean(erroDe('senha')) || (recusado.value && !erroDoEnvio.value)
+  () =>
+    Boolean(erroDe('senha')) ||
+    (recusado.value && !erroDoEnvio.value && !senhaNova.value)
 );
 
 const descricao = (campo, ajuda) =>
@@ -97,6 +103,7 @@ const descricao = (campo, ajuda) =>
     .join(' ');
 
 const mexeu = campo => {
+  if (campo === 'senha') senhaNova.value = true;
   faltando.value = faltando.value.filter(item => item !== campo);
   if (erroDoEnvio.value?.campo === campo) erroDoEnvio.value = null;
 };
@@ -108,6 +115,8 @@ const alterar = async () => {
   editando.value = true;
   login.value = '';
   senha.value = '';
+  mostrarSenha.value = false;
+  senhaNova.value = false;
   faltando.value = [];
   erroDoEnvio.value = null;
   await nextTick();
@@ -120,7 +129,6 @@ const depoisDoEnvio = async resposta => {
   emit('conferido', resposta);
   if (resposta?.estado === 'ok') {
     login.value = '';
-    mostrarSenha.value = false;
     return;
   }
   await nextTick();
@@ -146,7 +154,10 @@ const conferir = async () => {
   } catch (erro) {
     erroDoEnvio.value = erroDoContratado(t, erro);
   } finally {
+    // Depois de qualquer resposta (ou da falta dela): a senha sai do estado e o campo volta a esconder o que se digita.
     senha.value = '';
+    senhaNova.value = false;
+    mostrarSenha.value = false;
     conferindo.value = false;
   }
 };
@@ -162,10 +173,8 @@ const temRodape = computed(() =>
   mostraConferido.value ? props.emConfiguracao : isAdmin.value
 );
 
-const CAMPO =
-  'w-full px-3 text-base rounded-xl min-h-11 !bg-n-solid-1 ring-inset border-0 !mb-0 text-n-slate-12 disabled:opacity-60';
-const anel = invalido =>
-  invalido ? 'ring-2 ring-n-ruby-9' : 'ring-1 ring-n-slate-7';
+const CAMPO = CLASSE_DO_CAMPO;
+const anel = anelDoCampo;
 </script>
 
 <template>
@@ -301,18 +310,7 @@ const anel = invalido =>
               :class="[CAMPO, anel(loginInvalido)]"
               @input="mexeu('login')"
             />
-            <p
-              v-if="erroDe('login')"
-              :id="`${base}-login-erro`"
-              role="alert"
-              class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
-            >
-              <span
-                class="i-lucide-circle-alert size-4 shrink-0"
-                aria-hidden="true"
-              />
-              {{ erroDe('login') }}
-            </p>
+            <CampoErro :id="`${base}-login-erro`" :texto="erroDe('login')" />
             <p :id="`${base}-login-ajuda`" class="m-0 text-sm text-n-slate-11">
               {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.AJUDA') }}
             </p>
@@ -364,18 +362,7 @@ const anel = invalido =>
                 />
               </button>
             </div>
-            <p
-              v-if="erroDe('senha')"
-              :id="`${base}-senha-erro`"
-              role="alert"
-              class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
-            >
-              <span
-                class="i-lucide-circle-alert size-4 shrink-0"
-                aria-hidden="true"
-              />
-              {{ erroDe('senha') }}
-            </p>
+            <CampoErro :id="`${base}-senha-erro`" :texto="erroDe('senha')" />
             <p :id="`${base}-senha-ajuda`" class="m-0 text-sm text-n-slate-11">
               {{
                 recusado

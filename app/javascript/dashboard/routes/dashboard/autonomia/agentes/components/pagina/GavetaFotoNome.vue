@@ -44,6 +44,9 @@ const previa = ref(props.agente.avatar_url || '');
 const erroNome = ref('');
 const erroFoto = ref('');
 const falhou = ref(false);
+// #3211: a recusa do servidor (422) no contratado que não é do nome (`indisponivel`, outro campo): o texto dela, no
+// lugar do título geral do erro.
+const textoDaFalha = ref('');
 const salvando = ref(false);
 const seletor = ref(null);
 const campoNome = ref(null);
@@ -136,6 +139,7 @@ const salvar = async () => {
   }
   erroNome.value = '';
   falhou.value = false;
+  textoDaFalha.value = '';
   salvando.value = true;
   try {
     await gravar();
@@ -147,6 +151,8 @@ const salvar = async () => {
       erroNome.value = recusa.texto;
       campoNome.value?.focus();
     } else {
+      const doServidor = recusa && erro?.response?.status === 422;
+      textoDaFalha.value = doServidor ? recusa.texto : '';
       falhou.value = true;
     }
   } finally {
@@ -164,7 +170,7 @@ const salvar = async () => {
       <AgenteErro
         v-if="falhou"
         data-erro
-        :titulo="t(`${NS}.ERRO`)"
+        :titulo="textoDaFalha || t(`${NS}.ERRO`)"
         :garantia="t(`${NS}.ERRO_GARANTIA`)"
         :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
         :carregando="salvando"

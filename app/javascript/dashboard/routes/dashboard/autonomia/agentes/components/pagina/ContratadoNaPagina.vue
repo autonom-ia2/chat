@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 
@@ -9,7 +10,9 @@ import AgenteErro from '../AgenteErro.vue';
 // - o aviso da Universal que recusou o acesso depois (a senha mudou), com "Cadastrar a senha nova";
 // - "Corretora e acesso": o nome da corretora e o estado do acesso ao portal, cada um com "Alterar";
 // - "O que {nome} faz", com o aviso no item da proposta quando o login só cota.
-// Quem só vê lê tudo, sem os botões.
+// Quem só vê lê tudo, sem os botões. O acesso ao portal é só do administrador (Tarefa 21): quem gerencia sem ser
+// administrador não ganha "Cadastrar a senha nova" nem "Alterar" do acesso (abririam uma gaveta sem saída), e lê
+// no lugar que só o administrador cadastra o login e a senha.
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -20,6 +23,9 @@ const props = defineProps({
 const emit = defineEmits(['alterarCorretora', 'alterarAcesso']);
 
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const mudaAcesso = computed(() => props.podeGerenciar && isAdmin.value);
+const soAdmin = computed(() => props.podeGerenciar && !isAdmin.value);
 
 const dados = computed(() => props.agente.contratado || {});
 const acesso = computed(() => dados.value.acesso || null);
@@ -59,9 +65,7 @@ const itensFaz = computed(() => [
     data-aviso-recusado
     :titulo="t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.TITULO', { nome })"
     :garantia="t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.GARANTIA')"
-    :acao="
-      podeGerenciar ? t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.ACAO') : ''
-    "
+    :acao="mudaAcesso ? t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.ACAO') : ''"
     icone-acao="i-lucide-key-round"
     @acao="emit('alterarAcesso')"
   />
@@ -132,9 +136,16 @@ const itensFaz = computed(() => [
             />
             {{ t('AGENTS.CONTRATADOS.PAGINA.NAO_CONFERIDO') }}
           </span>
+          <span
+            v-if="soAdmin"
+            data-so-admin-pagina
+            class="text-sm text-n-slate-11"
+          >
+            {{ t('AGENTS.CONTRATADOS.ACESSO.SO_ADMIN') }}
+          </span>
         </span>
         <AgenteBotao
-          v-if="podeGerenciar"
+          v-if="mudaAcesso"
           data-alterar-acesso-pagina
           variante="contorno"
           :aria-label="t('AGENTS.CONTRATADOS.PAGINA.ALTERAR_ACESSO_ARIA')"

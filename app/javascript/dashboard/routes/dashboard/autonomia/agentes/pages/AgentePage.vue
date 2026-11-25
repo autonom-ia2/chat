@@ -604,8 +604,6 @@ const escrever = () => {
   else dialogoEscrever.value?.abrir();
 };
 
-const escolherCanal = () => abrir(gavetaDoCanal());
-
 const alterarAtendimento = () => {
   if (podeGerenciar.value) aberta.value = ATENDIMENTO;
 };
@@ -716,6 +714,20 @@ const escolherCanalDoContratado = () => {
 const abrirDoContratado = parte => {
   parteDoContratado.value = parte;
   abrir(GAVETA.CONTRATADO);
+};
+// #3211 — o rascunho do contratado segue os passos dele também pelo bloco da página: com o acesso conferido, o
+// passo 3 (o texto do passo e o aviso de que começou a atender); sem ele, o passo 2 (o servidor só põe o contratado
+// numa caixa com o acesso conferido).
+const escolherCanal = () => {
+  if (!contratado.value || !agenteEmConfiguracao.value) {
+    abrir(gavetaDoCanal());
+    return;
+  }
+  if (agente.value.contratado.acesso?.estado === 'ok') {
+    escolherCanalDoContratado();
+  } else {
+    abrirDoContratado('acesso');
+  }
 };
 const relerAgente = async () => {
   try {

@@ -374,6 +374,26 @@ describe('GavetaFotoNome (T12)', () => {
       expect(wrapper.emitted('fechar')).toBeUndefined();
       wrapper.unmount();
     });
+
+    it('shows the server text when the refusal is not about the name', async () => {
+      contratadosApi.salvarDados.mockRejectedValue(
+        Object.assign(new Error('422'), {
+          response: {
+            status: 422,
+            data: { error: 'x', code: 'indisponivel', campo: null },
+          },
+        })
+      );
+      const wrapper = montarContratada();
+      await digitar('[data-nome]', 'Rosa');
+      await clicar('[data-salvar]');
+
+      expect(no('[data-erro]').textContent).toContain(
+        'CONTRATADOS.ERRO.INDISPONIVEL'
+      );
+      expect(no('[data-erro-nome]')).toBeNull();
+      wrapper.unmount();
+    });
   });
 
   describe('nota com Mudar conversando', () => {

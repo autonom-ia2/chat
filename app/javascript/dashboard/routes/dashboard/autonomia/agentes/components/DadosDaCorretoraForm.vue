@@ -2,7 +2,9 @@
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteErro from './AgenteErro.vue';
+import CampoErro from './CampoErro.vue';
 import { MAX_NOME, MAX_SOBRE } from '../constants/contratados';
+import { CLASSE_DO_CAMPO, anelDoCampo } from '../utils/campo';
 
 // #3211 — os dados da corretora no agente contratado (mockup aprovado, estados 03, 04 e 15). Um componente só para
 // os dois usos:
@@ -11,7 +13,8 @@ import { MAX_NOME, MAX_SOBRE } from '../constants/contratados';
 //   foto e nome. `inicial` traz o que está gravado.
 // O botão de enviar fica no rodapé da gaveta de quem usa, que chama `enviar()` (exposto). Os obrigatórios vazios
 // bloqueiam o envio aqui mesmo; a recusa do servidor chega por `erro` ({ campo, texto }, utils/contratado): com
-// `campo`, o campo fica marcado com o texto embaixo; sem `campo`, o texto vai para o topo do formulário.
+// `campo`, o campo fica marcado com o texto embaixo; sem `campo`, ou com um campo que esta tela não mostra (o nome do
+// agente no `editar`), o texto vai para o topo do formulário.
 const props = defineProps({
   modo: {
     type: String,
@@ -50,6 +53,10 @@ const ERRO_LOCAL = {
 const obrigatorios = computed(() =>
   contratar.value ? ['nome_agente', 'nome_corretora'] : ['nome_corretora']
 );
+// Os campos que esta tela mostra: a recusa de outro campo não pode sumir sem mensagem.
+const exibidos = computed(() => [...obrigatorios.value, 'sobre_corretora']);
+const recusaNaTela = erro =>
+  Boolean(erro?.campo) && exibidos.value.includes(erro.campo);
 
 const rotulos = computed(() =>
   contratar.value
@@ -80,7 +87,7 @@ watch(
   () => props.erro,
   async erro => {
     doServidor.value = erro;
-    if (!erro?.campo) return;
+    if (!recusaNaTela(erro)) return;
     await nextTick();
     focar(erro.campo);
   }
@@ -92,11 +99,12 @@ const erroDe = campo => {
   return '';
 };
 const erroDoTopo = computed(() =>
-  doServidor.value && !doServidor.value.campo ? doServidor.value.texto : ''
+  doServidor.value && !recusaNaTela(doServidor.value)
+    ? doServidor.value.texto
+    : ''
 );
 
-const anel = campo =>
-  erroDe(campo) ? 'ring-2 ring-n-ruby-9' : 'ring-1 ring-n-slate-7';
+const anel = campo => anelDoCampo(Boolean(erroDe(campo)));
 const descricao = (campo, ...outros) =>
   [erroDe(campo) ? `${base}-${campo}-erro` : '', ...outros]
     .filter(Boolean)
@@ -143,8 +151,7 @@ const temMudanca = () => {
   );
 };
 
-const CAMPO =
-  'w-full px-3 text-base rounded-xl min-h-11 !bg-n-solid-1 ring-inset border-0 !mb-0 text-n-slate-12 disabled:opacity-60';
+const CAMPO = CLASSE_DO_CAMPO;
 
 defineExpose({ enviar, temMudanca });
 </script>
@@ -183,18 +190,10 @@ defineExpose({ enviar, temMudanca });
         :class="[CAMPO, anel('nome_agente')]"
         @input="mexeu('nome_agente')"
       />
-      <p
-        v-if="erroDe('nome_agente')"
+      <CampoErro
         :id="`${base}-nome_agente-erro`"
-        role="alert"
-        class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
-      >
-        <span
-          class="i-lucide-circle-alert size-4 shrink-0"
-          aria-hidden="true"
-        />
-        {{ erroDe('nome_agente') }}
-      </p>
+        :texto="erroDe('nome_agente')"
+      />
       <p :id="`${base}-nome-ajuda`" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.CONTRATADOS.CONTRATAR.NOME.AJUDA') }}
       </p>
@@ -220,18 +219,10 @@ defineExpose({ enviar, temMudanca });
         :class="[CAMPO, anel('nome_corretora')]"
         @input="mexeu('nome_corretora')"
       />
-      <p
-        v-if="erroDe('nome_corretora')"
+      <CampoErro
         :id="`${base}-nome_corretora-erro`"
-        role="alert"
-        class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
-      >
-        <span
-          class="i-lucide-circle-alert size-4 shrink-0"
-          aria-hidden="true"
-        />
-        {{ erroDe('nome_corretora') }}
-      </p>
+        :texto="erroDe('nome_corretora')"
+      />
     </div>
 
     <div class="flex flex-col gap-1">
@@ -259,18 +250,10 @@ defineExpose({ enviar, temMudanca });
         :class="[CAMPO, anel('sobre_corretora')]"
         @input="mexeu('sobre_corretora')"
       />
-      <p
-        v-if="erroDe('sobre_corretora')"
+      <CampoErro
         :id="`${base}-sobre_corretora-erro`"
-        role="alert"
-        class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
-      >
-        <span
-          class="i-lucide-circle-alert size-4 shrink-0"
-          aria-hidden="true"
-        />
-        {{ erroDe('sobre_corretora') }}
-      </p>
+        :texto="erroDe('sobre_corretora')"
+      />
       <div class="flex items-start justify-between gap-3">
         <p :id="`${base}-sobre-ajuda`" class="m-0 text-sm text-n-slate-11">
           {{ rotulos.sobreAjuda }}

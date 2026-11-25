@@ -1906,6 +1906,24 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    it('takes the page "Escolher canal" of the draft through its own steps', async () => {
+      preparar({ agente: contratada(ACESSO_OK), canais: LIVRE });
+      const wrapper = await montar();
+      await clicar('[data-escolher-canal]');
+      expect(no('[data-texto-do-passo]').textContent).toContain(
+        'CONTRATADOS.ONDE.PASSO'
+      );
+      wrapper.unmount();
+
+      preparar({ agente: contratada(), canais: LIVRE });
+      const semAcesso = await montar();
+      await clicar('[data-escolher-canal]');
+      expect(no('[role="dialog"]').textContent).toContain(
+        'CONTRATADOS.ACESSO.TITULO'
+      );
+      semAcesso.unmount();
+    });
+
     it('has no Mudar conversando, Tools, versions nor instructions, even for a SuperAdmin', async () => {
       preparar({
         agente: contratada(ACESSO_OK, {
