@@ -4008,6 +4008,157 @@
           "FATURA": "O valor entra na sua fatura do mês."
         }
       }
+    },
+    "CONTRATADOS": {
+      "AREA": {
+        "TITULO": "Vendem sozinhos",
+        "TEXTO": "Cotam, fazem a proposta e mandam o link de pagamento. Você só informa os dados da sua corretora."
+      },
+      "CARTAO": {
+        "TITULO": "Seguro Viagem Universal",
+        "TEXTO": "Vende o seguro viagem da Universal do começo ao fim: cota, faz a proposta e manda o link de pagamento.",
+        "PRECISA": "Precisa do login do portal da Universal.",
+        "VER": "Ver como funciona",
+        "VER_ARIA": "Ver como funciona: {nome}"
+      },
+      "MODELO": {
+        "TITULO": "Seguro Viagem Universal",
+        "TEXTO": "Um agente que vende seguro viagem da Universal para quem vai viajar, do primeiro oi ao link de pagamento.",
+        "VOLTAR": "Voltar para Criar agente",
+        "CONTRATAR": "Contratar",
+        "FAZ_TITULO": "O que ele faz",
+        "FAZ": {
+          "DUVIDAS": "Tira as dúvidas do viajante com as regras oficiais da Universal",
+          "COTA": "Cota na hora, com o destino, as datas e a idade de cada um",
+          "ESCOLHE": "Ajuda a escolher o plano e explica o que cada um cobre",
+          "PROPOSTA": "Monta a proposta e manda o link de pagamento"
+        },
+        "PRECISA_TITULO": "O que você vai precisar",
+        "PRECISA": {
+          "DADOS": "Um nome para o agente e uma frase sobre a sua corretora",
+          "LOGIN": "O login e a senha do portal da Universal",
+          "LOGIN_DETALHE": "É o mesmo que você usa no site da Universal.",
+          "CANAL": "Um canal para atender, como o WhatsApp"
+        },
+        "PRONTO": "Você não escreve nada: o jeito de atender já vem pronto e melhora sozinho.",
+        "EXEMPLO_TITULO": "Exemplo de conversa",
+        "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
+        "CONVERSA": {
+          "CLIENTE_1": "Oi! Quero seguro para Portugal, de 10 a 24 de janeiro. Somos 2.",
+          "AGENTE_1": "Oi! Eu sou a {nome}, da {corretora}. Quantos anos cada um tem?",
+          "CLIENTE_2": "45 e 43",
+          "AGENTE_2": "Para vocês dois, o plano mais escolhido para a Europa sai R$ 189,90 por pessoa. Quer esse?",
+          "CLIENTE_3": "Quero",
+          "AGENTE_3": "Para a proposta, me manda o nome completo, CPF e data de nascimento de cada um.",
+          "CLIENTE_4": "Ana Lima, 000.000.000-00, 02/03/1980\nJoão Lima, 000.000.000-00, 15/07/1982",
+          "AGENTE_4": "Pronto! Este é o link para pagar: pagamento.exemplo.com.br/a1b2"
+        }
+      },
+      "CONTRATAR": {
+        "TITULO": "Contratar o agente",
+        "PASSO": "Passo 1 de 3: sobre a sua corretora.",
+        "ENVIAR": "Contratar",
+        "ENVIANDO": "Contratando…",
+        "NOME": {
+          "ROTULO": "Nome do agente",
+          "AJUDA": "É o nome que o viajante vê na conversa.",
+          "ERRO": "Escreva o nome do agente."
+        },
+        "CORRETORA": {
+          "ROTULO": "Nome da corretora",
+          "ERRO": "Escreva o nome da corretora."
+        },
+        "SOBRE": {
+          "ROTULO": "Sobre a corretora (pode deixar para depois)",
+          "EXEMPLO": "Ex.: Corretora em Campinas desde 2010. Atendemos famílias e empresas.",
+          "AJUDA": "O agente usa para se apresentar.",
+          "CONTADOR": "{atual} de {maximo}"
+        }
+      },
+      "ERRO": {
+        "MARCADOR": "Este texto tem um código reservado (uma palavra que começa com $). Tire esse trecho e tente de novo.",
+        "INDISPONIVEL": "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia.",
+        "NOME_AGENTE": "Escreva o nome do agente, com até {maximo} caracteres.",
+        "NOME_CORRETORA": "Escreva o nome da corretora, com até {maximo} caracteres.",
+        "SOBRE_CORRETORA": "A apresentação da corretora pode ter até {maximo} caracteres.",
+        "ACESSO_INCOMPLETO": "Preencha o login e a senha da seguradora.",
+        "GENERICO": "Não deu certo agora. Tente de novo em alguns minutos."
+      },
+      "ACESSO": {
+        "TITULO": "Acesso ao portal da Universal",
+        "CRIADA": "Pronto, a {nome} foi criada. Ela começa parada. Falta o acesso à Universal e o canal.",
+        "PASSO": "Passo 2 de 3: acesso à Universal.",
+        "EXPLICA": "{nome} entra no portal da Universal com o login da sua corretora para cotar e fazer a proposta.",
+        "CONFERIDO": {
+          "TITULO": "Acesso conferido",
+          "TEXTO": "{nome} já pode cotar e mandar o link de pagamento."
+        },
+        "SO_COTA": {
+          "TITULO": "Esse login só faz cotação",
+          "TEXTO": "{nome} cota e tira dúvidas. Quando o cliente quiser fechar, ela passa a conversa para a sua equipe. Para {nome} fazer a proposta sozinha, peça à Universal para liberar a emissão nesse login.",
+          "ITEM": "Precisa de um login que faz proposta."
+        },
+        "LOGIN": {
+          "ROTULO": "Login do portal",
+          "AJUDA": "É o mesmo login do site da Universal. Não tem? Peça ao seu contato comercial na Universal.",
+          "ERRO": "Escreva o login do portal."
+        },
+        "SENHA": {
+          "ROTULO": "Senha do portal",
+          "AJUDA": "Depois de conferida, a senha fica guardada e não aparece mais.",
+          "ESQUECEU": "Esqueceu a senha? Troque no site da Universal.",
+          "ERRO": "Escreva a senha do portal.",
+          "GUARDADA": "Senha guardada com segurança",
+          "MOSTRAR": "Mostrar senha",
+          "ESCONDER": "Esconder senha"
+        },
+        "RECUSADO": {
+          "TITULO": "A Universal não aceitou esse login e senha.",
+          "GARANTIA": "Confira os dois e digite de novo. Nada foi guardado."
+        },
+        "INDISPONIVEL": {
+          "TITULO": "A Universal não respondeu agora.",
+          "GARANTIA": "Nada foi guardado. Tente de novo em alguns minutos."
+        },
+        "PEDIDO_INVALIDO": {
+          "TITULO": "A Universal não aceitou a conferência agora.",
+          "GARANTIA": "Nada foi guardado. Tente de novo em alguns minutos; se continuar, fale com o suporte da Autonom.ia."
+        },
+        "CONFERIR": "Conferir acesso",
+        "CONFERINDO": "Conferindo com a Universal…",
+        "ESCOLHER_CANAL": "Escolher o canal",
+        "ULTIMO_PASSO": "Último passo: onde {nome} atende os viajantes.",
+        "ALTERAR": "Alterar",
+        "ALTERAR_ARIA": "Alterar o login e a senha"
+      },
+      "PAGINA": {
+        "ATENDENDO": "{nome} está atendendo no {canal}.",
+        "FAZ_TITULO": "O que {nome} faz",
+        "CORRETORA_E_ACESSO": "Corretora e acesso",
+        "CORRETORA": "Corretora",
+        "PORTAL": "Portal da Universal",
+        "RECUSADO": "Recusado",
+        "CONFERIDO": "Conferido",
+        "ALTERAR": "Alterar",
+        "ALTERAR_CORRETORA_ARIA": "Alterar a corretora",
+        "ALTERAR_ACESSO_ARIA": "Alterar o acesso ao portal da Universal",
+        "AVISO_RECUSADO": {
+          "TITULO": "A Universal recusou o acesso da {nome}.",
+          "GARANTIA": "Enquanto isso, quem quiser cotar passa para a sua equipe.",
+          "ACAO": "Cadastrar a senha nova"
+        }
+      },
+      "ONDE": {
+        "PASSO": "Passo 3 de 3: onde a {nome} atende."
+      },
+      "CORRETORA": {
+        "TITULO": "Corretora",
+        "NOME": "Nome da corretora",
+        "SOBRE": "Sobre a corretora",
+        "SOBRE_AJUDA": "A {nome} usa para se apresentar.",
+        "CANCELAR": "Cancelar",
+        "SALVAR": "Salvar"
+      }
     }
   }
 }
