@@ -1142,6 +1142,7 @@ en:
       acesso_incompleto: 'Fill in the insurer login and password.'
       recusa:
         indisponivel: 'This ready-made agent is not available for this account right now. Contact Autonom.ia support.'
+        sem_chave_de_ia: "Your account's AI key is missing. This agent talks using your account's own key. Connect the AI key in Settings → Integrations and try again."
         nome_agente: "Write the agent's name, up to %{maximo} characters."
         nome_corretora: "Write the brokerage's name, up to %{maximo} characters."
         sobre_corretora: 'The brokerage introduction can have up to %{maximo} characters.'

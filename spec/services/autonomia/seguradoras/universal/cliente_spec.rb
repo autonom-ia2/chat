@@ -56,6 +56,20 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
     expect(saida.string).to include('chamada=cotar status=sem_resposta')
   end
 
+  it 'host ou rede inalcançável, conexão que esgota e IO cortado viram indisponivel (nunca 500 na conferência)' do
+    [Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::ETIMEDOUT, IOError].each do |falha|
+      stub_request(:get, "#{base}/v1/Emissor/Setup").to_raise(falha)
+      expect { cliente.setup }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+    end
+  end
+
+  it 'o emissor é um resumo do login, igual para o mesmo login e sem o login dentro' do
+    outro = described_class.new(login: 'outro.corretor.teste', senha: 's3nha-teste')
+    expect(cliente.emissor).to eq(described_class.new(login: 'corretor.teste', senha: 'outra').emissor)
+    expect(cliente.emissor).not_to eq(outro.emissor)
+    expect(cliente.emissor).not_to include('corretor')
+  end
+
   it '500 vira indisponivel' do
     stub_request(:post, "#{base}/v1/Cotacao").to_return(status: 500, body: 'erro')
     expect { cliente.cotar({}) }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }

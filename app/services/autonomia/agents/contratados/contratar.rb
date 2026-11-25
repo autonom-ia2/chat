@@ -5,8 +5,9 @@
 # (`SemearBaseJob`), porque passa pela chamada paga de embedding. Uma conta pode contratar várias cópias (uma por
 # corretora).
 class Autonomia::Agents::Contratados::Contratar
-  # A recusa leva o motivo (`indisponivel`, `nome_agente`, `nome_corretora`, `sobre_corretora` ou `marcador`) e o campo
-  # da tela que a causou (R14), para a tela destacar o campo. `campo` é nil no `indisponivel` (nenhum campo resolve).
+  # A recusa leva o motivo (`indisponivel`, `sem_chave_de_ia`, `nome_agente`, `nome_corretora`, `sobre_corretora` ou
+  # `marcador`) e o campo da tela que a causou (R14), para a tela destacar o campo. `campo` é nil no `indisponivel` e no
+  # `sem_chave_de_ia` (nenhum campo resolve).
   class Recusado < StandardError
     attr_reader :motivo, :campo
 
@@ -33,7 +34,7 @@ class Autonomia::Agents::Contratados::Contratar
   # marca. Recusa o primeiro campo fora do tamanho ou com um marcador da instrução dentro (um nome com `$nomeAgente`
   # mudaria o texto que o modelo lê).
   def self.conferir!(account:, modelo:, nome_agente:, nome_corretora:, sobre_corretora:)
-    raise Recusado, 'indisponivel' unless Autonomia::Agents::Contratados.disponivel?(account, modelo)
+    raise Recusado, 'indisponivel' unless Autonomia::Agents::Contratados.liberado?(account, modelo)
 
     valores = { 'nome_agente' => nome_agente, 'nome_corretora' => nome_corretora, 'sobre_corretora' => sobre_corretora }
               .transform_values { |valor| valor.to_s.strip }
@@ -51,8 +52,12 @@ class Autonomia::Agents::Contratados::Contratar
     @dados = { nome_agente: nome_agente, nome_corretora: nome_corretora, sobre_corretora: sobre_corretora }
   end
 
+  # Contratar exige a chave de IA da própria conta (`Contratados.disponivel?`): sem ela o agente nasceria para conversar
+  # com a chave da instalação. Trocar os dados da corretora (`DadosDaCorretora`) não chama a IA e não a exige.
   def call
     valores = self.class.conferir!(account: @account, modelo: @chave, **@dados)
+    raise Recusado, 'sem_chave_de_ia' unless Autonomia::Agents::Contratados.disponivel?(@account, @chave)
+
     agente = ActiveRecord::Base.transaction do
       novo = criar_agente!(valores)
       incluir_prontas!(novo)

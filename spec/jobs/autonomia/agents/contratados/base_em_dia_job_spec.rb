@@ -77,6 +77,30 @@ RSpec.describe Autonomia::Agents::Contratados::BaseEmDiaJob do
     expect(semear).to have_been_enqueued.with(primeiro.id)
   end
 
+  it 'para de enfileirar o agente que já voltou com a base pela metade no teto de tentativas' do
+    base = Autonomia::Agents::Contratados::Base
+    esgotado = contratado(nil)
+    outro = contratado(nil)
+    base::TETO_DE_PARCIAIS.times { base.anotar_parcial!(esgotado.id) }
+
+    expect { described_class.perform_now }.to have_enqueued_job(semear).exactly(1)
+    expect(semear).to have_been_enqueued.with(outro.id)
+  ensure
+    Redis::Alfred.delete(Autonomia::Agents::Contratados::Base.chave_das_parciais(esgotado.id)) if esgotado
+  end
+
+  it 'a contagem é da versão: com outra versão da base, o agente volta para a fila' do
+    base = Autonomia::Agents::Contratados::Base
+    agente = contratado(nil)
+    base::TETO_DE_PARCIAIS.times { base.anotar_parcial!(agente.id) }
+    chave_antiga = base.chave_das_parciais(agente.id)
+    stub_const('Autonomia::Agents::Contratados::Base::VERSAO', 'versao-nova-teste')
+
+    expect { described_class.perform_now }.to have_enqueued_job(semear).with(agente.id)
+  ensure
+    Redis::Alfred.delete(chave_antiga) if chave_antiga
+  end
+
   it 'está no cron de hora em hora' do
     agenda = YAML.load_file(Rails.root.join('config/schedule.yml'))
     expect(agenda['autonomia_contratados_base_em_dia_job']).to eq(

@@ -35,10 +35,11 @@ class Api::V1::Accounts::Autonomia::Agents::AcessoDaSeguradoraController < Api::
 
   private
 
-  # A flag do modelo desligada (ou sem o cofre): nada é conferido nem gravado, e a seguradora não é chamada.
+  # A flag do modelo desligada (ou sem o cofre): nada é conferido nem gravado, e a seguradora não é chamada. Conferir o
+  # login não chama a IA, então não exige a chave de IA da conta (quem a exige é o Contratar e o turno).
   def recusar_modelo_indisponivel!
     modelo = ::Autonomia::Agents::Contratados.marca(@agent)['modelo']
-    return if ::Autonomia::Agents::Contratados.disponivel?(Current.account, modelo)
+    return if ::Autonomia::Agents::Contratados.liberado?(Current.account, modelo)
 
     raise ::Autonomia::Agents::Contratados::Contratar::Recusado, 'indisponivel'
   end

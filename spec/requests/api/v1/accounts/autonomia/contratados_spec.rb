@@ -16,6 +16,10 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
   before do
     enable_test_encryption!
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas', 'agente_ferramentas_prontas_consultas')
+    # Contratar exige a chave de IA da própria conta; a de mentira não passa pelo provedor.
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
     allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedder)
   end
 
@@ -108,6 +112,20 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('code' => 'indisponivel', 'campo' => nil,
                                               'error' => I18n.t('autonomia.contratados.recusa.indisponivel'))
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
+    it 'conta sem a própria chave de IA: o catálogo mostra o modelo, e contratar diz o que falta' do
+      Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
+
+      get catalogo_url, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'])
+
+      post contratar_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'sem_chave_de_ia', 'campo' => nil,
+                                              'error' => I18n.t('autonomia.contratados.recusa.sem_chave_de_ia'))
       expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 

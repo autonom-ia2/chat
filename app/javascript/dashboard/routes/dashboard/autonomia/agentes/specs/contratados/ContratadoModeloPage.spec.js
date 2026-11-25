@@ -190,6 +190,26 @@ describe('ContratadoModeloPage (#3211)', () => {
     wrapper.unmount();
   });
 
+  it('says what is missing when the account has no AI key of its own', async () => {
+    api.contratar.mockRejectedValue(
+      recusa({
+        error: 'texto do servidor',
+        code: 'sem_chave_de_ia',
+        campo: null,
+      })
+    );
+    const wrapper = await montar();
+    await abrirFormulario(wrapper);
+    await preencher();
+    await enviar();
+
+    expect(invalido('nome_agente')).toBe(false);
+    expect(no('[data-erro-do-formulario]').textContent).toContain(
+      'AGENTS.CONTRATADOS.ERRO.SEM_CHAVE_DE_IA'
+    );
+    wrapper.unmount();
+  });
+
   it('says "try again" at the top when the request does not reach the server', async () => {
     api.contratar.mockRejectedValue(new Error('Network Error'));
     const wrapper = await montar();

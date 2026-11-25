@@ -9,10 +9,16 @@ class Autonomia::Agents::Contratados::SemearBaseJob < ApplicationJob
   def perform(agent_id)
     agente = Autonomia::Agents::Agent.kept.find_by(id: agent_id)
     return if agente.nil? || !agente.contratado?
-    return unless Autonomia::Agents::Contratados.disponivel?(agente.account, agente.marca_do_contratado['modelo'])
+
+    # Só o modelo liberado: a chave da conta é a `Base` quem confere, sob a trava, e devolve `sem_chave_da_conta`.
+    return unless Autonomia::Agents::Contratados.liberado?(agente.account, agente.marca_do_contratado['modelo'])
 
     resultado = Autonomia::Agents::Contratados::Base.semear_se_preciso!(agente)
-    avisar_no_log(agent_id, resultado) if resultado.is_a?(String)
+    return unless resultado.is_a?(String)
+
+    # A base pela metade pagou o embedding: conta, para o cron parar no teto (`Base::TETO_DE_PARCIAIS`).
+    Autonomia::Agents::Contratados::Base.anotar_parcial!(agent_id) if resultado == Autonomia::Agents::Contratados::Base::BASE_PARCIAL
+    avisar_no_log(agent_id, resultado)
   rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
     avisar_no_log(agent_id, e.motivo)
   rescue Faraday::Error

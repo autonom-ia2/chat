@@ -29,6 +29,17 @@ RSpec.describe Autonomia::Seguradoras::Universal::Destinos do
     expect(stub).to have_been_requested.once
   end
 
+  it 'o cache é por emissor: outro login lê a sua própria lista, e a chave não leva o login' do
+    stub = stub_destinos
+    outro = Autonomia::Seguradoras::Universal::Cliente.new(login: 'outro.corretor.teste', senha: 's3nha-teste')
+    allow(Rails.cache).to receive(:fetch).and_call_original
+
+    [cliente, outro, cliente].each { |quem| described_class.siglas(quem) }
+
+    expect(stub).to have_been_requested.twice
+    expect(Rails.cache).not_to have_received(:fetch).with(a_string_including('corretor.teste'), anything)
+  end
+
   it 'validas? aponta as siglas que a Universal não atende' do
     stub_destinos
     expect(described_class.validas?(%w[PT XX], cliente)).to eq([false, ['XX']])

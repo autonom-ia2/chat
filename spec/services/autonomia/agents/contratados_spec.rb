@@ -13,6 +13,19 @@ RSpec.describe Autonomia::Agents::Contratados do
     expect(described_class.disponiveis(account)).to eq([])
   end
 
+  it 'disponível exige a chave de IA da própria conta; liberado não (a da instalação não conta)' do
+    account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
+                             'agente_ferramentas_prontas_consultas')
+    create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+    expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(true)
+    expect(described_class.disponivel?(account, 'seguro_viagem_universal')).to be(false)
+
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
+    expect(described_class.disponivel?(account, 'seguro_viagem_universal')).to be(true)
+  end
+
   it 'os slugs do catálogo existem no Registry' do
     slugs = described_class::MODELOS.values.flat_map { |m| m[:ferramentas_nativas] }
     expect(slugs - Autonomia::Agents::Tools::Registry.slugs).to eq([])

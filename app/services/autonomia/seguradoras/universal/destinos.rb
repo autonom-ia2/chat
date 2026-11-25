@@ -1,10 +1,12 @@
-# Os países que a Universal atende, guardados por um dia: a lista muda pouco e a cotação a consulta a cada pedido.
+# Os países que a Universal atende, guardados por um dia: a lista muda pouco e a cotação a consulta a cada pedido. A lista
+# vem com o login do emissor, e nada garante que seja a mesma para todos: o cache é por emissor (`Cliente#emissor`), e
+# uma corretora nunca lê a lista que outra leu.
 # Guarda a sigla do país em maiúsculas e o nome do país como a Universal o escreve (o PDF e a conversa falam
 # "Portugal", não "PT"). Quando a Universal não responde, `siglas` devolve nil e a falha não fica guardada. Lista vazia
 # conta como falha: com ela toda sigla seria inválida por um dia inteiro. Quem chama não barra a cotação por isso; a
 # própria Universal recusa o destino que não atende.
 module Autonomia::Seguradoras::Universal::Destinos
-  CHAVE = 'autonomia:universal:destinos:v2'.freeze
+  CHAVE = 'autonomia:universal:destinos:v3:'.freeze
   VALIDADE = 1.day
 
   module_function
@@ -27,7 +29,7 @@ module Autonomia::Seguradoras::Universal::Destinos
   # uma vez e passa o mapa a `validas_em?` e `nomes_em`: com a Universal fora nada fica no cache, e ler duas vezes
   # seriam duas chamadas.
   def paises(cliente)
-    Rails.cache.fetch(CHAVE, expires_in: VALIDADE, skip_nil: true) { buscar(cliente) }
+    Rails.cache.fetch("#{CHAVE}#{cliente.emissor}", expires_in: VALIDADE, skip_nil: true) { buscar(cliente) }
   end
 
   # `validas?` sobre um mapa já lido. Mapa nil (Universal fora) não barra.

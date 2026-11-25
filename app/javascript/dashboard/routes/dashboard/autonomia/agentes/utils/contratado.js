@@ -6,6 +6,7 @@ import { MAX_NOME, MAX_SOBRE } from '../constants/contratados';
 const TEXTO_DO_CODIGO = {
   marcador: t => t('AGENTS.CONTRATADOS.ERRO.MARCADOR'),
   indisponivel: t => t('AGENTS.CONTRATADOS.ERRO.INDISPONIVEL'),
+  sem_chave_de_ia: t => t('AGENTS.CONTRATADOS.ERRO.SEM_CHAVE_DE_IA'),
   nome_agente: t =>
     t('AGENTS.CONTRATADOS.ERRO.NOME_AGENTE', { maximo: MAX_NOME }),
   nome_corretora: t =>

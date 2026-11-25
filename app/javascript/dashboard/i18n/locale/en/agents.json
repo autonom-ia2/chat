@@ -4125,6 +4125,7 @@
       "ERRO": {
         "MARCADOR": "This text has a reserved code (a piece of text with $). Remove that part and try again.",
         "INDISPONIVEL": "This ready-made agent is not available for this account right now. Contact Autonom.ia support.",
+        "SEM_CHAVE_DE_IA": "Your account's AI key is missing. This agent talks using your account's own key. Connect the AI key in Settings → Integrations and try again.",
         "NOME_AGENTE": "Write the agent's name, up to {maximo} characters.",
         "NOME_CORRETORA": "Write the brokerage's name, up to {maximo} characters.",
         "SOBRE_CORRETORA": "The brokerage's introduction can have up to {maximo} characters.",

@@ -4125,6 +4125,7 @@
       "ERRO": {
         "MARCADOR": "Este texto tem um código reservado (um trecho com $). Tire esse trecho e tente de novo.",
         "INDISPONIVEL": "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia.",
+        "SEM_CHAVE_DE_IA": "Falta a chave de IA da sua conta. Este agente conversa usando a chave da sua conta. Conecte a chave de IA em Configurações → Integrações e tente de novo.",
         "NOME_AGENTE": "Escreva o nome do agente, com até {maximo} caracteres.",
         "NOME_CORRETORA": "Escreva o nome da corretora, com até {maximo} caracteres.",
         "SOBRE_CORRETORA": "A apresentação da corretora pode ter até {maximo} caracteres.",

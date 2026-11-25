@@ -44,11 +44,14 @@ module Autonomia::Agents::Contratados
     MODELOS[marca(agent)&.dig('modelo')]
   end
 
+  # O catálogo da tela lista o modelo LIBERADO, mesmo sem a chave de IA da conta: quem clica em "Contratar" recebe a
+  # recusa `sem_chave_de_ia`, que diz o que falta e onde resolver, em vez de um cartão que some sem explicação.
   def disponiveis(account)
-    MODELOS.keys.select { |chave| disponivel?(account, chave) }
+    MODELOS.keys.select { |chave| liberado?(account, chave) }
   end
 
-  def disponivel?(account, chave)
+  # A flag do modelo, as duas das prontas e o cofre: o modelo existe para esta conta.
+  def liberado?(account, chave)
     modelo = MODELOS[chave]
     return false if modelo.nil? || account.nil?
 
@@ -56,6 +59,12 @@ module Autonomia::Agents::Contratados
       Autonomia::FerramentasProntas.ligada?(account) &&
       account.feature_enabled?(Autonomia::FerramentasProntas::FLAG_CONSULTAS) &&
       Chatwoot.encryption_configured?
+  end
+
+  # Liberado E com a chave de IA da PRÓPRIA conta (`Base.chave_da_conta`). O contratado conversa, busca na base e fala
+  # por áudio com a chave da conta; a da instalação nunca paga o atendimento de um cliente (regra do Rodrigo, #3204).
+  def disponivel?(account, chave)
+    liberado?(account, chave) && Autonomia::Agents::Contratados::Base.chave_da_conta(account).present?
   end
 
   # -> os slugs das ferramentas nativas do modelo; nil para quem não é contratado.

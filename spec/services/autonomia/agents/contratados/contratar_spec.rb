@@ -9,6 +9,10 @@ RSpec.describe Autonomia::Agents::Contratados::Contratar do
     enable_test_encryption!
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
+    # Contratar exige a chave de IA da própria conta; a de mentira não passa pelo provedor.
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
     coluna = Autonomia::Agents::Config.embedding_column(Autonomia::Agents::Config.active_embedding_model)
     dimensao = coluna == Autonomia::Agents::Config::EMBEDDING_LARGE_COLUMN ? 3072 : 1536
     allow(embedder).to receive(:embed_batch) { |textos| textos.map { Array.new(dimensao, 0.01) } }
@@ -59,10 +63,16 @@ RSpec.describe Autonomia::Agents::Contratados::Contratar do
     expect(Autonomia::Agents::Agent.count).to eq(0)
   end
 
+  it 'conta sem a própria chave de IA: sem_chave_de_ia, sem campo, nada criado (a da instalação não vale)' do
+    Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
+    create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+
+    expect { contratar.call }.to raise_error(described_class::Recusado) { |e| expect([e.motivo, e.campo]).to eq(['sem_chave_de_ia', nil]) }
+    expect(Autonomia::Agents::Agent.count).to eq(0)
+    expect(Autonomia::Agents::Contratados::SemearBaseJob).not_to have_been_enqueued
+  end
+
   it 'a versão da base vai por jsonb_set, sem regravar o resto do config' do
-    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
-    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
-                               settings: { 'api_key' => 'chave-da-conta-teste' })
     pasta = Pathname.new(Dir.mktmpdir)
     pasta.join('base.md').write("### Bloco 1\nUm.\n### Bloco 2\nDois.\n### Bloco 3\nTrês.\n")
     agente = contratar.call

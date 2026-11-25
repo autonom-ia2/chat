@@ -2237,6 +2237,7 @@ pt_BR:
       acesso_incompleto: "Preencha o login e a senha da seguradora."
       recusa:
         indisponivel: "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia."
+        sem_chave_de_ia: "Falta a chave de IA da sua conta. Este agente conversa usando a chave da sua conta. Conecte a chave de IA em Configurações → Integrações e tente de novo."
         nome_agente: "Escreva o nome do agente, com até %{maximo} caracteres."
         nome_corretora: "Escreva o nome da corretora, com até %{maximo} caracteres."
         sobre_corretora: "A apresentação da corretora pode ter até %{maximo} caracteres."

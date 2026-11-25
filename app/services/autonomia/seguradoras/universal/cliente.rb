@@ -16,8 +16,11 @@ class Autonomia::Seguradoras::Universal::Cliente
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
-  FALHAS_DE_REDE = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError,
+  FALHAS_DE_REDE = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
+                    Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::ETIMEDOUT, EOFError, IOError,
                     OpenSSL::SSL::SSLError, Net::HTTPBadResponse].freeze
+  # Separação de domínio do resumo do login (`emissor`): a chave do HMAC é derivada só para isto.
+  DOMINIO_DO_EMISSOR = 'universal/emissor'.freeze
 
   class Erro < StandardError
     attr_reader :codigo, :mensagem_da_seguradora
@@ -40,6 +43,12 @@ class Autonomia::Seguradoras::Universal::Cliente
 
   def setup
     chamar(:setup, Net::HTTP::Get, '/v1/Emissor/Setup')
+  end
+
+  # Um resumo do login (HMAC, 16 caracteres) para separar o que fica guardado por emissor, como a lista de destinos.
+  # Nunca o login: a chave de cache vai para o Redis e para log.
+  def emissor
+    OpenSSL::HMAC.hexdigest('SHA256', Rails.application.key_generator.generate_key(DOMINIO_DO_EMISSOR), @login.to_s).first(16)
   end
 
   def destinos

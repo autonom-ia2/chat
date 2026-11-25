@@ -68,6 +68,32 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
     expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=sem_chave_da_conta'))
   end
 
+  describe 'a base pela metade (cada tentativa pagou o embedding inteiro)' do
+    let(:base) { Autonomia::Agents::Contratados::Base }
+
+    after { Redis::Alfred.delete(base.chave_das_parciais(contratado.id)) }
+
+    it 'conta cada tentativa até o teto, com o motivo no log' do
+      allow(base).to receive(:semear_se_preciso!).and_return(base::BASE_PARCIAL)
+
+      (base::TETO_DE_PARCIAIS - 1).times { described_class.perform_now(contratado.id) }
+      expect(base.parciais_esgotadas?(contratado.id)).to be(false)
+      described_class.perform_now(contratado.id)
+
+      expect(base.parciais_esgotadas?(contratado.id)).to be(true)
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=base_parcial'))
+                                                  .exactly(base::TETO_DE_PARCIAIS).times
+    end
+
+    it 'só a base pela metade conta: sem a chave da conta, nada' do
+      allow(base).to receive(:semear_se_preciso!).and_return(base::SEM_CHAVE_DA_CONTA)
+
+      base::TETO_DE_PARCIAIS.times { described_class.perform_now(contratado.id) }
+
+      expect(base.parciais_esgotadas?(contratado.id)).to be(false)
+    end
+  end
+
   describe 'com a Base de verdade e o embedding parado' do
     let(:pasta) { Pathname.new(Dir.mktmpdir) }
     let(:embedder) { instance_double(Autonomia::Agents::EmbeddingService) }

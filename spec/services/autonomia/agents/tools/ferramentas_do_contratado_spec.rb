@@ -14,7 +14,15 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
                                      config: { 'contratado' => marca })
   end
 
-  before { enable_test_encryption! }
+  before do
+    enable_test_encryption!
+    # As ferramentas chegam com o modelo disponível no turno: a flag, as prontas e a chave de IA da própria conta.
+    account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
+                             'agente_ferramentas_prontas_consultas')
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
+  end
 
   def acesso_ok!(capacidades: {})
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: contratado, login: 'corretor.teste',
@@ -40,6 +48,19 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
   it 'contratado com acesso ok recebe as três' do
     acesso_ok!
     expect(described_class.for_agent(contratado).map(&:slug)).to eq(slugs)
+  end
+
+  it 'modelo desligado na conta: nenhuma, mesmo com o acesso ok' do
+    acesso_ok!
+    account.disable_features!('agente_seguro_viagem_universal')
+    expect(described_class.for_agent(contratado.reload).map(&:slug)).to eq([])
+  end
+
+  it 'conta sem a própria chave de IA: nenhuma, mesmo com a da instalação' do
+    acesso_ok!
+    Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
+    create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+    expect(described_class.for_agent(contratado.reload).map(&:slug)).to eq([])
   end
 
   it 'login que só cota: sem proposta' do

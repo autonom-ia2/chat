@@ -18,6 +18,12 @@ module Autonomia::Agents::Contratados::Base
   # Por que a semeadura não aconteceu (log e retorno), nunca a mensagem do provedor.
   SEM_CHAVE_DA_CONTA = 'sem_chave_da_conta'.freeze
   BASE_PARCIAL = 'base_parcial'.freeze
+  # Cada semeadura que volta `BASE_PARCIAL` pagou o embedding inteiro. Depois deste número de tentativas na mesma versão,
+  # o cron (`BaseEmDiaJob`) para de enfileirar o agente; a contagem é por versão (o deploy seguinte zera) e vence em
+  # `VALIDADE_DAS_PARCIAIS` (depois disso, mais `TETO_DE_PARCIAIS` tentativas).
+  TETO_DE_PARCIAIS = 3
+  VALIDADE_DAS_PARCIAIS = 30.days
+  PARCIAIS = 'autonomia:contratados:base:parciais:'.freeze
 
   module_function
 
@@ -135,6 +141,21 @@ module Autonomia::Agents::Contratados::Base
       ['config = jsonb_set(COALESCE(config, \'{}\'::jsonb), \'{contratado_base_versao}\', ?::jsonb, true), updated_at = ?',
        versao.to_json, Time.current]
     )
+  end
+
+  # Conta uma semeadura que voltou `BASE_PARCIAL` para este agente nesta versão.
+  def anotar_parcial!(agent_id)
+    chave = chave_das_parciais(agent_id)
+    Redis::Alfred.incr(chave)
+    Redis::Alfred.expire(chave, VALIDADE_DAS_PARCIAIS.to_i)
+  end
+
+  def parciais_esgotadas?(agent_id)
+    Redis::Alfred.get(chave_das_parciais(agent_id)).to_i >= TETO_DE_PARCIAIS
+  end
+
+  def chave_das_parciais(agent_id)
+    "#{PARCIAIS}#{agent_id}:#{VERSAO}"
   end
 
   # Trava de SESSÃO por agente: serializa a semeadura inteira sem segurar uma transação durante o embedding.
