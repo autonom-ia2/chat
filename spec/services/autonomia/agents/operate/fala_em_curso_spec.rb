@@ -87,6 +87,23 @@ RSpec.describe Autonomia::Agents::Operate::FalaEmCurso do
     expect(fala.prever_fim!(42, 7, 'oi')).to be_nil
   end
 
+  # O pool do Redis (ConnectionPool, espera de 1 s) esgotado não é Redis::BaseError; o `soltar` roda no ensure de todo
+  # ReplyJob e ChunkedDeliveryJob, com ou sem as opções, e não pode levantar.
+  it 'tempo de espera do pool no soltar: não levanta' do
+    allow(Redis::Alfred).to receive(:delete_if_equals).and_raise(ConnectionPool::TimeoutError)
+    expect { fala.soltar(42, 7) }.not_to raise_error
+  end
+
+  # Valor gravado antes do turno no valor (só os ms, sem "<id>:"): o fim ainda é lido, e ninguém o apaga como seu.
+  it 'fim no formato antigo, só ms: é lido e esquecer_o_fim não o apaga', :aggregate_failures do
+    fim = 20.seconds.from_now
+    Redis::Alfred.set(fala.chave_do_fim(42), (fim.to_f * 1000).round)
+
+    expect(fala.fim_previsto(42)).to be_within(0.001.seconds).of(fim)
+    expect(fala.esquecer_o_fim(42, 7)).to be(false)
+    expect(Redis::Alfred.get(fala.chave_do_fim(42))).to eq((fim.to_f * 1000).round.to_s)
+  end
+
   # #3211 (revisão final F3): só a falha do Redis é engolida; erro de código sobe, não vira "ninguém falando".
   it 'erro que não é do Redis sobe', :aggregate_failures do
     allow(Redis::Alfred).to receive(:get).and_raise(NoMethodError)

@@ -14,8 +14,9 @@
 # com WATCH/MULTI). O TTL é rede de segurança: o caminho normal sempre solta.
 #
 # Nunca levanta por falha do Redis: é sinal de cortesia. Redis fora do ar quer dizer "ninguém ocupando, sem fim
-# previsto", e o agente responde com a espera mínima. Só o erro do Redis é engolido (Redis::BaseError); erro de código
-# sobe, para não virar "ninguém falando" em silêncio.
+# previsto", e o agente responde com a espera mínima. Só o erro do Redis é engolido (Redis::BaseError e o tempo de espera
+# do pool, ConnectionPool::TimeoutError: o `soltar` roda no ensure de todo ReplyJob e ChunkedDeliveryJob, mesmo com as
+# opções desligadas); erro de código sobe, para não virar "ninguém falando" em silêncio.
 module Autonomia::Agents::Operate::FalaEmCurso
   CHAVE_OCUPADA = 'autonomia:fala_em_curso:%<conversa>d'.freeze
   CHAVE_DO_FIM = 'autonomia:fim_da_fala:%<conversa>d'.freeze
@@ -35,7 +36,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
   def ocupar(conversation_id, message_id, agent = nil)
     ::Redis::Alfred.set(chave_ocupada(conversation_id), message_id.to_s, ex: ::Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno(agent).to_i)
     nil
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     nil
   end
 
@@ -50,7 +51,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
         Array(redis.multi { |transacao| transacao.expire(chave, ttl) }).first.present?
       end
     end
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     false
   end
 
@@ -59,7 +60,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
 
     ::Redis::Alfred.delete_if_equals(chave_ocupada(conversation_id), message_id.to_s)
     nil
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     nil
   end
 
@@ -67,7 +68,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
   def ocupada_por_outro?(conversation_id, message_id)
     dono = ::Redis::Alfred.get(chave_ocupada(conversation_id))
     dono.present? && dono != message_id.to_s
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     false
   end
 
@@ -84,7 +85,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
     fim = agora + (duracao_estimada_ms(texto) / 1000.0)
     ::Redis::Alfred.set(chave_do_fim(conversation_id), "#{message_id}:#{(fim.to_f * 1000).round}", ex: TTL_DO_FIM)
     fim
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     nil
   end
 
@@ -94,7 +95,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
     return if ms.blank?
 
     Time.zone.at(ms.to_i / 1000.0)
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     nil
   end
 
@@ -111,7 +112,7 @@ module Autonomia::Agents::Operate::FalaEmCurso
         Array(redis.multi { |transacao| transacao.del(chave) }).first.to_i.positive?
       end
     end
-  rescue ::Redis::BaseError
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
     false
   end
 end
