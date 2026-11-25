@@ -1,7 +1,8 @@
 # Plano de implementação: agente pronto "Seguro Viagem Universal" (PR 2 da #3211)
 
-> Para quem executa: siga as tarefas na ordem. Cada tarefa tem spec que falha primeiro, implementação, verificação e
-> dois commits (teste e código separados). As tarefas de tela só começam depois da Tarefa 24 (gate do mockup).
+> Para quem executa: siga a **Ordem de execução** abaixo (não a numeração). Cada tarefa tem spec que falha primeiro,
+> implementação, verificação e dois commits (teste e código separados). As tarefas de tela só começam depois da
+> Tarefa 24 (gate do mockup).
 
 **Objetivo.** O corretor contrata, na área de Agentes, o agente "Seguro Viagem Universal": informa nome do agente,
 nome e descrição da corretora, depois login e senha do portal da Universal, depois a caixa. O agente vende seguro viagem
@@ -17,11 +18,70 @@ ferramentas fixas, a base e as opções de conversa de cada modelo. A Universal 
 (`Autonomia::Agents::AcessoDaSeguradora`). A cotação fica em `autonomia_cotacoes_de_viagem`, e a proposta lê dela:
 preço e plano nunca vêm do modelo.
 
-**Tecnologia.** Rails 7.2 (fork do Chatwoot), Postgres jsonb, ActiveRecord Encryption (`encrypts`), Net::HTTP, Prawn,
+**Tecnologia.** Rails 8.0 (fork do Chatwoot; as migrations do fork seguem `ActiveRecord::Migration[7.2]`), Postgres jsonb, ActiveRecord Encryption (`encrypts`), Net::HTTP, Prawn,
 Sidekiq + sidekiq-cron, Vue 3 `<script setup>`, Tailwind, Vitest, Histoire + Playwright headless para os prints.
 
 **Desenho aprovado.** `docs/superpowers/specs/2026-11-24-agente-seguro-viagem-universal-design.md` (tudo, menos a
 seção 8, que é o PR 1). Instrução aprovada: `app/services/autonomia/agents/contratados/seguro_viagem_universal/instrucao.md`.
+
+---
+
+## Ordem de execução
+
+A numeração das tarefas ficou como estava (as referências "Tarefa N" continuam valendo); a ordem em que elas rodam é
+esta:
+
+```text
+0 → 1 → 2 → 3 → 4 → 5 → 23 → 6 → [7 + 8, um despacho só] → 9 → 10 → 11 → 12 → 18 → 14 → 13 → 15 → 16 → 17
+  → 19 → 20 → 21 → 22 → 24 (gate) → 25 → 29a → 26 → 27 → 28 → 29b → 30
+```
+
+- **23 antes de 6:** o spec da Tarefa 6 liga a flag `agente_seguro_viagem_universal` (`enable_features!` chama
+  `feature_<nome>=`, que só existe com a flag em `config/features.yml`).
+- **7 e 8 num despacho só (R12):** os dois leitores do CRM trocam de predicado no mesmo commit em que
+  `instrucao_mantida?` passa a cobrir o contratado; nenhum commit intermediário deixa o CRM tratar o contratado como a Lia.
+- **18 e 14 antes de 13 (R6):** a 13 chama `SeguroViagem::Falhas` (18), `EntregaDoComparativo` (14) e os
+  utilitários `SeguroViagem::Faixas` e `SeguroViagem::Dinheiro` (criados na 14, a primeira que precisa deles).
+- **29a antes de 26 (R15):** a rota `autonomia_contratado_modelo` e o i18n do painel (`AGENTS.CONTRATADOS.*`) existem
+  antes do cartão que navega para ela; o bloco do Guia (29b) fica por último.
+
+---
+
+## Rulings do pre-flight (25/11)
+
+Decididos pelo controlador do pre-flight; aplicados no texto das tarefas indicadas.
+
+- **R0** — Nenhuma tarefa do PR 2 chama código do PR 1; 6 e 20 gravam só chaves em texto. A Tarefa 30 (teste pago)
+  exige o PR 1 mesclado **e no ar**. → "Interfaces que vêm do PR 1", Tarefas 6, 20 e 30.
+- **R1** — Fixtures da cotação real anonimizada (`cotacao_nacional_anonima.json`) + 1 produto montado à mão sem 2898;
+  `codigoEmissor` → 1; `setup.json` e `destinos.json` montados à mão; `setup_so_cotacao.json` sai. → Tarefas 0, 12.
+- **R2** — Índices em `account_id` (as duas tabelas) e `autonomia_agent_id` (cotações); `schema.rb` à mão sobe a
+  linha da versão. → Tarefa 2.
+- **R3** — `Autonomia::Seguradoras::Universal::Codigos` (os códigos de `motivo`) nasce na Tarefa 3, usado por 3 e 10.
+- **R4** — `pedido` da cotação guarda os nossos parâmetros e o pedido enviado (`'universal'`). → Tarefas 4, 13, 14,
+  15, 17.
+- **R5** — `principais` usa o texto `valor` da Universal; `cambio` = `valorDoCambio` (senão `tarifa.cambio`). → Tarefa 13.
+- **R6** — Ordem 18 → 14 → 13; `SeguroViagem::Falhas` com `module_function`; `Faixas` e `Dinheiro` criados uma vez
+  (Tarefa 14) e reusados. → Tarefas 13, 14, 15, 17, 18.
+- **R7** — Idempotência do PDF pelo marcador do `content_attributes`, sem filtrar `private`; mensagem criada em
+  `#criar`. → Tarefa 14.
+- **R8** — `enable_test_encryption!` nos specs com coluna cifrada ou `Contratados.disponivel?`; `MemoryStore` nos
+  specs de cache. → Restrições globais, Tarefas 3, 6, 7, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22.
+- **R9** — `validas?(siglas, cliente)` com os dois argumentos no spec. → Tarefa 11.
+- **R10** — `pedido_invalido` no Setup não levanta e grava motivo `pedido_invalido`. → Tarefa 12.
+- **R11** — Teste "não passa a atender sem acesso ok" sem `if`, com caixa arranjada; locales no arquivo da 7. → Tarefa 7.
+- **R12** — Tarefa 8 vira código (`Agent#protegido_no_crm?` e os dois leitores do CRM); 7 e 8 num despacho. → Tarefas 7, 8.
+- **R13** — Contratado nasce rascunho; versão da base por `update_all` + `jsonb_set`; `contratado_base_versao` em
+  `RESERVED_CONFIG_KEYS` na Tarefa 9; teste literal das chaves de conversa. → Tarefas 6, 9, 20.
+- **R14** — `Contratar::Recusado` leva `campo`; o 422 também. → Tarefas 20, 21, 27.
+- **R15** — Rota e i18n da 29 antes da 26 (29a); Guia por último (29b). → Ordem de execução, Tarefa 29.
+- **R16** — Tarefa 28 também mexe em `AgentePage.vue`, `GavetaOndeQuando.vue`, Saber só leitura e no "Continuar" da
+  lista; gavetas novas em `components/pagina/`. → Mapa de arquivos, Tarefa 28.
+- **R17** — `Cpf.valido?` protegido contra nil; `Compra` aceita bairro/logradouro nil. → Tarefa 17.
+- **R18** — Valores esperados do `planos_spec` calculados da fixture. → Tarefa 13.
+- **R19** — `Instrucao.renderizar` devolve nil com modelo desconhecido (com spec). → Tarefa 6.
+- **R20** — Testes fracos da proposta afirmam o código exato da recusa. → Tarefa 17.
+- **R21** — `autonomia/agents/acesso_da_seguradora` no grupo de credenciais do `automacao-recursos.yml`. → Tarefa 21.
 
 ---
 
@@ -56,7 +116,7 @@ projeto; cada uma tem tarefa própria abaixo):
 - `spec/services/autonomia/agents/tools/native/base_escreve_declarado_spec.rb`: toda nativa do `Registry` declara
   `escreve?` (Tarefa 19).
 - Vitest de outra pasta que importa as rotas reais quebra quando a rota muda: depois de mexer em rota, rodar também
-  `pnpm test app/javascript/dashboard/modules` (Tarefa 29).
+  `pnpm test app/javascript/dashboard/modules` (Tarefas 29a e 28).
 
 Como rodar o que é permitido localmente:
 
@@ -71,6 +131,26 @@ pnpm guia:check
 
 Specs Ruby: escreva, commite e deixe a CI rodar. Passo "Rodar" de toda tarefa Ruby: **não rodar localmente; roda na CI.**
 
+Duas regras de spec que valem para todas as tarefas (R8):
+
+- Spec que grava ou lê coluna cifrada (`AcessoDaSeguradora#login`/`#senha`) ou que passa por
+  `Contratados.disponivel?` (que exige `Chatwoot.encryption_configured?`) chama `enable_test_encryption!`
+  (`spec/support/insurance_encryption_helper.rb`) num `before`. A CI não tem as chaves do cofre.
+- O ambiente de teste usa `config.cache_store = :null_store`. Spec que prova cache troca o `Rails.cache` por um
+  `ActiveSupport::Cache::MemoryStore` e devolve o original:
+
+```ruby
+around do |exemplo|
+  original = Rails.cache
+  Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  begin
+    exemplo.run
+  ensure
+    Rails.cache = original
+  end
+end
+```
+
 ---
 
 ## Foco da revisão (o que mais provavelmente morde)
@@ -80,7 +160,7 @@ Specs Ruby: escreva, commite e deixe a CI rodar. Passo "Rodar" de toda tarefa Ru
 | R1 | Estender `instrucao_mantida?` muda a Lia, ou muda em silêncio um leitor que não é escritor da instrução (passagem da IA do CRM, F1, material, foto). | `agent_lia_inalterada_spec.rb` (instrução, ferramentas, rodadas e predicados da Lia idênticos) e `leitores_de_instrucao_mantida_spec.rb` (um exemplo por leitor, com a decisão escrita). | 7 e 8 |
 | R2 | Comissão, markup, ranking ou dado pessoal chega ao modelo, ao PDF, ao banco ou ao log. | `planos_spec.rb` monta os planos da resposta gravada e afirma que o JSON não contém `comissao`, `comissaoIntermediario`, `markup`, `rank`, `quotationPorcentagem`, `valorSemDesconto`; `cliente_spec.rb` captura o log e afirma que não tem `Senha`, login, CPF nem corpo. | 10 e 13 |
 | R3 | Preço ou plano da proposta vem do texto do modelo; ou a proposta sai duas vezes. | `gerar_proposta_seguro_viagem_spec.rb`: `ValorCompra` e `CodigoProduto` enviados são os da cotação guardada; código inexistente é recusado sem chamar a Universal; segunda chamada igual não faz segundo `POST /v1/Compras`. | 17 |
-| R4 | A ferramenta fica disponível para agente que não é o contratado (PATCH em `native_tool_slugs`), ou sem acesso conferido, ou a proposta para login "só cota". | `ferramentas_do_contratado_spec.rb`: `Registry.for_agent` de um `sdr` comum com os três slugs gravados devolve nenhum; do contratado com acesso `nao_conferido` devolve nenhum; com `soCotacao: true` devolve cotar e detalhes, sem proposta. | 19 |
+| R4 | A ferramenta fica disponível para agente que não é o contratado (PATCH em `native_tool_slugs`), ou sem acesso conferido, ou a proposta para login "só cota". | `ferramentas_do_contratado_spec.rb`: `Registry.for_agent` de um `sdr` comum com os três slugs gravados devolve nenhum; do contratado com acesso `nao_conferido` devolve nenhum; com `capacidades['so_cotacao'] == true` devolve cotar e detalhes, sem proposta. | 19 |
 | R5 | Login ou senha da Universal sai pela API, pelo jbuilder, por log ou por erro; a recusa da ferramenta não passa pelo registro e trava a próxima escrita do turno (`UmaEscritaPorTurno`). | `acesso_da_seguradora_spec.rb` (request): resposta sem `senha`, sem `login` completo, só `login_dica`; `falhas_spec.rb`: toda recusa chama `Tools::Recusa.registrar`, e o erro de HTTP nunca levanta da ferramenta. | 21 e 18 |
 
 ---
@@ -103,6 +183,7 @@ app/services/autonomia/agents/contratados/conferir_acesso.rb
 app/services/autonomia/agents/contratados/base.rb               # semear a base oficial
 app/services/autonomia/agents/contratados/seguro_viagem_universal/base/condicoes_gerais.md
 app/services/autonomia/agents/contratados/seguro_viagem_universal/base/folheto_de_produtos.md
+app/services/autonomia/seguradoras/universal/codigos.rb        # R3: códigos de motivo (Tarefa 3)
 app/services/autonomia/seguradoras/universal/cliente.rb
 app/services/autonomia/seguradoras/universal/destinos.rb
 app/services/autonomia/agents/tools/native/cotar_seguro_viagem.rb
@@ -110,7 +191,8 @@ app/services/autonomia/agents/tools/native/detalhes_da_cotacao.rb
 app/services/autonomia/agents/tools/native/gerar_proposta_seguro_viagem.rb
 app/services/autonomia/agents/tools/native/seguro_viagem/pedido.rb
 app/services/autonomia/agents/tools/native/seguro_viagem/planos.rb
-app/services/autonomia/agents/tools/native/seguro_viagem/faixas.rb
+app/services/autonomia/agents/tools/native/seguro_viagem/faixas.rb       # R6: nasce na Tarefa 14, a 17 acrescenta
+app/services/autonomia/agents/tools/native/seguro_viagem/dinheiro.rb     # R6: nasce na Tarefa 14
 app/services/autonomia/agents/tools/native/seguro_viagem/viajantes.rb
 app/services/autonomia/agents/tools/native/seguro_viagem/compra.rb
 app/services/autonomia/agents/tools/native/seguro_viagem/endereco_do_cep.rb
@@ -122,22 +204,27 @@ app/jobs/autonomia/agents/contratados/base_em_dia_job.rb
 app/controllers/api/v1/accounts/autonomia/contratados_controller.rb
 app/controllers/api/v1/accounts/autonomia/agents/contratado_controller.rb
 app/controllers/api/v1/accounts/autonomia/agents/acesso_da_seguradora_controller.rb
-spec/fixtures/universal/{setup,setup_so_cotacao,destinos,cotacao,compras_ok,compras_400}.json
+spec/fixtures/universal/{setup,destinos,cotacao,compras_ok,compras_400}.json
 app/javascript/dashboard/api/autonomia/contratados.js
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/composables/useContratados.js
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/ProntosParaContratar.vue
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/ContratadoCartao.vue
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/pages/ContratadoModeloPage.vue
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/DadosDaCorretoraForm.vue
-app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/AcessoDaSeguradoraForm.vue
-app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/GavetaDoContratado.vue
-app/javascript/dashboard/routes/dashboard/autonomia/agentes/stories/Contratado.story.vue
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/pagina/AcessoDaSeguradoraForm.vue
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/pagina/GavetaDoContratado.vue
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/stories/Contratado.story.vue   # já commitada (gate 24)
 ```
+
+`ContratadoModeloPage.vue` nasce na Tarefa 29a com o mínimo (a rota precisa do arquivo) e é completada na Tarefa 27.
 
 Modificar (linhas lidas em 24/11, no HEAD `a390af7dce`):
 
 ```text
-app/models/autonomia/agents/agent.rb                 63 (include), 217-219, 240-242, 249-254
+db/schema.rb                                         versão (linha 13) e as duas tabelas, em ordem alfabética
+app/models/autonomia/agents/agent.rb                 63 (include), 217-219, 240-242, 249-254; + protegido_no_crm?
+app/services/crm/ai/fatos_da_conversa.rb                                  10 (comentário), 122
+app/services/crm/ai/handoff_executor.rb                                   30 (comentário), 110
 app/controllers/api/v1/accounts/autonomia/agents_controller.rb      203 (RESERVED_CONFIG_KEYS)
 app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb   2-3, 9, 32, 41
 app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb     83-87
@@ -155,7 +242,11 @@ app/javascript/dashboard/i18n/locale/{en,pt_BR}/agents.json
 app/javascript/dashboard/routes/dashboard/autonomia/autonomia.routes.js   perto da 172
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/pages/AgenteEscolherPage.vue   65-231
 app/javascript/dashboard/routes/dashboard/autonomia/agentes/utils/pagina.js                37-90
-lib/operator_guide/porques.md, lib/operator_guide/automacao-recursos.yml (595-625)
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/pages/AgentePage.vue          204 (gavetasPermitidas), gavetas
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/pages/AgentesListaPage.vue    310-327 (continuar)
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/pagina/GavetaOndeQuando.vue   props (texto do passo)
+app/javascript/dashboard/routes/dashboard/autonomia/agentes/components/pagina/GavetaOQueSabe.vue     Saber só leitura
+lib/operator_guide/porques.md, lib/operator_guide/automacao-recursos.yml (559-595 credenciais; 597-625 IA)
 spec/services/autonomia/insurance/receita/sem_texto_fixo_ao_cliente_spec.rb   PONTOS (19+)
 ```
 
@@ -178,8 +269,13 @@ CONVERSA_DO_PR1 = {
 ```
 
 Já existem hoje e entram junto: `'humanize_delivery' => true` (quebra e cadência) e `'voice_reply' => true` (P7; a
-regra "sem áudio quando a resposta tem link" é do PR 1). **Pré-condição deste PR: PR 1 mesclado.** Se o PR 2 precisar
-abrir antes, a constante entra vazia e a Tarefa 20 tem um teste pendente nomeado `liga as opções de conversa do PR 1`.
+regra "sem áudio quando a resposta tem link" é do PR 1).
+
+**Dependência do PR 1 (R0).** Nenhuma tarefa deste PR chama código do PR 1: as Tarefas 6 e 20 só **gravam** as
+quatro chaves acima, em texto, no `config` do agente; quem as lê é o PR 1. Por isso o código e os specs deste PR não
+esperam o PR 1, e a constante nasce sempre com as quatro chaves (nunca vazia). O que espera é a **Tarefa 30** (teste
+pago): ela só roda com o PR 1 **mesclado e no ar**, porque o teste confere a conversa de ponta a ponta, inclusive a
+regra do P7 "link não vira áudio" (a resposta com o link de pagamento não pode sair em áudio).
 
 ---
 
@@ -187,16 +283,16 @@ abrir antes, a constante entra vazia e a Tarefa 20 tem um teste pendente nomeado
 
 ### Tarefa 0 — Insumos reais da Universal (gate de dados)
 
-Login (Rodrigo, 24/11): o **dele**, cadastrado por ele na tela de acesso do agente, na conta 18, depois do deploy. Por
+Login (Rodrigo, 24/11): o **dele**, cadastrado por ele na tela de acesso do agente, na conta piloto, depois do deploy. Por
 isso esta tarefa se divide:
 
-- **0a — antes do código (agora):** as fixtures saem da resposta real de `doQuotation Universal` da execução n8n
-  `5701717` (fluxo `O7AQQa5tGNxEhIop`, cotação nacional `BR`, 2 produtos "Especial UA 100K/30K BRL", 32 benefícios),
-  lida só pela API do n8n e anonimizada como abaixo. É a única execução de cotação que o n8n ainda guarda. As
-  constantes nascem como listas: `IDS_DMH = [2898]`, `IDS_BAGAGEM = [2595]`, `IDS_CANCELAMENTO = [2601]`; benefício
-  sem id conhecido aparece no PDF e em `detalhes_da_cotacao` pela lista completa, só não vira coluna de destaque.
-  Setup, destinos e um produto sem despesas médicas (para o filtro) entram como fixtures montadas à mão, com a forma
-  do Postman.
+- **0a — antes do código (agora):** as fixtures saem de
+  `.superpowers/sdd/2026-11-24-agente-seguro-viagem-universal/cotacao_nacional_anonima.json` (chaves `"pedido"` e
+  `"resposta"`): a resposta real de `doQuotation Universal` de uma cotação nacional `BR`, já anonimizada, com 2
+  produtos ("Especial UA 100K BRL" e "Especial UA 30K BRL", os dois com o benefício 2898) e 32 benefícios no
+  catálogo. As constantes nascem como listas: `IDS_DMH = [2898]`, `IDS_BAGAGEM = [2595]`, `IDS_CANCELAMENTO = [2601]`;
+  benefício sem id conhecido aparece no PDF e em `detalhes_da_cotacao` pela lista completa, só não vira coluna de
+  destaque. Setup, destinos e um terceiro produto sem despesas médicas (para o filtro) entram montados à mão.
 - **0b — depois do deploy, com o login do Rodrigo (passo da Tarefa 30):** a primeira cotação internacional (`PT`) pela
   conversa de teste confirma os ids internacionais, o `tipoTarifa` do Setup e o `FormaPagamento: 8`. Se os ids forem
   outros, um PR pequeno acrescenta à lista. Os passos abaixo descrevem a conferência; nenhum script com credencial.
@@ -212,13 +308,50 @@ isso esta tarefa se divide:
   ids internacionais são os mesmos; se forem outros, um PR pequeno os acrescenta às listas.
   Nota: a mesma cotação real foi aceita com `tipoTarifa: 0` e devolveu `mostrarTarifaAcordo: true`; manter a regra do
   Setup (1/2) e conferir aqui que `2` funciona para o login do Rodrigo.
-- [ ] Gravar as fixtures em `spec/fixtures/universal/` **anonimizadas**: `idCotacao` trocado por `'COT-TESTE-1'`,
-  `fkEmpresa`/`idEmissor` por `1`, nenhum nome, CPF, e-mail ou login. Reduzir `cotacao.json` a 3 produtos (um sem
-  despesas médicas, para o filtro) e manter os campos internos (`comissao`, `markup`, `rank`, ...) com valores
-  fictícios, porque o teste prova que eles somem. `setup_so_cotacao.json` é cópia de `setup.json` com `soCotacao: true`.
-  `compras_ok.json` = `{"codigoCarrinho": 987654, "codigoCotacao": "COT-TESTE-1", "urlVoucher":
+- [ ] (0b) Conferir os **nomes dos campos do Setup** na resposta real: `soCotacao`, `emiteFaturado`, `emiteBoleto`,
+  `tarifaAcordo` (nomes do levantamento de fatos; o resumo mascarado da coleção Postman não traz o Setup). Se algum
+  nome for outro, um PR pequeno troca só a chave da esquerda de `ConferirAcesso::CAPACIDADES` (Tarefa 12) e o
+  `setup.json`; as nossas chaves (`so_cotacao`, ...) não mudam.
+
+Fixtures (0a), em `spec/fixtures/universal/`, **anonimizadas** (nenhum nome, CPF, e-mail, telefone real ou login):
+
+- [ ] `cotacao.json` = o objeto `"resposta"` do arquivo acima, com:
+  - `codigoEmissor` trocado por `1` (`idCotacao` já é `'COT-TESTE-1'`, `codigoEmpresa` já é `1`, `empresa` já é
+    `'Corretora Exemplo'`);
+  - os campos internos com valores fictícios não nulos, **mantendo as chaves** (o teste prova que elas somem):
+    `tarifa.comissao` → `1`, `tarifa.comissaoIntermediario` → `1`, `markup` → `1.1`, `rank` → `1`,
+    `quotationPorcentagemVenda` e `quotationPorcentagemPremio` → `1`; `valorSemDesconto*` ficam como estão;
+  - os 2 produtos reais **sem nenhuma outra mudança** e, depois deles, um terceiro produto montado à mão, **sem** o
+    benefício 2898 e com faixa de idade mais larga (para o filtro e para o teste de idade):
+
+```json
+{
+  "avulso": false, "descricao": "Produto Teste Sem DMH", "descricaoAdicional": "Produto montado para o teste do filtro",
+  "idProduto": 9000001, "idProdutoAcordo": 9000002, "idadeMinima": 0, "idadeMaxima": 99, "simboloMoeda": "R$",
+  "maxParcelas": 6, "internacional": false, "multiviagem": false, "rank": 1, "markup": 1.1,
+  "quotationPorcentagemVenda": 1, "quotationPorcentagemPremio": 1,
+  "regraCancelamento": [{ "de": "2026-11-24T00:00:00-03:00", "ate": "2026-11-24T00:00:00-03:00", "geraCredito": false, "multa": 0 }],
+  "tarifa": { "cambio": 1, "comissao": 1, "comissaoIntermediario": 1, "quantidadePassageiros": 3,
+              "tarifaIdade": [{ "de": 0, "ate": 99, "valor": 50, "valorMoeda": 50 }],
+              "valor": 150, "valorMoeda": 150, "valorSemDesconto": 150, "valorSemDescontoBRL": 150 },
+  "beneficios": [{ "beneficioDestaque": false, "beneficiosCustomizadoCotado": [], "idBeneficio": 2595,
+                   "idadeMaxima": 110, "idadeMinima": 0, "valor": "R$ 500", "descricao": null,
+                   "valorEmDinheiro": 500, "tipoMoeda": "BRL" }]
+}
+```
+
+- [ ] `setup.json`, montado à mão com os nomes dos campos do Setup (ver o passo 0b):
+  `{"soCotacao": false, "emiteFaturado": false, "emiteBoleto": false, "tarifaAcordo": true, "fkEmpresa": 1, "idEmissor": 1}`.
+  Não há `setup_so_cotacao.json`: o spec que precisa de "só cota" troca o valor no próprio exemplo.
+- [ ] `destinos.json`, montado à mão com a forma de `GET /v1/destinos`:
+  `[{"idRegiao": 1, "regiao": "América do Sul", "siglaRegiao": "AS", "idPais": 1, "pais": "Brasil", "siglaPais": "BR"},
+  {"idRegiao": 2, "regiao": "Europa", "siglaRegiao": "EU", "idPais": 2, "pais": "Portugal", "siglaPais": "PT"},
+  {"idRegiao": 2, "regiao": "Europa", "siglaRegiao": "EU", "idPais": 3, "pais": "Espanha", "siglaPais": "ES"}]`.
+- [ ] `compras_ok.json` = `{"codigoCarrinho": 987654, "codigoCotacao": "COT-TESTE-1", "urlVoucher":
   "https://pagamento.universal-assistance.com/?IdCarrinho=987654", "valorBrutoBrl": 312.45}` (forma da coleção, valores
   inventados). `compras_400.json` = `{"status": 400, "message": "Valor enviado no cartão é incompatível com a tarifa do produto"}`.
+- [ ] Conferir por leitura: o `codigoEmissor` real não aparece em lugar nenhum do diff (só `1`), nem telefone ou
+  e-mail reais.
 - [ ] Commit: `test(seguro-viagem): respostas gravadas da Universal, anonimizadas`.
 
 ### Tarefa 1 — Material oficial em texto (base de conhecimento)
@@ -264,35 +397,56 @@ it 'cotação: jsonb para pedido, planos e proposta' do
   expect(cols.slice('pedido', 'planos', 'proposta').values.map(&:sql_type)).to all(eq('jsonb'))
   expect(cols['conversation_id'].null).to be(false)
 end
+
+it 'toda chave para tabela apagada pela exclusão da conta tem índice (R2)' do
+  { 'autonomia_acessos_da_seguradora' => [['account_id'], ['autonomia_agent_id']],
+    'autonomia_cotacoes_de_viagem' => [['account_id'], ['autonomia_agent_id'], %w[conversation_id id]] }.each do |tabela, esperados|
+    colunas = ActiveRecord::Base.connection.indexes(tabela).map(&:columns)
+    expect(colunas).to include(*esperados)
+  end
+end
 ```
 
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar `CreateAutonomiaAcessosDaSeguradora` (`ActiveRecord::Migration[7.2]`):
-  `account_id` bigint not null FK accounts **sem cascata**; `autonomia_agent_id` bigint not null FK `autonomia_agents`
-  `on_delete: :cascade`, índice único; `seguradora` string not null default `'universal'`; `login` text; `senha` text;
-  `login_dica` string; `estado` string not null default `'nao_conferido'`; `conferido_em` datetime; `motivo` string;
-  `capacidades` jsonb not null default `{}`; timestamps.
-- [ ] Implementar `CreateAutonomiaCotacoesDeViagem`: `account_id` FK sem cascata; `conversation_id` not null FK
-  `conversations` `on_delete: :cascade`; `autonomia_agent_id` not null FK `autonomia_agents` `on_delete: :cascade`;
-  `id_cotacao` string not null; `pedido` jsonb not null default `{}`; `planos` jsonb not null default `[]`;
-  `proposta` jsonb (nulo); timestamps; índice `[:conversation_id, :id]`.
-  Comentário no topo explicando: tabelas novas e vazias, nenhuma trava em tabela existente, nenhum job enfileirado.
+  `account_id` bigint not null FK accounts **sem cascata**, **com índice**; `autonomia_agent_id` bigint not null FK
+  `autonomia_agents` `on_delete: :cascade`, índice único; `seguradora` string not null default `'universal'`; `login`
+  text; `senha` text; `login_dica` string; `estado` string not null default `'nao_conferido'`; `conferido_em` datetime;
+  `motivo` string; `capacidades` jsonb not null default `{}`; timestamps.
+- [ ] Implementar `CreateAutonomiaCotacoesDeViagem`: `account_id` FK sem cascata, **com índice**; `conversation_id`
+  not null FK `conversations` `on_delete: :cascade`; `autonomia_agent_id` not null FK `autonomia_agents`
+  `on_delete: :cascade`, **com índice**; `id_cotacao` string not null; `pedido` jsonb not null default `{}`; `planos`
+  jsonb not null default `[]`; `proposta` jsonb (nulo); timestamps; índice `[:conversation_id, :id]` (cobre a chave de
+  `conversation_id` pela primeira coluna).
+  Os índices de chave existem porque `spec/services/autonomia/exclusao_da_conta_spec.rb` exige índice em toda chave
+  estrangeira para tabela que a exclusão apaga. Comentário no topo explicando: tabelas novas e vazias, nenhuma trava em
+  tabela existente, nenhum job enfileirado.
 - [ ] `bundle exec rails db:migrate` local **não** (sem banco de teste local); gerar `db/schema.rb` pela CI não
-  existe, então escrever o trecho do `schema.rb` à mão, na ordem alfabética das tabelas, e conferir no diff.
+  existe, então escrever o trecho do `schema.rb` à mão: as duas tabelas na ordem alfabética, os índices e as
+  `add_foreign_key` no fim, **e a linha da versão** (`ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000)`
+  hoje) sobe para a migration mais nova, `2026_11_25_100100`. Conferir no diff.
 - [ ] Commits: `test(seguro-viagem): tabelas de acesso e cotação` e `feat(seguro-viagem): tabelas de acesso e cotação`.
 
 ### Tarefa 3 — Model `AcessoDaSeguradora`
 
-**Arquivos.** Criar `app/models/autonomia/agents/acesso_da_seguradora.rb`.
+**Arquivos.** Criar `app/services/autonomia/seguradoras/universal/codigos.rb` e
+`app/models/autonomia/agents/acesso_da_seguradora.rb`.
 
 **Interfaces.**
+- Produz (R3): `Autonomia::Seguradoras::Universal::Codigos` (módulo só de constantes):
+  `ACESSO_RECUSADO = 'acesso_recusado'`, `PEDIDO_INVALIDO = 'pedido_invalido'`, `INDISPONIVEL = 'indisponivel'`,
+  `TODOS = [ACESSO_RECUSADO, PEDIDO_INVALIDO, INDISPONIVEL].freeze`. É a lista dos valores de `motivo` do acesso e dos
+  códigos de erro do cliente (Tarefa 10).
 - Produz: `Autonomia::Agents::AcessoDaSeguradora` com `ESTADOS = %w[nao_conferido ok recusado].freeze`,
   `SEGURADORAS = %w[universal].freeze`, `belongs_to :account`, `belongs_to :agent` (`foreign_key: :autonomia_agent_id`),
-  `encrypts :login`, `encrypts :senha`, `#ok?`, `#so_cotacao?` (lê `capacidades['soCotacao'] == true`),
-  `#tarifa_acordo?`, `#payload_publico -> Hash` (`seguradora, login_dica, estado, motivo, conferido_em, so_cotacao`).
+  `encrypts :login`, `encrypts :senha`, `#ok?`, `#so_cotacao?` (lê `capacidades['so_cotacao'] == true`),
+  `#tarifa_acordo?` (lê `capacidades['tarifa_acordo'] == true`), `#payload_publico -> Hash` (`seguradora, login_dica,
+  estado, motivo, conferido_em, so_cotacao`). As chaves de `capacidades` são as nossas, em snake_case
+  (`so_cotacao`, `emite_faturado`, `emite_boleto`, `tarifa_acordo`); a tradução dos nomes da Universal é da Tarefa 12.
 - Consome: `Chatwoot.encryption_configured?` (mesma guarda de `Insurance::Connection#credentials_require_encryption`).
 
-- [ ] Spec que falha: `spec/models/autonomia/agents/acesso_da_seguradora_spec.rb`
+- [ ] Spec que falha: `spec/models/autonomia/agents/acesso_da_seguradora_spec.rb` (com `before { enable_test_encryption! }`,
+  R8; o exemplo "recusa gravar sem cofre" sobrescreve o stub dentro dele)
 
 ```ruby
 it 'guarda login e senha cifrados' do
@@ -324,13 +478,23 @@ it 'um por agente' do
   expect { described_class.create!(account: account, agent: agente, login: 'd4e5f6', senha: 'y') }
     .to raise_error(ActiveRecord::RecordInvalid)
 end
+
+it 'motivo só com os códigos da Universal' do
+  expect(described_class.new(account: account, agent: agente, motivo: 'qualquer')).not_to be_valid
+  expect(described_class.new(account: account, agent: agente, motivo: 'pedido_invalido')).to be_valid
+end
+
+it 'capacidades pelas nossas chaves' do
+  acesso = described_class.new(capacidades: { 'so_cotacao' => true, 'tarifa_acordo' => true })
+  expect([acesso.so_cotacao?, acesso.tarifa_acordo?]).to eq([true, true])
+end
 ```
 
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar. `before_validation :derivar_login_dica` (se `login` mudou): `login.length > 4 ?
   "#{login.first(2)}•••#{login.last(2)}" : '•••'`. Validações: `estado` em `ESTADOS`, `seguradora` em `SEGURADORAS`,
-  `autonomia_agent_id` único, `validate :credenciais_exigem_cofre`. `motivo` só aceita códigos de
-  `Seguradoras::Universal::Cliente::CODIGOS` (Tarefa 10) ou nil.
+  `autonomia_agent_id` único, `validate :credenciais_exigem_cofre`. `motivo` em
+  `Autonomia::Seguradoras::Universal::Codigos::TODOS` ou nil (`allow_nil: true`).
 - [ ] Commits: `test(seguro-viagem): acesso cifrado por agente` / `feat(seguro-viagem): acesso cifrado por agente`.
 
 ### Tarefa 4 — Model `CotacaoDeViagem`
@@ -341,6 +505,15 @@ end
 `.ultima_da_conversa(conversation_id) -> CotacaoDeViagem|nil` (maior `id`), `#plano(codigo) -> Hash|nil`,
 `#do_dia?(fuso) -> Boolean` (`created_at.in_time_zone(fuso).to_date == fuso.today`), `#idades -> Array<Integer>`
 (lê `pedido['idades']`).
+
+Forma do `pedido` (R4; quem grava é a Tarefa 13, quem lê são 14, 15 e 17): os **nossos** parâmetros, já conferidos,
+e o pedido enviado à Universal:
+
+```ruby
+{ 'destinos' => ['PT'], 'data_saida' => '2027-02-02', 'data_retorno' => '2027-02-06', 'idades' => [45],
+  'motivo' => nil, 'universal' => { 'destinos' => ['PT'], 'passageiros' => [...], 'dataSaida' => '2027-02-02',
+                                    'tipoTarifa' => 2, ... } }
+```
 
 - [ ] Spec que falha: `spec/models/autonomia/agents/cotacao_de_viagem_spec.rb`
 
@@ -363,6 +536,11 @@ it 'do dia no fuso da conta' do
     c = criar_cotacao
     expect(c.do_dia?(fuso)).to be(true)
   end
+end
+
+it 'idades vêm dos nossos parâmetros, não do pedido da Universal' do
+  c = criar_cotacao(pedido: { 'idades' => [47, 19, 12], 'universal' => { 'passageiros' => [] } })
+  expect(c.idades).to eq([47, 19, 12])
 end
 ```
 
@@ -388,6 +566,10 @@ end
 **Interfaces.**
 - Produz:
   - `Autonomia::Agents::Contratados::MARCA = 'contratado'`.
+  - `Autonomia::Agents::Contratados::BASE_VERSAO = 'contratado_base_versao'` (a chave do `config` com a versão da base
+    semeada; gravada pela Tarefa 20, reservada na API pela Tarefa 9).
+  - `Autonomia::Agents::Contratados::CONVERSA_DO_PR1` exatamente como na seção "Interfaces que vêm do PR 1" (quatro
+    chaves em texto, `true`; R0: nada do PR 1 é chamado, só gravado).
   - `Autonomia::Agents::Contratados::MODELOS -> Hash<String, Hash>` com uma entrada `'seguro_viagem_universal' => {
     flag: 'agente_seguro_viagem_universal', agent_type: 'sdr', pasta: <Pathname>, arquivo: 'instrucao.md',
     ferramentas_nativas: %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem],
@@ -447,6 +629,10 @@ it 'nil para quem não é contratado' do
   expect(described_class.renderizar(agente(nil))).to be_nil
 end
 
+it 'nil para marca com modelo que não está no catálogo (R19)' do
+  expect(described_class.renderizar(agente(marca.merge('modelo' => 'outro')), hoje: Date.new(2026, 11, 24))).to be_nil
+end
+
 it 'marca presente e incompleta para com o nome do campo' do
   expect { described_class.renderizar(agente(marca.except('nome_corretora'))) }
     .to raise_error(Autonomia::Agents::Contratados::DadosIncompletos, 'nome_corretora')
@@ -464,7 +650,8 @@ it 'cabe no teto da coluna com os maiores valores' do
 end
 ```
 
-E `spec/services/autonomia/agents/contratados_spec.rb`:
+E `spec/services/autonomia/agents/contratados_spec.rb` (com `before { enable_test_encryption! }`, R8: `disponivel?`
+exige o cofre):
 
 ```ruby
 it 'disponível só com a flag do modelo, as duas das prontas e o cofre' do
@@ -484,28 +671,35 @@ end
 (O segundo exemplo fica pendente até a Tarefa 19 registrar as ferramentas: marcar com `pending` e tirar na 19.)
 
 - [ ] Rodar: não rodar localmente; roda na CI. `bundle exec rubocop app/services/autonomia/agents/contratados*`.
-- [ ] Implementar. `renderizar`: retorna nil se `MARCA` ausente; confere `nome_agente` e `nome_corretora` presentes
+- [ ] Implementar. `renderizar`: retorna nil se `MARCA` ausente **ou** se `marca['modelo']` não é chave de `MODELOS`
+  (R19; mesma regra de `.modelo(agent)`, que também devolve nil); confere `nome_agente` e `nome_corretora` presentes
   (`DadosIncompletos, campo`), `sobre_corretora` pode ser vazio; lê `pasta.join(arquivo).read` a cada chamada.
 - [ ] Commits: `test(seguro-viagem): catálogo e instrução por turno` / `feat(seguro-viagem): catálogo e instrução por turno`.
 
 ### Tarefa 7 — O `Agent` contratado (e a Lia inalterada)
 
+**Despacho.** As Tarefas 7 e 8 vão juntas, num despacho só (R12): os commits de código da 7 e da 8 entram em sequência
+no mesmo despacho, e o commit que estende `instrucao_mantida?` já leva a troca dos dois leitores do CRM (Tarefa 8),
+para nenhum commit deixar o CRM tratar o contratado como a Lia.
+
 **Arquivos.** Criar `app/models/autonomia/agents/contratado.rb`; modificar `app/models/autonomia/agents/agent.rb`
-(63: `include Autonomia::Agents::Contratado` logo depois de `MarcaDoModeloPronto`; 217-219; 240-242; 249-254).
+(63: `include Autonomia::Agents::Contratado` logo depois de `MarcaDoModeloPronto`; 217-219; 240-242; 249-254);
+`config/locales/en.yml` e `config/locales/pt_BR.yml` (`autonomia.contratados.acesso_pendente`, R11).
 
 **Interfaces.**
 - Produz (concern `Autonomia::Agents::Contratado`): `#contratado? -> Boolean` (`config.to_h[MARCA].is_a?(Hash) &&
   Contratados::MODELOS.key?(marca['modelo'])`), `#marca_do_contratado -> Hash|nil`, `has_one :acesso_da_seguradora`
   (`foreign_key: :autonomia_agent_id, dependent: :destroy`), `validate :contratado_fica_no_tipo` (persistido com marca:
   `agent_type` não muda), `validate :atender_exige_acesso_conferido, on: %i[update ativacao], if: :passa_a_atender?`
-  (erro `I18n.t('autonomia.contratados.acesso_pendente')`), `before_update :manter_marca_salva` (o mesmo desenho de
+  (`errors.add(:base, I18n.t('autonomia.contratados.acesso_pendente'))`, como `atender_exige_onde_trabalhar`),
+  `before_update :manter_marca_salva` (o mesmo desenho de
   `MarcaDoModeloPronto`: se o save muda o `config` sem mexer na marca, relê a marca sob a trava e mantém a salva).
 - Muda em `Agent`:
   - `instrucao_mantida?` → `agent_type == 'insurance_quote' || contratado?`
   - `instrucao_do_sistema` → `Contratados::Instrucao.renderizar(self) || QuoteAgent::Builder.instrucao_do_principal(self) || instruction`
   - `ferramentas_nativas` → `Contratados.ferramentas(self) || <expressão atual inteira, sem mudança>`
 
-- [ ] Spec que falha 1: `spec/models/autonomia/agents/contratado_spec.rb`
+- [ ] Spec que falha 1: `spec/models/autonomia/agents/contratado_spec.rb` (com `before { enable_test_encryption! }`, R8)
 
 ```ruby
 it 'é contratado só com a marca de um modelo do catálogo' do
@@ -542,10 +736,15 @@ end
 
 it 'não passa a atender sem acesso ok' do
   agente = criar_contratado
+  # Caixa arranjada: com vínculo ativo, `tem_onde_trabalhar?` é verdade e a única regra que falha é a do acesso (R11).
+  inbox = create(:inbox, account: agente.account)
+  Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: agente.account,
+                                        agent_bot: create(:agent_bot, account: agente.account))
   agente.assign_attributes(status: :active, enabled: true)
   expect(agente.valid?(:ativacao)).to be(false)
+  expect(agente.errors[:base]).to eq([I18n.t('autonomia.contratados.acesso_pendente')])
   agente.create_acesso_da_seguradora!(account: agente.account, login: 'corretor.teste', senha: 'x', estado: 'ok')
-  expect(agente.errors.full_messages.join).not_to include(I18n.t('autonomia.contratados.acesso_pendente')) if agente.valid?(:ativacao)
+  expect(agente.valid?(:ativacao)).to be(true)
 end
 
 it 'save comum com cópia velha não desfaz a edição dos três campos' do
@@ -585,9 +784,20 @@ end
 
 - [ ] Rodar: não rodar localmente; roda na CI. `bundle exec rubocop app/models/autonomia/agents/agent.rb app/models/autonomia/agents/contratado.rb`.
 - [ ] Implementar. O comentário de `instrucao_mantida?` ganha uma linha: "ou o agente contratado do catálogo (#3211)".
-- [ ] Commits: `test(agentes): agente contratado e a Lia inalterada` / `feat(agentes): agente contratado com instrução mantida`.
+  i18n en + pt_BR: `autonomia.contratados.acesso_pendente`.
+- [ ] Commits: `test(agentes): agente contratado e a Lia inalterada` / `feat(agentes): agente contratado com instrução
+  mantida` — este commit de código já inclui o código da Tarefa 8 (`protegido_no_crm?` e os dois leitores do CRM).
 
-### Tarefa 8 — Leitores de `instrucao_mantida?` que não são escritores (auditoria com teste)
+### Tarefa 8 — Leitores de `instrucao_mantida?` que não são escritores (código do CRM e auditoria com teste)
+
+Vai no mesmo despacho da Tarefa 7 (R12). Ordem dos commits no despacho: teste da 7, teste da 8, e **um** commit de
+código com a 7 e a 8 juntas.
+
+**Arquivos.** Modificar `app/models/autonomia/agents/agent.rb` (`protegido_no_crm?`),
+`app/services/crm/ai/fatos_da_conversa.rb` (comentário da linha 10; leitor da linha 122),
+`app/services/crm/ai/handoff_executor.rb` (comentário da linha 30; leitor da linha 110).
+
+**Interfaces.** Produz `Agent#protegido_no_crm? -> Boolean` (`agent_type == 'insurance_quote'`).
 
 Estender o predicado também muda estes leitores (lidos no código em 24/11). A decisão de cada um fica escrita no spec.
 
@@ -606,8 +816,8 @@ Os dois leitores do CRM (`fatos_da_conversa.rb:122`, `handoff_executor.rb:110`) 
 passam a usar `protegido_no_crm?`. Para a Lia nada muda (o predicado devolve o mesmo que antes).
 
 - [ ] Spec que falha: `spec/services/autonomia/agents/contratados/leitores_de_instrucao_mantida_spec.rb`, um exemplo por
-  linha da tabela, afirmando o efeito com um contratado criado pelo `Contratar` (Tarefa 20) ou à mão com a marca.
-  Exemplos das linhas do CRM:
+  linha da tabela, afirmando o efeito com um contratado criado **à mão com a marca** (o `Contratar` só existe na
+  Tarefa 20). Exemplos das linhas do CRM:
 
 ```ruby
 it 'F1: a fala do contratado conta como a de agente comum' do
@@ -625,9 +835,13 @@ end
 ```
 
 - [ ] Rodar: não rodar localmente; roda na CI.
-- [ ] Implementar: nada de código (é só prova). Se o Rodrigo decidir o contrário nas duas linhas marcadas, a troca é
-  um predicado novo `Agent#agente_protegido_do_crm?` (só Lia) usado nesses dois leitores, com o exemplo invertido.
-- [ ] Commit: `test(agentes): o que muda para o contratado em cada leitor da instrução mantida`.
+- [ ] Implementar (é código, R12): `Agent#protegido_no_crm?` com o comentário acima; em `fatos_da_conversa.rb:122`
+  `vinculo.agent&.instrucao_mantida?` → `vinculo.agent&.protegido_no_crm?`; em `handoff_executor.rb:110`
+  `!dono_ativo.agent&.instrucao_mantida?` → `!dono_ativo.agent&.protegido_no_crm?`; os comentários das linhas 10
+  (`fatos_da_conversa.rb`) e 30 (`handoff_executor.rb`) passam a citar `protegido_no_crm?` (só a Lia) em vez de
+  `instrucao_mantida?`. Conferir por `grep` que nenhum leitor do CRM ficou com `instrucao_mantida?`.
+- [ ] Commits: `test(agentes): o que muda para o contratado em cada leitor da instrução mantida`; o código entra no
+  commit `feat(agentes): agente contratado com instrução mantida` da Tarefa 7.
 
 ### Tarefa 9 — Travas da API: marca reservada, ferramentas e base
 
@@ -635,7 +849,8 @@ end
 `agents/sources_controller.rb:2-3`; `config/locales/{en,pt_BR}.yml`.
 
 **Interfaces.**
-- `RESERVED_CONFIG_KEYS` ganha `Autonomia::Agents::Contratados::MARCA`.
+- `RESERVED_CONFIG_KEYS` ganha `Autonomia::Agents::Contratados::MARCA` e `Autonomia::Agents::Contratados::BASE_VERSAO`
+  (`'contratado_base_versao'`, R13; as duas da Tarefa 6).
 - `ToolsController#refuse_quote_agent` passa a recusar também `@agent.contratado?` (mesma mensagem nova
   `autonomia.agents.ferramenta_no_contratado`); SuperAdmin continua passando.
 - `FerramentasProntas::Incluir#initialize(..., pelo_contratar: false)`; `conferir!` levanta `Recusado,
@@ -651,6 +866,12 @@ it 'PATCH não grava nem troca a marca' do
                    headers: admin.create_new_auth_token, as: :json
   expect(response).to have_http_status(:ok)
   expect(agente.reload.config['contratado']['nome_corretora']).to eq('Corretora Exemplo')
+end
+
+it 'PATCH não grava a versão da base' do
+  patch agent_url, params: { agent: { config: { contratado_base_versao: 'forjada' } } },
+                   headers: admin.create_new_auth_token, as: :json
+  expect(agente.reload.config['contratado_base_versao']).not_to eq('forjada')
 end
 
 it 'POST create não nasce contratado pela API genérica' do
@@ -692,8 +913,10 @@ fonte: 'cep').call` levanta `Recusado` com `motivo == 'agente_contratado'`; com 
   `#setup -> Hash`, `#cotar(pedido) -> Hash`, `#comprar(pedido) -> Hash`, `#destinos -> Array<Hash>`.
 - `BASE_URL = ENV.fetch('UNIVERSAL_API_BASE_URL', 'https://api-br.universal-assistance.com')` (lido em
   `base_url`, não no boot); `ABERTURA = 5`; `LEITURA = { setup: 15, destinos: 15, cotar: 40, comprar: 40 }`.
-- `CODIGOS = %w[acesso_recusado pedido_invalido indisponivel].freeze`;
-  `class Erro < StandardError; attr_reader :codigo, :mensagem_da_seguradora; end` (mensagem do `super` é só o código).
+- Consome `Autonomia::Seguradoras::Universal::Codigos` (Tarefa 3, R3): os códigos do erro são `Codigos::TODOS`; o
+  cliente não define lista própria.
+  `class Erro < StandardError; attr_reader :codigo, :mensagem_da_seguradora; end`, com
+  `Erro.new(codigo, mensagem_da_seguradora: nil)` (mensagem do `super` é só o código).
 - Mapa: 401/403 → `acesso_recusado`; 400/404/409/422 → `pedido_invalido` com `mensagem_da_seguradora =
   corpo['message'].to_s.first(200)` quando o corpo é JSON; 5xx, `Net::OpenTimeout`, `Net::ReadTimeout`,
   `SocketError`, `Errno::ECONNREFUSED`, JSON inválido em 2xx → `indisponivel`.
@@ -766,11 +989,15 @@ end
 
 **Interfaces.** `Destinos.siglas(cliente) -> Set<String>|nil` (nil quando a Universal não respondeu: quem chama não
 barra a cotação por isso). Cache `Rails.cache` chave `'autonomia:universal:destinos:v1'`, `expires_in: 1.day`, guarda
-só `siglaPais` maiúsculas. `Destinos.validas?(siglas, cliente) -> [Boolean, Array<String> invalidas]`.
+só `siglaPais` maiúsculas (`Rails.cache.fetch(chave, expires_in: 1.day, skip_nil: true)`: a falha não fica guardada).
+`Destinos.validas?(siglas, cliente) -> [Boolean, Array<String> invalidas]`.
 
-- [ ] Spec que falha: `spec/services/autonomia/seguradoras/universal/destinos_spec.rb`: com a fixture, `siglas` inclui
-  `'PT'` e `'ES'`; segunda chamada não chama a API (`have_been_requested.once`); `validas?(%w[PT XX])` →
-  `[false, ['XX']]`; API fora → `siglas` nil e `validas?` → `[true, []]`.
+- [ ] Spec que falha: `spec/services/autonomia/seguradoras/universal/destinos_spec.rb`, com o `around` do
+  `MemoryStore` (R8; sem ele o `:null_store` do teste nunca guarda e o "segunda chamada" falha): com a fixture
+  `destinos.json`, `siglas(cliente)` é `Set['BR', 'PT', 'ES']`; segunda chamada não chama a API
+  (`have_been_requested.once`); `validas?(%w[PT XX], cliente)` → `[false, ['XX']]` (R9: os dois argumentos);
+  `validas?(%w[BR], cliente)` → `[true, []]`; API fora (`to_timeout`) → `siglas(cliente)` nil e
+  `validas?(%w[PT], cliente)` → `[true, []]`.
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar. Commits: `test(seguro-viagem): destinos da Universal` / `feat(seguro-viagem): destinos da Universal`.
 
@@ -779,24 +1006,50 @@ só `siglaPais` maiúsculas. `Destinos.validas?(siglas, cliente) -> [Boolean, Ar
 **Arquivos.** Criar `app/services/autonomia/agents/contratados/conferir_acesso.rb`.
 
 **Interfaces.** `ConferirAcesso.new(agent:, login:, senha:).call -> AcessoDaSeguradora`: grava login e senha (upsert
-no acesso do agente), chama `Cliente#setup`, grava `estado: 'ok'`, `conferido_em: Time.current`, `motivo: nil`,
-`capacidades: setup.slice('soCotacao', 'emiteFaturado', 'emiteBoleto', 'tarifaAcordo')` (só booleanos). Erro
-`acesso_recusado` → `estado: 'recusado', motivo: 'acesso_recusado'`; `indisponivel` → `estado: 'nao_conferido',
-motivo: 'indisponivel'`. Nunca levanta `Cliente::Erro` para fora.
-
-- [ ] Spec que falha: `spec/services/autonomia/agents/contratados/conferir_acesso_spec.rb`
+no acesso do agente), chama `Cliente#setup`, grava `estado: 'ok'`, `conferido_em: Time.current`, `motivo: nil` e as
+capacidades traduzidas para as nossas chaves (R1):
 
 ```ruby
-it 'Setup ok grava ok e as capacidades, só booleanos' do
+# Nome do campo no Setup da Universal => a nossa chave em `capacidades`. Os nomes da esquerda são os do levantamento
+# de fatos (o resumo da coleção Postman não traz o Setup); a Tarefa 0b os confere na resposta real.
+CAPACIDADES = { 'soCotacao' => 'so_cotacao', 'emiteFaturado' => 'emite_faturado',
+                'emiteBoleto' => 'emite_boleto', 'tarifaAcordo' => 'tarifa_acordo' }.freeze
+# capacidades = CAPACIDADES.to_h { |deles, nossa| [nossa, setup[deles] == true] }   (só booleanos)
+```
+
+Erros, todos pelos códigos de `Universal::Codigos` (Tarefa 3): `acesso_recusado` → `estado: 'recusado', motivo:
+'acesso_recusado'`; `indisponivel` → `estado: 'nao_conferido', motivo: 'indisponivel'`; `pedido_invalido` (400/404 no
+Setup, R10) → `estado: 'nao_conferido', motivo: 'pedido_invalido'`. Nunca levanta `Cliente::Erro` para fora. (O
+estado `indisponivel` pedido no R10 não existe em `ESTADOS` nem no desenho, seção 6.2; o mais próximo é
+`nao_conferido` com o motivo, o mesmo tratamento de `indisponivel`.)
+
+- [ ] Spec que falha: `spec/services/autonomia/agents/contratados/conferir_acesso_spec.rb` (com
+  `before { enable_test_encryption! }`, R8; `Setup` com `setup.json` por WebMock)
+
+```ruby
+it 'Setup ok grava ok e as capacidades nas nossas chaves, só booleanos' do
   acesso = described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
   expect(acesso.estado).to eq('ok')
-  expect(acesso.capacidades.keys).to contain_exactly('soCotacao', 'emiteFaturado', 'emiteBoleto', 'tarifaAcordo')
-  expect(acesso.capacidades.values).to all(be_in([true, false]))
+  expect(acesso.capacidades).to eq('so_cotacao' => false, 'emite_faturado' => false, 'emite_boleto' => false,
+                                   'tarifa_acordo' => true)
+end
+
+it 'login que só cota' do
+  setup = JSON.parse(file_fixture('../universal/setup.json').read).merge('soCotacao' => true)
+  stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 200, body: setup.to_json)
+  expect(described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call.so_cotacao?).to be(true)
 end
 
 it '401 grava recusado com o código' do
   stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 401)
   expect(described_class.new(agent: contratado, login: 'x1x1x', senha: 'y').call).to have_attributes(estado: 'recusado', motivo: 'acesso_recusado')
+end
+
+it '400 no Setup não levanta e grava pedido_invalido (R10)' do
+  stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 400, body: '{"status":400,"message":"x"}')
+  acesso = nil
+  expect { acesso = described_class.new(agent: contratado, login: 'x1x1x', senha: 'y').call }.not_to raise_error
+  expect(acesso).to have_attributes(estado: 'nao_conferido', motivo: 'pedido_invalido')
 end
 
 it 'trocar o login refaz a conferência e não cria segunda linha' do
@@ -809,6 +1062,10 @@ end
 - [ ] Implementar. Commits: `test(seguro-viagem): conferir o acesso pelo Setup` / `feat(seguro-viagem): conferir o acesso pelo Setup`.
 
 ### Tarefa 13 — `cotar_seguro_viagem` (pedido, planos, ferramenta)
+
+Roda **depois** das Tarefas 18 e 14 (R6). Consome: `SeguroViagem::Falhas.tratar` (18),
+`SeguroViagem::EntregaDoComparativo.postar` e `SeguroViagem::Dinheiro.brl` (14), `Universal::Cliente` (10),
+`Universal::Destinos` (11), `AcessoDaSeguradora#tarifa_acordo?` (3), `CotacaoDeViagem` (4).
 
 **Arquivos.** Criar `native/seguro_viagem/pedido.rb`, `native/seguro_viagem/planos.rb`, `native/cotar_seguro_viagem.rb`.
 
@@ -826,20 +1083,26 @@ end
   'cupom' => '', 'classificacoes' => [CLASSIFICACAO.fetch(motivo)] }`.
 - `SeguroViagem::Planos.de(resposta, idades:) -> Array<Hash>`: **lista branca** (nunca copia o produto cru).
   `IDS_DMH`, `IDS_BAGAGEM`, `IDS_CANCELAMENTO` = listas da Tarefa 0a (`[2898]`, `[2595]`, `[2601]`). Cada plano: `codigo` (`"P#{n}"`, n a partir de 1, na
-  ordem da Universal depois do filtro), `id_produto`, `id_produto_acordo`, `nome` (`descricao`), `descricao_adicional`,
-  `preco_total` (string decimal de `tarifa.valor`), `valor_moeda`, `moeda` (`simboloMoeda`), `cambio`, `max_parcelas`,
-  `idade_minima`, `idade_maxima`, `regra_cancelamento`, `faixas` (`tarifaIdade` → `[{de, ate, valor, valor_moeda}]`),
-  `coberturas` (`[{id_beneficio, nome, descricao_completa, valor, moeda}]`, nome e descrição vindos de
-  `resposta['beneficios']` pelo `idBeneficio`), `principais` (`{despesas_medicas, bagagem, cancelamento}` como
-  `"#{moeda} #{valor}"` ou nil). Filtro: só produtos com cobertura em `IDS_DMH` — **mas só quando o catálogo `resposta['beneficios']` traz algum id
-  de `IDS_DMH`**; se não traz nenhum (destino com ids ainda desconhecidos), não filtra e grava
-  `Rails.logger.warn('[seguro_viagem] catálogo sem id conhecido de despesas médicas', ids: <ids do catálogo>)` para a
-  Tarefa 0b achar o id novo (nunca zera a lista de planos por id desconhecido); e fora os que têm uma idade fora de
-  `idade_minima..idade_maxima`. `Planos.resumo(planos) -> Array<Hash>` com `codigo, nome, preco_total` formatado
-  (`'R$ 1.480,25'` por `ActiveSupport::NumberHelper.number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.')`),
-  `max_parcelas`, `principais`.
+  ordem da Universal depois do filtro), `id_produto`, `id_produto_acordo`, `nome` (`descricao.to_s.strip`: a
+  Universal manda com espaço no fim), `descricao_adicional`, `preco_total` (string decimal de `tarifa.valor`:
+  `BigDecimal(v.to_s).to_s('F')`, `360` → `'360.0'`), `valor_moeda` (idem, de `tarifa.valorMoeda`), `moeda`
+  (`simboloMoeda`), `cambio` (R5: `resposta['valorDoCambio']` quando presente, senão `tarifa['cambio']`; número como
+  veio), `max_parcelas` (`maxParcelas`), `idade_minima`, `idade_maxima`, `regra_cancelamento` (`regraCancelamento`
+  como veio), `faixas` (`tarifaIdade` → `[{'de', 'ate', 'valor', 'valor_moeda'}]`, valores em string decimal),
+  `coberturas` (`[{'id_beneficio', 'nome', 'descricao_completa', 'valor', 'moeda'}]`: `valor` é o texto `valor` do
+  benefício do produto, `moeda` o `tipoMoeda`, nome e descrição vindos de `resposta['beneficios']` pelo
+  `idBeneficio`), `principais` (`{'despesas_medicas', 'bagagem', 'cancelamento'}`, R5: o texto `valor` do benefício
+  **como a Universal entrega** — já vem `"R$ 100.000"`, sem prefixo nosso; só quando `valor` está em branco,
+  `"#{tipoMoeda} #{valorEmDinheiro}"`; sem o benefício, nil). Filtro: só produtos com cobertura em `IDS_DMH` — **mas
+  só quando o catálogo `resposta['beneficios']` traz algum id de `IDS_DMH`**; se não traz nenhum (destino com ids
+  ainda desconhecidos), não filtra e grava
+  `Rails.logger.warn("[seguro_viagem] catálogo sem id conhecido de despesas médicas ids=#{ids_do_catalogo.join(',')}")`
+  para a Tarefa 0b achar o id novo (nunca zera a lista de planos por id desconhecido); e fora os que têm uma idade
+  fora de `idade_minima..idade_maxima`. `Planos.resumo(planos) -> Array<Hash>` com `codigo`, `nome`, `preco_total`
+  formatado por `SeguroViagem::Dinheiro.brl` (Tarefa 14; `'360.0'` → `'R$ 360,00'`), `max_parcelas`, `principais`.
 - `Native::CotarSeguroViagem < Native::Base`: `slug 'cotar_seguro_viagem'`, `escreve? true`,
-  `args_registraveis %w[destinos data_saida data_retorno motivo]`, `available_for?(agent)` (Tarefa 19), `params`:
+  `args_registraveis %w[destinos data_saida data_retorno motivo]` (o `available_for?(agent)` entra na Tarefa 19; aqui
+  fica o da `Base`), `params`:
 
 ```ruby
 [
@@ -854,11 +1117,23 @@ end
 ]
 ```
 
-  `#call`: sem `delivery` → `error('cotacao_sem_conversa')`; `Pedido#conferir` com falta → `recusar('pedido_invalido',
-  falta.texto, faltando: [falta.campo])`; siglas inválidas → `recusar('destino_invalido', ..., faltando: ['destinos'])`;
-  `Cliente#cotar`; `Cliente::Erro` → `Falhas.tratar` (Tarefa 18); sem plano por idade →
-  `recusar('idade_fora_do_limite', <texto com as idades>, faltando: ['idades'])`; sem plano → `recusar('sem_plano', ...)`;
-  grava `CotacaoDeViagem`; `EntregaDoComparativo.postar` (Tarefa 14); devolve
+  `#call`: sem `delivery` → `error('cotacao_sem_conversa')`; `Pedido#conferir` (com
+  `tarifa_acordo: agent.acesso_da_seguradora.tarifa_acordo?`) com falta → `recusar('pedido_invalido', falta.texto,
+  faltando: [falta.campo])`; siglas inválidas (`ok, invalidas = Destinos.validas?(pedido_da_universal['destinos'], cliente)`, `ok` falso) →
+  `recusar('destino_invalido', "Destino não reconhecido pela seguradora: #{invalidas.join(', ')}. Confirme o país com o
+  cliente.", faltando: ['destinos'])`; `Cliente#cotar(pedido_da_universal)`; `Cliente::Erro => e` →
+  `return Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: delivery.conversation)` (Tarefa 18);
+  `Planos.de(resposta, idades:)` vazio e `Planos.de(resposta, idades: []).any?` (sem idade, a regra de idade não tira
+  nenhum: o vazio é da idade) →
+  `recusar('idade_fora_do_limite', "Nenhum plano aceita as idades #{idades.join(', ')}. Avise o cliente e passe para a
+  equipe.", faltando: ['idades'])`; vazio por outro motivo → `recusar('sem_plano', 'A seguradora não devolveu plano para
+  esta viagem. Passe a conversa para a equipe.')`; grava `CotacaoDeViagem.create!(account:, conversation:
+  delivery.conversation, agent:, id_cotacao: resposta['idCotacao'], planos:, pedido:)` com o `pedido` da Tarefa 4
+  (R4): `{ 'destinos' => pedido_da_universal['destinos'], 'data_saida' => pedido_da_universal['dataSaida'],
+  'data_retorno' => pedido_da_universal['dataRetorno'], 'idades' => params['idades'].map(&:to_i), 'motivo' =>
+  params['motivo'], 'universal' => pedido_da_universal }` (siglas já em maiúsculas e datas ISO, como o `Pedido` as
+  conferiu); `pdf_enviado =
+  EntregaDoComparativo.postar(conversation: delivery.conversation, cotacao:, agent:)` (Tarefa 14); devolve
   `JSON.generate({ cotacao: { destinos:, data_saida:, data_retorno:, idades: }, planos: Planos.resumo(planos), pdf_enviado: })`.
 
 - [ ] Spec que falha 1: `spec/services/autonomia/agents/tools/native/seguro_viagem/pedido_spec.rb`
@@ -904,47 +1179,106 @@ it 'saída hoje é aceita' do
 end
 ```
 
-- [ ] Spec que falha 2 (R2): `.../seguro_viagem/planos_spec.rb`
+- [ ] Spec que falha 2 (R2, R18): `.../seguro_viagem/planos_spec.rb`. Valores esperados calculados da fixture
+  `cotacao.json` da Tarefa 0 (2 produtos reais, ambos com idade 0..65 e o benefício 2898, + o "Produto Teste Sem DMH",
+  idade 0..99, sem 2898; `valorDoCambio` 5.9702 no topo da resposta).
 
 ```ruby
 let(:resposta) { JSON.parse(file_fixture('../universal/cotacao.json').read) }
+let(:sem_ids) do
+  resposta.merge('beneficios' => resposta['beneficios'].map { |b| b.merge('idBeneficio' => b['idBeneficio'] + 90_000) })
+end
 
 it 'só planos com despesas médicas e hospitalares, com código nosso' do
   planos = described_class.de(resposta, idades: [45])
   expect(planos.pluck('codigo')).to eq(%w[P1 P2])
+  expect(planos.pluck('nome')).to eq(['Especial UA 100K BRL', 'Especial UA 30K BRL'])
+  expect(planos.pluck('id_produto')).to eq([5_382_451, 5_382_452])
+  expect(planos.pluck('id_produto_acordo')).to eq([634_248, 634_249])
   expect(planos).to all(satisfy { |p| p['coberturas'].any? { |c| described_class::IDS_DMH.include?(c['id_beneficio']) } })
 end
 
+it 'preço, parcelas, câmbio e faixa como a Universal mandou (R5: câmbio = valorDoCambio)' do
+  p1, p2 = described_class.de(resposta, idades: [45])
+  expect(p1.slice('preco_total', 'valor_moeda', 'moeda', 'max_parcelas', 'cambio', 'idade_minima', 'idade_maxima'))
+    .to eq('preco_total' => '360.0', 'valor_moeda' => '360.0', 'moeda' => 'R$', 'max_parcelas' => 12,
+           'cambio' => 5.9702, 'idade_minima' => 0, 'idade_maxima' => 65)
+  expect(p2.slice('preco_total', 'cambio')).to eq('preco_total' => '210.0', 'cambio' => 5.9702)
+  expect(p1['faixas']).to eq([{ 'de' => 0, 'ate' => 65, 'valor' => '120.0', 'valor_moeda' => '120.0' }])
+  expect(p2['faixas']).to eq([{ 'de' => 0, 'ate' => 65, 'valor' => '70.0', 'valor_moeda' => '70.0' }])
+end
+
+it 'câmbio da tarifa quando a resposta não traz valorDoCambio' do
+  expect(described_class.de(resposta.except('valorDoCambio'), idades: [45]).pluck('cambio')).to eq([1, 1])
+end
+
+it 'principais com o texto da Universal, sem prefixo nosso (R5)' do
+  expect(described_class.de(resposta, idades: [45]).pluck('principais')).to eq([
+    { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' },
+    { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil }
+  ])
+end
+
+it 'valor em branco: moeda e valor em dinheiro' do
+  produtos = resposta['produtos'].map do |produto|
+    produto.merge('beneficios' => produto['beneficios'].map { |b| b['idBeneficio'] == 2898 ? b.merge('valor' => '') : b })
+  end
+  expect(described_class.de(resposta.merge('produtos' => produtos), idades: [45]).first.dig('principais', 'despesas_medicas'))
+    .to eq('BRL 100000')
+end
+
+it 'todas as coberturas do produto, com o nome do catálogo' do
+  p1, p2 = described_class.de(resposta, idades: [45])
+  expect([p1['coberturas'].size, p2['coberturas'].size]).to eq([32, 29])
+  expect(p1['coberturas'].first).to eq('id_beneficio' => 2898, 'nome' => 'Despesas Médicas e Hospitalares (por evento)',
+                                       'descricao_completa' => '', 'valor' => 'R$ 100.000', 'moeda' => 'BRL')
+end
+
 it 'catálogo sem id conhecido de despesas médicas não zera os planos' do
-  sem_ids = resposta.merge('beneficios' => resposta['beneficios'].map { |b| b.merge('idBeneficio' => b['idBeneficio'] + 90_000) })
-  expect(described_class.de(sem_ids, idades: [45])).not_to be_empty
+  expect(described_class.de(sem_ids, idades: [45]).pluck('codigo')).to eq(%w[P1 P2 P3])
 end
 
 it 'nunca leva campo interno da tarifa' do
-  texto = JSON.generate(described_class.de(resposta, idades: [45]))
+  texto = JSON.generate(described_class.de(sem_ids, idades: [45]))
   %w[comissao comissaoIntermediario markup rank quotationPorcentagem valorSemDesconto].each do |campo|
     expect(texto).not_to include(campo)
   end
 end
 
 it 'resumo em reais com duas casas' do
-  expect(described_class.resumo(described_class.de(resposta, idades: [45])).first['preco_total']).to start_with('R$ ')
+  expect(described_class.resumo(described_class.de(resposta, idades: [45])).pluck('preco_total'))
+    .to eq(['R$ 360,00', 'R$ 210,00'])
 end
 
 it 'tira o produto que não aceita a idade' do
-  expect(described_class.de(resposta, idades: [99]).pluck('codigo')).to eq(<conforme fixture>)
+  expect(described_class.de(resposta, idades: [99])).to eq([])
+  expect(described_class.de(resposta, idades: [45, 66])).to eq([])
+  expect(described_class.de(sem_ids, idades: [99]).pluck('codigo', 'nome')).to eq([['P1', 'Produto Teste Sem DMH']])
 end
 ```
 
-- [ ] Spec que falha 3: `.../native/cotar_seguro_viagem_spec.rb`
+- [ ] Spec que falha 3: `.../native/cotar_seguro_viagem_spec.rb` (com `before { enable_test_encryption! }`, R8;
+  contratado com acesso `ok` e `capacidades: { 'tarifa_acordo' => true }`; `params = { 'destinos' => ['pt'],
+  'data_saida' => '2027-02-02', 'data_retorno' => '2027-02-06', 'idades' => [45], 'motivo' => nil }`, com `hoje`
+  antes da saída; WebMock: `/v1/destinos` com `destinos.json` e `/v1/Cotacao` com `cotacao.json`;
+  `EntregaDoComparativo.postar` stubado devolvendo `true`)
 
 ```ruby
 it 'cota, guarda e devolve só o resumo' do
   saida = JSON.parse(ferramenta(params).call)
-  expect(saida['planos'].first.keys).to contain_exactly('codigo', 'nome', 'preco_total', 'max_parcelas', 'principais')
+  expect(saida['planos']).to eq([
+    { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00', 'max_parcelas' => 12,
+      'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' } },
+    { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00', 'max_parcelas' => 12,
+      'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil } }
+  ])
+  expect(saida['pdf_enviado']).to be(true)
   cotacao = Autonomia::Agents::CotacaoDeViagem.last
   expect(cotacao.id_cotacao).to eq('COT-TESTE-1')
-  expect(cotacao.pedido['passageiros']).to eq([{ 'nome' => 'Viajante 1', 'dataNascimento' => '1981-08-02' }])
+  expect(cotacao.pedido.except('universal')).to eq('destinos' => ['PT'], 'data_saida' => '2027-02-02',
+                                                   'data_retorno' => '2027-02-06', 'idades' => [45], 'motivo' => nil)
+  expect(cotacao.pedido['universal']['passageiros']).to eq([{ 'nome' => 'Viajante 1', 'dataNascimento' => '1981-08-02' }])
+  expect(cotacao.idades).to eq([45])
   expect(a_request(:post, "#{base}/v1/Cotacao").with(body: hash_including('tipoTarifa' => 2, 'classificacoes' => [1]))).to have_been_made
 end
 
@@ -958,8 +1292,16 @@ it 'data errada recusa com o campo e registra a recusa (não trava a escrita do 
   ferramenta(params.merge('data_saida' => '2020-01-01')).call
 end
 
-it 'timeout não levanta' do
+it 'idade que nenhum plano aceita: idade_fora_do_limite' do
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('idade_fora_do_limite', hash_including(faltando: ['idades']))
+  ferramenta(params.merge('idades' => [70])).call
+end
+
+it 'timeout não levanta e passa pelas falhas' do
   stub_request(:post, "#{base}/v1/Cotacao").to_timeout
+  expect(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas).to receive(:tratar)
+    .with(an_instance_of(Autonomia::Seguradoras::Universal::Cliente::Erro), acao: 'cotar_seguro_viagem',
+          agent: contratado, conversation: conversa).and_call_original
   expect { ferramenta(params).call }.not_to raise_error
 end
 ```
@@ -967,31 +1309,84 @@ end
 - [ ] Rodar: não rodar localmente; roda na CI. Rubocop nos três arquivos.
 - [ ] Implementar. Commits: `test(seguro-viagem): cotar seguro viagem` / `feat(seguro-viagem): cotar seguro viagem`.
 
-### Tarefa 14 — PDF comparativo e entrega na conversa
+### Tarefa 14 — PDF comparativo e entrega na conversa (e os utilitários `Faixas` e `Dinheiro`)
 
-**Arquivos.** Criar `native/seguro_viagem/comparativo_pdf.rb`, `native/seguro_viagem/entrega_do_comparativo.rb`;
-modificar `spec/services/autonomia/insurance/receita/sem_texto_fixo_ao_cliente_spec.rb` (`PONTOS`).
+Roda **depois** da 18 e **antes** da 13 (R6). Não depende de código da 13: o spec monta a `CotacaoDeViagem` à mão,
+com `planos` no formato de `Planos.de` (Tarefa 13, seção Interfaces) e `pedido` no formato da Tarefa 4.
+
+**Arquivos.** Criar `native/seguro_viagem/dinheiro.rb`, `native/seguro_viagem/faixas.rb`,
+`native/seguro_viagem/comparativo_pdf.rb`, `native/seguro_viagem/entrega_do_comparativo.rb`; modificar
+`spec/services/autonomia/insurance/receita/sem_texto_fixo_ao_cliente_spec.rb` (`PONTOS`).
 
 **Interfaces.**
+- `SeguroViagem::Dinheiro.brl(valor) -> String` (`module_function`): `BigDecimal(valor.to_s)` formatado por
+  `ActiveSupport::NumberHelper.number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.', precision: 2)`:
+  `'1480.25'` → `'R$ 1.480,25'`, `360` → `'R$ 360,00'`. É o **único** formatador de reais do seguro viagem (13, 14, 15
+  e 17 o usam; nenhum outro `number_to_currency` nesses arquivos).
+- `SeguroViagem::Faixas` (`module_function`), criado aqui e acrescentado na Tarefa 17:
+  `faixa(plano, idade) -> Hash|nil` (a faixa de `plano['faixas']` com `de <= idade <= ate`; nil sem faixa ou com a
+  idade fora de `idade_minima..idade_maxima`); `precos_por_pessoa(plano, idades) -> Array<String|nil>` (o `'valor'`
+  da faixa de cada idade, na ordem das idades). Toda busca de faixa no seguro viagem passa por `faixa`.
 - `ComparativoPdf.new(cotacao:, nome_corretora:).render -> String` (bytes `%PDF-`), Prawn, A4 paisagem, cores de
   `Autonomia::Desempenho::Exportacao::Pdf::COR` (navy, tinta, linha) e `FONTES` de `Relatorios::Pdf::FONTES`.
-  Conteúdo: nome da corretora; destino(s), datas, viajantes por idade; tabela lado a lado (uma coluna por plano):
-  preço total, preço por pessoa (por faixa de cada idade), parcelas, **todas** as coberturas com valor e moeda (linhas
-  pela união dos `id_beneficio`, "—" quando o plano não tem); data da cotação. Sem comissão, sem `id_produto`, sem
-  código `P1`.
-- `EntregaDoComparativo.postar(conversation:, cotacao:, agent:) -> Boolean`. Grava o blob
-  (`ActiveStorage::Blob.create_and_upload!(io:, filename: 'comparativo-seguro-viagem.pdf', content_type: 'application/pdf')`)
-  e, **sob o lock da conversa**, cria a mensagem com `Messages::MessageBuilder` (`content: nil`, `attachments:
+  Conteúdo: nome da corretora; destino(s) e datas de `cotacao.pedido` (`'destinos'`, `'data_saida'`,
+  `'data_retorno'`), viajantes por idade (`cotacao.idades`); tabela lado a lado (uma coluna por plano): preço total
+  (`Dinheiro.brl(plano['preco_total'])`), preço por pessoa (`Faixas.precos_por_pessoa(plano, cotacao.idades)`, cada um
+  por `Dinheiro.brl`), parcelas, **todas** as coberturas com valor (linhas pela união dos `id_beneficio`, "—" quando o
+  plano não tem); data da cotação. Sem comissão, sem `id_produto`, sem código `P1`.
+- `EntregaDoComparativo.postar(conversation:, cotacao:, agent:) -> Boolean` = `new(conversation:, cotacao:,
+  agent:).postar`. A instância grava o blob
+  (`ActiveStorage::Blob.create_and_upload!(io:, filename: 'comparativo-seguro-viagem.pdf', content_type: 'application/pdf')`,
+  `nome_corretora` de `agent.marca_do_contratado['nome_corretora']`) e, **sob o lock da conversa** (cópia lida agora,
+  como em `NotaNaHora.postar`), chama `#criar(blob)` só se `#postado?` for falso. `#criar(blob)` é o método que cria a
+  mensagem (R7: é o nome da chave de `PONTOS`), com `Messages::MessageBuilder` (`content: nil`, `attachments:
   [blob.signed_id]`, `message_type: 'outgoing'`, `sender_type: 'AgentBot'`, `sender_id:` do `agent_inbox` da conversa
   (`Autonomia::Agents::QuemResponde.agent_inbox`), `private: conversation.assignee_id.present?`,
-  `content_attributes: { 'autonomia_agent_id' => agent.id, 'autonomia_comparativo_viagem' => cotacao.id }`), só se ainda
-  não houver mensagem com esse `autonomia_comparativo_viagem` (mesma peneira de `NotaNaHora.postada?`). Falha → log com
-  ids e classe, `false`, nunca levanta.
-- `PONTOS` ganha `'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo#criar' => { tipo: :anexo_sem_texto, motivo: 'o comparativo da cotação de seguro viagem, em PDF, sem legenda (#3211)' }` (ajustar o nome do método ao que for implementado: a chave é `arquivo::Classe#metodo`).
+  `content_attributes: { 'autonomia_agent_id' => agent.id, 'autonomia_comparativo_viagem' => cotacao.id }`).
+  `#postado?` (R7) procura pelo **marcador da própria mensagem**, sem filtrar `private` (o PDF pode ser público):
+  `conversation.messages.where('content_attributes::text LIKE ?', '%autonomia_comparativo_viagem%')
+  .any? { |m| m.content_attributes.to_h['autonomia_comparativo_viagem'].to_i == cotacao.id }`. Falha → log com ids e
+  classe, `false`, nunca levanta.
+- `PONTOS` ganha `'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo#criar' => { tipo: :anexo_sem_texto, motivo: 'o comparativo da cotação de seguro viagem, em PDF, sem legenda (#3211)' }`.
 
-- [ ] Spec que falha: `.../seguro_viagem/comparativo_pdf_spec.rb` (bytes começam com `%PDF-`; o texto extraído por
-  `PDF::Reader` — `pdf-reader 2.16.0` está no `Gemfile.lock` — inclui o nome da corretora, `'R$ '` e o nome de cada
-  cobertura, e não inclui `'comissao'` nem `'P1'`) e `.../entrega_do_comparativo_spec.rb`:
+Cotação do spec (à mão, valores da fixture da Tarefa 0): `pedido: { 'destinos' => ['BR'], 'data_saida' =>
+'2027-02-02', 'data_retorno' => '2027-02-06', 'idades' => [47, 19, 12], 'motivo' => nil, 'universal' => {} }`,
+`planos` com P1 (`'nome' => 'Especial UA 100K BRL'`, `'preco_total' => '360.0'`, `'max_parcelas' => 12`,
+`'idade_minima' => 0`, `'idade_maxima' => 65`, `'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => '120.0',
+'valor_moeda' => '120.0' }]`, `'coberturas' => [{ 'id_beneficio' => 2898, 'nome' => 'Despesas Médicas e Hospitalares
+(por evento)', 'descricao_completa' => '', 'valor' => 'R$ 100.000', 'moeda' => 'BRL' }]`) e P2 (`'Especial UA 30K
+BRL'`, `'210.0'`, faixa `'70.0'`, cobertura 2898 `'R$ 30.000'`).
+
+- [ ] Spec que falha 1: `.../seguro_viagem/dinheiro_spec.rb` e `.../seguro_viagem/faixas_spec.rb`
+
+```ruby
+# dinheiro_spec.rb
+it 'reais com milhar e duas casas' do
+  expect(described_class.brl('1480.25')).to eq('R$ 1.480,25')
+  expect(described_class.brl(360)).to eq('R$ 360,00')
+end
+
+# faixas_spec.rb
+let(:plano) { { 'idade_minima' => 0, 'idade_maxima' => 85,
+                'faixas' => [{ 'de' => 0, 'ate' => 64, 'valor' => '120.0' }, { 'de' => 65, 'ate' => 75, 'valor' => '240.0' },
+                             { 'de' => 76, 'ate' => 85, 'valor' => '480.0' }] } }
+
+it 'faixa da idade; fora do limite é nil' do
+  expect(described_class.faixa(plano, 70)['valor']).to eq('240.0')
+  expect(described_class.faixa(plano, 90)).to be_nil
+end
+
+it 'preço por pessoa na ordem das idades' do
+  expect(described_class.precos_por_pessoa(plano, [45, 70, 90])).to eq(['120.0', '240.0', nil])
+end
+```
+
+- [ ] Spec que falha 2: `.../seguro_viagem/comparativo_pdf_spec.rb` (bytes começam com `%PDF-`; o texto extraído por
+  `PDF::Reader` — `pdf-reader 2.16.0` está no `Gemfile.lock` — inclui o nome da corretora, `'R$ 360,00'`,
+  `'R$ 120,00'`, `'Especial UA 100K BRL'` e `'Despesas Médicas e Hospitalares (por evento)'`, e não inclui
+  `'comissao'`, `'5382451'` nem `'P1'`).
+- [ ] Spec que falha 3: `.../seguro_viagem/entrega_do_comparativo_spec.rb` (contratado com a marca; conversa com
+  `agent_inbox` do contratado)
 
 ```ruby
 it 'posta o PDF uma vez por cotação, sem texto' do
@@ -1002,14 +1397,27 @@ it 'posta o PDF uma vez por cotação, sem texto' do
   expect(mensagens.first.attachments.first.file.content_type).to eq('application/pdf')
 end
 
-it 'com responsável na conversa vira nota privada' do
+it 'com responsável na conversa vira nota privada, e a nota também conta para não repetir (R7)' do
   conversa.update!(assignee: atendente)
-  described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)
+  2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }
   expect(conversa.messages.last.private).to be(true)
+  expect(conversa.messages.where("content_attributes::text LIKE '%autonomia_comparativo_viagem%'").count).to eq(1)
+end
+
+it 'sem responsável é pública, e a pública também conta para não repetir (R7)' do
+  2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }
+  expect(conversa.messages.where("content_attributes::text LIKE '%autonomia_comparativo_viagem%'").pluck(:private))
+    .to eq([false])
+end
+
+it 'falha não levanta' do
+  allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(StandardError)
+  expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
 end
 ```
 
-- [ ] Rodar: não rodar localmente; roda na CI.
+- [ ] Rodar: não rodar localmente; roda na CI. Conferir por leitura que a chave nova de `PONTOS` bate com
+  `arquivo::Classe#criar`.
 - [ ] Implementar. Commits: `test(seguro-viagem): comparativo em PDF na conversa` / `feat(seguro-viagem): comparativo em PDF na conversa`.
 
 ### Tarefa 15 — `detalhes_da_cotacao`
@@ -1023,19 +1431,35 @@ end
 `recusar('plano_inexistente', ..., faltando: ['codigos_dos_planos'])`; devolve JSON com, por plano: `codigo, nome,
 descricao_adicional, preco_total, preco_por_pessoa` (lista por viajante, pela faixa da idade cotada),
 `max_parcelas, cambio, moeda, idade_minima, idade_maxima, regra_cancelamento, coberturas` (todas, com
-`descricao_completa`). Sem chamada à Universal.
+`descricao_completa`). Sem chamada à Universal. `preco_total` e cada item de `preco_por_pessoa` em reais por
+`SeguroViagem::Dinheiro.brl`; `preco_por_pessoa` = `SeguroViagem::Faixas.precos_por_pessoa(plano, cotacao.idades)`
+(R4: as idades vêm de `cotacao.pedido['idades']`; R6: nada de busca de faixa própria). Idade sem faixa → `nil` no
+lugar.
 
-- [ ] Spec que falha: `.../native/detalhes_da_cotacao_spec.rb`
+- [ ] Spec que falha: `.../native/detalhes_da_cotacao_spec.rb` (a `CotacaoDeViagem` da conversa montada como no spec
+  da Tarefa 14: idades `[47, 19, 12]`, P1 e P2 da fixture)
 
 ```ruby
 it 'lê a cotação guardada, sem chamar a Universal' do
   saida = JSON.parse(ferramenta('codigos_dos_planos' => ['P1']).call)
-  expect(saida['planos'].first['coberturas'].first.keys).to include('nome', 'valor', 'moeda', 'descricao_completa')
-  expect(a_request(:any, /universal-assistance/)).not_to have_been_made
+  expect(saida['planos'].pluck('codigo')).to eq(['P1'])
+  expect(saida['planos'].first['coberturas'].first)
+    .to eq('id_beneficio' => 2898, 'nome' => 'Despesas Médicas e Hospitalares (por evento)', 'descricao_completa' => '',
+           'valor' => 'R$ 100.000', 'moeda' => 'BRL')
+  expect(a_request(:post, "#{base}/v1/Cotacao")).not_to have_been_made
 end
 
-it 'preço por pessoa pela faixa de cada idade cotada' do
-  expect(JSON.parse(ferramenta('codigos_dos_planos' => []).call)['planos'].first['preco_por_pessoa'].size).to eq(cotacao.idades.size)
+it 'preço total e por pessoa pela faixa de cada idade cotada' do
+  p1, p2 = JSON.parse(ferramenta('codigos_dos_planos' => []).call)['planos']
+  expect(p1.slice('preco_total', 'preco_por_pessoa'))
+    .to eq('preco_total' => 'R$ 360,00', 'preco_por_pessoa' => ['R$ 120,00', 'R$ 120,00', 'R$ 120,00'])
+  expect(p2['preco_por_pessoa']).to eq(['R$ 70,00', 'R$ 70,00', 'R$ 70,00'])
+end
+
+it 'código desconhecido recusa com o campo' do
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar)
+    .with('plano_inexistente', hash_including(faltando: ['codigos_dos_planos']))
+  ferramenta('codigos_dos_planos' => ['P9']).call
 end
 
 it 'sem campo interno' do
@@ -1054,38 +1478,48 @@ end
 Consome `FerramentasProntas::Fontes::Cep::FONTE.consulta('endereco')`, `Consulta#conferir({ 'cep' => cep })`,
 `FerramentasProntas::Cache.new(FONTE, consulta, params).ler`; no cache vazio, roda a pronta do agente
 (`FerramentasProntas::Execucao.new(tool: agent.tools.find_by(fonte_pronta: 'cep'), params: { 'consulta' => 'endereco',
-'cep' => cep }).call`) e lê o cache de novo. O endereço nunca vem do modelo.
+'cep' => cep }).call`) e lê o cache de novo. O endereço nunca vem do modelo. O hash devolvido é
+`dados.slice('logradouro', 'bairro', 'cidade', 'uf', 'cep').compact` (R17): CEP de cidade com CEP único vem sem
+`logradouro` e sem `bairro`, e quem lê (a `Compra`, Tarefa 17) aceita a ausência.
 
-- [ ] Spec que falha: `.../seguro_viagem/endereco_do_cep_spec.rb`: cache com `{'situacao' => 'encontrado', 'dados' =>
-  {'cep' => '01310-100', 'logradouro' => 'Avenida Paulista', 'bairro' => 'Bela Vista', 'cidade' => 'São Paulo', 'uf' =>
-  'SP'}}` → devolve o hash sem chamar provedor; cache vazio + ViaCEP gravado com WebMock → devolve e chama a
-  `Execucao` uma vez; CEP com 7 dígitos → nil; `nao_encontrado` → nil.
+- [ ] Spec que falha: `.../seguro_viagem/endereco_do_cep_spec.rb`, com o `around` do `MemoryStore` (R8; o
+  `FerramentasProntas::Cache` lê e grava em `Rails.cache`, que no teste é `:null_store`): cache com
+  `{'situacao' => 'encontrado', 'dados' => {'cep' => '01310-100', 'logradouro' => 'Avenida Paulista', 'bairro' =>
+  'Bela Vista', 'cidade' => 'São Paulo', 'uf' => 'SP'}}` → devolve o hash sem chamar provedor; cache vazio + ViaCEP
+  gravado com WebMock → devolve e chama a `Execucao` uma vez; cache com `logradouro` e `bairro` nil → devolve
+  `{'cep' => ..., 'cidade' => ..., 'uf' => ...}` sem as duas chaves; CEP com 7 dígitos → nil; `nao_encontrado` → nil.
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar. Commits: `test(seguro-viagem): endereço pelo CEP no servidor` / `feat(seguro-viagem): endereço pelo CEP no servidor`.
 
 ### Tarefa 17 — `gerar_proposta_seguro_viagem`
 
-**Arquivos.** Criar `native/seguro_viagem/viajantes.rb`, `native/seguro_viagem/faixas.rb`,
-`native/seguro_viagem/compra.rb`, `native/gerar_proposta_seguro_viagem.rb`.
+Consome: `SeguroViagem::Falhas.tratar` e `.sem_link` (18), `SeguroViagem::Faixas.faixa` e `SeguroViagem::Dinheiro.brl`
+(14), `EnderecoDoCep.buscar` (16), `CotacaoDeViagem` com o `pedido` da Tarefa 4 (R4), `Universal::Cliente` (10).
+
+**Arquivos.** Criar `native/seguro_viagem/viajantes.rb`, `native/seguro_viagem/compra.rb`,
+`native/gerar_proposta_seguro_viagem.rb`; modificar `native/seguro_viagem/faixas.rb` (criado na Tarefa 14, R6).
 
 **Interfaces.**
 - `Viajantes.conferir(titular:, demais:) -> [Array<Hash>, nil] | [nil, Falta]`: nome completo com pelo menos duas
-  palavras (`split`), CPF por `FerramentasProntas::Fontes::Cpf.valido?(Parametro.digitos(cpf, 11))`, CPFs sem
-  repetição, nascimento `Date.iso8601`, e-mail com `@` e ponto depois dele (`split('@')`), telefone 10 ou 11 dígitos,
-  CEP 8 dígitos, `numero` presente; `complemento` pode ser nil.
-- `Faixas.idade_em(nascimento, data) -> Integer`; `Faixas.mesma_faixa?(plano, idades_cotadas, idades_reais) ->
-  Boolean` (compara as **multisets** das faixas `de..ate` de cada idade; idade sem faixa ou fora de
-  `idade_minima..idade_maxima` → false).
+  palavras (`split`), CPF válido (R17: `digitos = Parametro.digitos(cpf, 11)`; `digitos.present? &&
+  FerramentasProntas::Fontes::Cpf.valido?(digitos)` — `Parametro.digitos` devolve nil para valor com outro tamanho, e
+  `Cpf.valido?` nunca recebe nil), CPFs sem repetição, nascimento `Date.iso8601`, e-mail com `@` e ponto depois dele
+  (`split('@')`), telefone 10 ou 11 dígitos, CEP 8 dígitos, `numero` presente; `complemento` pode ser nil.
+- `Faixas` ganha (no mesmo arquivo da Tarefa 14, sem segunda busca de faixa): `idade_em(nascimento, data) -> Integer`;
+  `mesma_faixa?(plano, idades_cotadas, idades_reais) -> Boolean` (compara as **multisets** de `faixa(plano, idade)` de
+  cada idade; alguma `faixa` nil → false).
 - `Compra.montar(cotacao:, plano:, viajantes:, endereco:, contato:) -> Hash` com as chaves exatas dos fatos:
-  `DadosBasicos{Destinos, TipoViagem: 1, TipoTarifa: cotacao.pedido['tipoTarifa'], DataSaida, DataRetorno (ISO, da
-  cotação), ValorCompra: plano['preco_total'] (número), FormaPagamento: 8, NomeContatoBrasil, TelefoneContatoBrasil,
+  `DadosBasicos{Destinos: cotacao.pedido['destinos'], TipoViagem: 1, TipoTarifa: cotacao.pedido['universal']['tipoTarifa'],
+  DataSaida: cotacao.pedido['data_saida'], DataRetorno: cotacao.pedido['data_retorno'] (ISO, da cotação; R4),
+  ValorCompra: plano['preco_total'] (número), FormaPagamento: 8, NomeContatoBrasil, TelefoneContatoBrasil,
   CelularContatoBrasil}`, `DadosTitular{Codigo: 1, Nome, Sobrenome (split(' ', 2)), Documento, TipoDocumento: 1,
-  Telefone, Celular, Email, DataNascimento ISO, Endereco, CEP, Numero, Cidade, Bairro, UF, SiglaPaisEndereco: 'BR',
-  Complemento, Idade}`, `DadosIntegrantes[{Codigo: 2.., Nome, Sobrenome, TipoDocumento: 1, Documento, DataNascimento,
-  Idade}]`, `DadosProdutos{CodigoProduto: plano['id_produto'], ValorProduto: plano['preco_total'],
-  CodigoPeriodoMultiViagem: 0, CodigoTarifaAcordo: plano['id_produto_acordo'], Cambio: plano['cambio']}`,
-  `DadosBeneficios: [], DadosBeneficiosCustomizavel: [], DadosProdutosAvulsos: []`, `DadosPagamento{NomeTitularCartao,
-  CPFTitular}` (do titular). `FORMA_DE_PAGAMENTO_LINK = 8`.
+  Telefone, Celular, Email, DataNascimento ISO, Endereco: endereco['logradouro'], CEP, Numero, Cidade, Bairro:
+  endereco['bairro'], UF, SiglaPaisEndereco: 'BR', Complemento, Idade}` (R17: `Endereco` e `Bairro` podem ser nil — o
+  CEP único de cidade não tem; a `Compra` não recusa por isso), `DadosIntegrantes[{Codigo: 2.., Nome, Sobrenome,
+  TipoDocumento: 1, Documento, DataNascimento, Idade}]`, `DadosProdutos{CodigoProduto: plano['id_produto'],
+  ValorProduto: plano['preco_total'], CodigoPeriodoMultiViagem: 0, CodigoTarifaAcordo: plano['id_produto_acordo'],
+  Cambio: plano['cambio']}`, `DadosBeneficios: [], DadosBeneficiosCustomizavel: [], DadosProdutosAvulsos: []`,
+  `DadosPagamento{NomeTitularCartao, CPFTitular}` (do titular). `FORMA_DE_PAGAMENTO_LINK = 8`.
 - `Compra.link(codigo_carrinho) -> String|nil`: `URI::HTTPS.build(host: 'pagamento.universal-assistance.com', path: '/',
   query: URI.encode_www_form('IdCarrinho' => codigo)).to_s`; codigo vazio → nil.
 - `Native::GerarPropostaSeguroViagem`: `slug 'gerar_proposta_seguro_viagem'`, `escreve? true`,
@@ -1126,16 +1560,18 @@ VIAJANTE = [
   `EnderecoDoCep.buscar` nil → `recusar('cep_nao_encontrado', ..., faltando: ['titular.cep'])`; então
   `cotacao.with_lock`: chave `Digest::SHA256.hexdigest([cotacao.id, codigo, cpfs.sort].join('|'))`; se
   `cotacao.proposta&.dig('chave') == chave` → devolve a mesma proposta guardada; senão `Cliente#comprar(Compra.montar(...))`,
-  `Cliente::Erro` → `Falhas.tratar`; `Compra.link` nil → `Falhas.sem_link` (nota + recusa); grava
+  `Cliente::Erro => e` → `return Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation:
+  delivery.conversation)`; `Compra.link` nil → `return Falhas.sem_link(acao: self.class.slug, agent: agent,
+  conversation: delivery.conversation)` (nota + recusa); grava
   `proposta: { 'chave', 'codigo_do_plano', 'codigo_carrinho', 'link', 'valor_bruto_brl', 'gerada_em' }` (nenhum dado
-  pessoal); devolve `JSON.generate({ link_de_pagamento:, numero_do_carrinho:, plano: plano['nome'], total: <R$> })`.
+  pessoal); devolve `JSON.generate({ link_de_pagamento:, numero_do_carrinho:, plano: plano['nome'], total:
+  Dinheiro.brl(plano['preco_total']) })`.
+  O acesso desta tarefa lê `agent.acesso_da_seguradora.so_cotacao?` (chave nossa `so_cotacao`, R1).
 
-- [ ] Spec que falha 1: `.../seguro_viagem/faixas_spec.rb`
+- [ ] Spec que falha 1: acrescentar ao `.../seguro_viagem/faixas_spec.rb` da Tarefa 14 (o mesmo `let(:plano)`, com
+  as três faixas 0-64, 65-75 e 76-85):
 
 ```ruby
-let(:plano) { { 'idade_minima' => 0, 'idade_maxima' => 85,
-                'faixas' => [{ 'de' => 0, 'ate' => 64 }, { 'de' => 65, 'ate' => 75 }, { 'de' => 76, 'ate' => 85 }] } }
-
 it 'idade na data da saída' do
   expect(described_class.idade_em(Date.new(1981, 3, 15), Date.new(2027, 2, 2))).to eq(45)
   expect(described_class.idade_em(Date.new(1981, 2, 2), Date.new(2027, 2, 2))).to eq(46)
@@ -1148,11 +1584,20 @@ it 'mesma faixa por multiset, não pela ordem' do
 end
 ```
 
-- [ ] Spec que falha 2: `.../seguro_viagem/compra_spec.rb` — `FormaPagamento == 8`; `ValorCompra` e `ValorProduto`
-  iguais ao `preco_total` do plano; `CodigoProduto` e `CodigoTarifaAcordo` do plano; datas da cotação;
-  `TipoTarifa` igual ao do pedido guardado; `DataNascimento` do titular é a informada (não 1º de janeiro);
+- [ ] Spec que falha 2: `.../seguro_viagem/compra_spec.rb` (cotação e P1 como no spec da Tarefa 14, com
+  `'id_produto' => 5_382_451`, `'id_produto_acordo' => 634_248`, `'cambio' => 5.9702` e
+  `pedido['universal']['tipoTarifa'] == 2`) — `FormaPagamento == 8`; `ValorCompra` e `ValorProduto` iguais a `360.0`;
+  `CodigoProduto == 5_382_451` e `CodigoTarifaAcordo == 634_248`; `Cambio == 5.9702`; `DataSaida == '2027-02-02'` e
+  `DataRetorno == '2027-02-06'` (de `pedido['data_saida']`/`['data_retorno']`); `TipoTarifa == 2` (de
+  `pedido['universal']['tipoTarifa']`); `DataNascimento` do titular é a informada (não 1º de janeiro); com
+  `endereco = { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' }` (sem `logradouro` nem `bairro`, R17)
+  monta sem levantar, com `Endereco` e `Bairro` nil;
   `Compra.link(987654) == 'https://pagamento.universal-assistance.com/?IdCarrinho=987654'`; `Compra.link(nil)` nil.
-- [ ] Spec que falha 3 (R3): `.../native/gerar_proposta_seguro_viagem_spec.rb`
+- [ ] Spec que falha 2b: `.../seguro_viagem/viajantes_spec.rb` — CPF com 10 dígitos devolve a `Falta` do campo do CPF
+  (R17: não levanta `NoMethodError` no `Cpf.valido?`); CPF repetido entre titular e demais → `Falta`; e-mail sem ponto
+  depois do `@` → `Falta` `titular.email`.
+- [ ] Spec que falha 3 (R3): `.../native/gerar_proposta_seguro_viagem_spec.rb` (com `before { enable_test_encryption! }`,
+  R8)
 
 ```ruby
 it 'preço e produto saem da cotação guardada' do
@@ -1175,7 +1620,9 @@ it 'idempotente: a mesma chamada não gera segunda proposta' do
 end
 
 it 'código inexistente recusa sem chamar a Universal' do
-  expect(ferramenta(params.merge('codigo_do_plano' => 'P9')).call).to be_present
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar)
+    .with('plano_inexistente', hash_including(faltando: ['codigo_do_plano']))
+  ferramenta(params.merge('codigo_do_plano' => 'P9')).call
   expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
 end
 
@@ -1186,13 +1633,23 @@ end
 
 it 'cotação de ontem: recotar' do
   cotacao.update_columns(created_at: 2.days.ago)
-  expect(ferramenta(params).call).to include('Cote de novo').or include('recotar')
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('recotar', anything)
+  ferramenta(params).call
+  expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
 end
 
 it 'acesso que só cota não gera' do
-  acesso.update!(capacidades: acesso.capacidades.merge('soCotacao' => true))
+  acesso.update!(capacidades: acesso.capacidades.merge('so_cotacao' => true))
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('so_cotacao', anything)
   ferramenta(params).call
   expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+end
+
+it 'compra sem codigoCarrinho: passa pelas falhas (sem link)' do
+  stub_request(:post, "#{base}/v1/Compras").to_return(status: 200, body: { codigoCarrinho: nil }.to_json)
+  expect(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas).to receive(:sem_link)
+    .with(acao: 'gerar_proposta_seguro_viagem', agent: contratado, conversation: conversa).and_call_original
+  ferramenta(params).call
 end
 
 it 'proposta guardada não tem dado pessoal' do
@@ -1206,37 +1663,70 @@ end
 
 ### Tarefa 18 — Falhas da Universal: nota à equipe e passagem
 
-**Arquivos.** Criar `native/seguro_viagem/falhas.rb` (módulo incluído nas duas ferramentas que chamam a Universal;
-fazer **antes** das Tarefas 13 e 17 se for mais natural, a ordem dos commits não importa); i18n backend.
+Roda **antes** das Tarefas 14 e 13 (R6): a 13 e a 17 chamam `Falhas.tratar` e `Falhas.sem_link`, com estes nomes.
 
-**Interfaces.** `SeguroViagem::Falhas#tratar_falha(erro, acao:) -> String` (privado, usa `recusar` da `Base`):
-- `acesso_recusado`: `agent.acesso_da_seguradora.update!(estado: 'recusado', motivo: 'acesso_recusado')`;
-  `Insurance::NotaNaHora.postar(delivery.conversation, I18n.t('autonomia.contratados.universal.notas.acesso_recusado'),
-  chave: "universal:acesso_recusado:#{delivery.turno}")`; devolve `recusar('acesso_recusado', TEXTO_PASSAR)` com
-  `TEXTO_PASSAR = 'A seguradora recusou o acesso da corretora. Não tente de novo. Passe a conversa para a equipe agora e
-  diga ao cliente só que alguém da equipe vai continuar, sem falar do erro.'`.
-- `indisponivel`: nota (`notas.indisponivel`, chave com `acao` e turno) e `recusar('indisponivel', 'O sistema da
-  seguradora não respondeu. Tente uma vez de novo; se falhar de novo, passe a conversa para a equipe, sem mostrar o erro.')`.
-- `pedido_invalido`: `recusar('pedido_invalido', "A seguradora não aceitou o pedido: #{erro.mensagem_da_seguradora}.
-  Corrija com o cliente só o dado em questão.")` (a mensagem não vai a log).
-- `sem_link`: nota (`notas.sem_link`) e recusa que manda passar para a equipe.
-Textos das notas em en e pt_BR, sem dado do cliente.
+**Arquivos.** Criar `native/seguro_viagem/falhas.rb`; `config/locales/en.yml` e `config/locales/pt_BR.yml`
+(`autonomia.contratados.universal.notas.*`).
 
-- [ ] Spec que falha: `.../seguro_viagem/falhas_spec.rb`
+**Interfaces.** `Autonomia::Agents::Tools::Native::SeguroViagem::Falhas`, módulo com `module_function` (não é
+incluído nas ferramentas; elas o chamam). Recebe tudo por argumento, porque não tem o `recusar` da `Base`: registra a
+recusa direto em `Tools::Recusa.registrar(codigo, slug: acao, agente: agent, conversa: conversation.id)` e devolve o
+texto ao modelo.
+
+- `tratar(erro, acao:, agent:, conversation:) -> String` — `erro` é um `Universal::Cliente::Erro`; `acao` é o slug da
+  ferramenta que chamou (`'cotar_seguro_viagem'` ou `'gerar_proposta_seguro_viagem'`). Pelo `erro.codigo`:
+  - `acesso_recusado`: `agent.acesso_da_seguradora.update!(estado: 'recusado', motivo: 'acesso_recusado')`;
+    `Insurance::NotaNaHora.postar(conversation, I18n.t('autonomia.contratados.universal.notas.acesso_recusado'),
+    chave: "universal:acesso_recusado:#{acao}:#{conversation.id}")`; registra `'acesso_recusado'` e devolve
+    `TEXTO_PASSAR = 'A seguradora recusou o acesso da corretora. Não tente de novo. Passe a conversa para a equipe agora e
+    diga ao cliente só que alguém da equipe vai continuar, sem falar do erro.'`.
+  - `indisponivel`: nota `notas.indisponivel` com chave `"universal:indisponivel:#{acao}:#{conversation.id}"`;
+    registra `'indisponivel'` e devolve `'O sistema da seguradora não respondeu. Tente uma vez de novo; se falhar de
+    novo, passe a conversa para a equipe, sem mostrar o erro.'`.
+  - `pedido_invalido`: registra `'pedido_invalido'` e devolve `"A seguradora não aceitou o pedido:
+    #{erro.mensagem_da_seguradora}. Corrija com o cliente só o dado em questão."` (a mensagem não vai a log nem à nota).
+- `sem_link(acao:, agent:, conversation:) -> String` — a compra voltou sem `codigoCarrinho`: nota `notas.sem_link`
+  com chave `"universal:sem_link:#{acao}:#{conversation.id}"`; registra `'sem_link'` e devolve `'A seguradora não
+  devolveu o link de pagamento. Não tente de novo. Passe a conversa para a equipe agora, sem mostrar o erro.'`.
+
+A chave da nota é por conversa e ação (a assinatura não tem o turno): a mesma falha na mesma conversa vira uma nota só.
+Textos das notas em en e pt_BR, sem dado do cliente. Nunca levanta (a `NotaNaHora` já não levanta; o `update!` do
+acesso fica num `rescue StandardError` com log de classe e ids).
+
+- [ ] Spec que falha: `.../seguro_viagem/falhas_spec.rb` (com `before { enable_test_encryption! }`, R8; contratado
+  com acesso `ok` criado à mão; erro montado com `Universal::Cliente::Erro.new('acesso_recusado')`)
 
 ```ruby
+def tratar(codigo, mensagem = nil)
+  erro = Autonomia::Seguradoras::Universal::Cliente::Erro.new(codigo, mensagem_da_seguradora: mensagem)
+  described_class.tratar(erro, acao: 'cotar_seguro_viagem', agent: contratado, conversation: conversa)
+end
+
 it 'acesso recusado: marca o acesso, posta nota privada uma vez, registra a recusa' do
-  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('acesso_recusado', anything).twice
-  2.times { ferramenta_com_erro('acesso_recusado').call }
-  expect(acesso.reload.estado).to eq('recusado')
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar)
+    .with('acesso_recusado', hash_including(slug: 'cotar_seguro_viagem', conversa: conversa.id)).twice
+  2.times { tratar('acesso_recusado') }
+  expect(acesso.reload).to have_attributes(estado: 'recusado', motivo: 'acesso_recusado')
   expect(conversa.messages.where(private: true).count).to eq(1)
 end
 
 it 'a frase ao modelo não traz o erro técnico nem a credencial' do
-  texto = ferramenta_com_erro('acesso_recusado').call
-  expect(texto).not_to include('401', 'corretor.teste')
+  expect(tratar('acesso_recusado')).not_to include('401', 'corretor.teste')
+end
+
+it 'pedido inválido: repassa a mensagem curta da seguradora, sem nota' do
+  expect(tratar('pedido_invalido', 'Data de saída inválida')).to include('Data de saída inválida')
+  expect(conversa.messages.where(private: true).count).to eq(0)
+end
+
+it 'sem link: nota e recusa registrada' do
+  expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('sem_link', anything)
+  described_class.sem_link(acao: 'gerar_proposta_seguro_viagem', agent: contratado, conversation: conversa)
+  expect(conversa.messages.where(private: true).count).to eq(1)
 end
 ```
+
+  `Cliente::Erro.new(codigo, mensagem_da_seguradora: nil)` é o construtor da Tarefa 10 (o `super` recebe só o código).
 
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar. Commits: `test(seguro-viagem): falhas da seguradora` / `feat(seguro-viagem): falhas da seguradora`.
@@ -1250,7 +1740,8 @@ end
 `agent.contratado? && Contratados.ferramentas(agent)&.include?(slug) && agent.acesso_da_seguradora&.ok?`; a de
 proposta também `&& !agent.acesso_da_seguradora.so_cotacao?`.
 
-- [ ] Spec que falha (R4): `spec/services/autonomia/agents/tools/ferramentas_do_contratado_spec.rb`
+- [ ] Spec que falha (R4): `spec/services/autonomia/agents/tools/ferramentas_do_contratado_spec.rb` (com
+  `before { enable_test_encryption! }`, R8; `acesso_ok!` cria o acesso com `estado: 'ok'`)
 
 ```ruby
 SLUGS = %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem].freeze
@@ -1270,7 +1761,7 @@ it 'contratado com acesso ok recebe as três' do
 end
 
 it 'login que só cota: sem proposta' do
-  acesso_ok!(capacidades: { 'soCotacao' => true })
+  acesso_ok!(capacidades: { 'so_cotacao' => true })
   expect(Autonomia::Agents::Tools::Registry.for_agent(contratado).map(&:slug)).to eq(SLUGS.first(2))
 end
 
@@ -1294,11 +1785,16 @@ Tirar o `pending` do exemplo de slugs da Tarefa 6.
 
 **Interfaces.**
 - `Contratar.new(account:, user:, modelo:, nome_agente:, nome_corretora:, sobre_corretora:).call -> Agent`.
-  `class Recusado < StandardError` com `motivo` (`indisponivel`, `nome_agente`, `nome_corretora`, `sobre_corretora`,
-  `marcador`). Confere: `Contratados.disponivel?`; nomes 1..120; sobre 0..1000; nenhum valor com marcador
-  (`Instrucao.marcador_dentro?`). Transação: cria o `Agent` (`agent_type: 'sdr'`, `name: nome_agente`, `status:
-  :paused`, `enabled: false`, `mode: :guided`, `created_by: user`, `instruction:` retrato do nascimento
-  `Instrucao.renderizar` sobre o novo, `config: { 'contratado' => marca, 'with_knowledge' => true }.merge(modelo[:conversa])`),
+  `class Recusado < StandardError` com `attr_reader :motivo, :campo` e `Recusado.new(motivo, campo: nil)` (R14): `motivo`
+  em `indisponivel`, `nome_agente`, `nome_corretora`, `sobre_corretora`, `marcador`; `campo` é o nome do campo da tela
+  que causou a recusa (`'nome_agente'`, `'nome_corretora'` ou `'sobre_corretora'`; no `marcador`, o campo onde o
+  marcador apareceu; no `indisponivel`, nil). Confere: `Contratados.disponivel?`; nomes 1..120; sobre 0..1000; nenhum
+  valor com marcador (`Instrucao.marcador_dentro?`). Transação: cria o `Agent` (`agent_type: 'sdr'`, `name:
+  nome_agente`, `status: :draft` (R13: nasce **rascunho**, "Falta terminar" na tela, nota 6 do mockup; deixa de ser
+  rascunho quando o acesso fica `ok` e a caixa é escolhida, pelo `InboxConnector` com `ativar`), `enabled: false`,
+  `mode: :guided`, `created_by: user`, `instruction:` retrato do nascimento
+  `Instrucao.renderizar` sobre o novo, `config: { 'contratado' => marca, 'with_knowledge' => true }.merge(modelo[:conversa])` — `modelo[:conversa]` são
+  as chaves em texto da Tarefa 6, R0),
   `save!(context: %i[create ativacao])`; inclui as prontas `cep` e `cpf` com `FerramentasProntas::Incluir.new(...,
   pelo_contratar: true, usar_quando: USAR_QUANDO[fonte]).call` (`USAR_QUANDO = { 'cep' => 'na proposta, para achar o
   endereço do titular pelo CEP', 'cpf' => 'na proposta, para conferir cada CPF assim que chegar' }`). Depois do commit:
@@ -1311,19 +1807,24 @@ Tirar o `pending` do exemplo de slugs da Tarefa 6.
   regex), embebe com `EmbeddingService.new(account:, model: Config.active_embedding_model).embed_batch`, recria a fonte
   `source_type: 'md', kind: :knowledge, reference: 'Base oficial Universal', metadata: { 'contratado_base' => true }`,
   `status: ready`, `review_status: 'accepted'`, e as `KnowledgeEntry` (mesmo desenho de `Guide::Seed#ensure_knowledge`,
-  incluindo a coluna `embedding_large`), e grava `contratado_base_versao` com `update_columns` no jsonb (`jsonb_set`)
-  para não passar pelo save comum. Sob `pg_advisory_lock` por agente.
+  incluindo a coluna `embedding_large`), e grava `Contratados::BASE_VERSAO` (`'contratado_base_versao'`) sem passar
+  pelo save comum, com `update_all` + `jsonb_set` no mesmo desenho de `Agent#bump_knowledge_refresh_token!`
+  (`agent.rb:317-321`, R13; nunca `update_columns`, que regravaria o `config` inteiro lido antes):
+  `Agent.kept.where(id: agent.id).update_all(['config = jsonb_set(COALESCE(config, \'{}\'::jsonb),
+  \'{contratado_base_versao}\', ?::jsonb, true), updated_at = ?', versao.to_json, Time.current])`. Sob
+  `pg_advisory_lock` por agente.
 - `SemearBaseJob#perform(agent_id)`: `Base.semear!` se não `em_dia?`; agente apagado ou não contratado: nada.
 - `BaseEmDiaJob#perform`: para cada contratado `kept` com versão diferente, `SemearBaseJob.perform_later`. Cron
   `autonomia_contratados_base_em_dia_job: cron: '17 * * * *'`, `queue: scheduled_jobs`.
-- `contratado_base_versao` entra em `RESERVED_CONFIG_KEYS` (Tarefa 9, mesma linha).
+- `contratado_base_versao` já está em `RESERVED_CONFIG_KEYS` desde a Tarefa 9 (R13).
 
-- [ ] Spec que falha: `spec/services/autonomia/agents/contratados/contratar_spec.rb`
+- [ ] Spec que falha: `spec/services/autonomia/agents/contratados/contratar_spec.rb` (com
+  `before { enable_test_encryption! }`, R8: `Contratar` passa por `Contratados.disponivel?`)
 
 ```ruby
-it 'nasce sdr, parado, com a marca, as opções de conversa e as duas prontas' do
+it 'nasce sdr, rascunho, com a marca, as opções de conversa e as duas prontas' do
   agente = contratar.call
-  expect(agente).to have_attributes(agent_type: 'sdr', status: 'paused', enabled: false, mode: 'guided', name: 'Bia')
+  expect(agente).to have_attributes(agent_type: 'sdr', status: 'draft', enabled: false, mode: 'guided', name: 'Bia')
   expect(agente.config['contratado']).to eq('modelo' => 'seguro_viagem_universal', 'nome_agente' => 'Bia',
                                             'nome_corretora' => 'Corretora Exemplo', 'sobre_corretora' => 'Desde 2010.')
   expect(agente.config).to include('humanize_delivery' => true, 'voice_reply' => true)
@@ -1332,21 +1833,42 @@ it 'nasce sdr, parado, com a marca, as opções de conversa e as duas prontas' d
 end
 
 it 'liga as opções de conversa do PR 1' do
-  expect(contratar.call.config).to include(Autonomia::Agents::Contratados::CONVERSA_DO_PR1)
+  config = contratar.call.config
+  chaves = %w[conversa_espera_a_fala conversa_em_fila conversa_entrega_inteira conversa_ritmo_do_canal
+              humanize_delivery voice_reply]
+  expect(config.slice(*chaves)).to eq(chaves.index_with(true))
 end
 
 it 'enfileira a base depois do commit' do
   expect { contratar.call }.to have_enqueued_job(Autonomia::Agents::Contratados::SemearBaseJob)
 end
 
-it 'recusa nome com marcador, só com o campo' do
-  expect { contratar(nome_corretora: '$nomeAgente').call }.to raise_error(described_class::Recusado) { |e| expect(e.motivo).to eq('marcador') }
+it 'recusa nome com marcador, com o campo (R14)' do
+  expect { contratar(nome_corretora: '$nomeAgente').call }.to raise_error(described_class::Recusado) { |e|
+    expect([e.motivo, e.campo]).to eq(%w[marcador nome_corretora])
+  }
 end
 
-it 'conta sem a flag: indisponivel, nada criado' do
+it 'nome grande demais: o campo é o motivo e o campo' do
+  expect { contratar(nome_agente: 'a' * 121).call }.to raise_error(described_class::Recusado) { |e|
+    expect([e.motivo, e.campo]).to eq(%w[nome_agente nome_agente])
+  }
+end
+
+it 'conta sem a flag: indisponivel, sem campo, nada criado' do
   account.disable_features!('agente_seguro_viagem_universal')
-  expect { contratar.call }.to raise_error(described_class::Recusado)
+  expect { contratar.call }.to raise_error(described_class::Recusado) { |e| expect([e.motivo, e.campo]).to eq(['indisponivel', nil]) }
   expect(Autonomia::Agents::Agent.count).to eq(0)
+end
+
+it 'a versão da base vai por jsonb_set, sem regravar o resto do config' do
+  # EmbeddingService stubado devolvendo vetores, como no base_spec.
+  agente = contratar.call
+  copia = Autonomia::Agents::Agent.find(agente.id)
+  agente.update!(config: agente.config.merge('greeting_extra' => 'x'))
+  Autonomia::Agents::Contratados::Base.semear!(copia)
+  expect(agente.reload.config).to include('greeting_extra' => 'x',
+                                          'contratado_base_versao' => Autonomia::Agents::Contratados::Base::VERSAO)
 end
 ```
 
@@ -1363,27 +1885,30 @@ antigas), `dados_da_corretora_spec.rb` (troca os três, mantém `modelo`, não e
 `resources :agents` → `patch 'contratado', to: 'agents/contratado#update'` e `resource :acesso_da_seguradora, only:
 [:show, :create], controller: 'agents/acesso_da_seguradora'`; fora dele, ao lado de `modelos_de_ramo` →
 `get 'contratados', to: 'contratados#index'` e `post 'contratados/:modelo', to: 'contratados#create'`);
-`_agent.json.jbuilder:31` (novo bloco `json.contratado`); `lib/operator_guide/automacao-recursos.yml:599-625`;
-i18n backend.
+`_agent.json.jbuilder:31` (novo bloco `json.contratado`); `lib/operator_guide/automacao-recursos.yml` (559-595, grupo
+das credenciais; 597-625, grupo de IA); i18n backend.
 
 **Interfaces.**
 - `GET /api/v1/accounts/:account_id/autonomia/contratados` → `{ modelos: ['seguro_viagem_universal'] }` (só chaves;
   textos são da tela; vazio sem flag).
 - `POST /api/v1/accounts/:account_id/autonomia/contratados/:modelo` params `{ nome_agente, nome_corretora,
   sobre_corretora }` → 201 com o agente (`render 'api/v1/accounts/autonomia/agents/show'`); `Recusado` → 422
-  `{ error:, code: motivo }`.
+  `{ error:, code: e.motivo, campo: e.campo }` (R14: `campo` é o campo que a tela destaca; nil no `indisponivel`).
 - `PATCH /api/v1/accounts/:account_id/autonomia/agents/:agent_id/contratado` mesmos params → 200 com o agente; agente
-  não contratado → 404.
+  não contratado → 404; `Recusado` → o mesmo 422 com `campo`.
 - `POST .../agents/:agent_id/acesso_da_seguradora` `{ login, senha }` → `ConferirAcesso` → 200
   `acesso.payload_publico`; `GET` → 200 `payload_publico` ou `{ estado: 'nao_conferido' }` sem linha.
 - jbuilder: `json.contratado(agent.contratado? ? agent.config['contratado'].slice('modelo', 'nome_agente',
   'nome_corretora', 'sobre_corretora').merge('acesso' => agent.acesso_da_seguradora&.payload_publico) : nil)`.
-- `automacao-recursos.yml`: `autonomia/contratados`, `autonomia/agents/contratado`,
-  `autonomia/agents/acesso_da_seguradora` no grupo "Rotas de IA, do CRM e dos agentes. Sempre fora".
+- `automacao-recursos.yml` (R21): `autonomia/agents/acesso_da_seguradora` no grupo da linha 559 ("Usuários, funções,
+  conta, segurança, integrações, credenciais, tokens e canais. Sempre fora"), ao lado de
+  `autonomia/insurance/connection` (é credencial de seguradora); `autonomia/contratados` e `autonomia/agents/contratado`
+  no grupo da linha 597 ("Rotas de IA, do CRM e dos agentes. Sempre fora"), ao lado de `autonomia/agents/modelo_pronto`.
 - Permissão: herda `check_module_permission!('autonomia')` do `BaseController` (escrita = `autonomia_manage`).
 
 - [ ] Spec que falha: `spec/requests/api/v1/accounts/autonomia/contratados_spec.rb`,
-  `.../agents/contratado_spec.rb`, `.../agents/acesso_da_seguradora_spec.rb`
+  `.../agents/contratado_spec.rb`, `.../agents/acesso_da_seguradora_spec.rb` (todos com
+  `before { enable_test_encryption! }`, R8; o Setup por WebMock com `setup.json`)
 
 ```ruby
 it 'acesso: POST confere e nunca devolve a senha nem o login (R5)' do
@@ -1414,6 +1939,12 @@ it 'agente de outra conta: 404' do
   patch outro_contratado_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json
   expect(response).to have_http_status(:not_found)
 end
+
+it 'recusa com o campo que a tela destaca (R14)' do
+  post contratar_url, params: tres_campos.merge(nome_corretora: '$nomeAgente'), headers: admin.create_new_auth_token, as: :json
+  expect(response).to have_http_status(:unprocessable_entity)
+  expect(response.parsed_body.slice('code', 'campo')).to eq('code' => 'marcador', 'campo' => 'nome_corretora')
+end
 ```
 
 - [ ] Rodar: não rodar localmente; roda na CI.
@@ -1429,13 +1960,18 @@ end
 **Interfaces.** Em `recusa_de_conexao`, antes de `:agent_not_active`:
 `return :acesso_da_seguradora_pendente if @agent.contratado? && !@agent.acesso_da_seguradora&.ok?`.
 
-- [ ] Spec que falha: `spec/services/autonomia/agents/operate/inbox_connector_contratado_spec.rb`: contratado sem
-  acesso ok → `result.error == :acesso_da_seguradora_pendente` e nenhum `AgentInbox` criado; com acesso ok e
-  `ativar: true` → vínculo criado e agente `active`/`enabled`; agente comum inalterado.
+- [ ] Spec que falha: `spec/services/autonomia/agents/operate/inbox_connector_contratado_spec.rb` (com
+  `before { enable_test_encryption! }`, R8; contratado criado à mão como **rascunho**, `status: :draft`, como o
+  `Contratar` o cria, R13): contratado sem acesso ok, com `ativar: true` → `result.error ==
+  :acesso_da_seguradora_pendente`, nenhum `AgentInbox` criado e o agente continua `draft`; com acesso ok e
+  `ativar: true` → vínculo criado e agente `active`/`enabled` (sai do rascunho); agente comum inalterado.
 - [ ] Rodar: não rodar localmente; roda na CI.
 - [ ] Implementar. Commits: `test(seguro-viagem): caixa só com acesso conferido` / `feat(seguro-viagem): caixa só com acesso conferido`.
 
 ### Tarefa 23 — Flag da conta
+
+Roda **antes** da Tarefa 6 (ver Ordem de execução): o spec da 6 liga e desliga esta flag pelo `enable_features!`, que
+só existe com a flag em `config/features.yml`. A constante do front entra junto (a rota da Tarefa 29a a usa).
 
 **Arquivos.** Modificar `config/features.yml` (fim do arquivo) e `app/javascript/dashboard/featureFlags.js`.
 
@@ -1450,7 +1986,7 @@ senão `feature_flags_ext_3`. Front: `AGENTE_SEGURO_VIAGEM_UNIVERSAL: 'agente_se
 
 ### Tarefa 24 — GATE: mockup em prints aprovado pelo Rodrigo
 
-Nenhuma tarefa de tela (25 a 29) começa antes deste gate fechar.
+Nenhuma tarefa de tela (25, 29a, 26, 27, 28, 29b) começa antes deste gate fechar.
 
 - [ ] Escrever `app/javascript/dashboard/routes/dashboard/autonomia/agentes/stories/Contratado.story.vue` com dados
   fictícios (nome "Bia", "Corretora Exemplo"), uma variante por estado da jornada:
@@ -1491,6 +2027,8 @@ sobreCorretora })` (snake_case no corpo); `.salvarDados(agentId, campos) -> PATC
 
 ### Tarefa 26 — Cartão "Prontos para contratar"
 
+Roda depois da Tarefa 29a (R15): a rota `autonomia_contratado_modelo` e os textos `AGENTS.CONTRATADOS.*` já existem.
+
 **Arquivos.** Criar `ProntosParaContratar.vue`, `ContratadoCartao.vue`; modificar `AgenteEscolherPage.vue` (65-231:
 seção nova depois de `RamosProntos`, antes dos modelos gerais, como no mockup aprovado).
 
@@ -1503,20 +2041,38 @@ Só aparece com lista não vazia.
 
 ### Tarefa 27 — Página do modelo e os três campos
 
-**Arquivos.** Criar `ContratadoModeloPage.vue`, `DadosDaCorretoraForm.vue`.
+**Arquivos.** Completar `ContratadoModeloPage.vue` (o arquivo mínimo nasceu na Tarefa 29a); criar
+`DadosDaCorretoraForm.vue`.
 
 **Interfaces.** Página recebe `modelo`; mostra o que o agente faz e o que vai pedir; **Contratar** abre o formulário
 (3 campos, `maxlength` 120/120/1000, contador no de descrição). Envio → `ContratadosAPI.contratar` → rota
-`autonomia_agent_panel` com `?gaveta=contratado` (Tarefa 28). Erro 422 mostra a mensagem do campo (`code`).
-`DadosDaCorretoraForm` é o mesmo componente da edição depois (prop `inicial`).
+`autonomia_agent_panel` com `?gaveta=contratado` (Tarefa 28). Erro 422: o campo destacado é o `campo` da resposta
+(R14, Tarefa 21: `{ error, code, campo }`), com o texto do i18n pelo `code`; `campo` nil (`indisponivel`) mostra o
+erro no topo do formulário, sem destacar campo. `DadosDaCorretoraForm` é o mesmo componente da edição depois (prop
+`inicial`).
 
 - [ ] Spec que falha: `specs/contratados/ContratadoModeloPage.spec.js` (campos obrigatórios bloqueiam o envio; corpo
-  enviado exato; sucesso navega para o agente criado com a gaveta; 422 `nome_corretora` marca o campo).
+  enviado exato; sucesso navega para o agente criado com a gaveta; 422 `{ code: 'marcador', campo: 'nome_corretora' }`
+  marca o campo "nome da corretora" e nenhum outro; 422 `{ code: 'indisponivel', campo: null }` não marca campo).
 - [ ] Rodar vitest; implementar; eslint. Commits: teste / `feat(seguro-viagem): página do modelo e dados da corretora`.
 
 ### Tarefa 28 — Gaveta do contratado (dados e acesso) e regras da página
 
-**Arquivos.** Criar `GavetaDoContratado.vue`, `AcessoDaSeguradoraForm.vue`; modificar `utils/pagina.js:37-90`.
+**Arquivos** (R16; gavetas novas em `components/pagina/`, junto das outras gavetas da página):
+- Criar `components/pagina/GavetaDoContratado.vue` e `components/pagina/AcessoDaSeguradoraForm.vue`.
+- Modificar `utils/pagina.js:37-90` (regras abaixo).
+- Modificar `pages/AgentePage.vue`: passar o contratado por `gavetasPermitidas` (linha 204) e montar a
+  `GavetaDoContratado` quando a gaveta é `GAVETA.CONTRATADO`; a gaveta Saber (`GavetaOQueSabe`) recebe
+  `somenteLeitura` para o contratado.
+- Modificar `components/pagina/GavetaOQueSabe.vue`: prop nova `somenteLeitura: Boolean` (padrão `false`); com ela, a
+  gaveta lista a base sem botão de enviar, apagar ou reler material (a API recusa desde a Tarefa 9; a tela não oferece).
+- Modificar `components/pagina/GavetaOndeQuando.vue` (nota 5 do mockup): prop nova `textoDoPasso: String` (padrão
+  `null`; com valor, mostra esse texto no topo da gaveta — o contratado passa "Passo 3 de 3" do i18n) e, quando há um
+  único canal livre, ele já vem marcado. A `AgentePage` usa `GavetaOndeQuandoFase2.vue` quando a Fase 2 está ligada; as duas props entram nela
+  também, com o mesmo comportamento.
+- Modificar `pages/AgentesListaPage.vue` (`continuar`, linhas 310-327): para um agente com `contratado` (rascunho), o
+  "Continuar" do cartão da lista abre a página do agente (`autonomia_agent_panel` com `?gaveta=contratado`), **nunca** o
+  Construtor (`autonomia_agents_builder`), que recusa o contratado com 422.
 
 **Interfaces.**
 - `pagina.js`: `export const ehContratado = agente => Boolean(agente?.contratado)`; `GAVETA.CONTRATADO = 'contratado'`;
@@ -1524,33 +2080,50 @@ Só aparece com lista não vazia.
   `[GAVETA.CONTRATADO, GAVETA.ONDE, GAVETA.TESTAR, GAVETA.SABE, GAVETA.FOTO, GAVETA.VOLTAR]` (Saber só leitura, sem
   enviar material); quem só vê: `[GAVETA.TESTAR, GAVETA.SABE]`. `gavetaDaUrl` aceita `contratado`.
 - `AcessoDaSeguradoraForm`: login + senha (`type="password"`, `autocomplete="off"`), botão Conferir; mostra
-  `login_dica` e estado; senha limpa do estado depois do envio; estado `ok` mostra **Escolher a caixa** → gaveta ONDE.
-  Com `so_cotacao` avisa que o login só cota.
+  `login_dica` e estado; senha limpa do estado depois do envio; estado `ok` mostra **Escolher a caixa** → gaveta ONDE
+  com `textoDoPasso`. Com `so_cotacao` avisa que o login só cota. Notas 1 a 4 do mockup valem aqui (aviso do acesso
+  recusado com "Cadastrar a senha nova"; "Salvar" `xl bloco` nos dados; "Passo 2 de 3" igual em conferido e só cota;
+  olho da senha com `aria-label` alternado e `aria-pressed`).
 
 - [ ] Spec que falha: `specs/contratados/regrasDoContratado.spec.js` (as listas exatas acima; `podeMudarConversando`
   falso; a Lia e o agente comum com as mesmas listas de antes — comparar com o resultado atual de `gavetasPermitidas`
-  para eles) e `specs/contratados/AcessoDaSeguradoraForm.spec.js` (POST com corpo exato; depois do POST nenhum
-  `input` tem a senha; estados `recusado` e `so_cotacao` mostram os textos do i18n).
+  para eles), `specs/contratados/AcessoDaSeguradoraForm.spec.js` (POST com corpo exato; depois do POST nenhum
+  `input` tem a senha; estados `recusado` e `so_cotacao` mostram os textos do i18n),
+  `specs/contratados/continuarContratado.spec.js` (o "Continuar" de um rascunho contratado vai para
+  `autonomia_agent_panel` com `query.gaveta === 'contratado'`; o de um rascunho comum continua indo para
+  `autonomia_agents_builder` com `query.agente`), e, nos specs existentes das gavetas, `GavetaOQueSabe` com
+  `somenteLeitura` sem os botões de escrita e `GavetaOndeQuando` com um canal livre já marcado.
 - [ ] Rodar vitest (também `specs/pagina`), implementar, eslint. Commits: teste / `feat(seguro-viagem): gaveta do contratado`.
 
-### Tarefa 29 — Rota, i18n do painel e Guia
+### Tarefa 29 — Rota, i18n do painel e Guia (em duas partes, R15)
+
+**29a — rota e i18n (roda depois da 25 e antes da 26).**
 
 **Arquivos.** Modificar `autonomia.routes.js` (rota `autonomia_contratado_modelo`, path
 `accounts/:accountId/agents/prontos/:modelo`, `meta: { ...agentsManageMeta, featureFlag:
-FEATURE_FLAGS.AGENTE_SEGURO_VIAGEM_UNIVERSAL }`, `beforeEnter: [ensureAutonomiaEnabled,
+FEATURE_FLAGS.AGENTE_SEGURO_VIAGEM_UNIVERSAL }` (a constante é da Tarefa 23), `beforeEnter: [ensureAutonomiaEnabled,
 comFlags(FEATURE_FLAGS.AGENTE_SEGURO_VIAGEM_UNIVERSAL)]`, **antes** de `autonomia_agent_panel` para `prontos` não
-casar como `agentId`); `i18n/locale/{en,pt_BR}/agents.json` (namespace `AGENTS.CONTRATADOS.*`); `lib/operator_guide/porques.md`.
+casar como `agentId`); `i18n/locale/{en,pt_BR}/agents.json` (namespace `AGENTS.CONTRATADOS.*`: todos os textos das
+Tarefas 26 a 28, de uma vez); criar `pages/ContratadoModeloPage.vue` mínima (`<script setup>` com a prop `modelo` e o
+título `AGENTS.CONTRATADOS.MODELO.TITULO`), porque a rota importa o arquivo; a Tarefa 27 a completa.
 
 - [ ] Spec que falha: `autonomia.routes.spec.js` ganha `rota('autonomia_contratado_modelo')` com a flag e a ordem.
 - [ ] i18n: en e pt_BR juntos (catálogo do fork); `pnpm i18n:fork:check`.
+- [ ] Rodar `pnpm test app/javascript/dashboard/routes/dashboard/autonomia` e `pnpm test app/javascript/dashboard/modules`.
+- [ ] Commits: teste / `feat(seguro-viagem): rota da página do modelo e textos do painel`.
+
+**29b — Guia (roda por último, depois da 28).**
+
+**Arquivos.** Modificar `lib/operator_guide/porques.md` e os gerados (`lib/operator_guide/guia-produto.md`,
+`app/javascript/dashboard/helper/guideRouteRegistry.js`, por `pnpm guia:build`).
+
 - [ ] `porques.md`: bloco `### contratar_agente_seguro_viagem_universal` com `titulo`, `rota:
   autonomia_contratado_modelo`, `intent` (como contrato o agente de seguro viagem; onde ponho o login da Universal;
   por que não consigo mudar a instrução dele), `onde_fica`, `pre_requisitos` (flag e prontas ligadas; login do portal
   da Universal), `passos` (Contratar → 3 campos → login e senha → Escolher a caixa), `gotchas` (instrução e base são
   mantidas pela Autonom.ia; não dá para incluir ferramenta; login que só cota não gera proposta).
   `pnpm guia:build` e enviar o gerado; `pnpm guia:check`.
-- [ ] Rodar `pnpm test app/javascript/dashboard/routes/dashboard/autonomia` e `pnpm test app/javascript/dashboard/modules`.
-- [ ] Commits: teste / `feat(seguro-viagem): rota da página do modelo e Guia`.
+- [ ] Commit: `docs(guia): contratar o agente de seguro viagem`.
 
 ### Tarefa 30 — Validação, revisão e teste pago
 
@@ -1559,6 +2132,9 @@ casar como `agentId`); `i18n/locale/{en,pt_BR}/agents.json` (namespace `AGENTS.C
 - [ ] Prints finais da tela implementada (1440 e 390) comparados com o mockup aprovado; `diretor-de-arte` de novo.
 - [ ] Abrir o PR com `Refs #3211` (não `Closes`: a jornada paga e o piloto ficam depois). CI verde lida linha a linha.
 - [ ] Revisor `agentes-ia-refactor-reviewer` no diff inteiro, com os cinco itens do Foco da revisão.
+- [ ] **Pré-condição do teste pago (R0): o PR 1 (paridade da conversa) mesclado e no ar.** O teste confere a conversa
+  inteira, e o P7 ("link não vira áudio": a resposta com o link de pagamento sai em texto, nunca em áudio) é do PR 1.
+  Sem o PR 1 no ar, o teste pago espera.
 - [ ] Teste pago na conta piloto, **com OK do Rodrigo e teto de US$ 10**: viajante "QI 60" do "oi" ao link, cotação e
   proposta reais na Universal (uma proposta de teste fica registrada, sem pagamento). Confirma `FormaPagamento: 8` e o
   link. Se o `8` falhar, a decisão volta ao Rodrigo (boleto ou faturado).
@@ -1587,7 +2163,7 @@ casar como `agentId`); `i18n/locale/{en,pt_BR}/agents.json` (namespace `AGENTS.C
 13. `DadosIncompletos` é subclasse de `EscolhasIncompletas`, para as portas que já tratam a da Lia tratarem esta.
 14. ~~F1 e a promessa da IA do CRM tratam o contratado como a Lia.~~ Rodrigo decidiu (24/11): **agente comum** no CRM;
     predicado `protegido_no_crm?` só para a Lia (Tarefa 8).
-15. Login do teste: o **do próprio Rodrigo**, cadastrado por ele na tela de acesso do agente na conta 18 (Rodrigo,
+15. Login do teste: o **do próprio Rodrigo**, cadastrado por ele na tela de acesso do agente na conta piloto (Rodrigo,
     24/11: "vamos fazer o processo"). Ninguém digita login/senha em chat, script ou arquivo; a Tarefa 0 vira fixture
     da cotação real guardada no n8n + conferência depois do deploy (ver Tarefa 0).
 
