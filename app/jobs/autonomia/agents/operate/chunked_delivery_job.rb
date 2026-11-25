@@ -79,7 +79,7 @@ module Autonomia
         # avisou que vai chamar alguém não impede a avaliação da Atribuição. Os outros motivos só encerram.
         # #3211 (P1): parada antes do 1º pedaço sem postar apaga o fim previsto da fala deste turno (FalaDaCadeia.parou).
         def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
-          FalaDaCadeia.parou(conversation.id, agent_inbox.agent, reply_to_message_id, index) { chunk_posted?(conversation, reply_to_message_id, 0) }
+          FalaDaCadeia.parou(conversation, agent_inbox.agent, reply_to_message_id, index) { chunk_posted?(conversation, reply_to_message_id, 0) }
           case motivo
           when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
           when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
@@ -111,7 +111,8 @@ module Autonomia
         # nova não a corta: vale sem olhar o stamp (FalaDaCadeia.comecada?). O 1º pedaço sempre confere. Elegibilidade,
         # `ja_postado` e `pessoa_respondeu` seguem conferidos em todo pedaço.
         def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
-          return :turno_mudou unless FalaDaCadeia.comecada?(agent_inbox.agent, index) || current_turn?(conversation, reply_to_message_id)
+          comecada = FalaDaCadeia.comecada?(agent_inbox.agent, conversation.inbox, index)
+          return :turno_mudou unless comecada || current_turn?(conversation, reply_to_message_id)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
           return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
 
@@ -167,7 +168,7 @@ module Autonomia
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           renovar_o_turno(conversation, reply_to_message_id)
-          FalaDaCadeia.renovar(conversation.id, agent_inbox.agent, reply_to_message_id) # #3211 (P2): a fala segue no próximo pedaço
+          FalaDaCadeia.renovar(conversation, agent_inbox.agent, reply_to_message_id) # #3211 (P2): a fala segue no próximo pedaço
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
         end

@@ -40,10 +40,10 @@ class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
   def janela_do_turno(agent, conversation, message_id)
     espera = ::Autonomia::Agents::Operate::EsperaDaFala
     marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-    return espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true) if marca_do_turno?(marca, message_id)
+    return espera.janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true) if marca_do_turno?(marca, message_id)
 
-    janela = espera.da_rajada(agent: agent, conversation_id: conversation.id)
-    ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent) ? janela + espera::TETO_DA_FILA : janela
+    janela = espera.da_rajada(agent: agent, conversation_id: conversation.id, inbox: conversation.inbox)
+    ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox) ? janela + espera::TETO_DA_FILA : janela
   end
 
   def marca_do_turno?(marca, message_id)

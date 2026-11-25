@@ -5,7 +5,12 @@
 # com `conversa_entrega_inteira` uma mensagem nova do cliente pode chegar entre o 1º pedaço e o 2º. Os pedaços que vêm
 # depois do primeiro (`autonomia_chunk_index` > 0) são continuação da mesma fala e não fecham a rajada; sem isso, a lista
 # ficaria vazia (a última outgoing seria um pedaço posterior) e a pergunta seria vazia ou a já respondida. O 1º pedaço
-# (índice 0) e qualquer outra saída (pessoa, outro robô, mensagem de sistema) fecham a rajada.
+# (índice 0) e qualquer outra saída (pessoa, outro robô) fecham a rajada.
+#
+# Mensagem automática do Chatwoot (`message_type` template: a coleta de e-mail do site, a saudação, o fora do horário)
+# também não fecha: ela é criada logo depois da mensagem do cliente, sem ser fala de ninguém, e fechar nela deixava a
+# rajada vazia (a pergunta e a busca na base iam vazias no 1º turno). Antes do #3211 a pergunta já a pulava
+# (`last_incoming_message` só olha incoming).
 module Autonomia::Agents::Operate::RajadaDoCliente
   CHAVE_DO_PEDACO = 'autonomia_chunk_index'.freeze
 
@@ -17,7 +22,7 @@ module Autonomia::Agents::Operate::RajadaDoCliente
     recent_messages.reverse_each do |message|
       if message.incoming?
         rajada << message
-      elsif !continuacao_de_cadeia?(message)
+      elsif !continuacao_de_cadeia?(message) && !message.template?
         break
       end
     end

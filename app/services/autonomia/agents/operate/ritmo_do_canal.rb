@@ -37,7 +37,7 @@ module Autonomia::Agents::Operate::RitmoDoCanal
   end
 
   def para(chunks, agent:, conversation:)
-    return chunks unless ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(agent)
+    return chunks unless ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(agent, conversation&.inbox)
 
     aplicar(chunks, whatsapp_oficial: whatsapp_oficial?(conversation))
   end

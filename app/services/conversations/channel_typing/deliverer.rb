@@ -1,12 +1,13 @@
 # chat#1442 — "Digitando" no canal da conversa: WhatsApp Cloud oficial, Instagram e caixa WhatsApp API
 # (Channel::Api provisionada para WAHA). Atende o robô externo (toggle_typing_status com deliver_to_channel)
 # e o agente nativo (Autonomia::Agents::Operate::TypingIndicator delega para cá o WhatsApp oficial e o
-# Instagram; a caixa WhatsApp API do agente nativo segue pelo evento do painel, a não ser que o agente tenha a opção
-# `conversa_ritmo_do_canal` (#3211), que também manda o "digitando" ao canal na caixa WAHA).
+# Instagram; na caixa WhatsApp API, o agente nativo manda o evento do painel e, com a opção `conversa_ritmo_do_canal`
+# (#3211, ligada por padrão menos na Lia), também o "digitando" ao canal na caixa WAHA).
 # Caixa oficial com WhatsApp Híbrido (chat#1067) segue pela Meta, como qualquer caixa oficial.
 # Chave de instalação AI_HUMANIZE_CHANNEL_TYPING (ligada quando ausente): desligada, ninguém mostra
 # "digitando" no canal.
-# timeout (segundos) limita a chamada ao canal; o job informa, o agente nativo não (segue como era).
+# timeout (segundos) limita a chamada ao canal; o job informa; o agente nativo informa só na caixa WAHA (#3211), no
+# WhatsApp oficial e no Instagram segue sem (como era).
 # É cosmético: nunca levanta. Falha vira log sem token e sem conteúdo: na Meta e no Instagram, a classe do
 # erro ou o status HTTP da recusa; no WAHA, só a classe do erro (a mensagem dele traz URL e corpo).
 class Conversations::ChannelTyping::Deliverer

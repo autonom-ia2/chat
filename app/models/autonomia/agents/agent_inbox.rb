@@ -144,7 +144,8 @@ module Autonomia
         stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
         return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
 
-        janela = ::Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle(agent: agent, marca: stamp, com_a_fila: true) + FOLGA_DO_TURNO
+        espera = ::Autonomia::Agents::Operate::EsperaDaFala
+        janela = espera.janela_do_settle(agent: agent, marca: stamp, inbox: conversation.inbox, com_a_fila: true) + FOLGA_DO_TURNO
         stamp['at'].to_f >= janela.ago.to_f
       end
 

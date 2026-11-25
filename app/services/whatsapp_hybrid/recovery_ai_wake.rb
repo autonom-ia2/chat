@@ -34,7 +34,8 @@ module WhatsappHybrid::RecoveryAiWake
     agent_inbox = ::Autonomia::Agents::Operate.eligible_agent_inbox(message.conversation)
     return if agent_inbox.nil?
 
-    espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: message.conversation_id)
+    espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: message.conversation_id,
+                                                                  inbox: message.inbox)
     return unless marcar_turno?(message, espera)
 
     ::Autonomia::Agents::Operate::ReplyJob.set(wait: espera).perform_later(message.conversation_id, message.id, 'settle')

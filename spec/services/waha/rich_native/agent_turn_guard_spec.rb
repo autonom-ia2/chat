@@ -136,6 +136,24 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(consultas.sole[:history].pluck(:content)).not_to include('Você recebeu uma mensagem de visualização única.')
     end
 
+    # Revisão do #3218. Pega: com a espera pela fala (P1, ligada por padrão, #3211), o turno do guard fechar na mensagem
+    # automática do Chatwoot (template) que veio depois da bolha, ficar vazio e não calar: a IA seria chamada (paga) com a
+    # pergunta vazia.
+    it 'with the default P1, keeps the AI quiet on a bubbles-only burst followed by an automatic message', :aggregate_failures do
+      mensagem = sem_suporte
+      travel 1.second
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :template, sender: nil,
+                       content: 'Informe seu e-mail para receber a resposta.')
+      gatilho(mensagem)
+
+      rodar_turno!
+
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.where(conversation_id: conversation.id).pluck(:message_id))
+        .to eq([mensagem.id])
+    end
+
     it 'answers as in main without the flag' do
       account.disable_features!(Waha::RichNative::FLAG)
       gatilho(sem_suporte)
@@ -220,7 +238,9 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
 
       before { freeze_time }
 
+      # Sem a fila: com ela (o padrão, #3211), a janela ganha o teto da fila, e o exemplo mede só a espera pela fala.
       it 'waits for the burst window of now, with conversa_espera_a_fala' do
+        desligar_paridade!(agente_da_porta, 'conversa_em_fila')
         agente_da_porta.update!(config: agente_da_porta.config.to_h.merge('conversa_espera_a_fala' => true))
         allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:fim_previsto).and_return(25.seconds.from_now)
         sem = bolha
@@ -231,7 +251,8 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
         expect(Waha::RichNative::UnsupportedTurnJob).to have_been_enqueued.with(conversation.id, sem.id, 'settle').at(25.seconds.from_now)
       end
 
-      it 'waits for the usual debounce without the options' do
+      it 'waits for the usual debounce with the options turned off' do
+        desligar_paridade!(agente_da_porta)
         sem = bolha
         marca_velha!(sem)
 

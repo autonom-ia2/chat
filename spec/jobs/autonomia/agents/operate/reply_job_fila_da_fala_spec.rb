@@ -6,7 +6,8 @@ require 'rails_helper'
 #   resposta superada por mensagem nova durante a IA é descartada, com ou sem Fase 2;
 # - a fala ocupada por este turno sai por qualquer caminho (resposta, falha, opção desligada no meio), menos quando a
 #   cadeia de pedaços fica com ela.
-# Sem as opções, o turno é o de sempre: 6 s de debounce e as duas respostas fora da Fase 2.
+# As opções nascem ligadas (menos na Lia). Com elas gravadas `false`, o turno é o de antes: 6 s de debounce e as duas
+# respostas fora da Fase 2.
 RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
   include_context 'with crm responsible agent'
 
@@ -47,7 +48,24 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq(25_000)
   end
 
-  it 'sem opção: 6 s, como hoje' do
+  it 'P1 sem a chave (padrão ligado), sem fala anterior: a espera mínima de 1 s', :aggregate_failures do
+    gatilho(cliente_escreve('oi'))
+
+    expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(1.second.from_now)
+    expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq(1000)
+  end
+
+  it 'P1 na Lia sem a chave: 6 s, como antes' do
+    agente_da_porta.update_columns(agent_type: 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations
+    allow(fala).to receive(:fim_previsto).and_return(25.seconds.from_now)
+
+    gatilho(cliente_escreve('oi'))
+
+    expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(6.seconds.from_now)
+  end
+
+  it 'opção desligada: 6 s, como antes' do
+    desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
     gatilho(cliente_escreve('oi'))
 
     expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(6.seconds.from_now)
@@ -68,6 +86,16 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     rodar_turno!
 
     expect(respostas.count).to eq(1)
+  end
+
+  it 'P2 sem a chave (padrão ligado): outro turno falando, o settle volta em 2 s e não responde', :aggregate_failures do
+    fala.ocupar(conversation.id, 999_999)
+    gatilho(cliente_escreve('oi'))
+
+    rodar_rodada!
+
+    expect(respostas).to be_empty
+    expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(2.seconds.from_now)
   end
 
   it 'P2: passado o teto da fila, responde mesmo com a marca de outro' do
@@ -96,8 +124,9 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     expect(respostas.sole.content_attributes['autonomia_reply_to_message_id']).to eq(segunda.id)
   end
 
-  it 'sem opção e sem Fase 2: posta as duas, como hoje' do
+  it 'opção desligada e sem Fase 2: posta as duas, como antes' do
     Autonomia::Agents::Fase2.desligar!(account)
+    desligar_paridade!(agente_da_porta)
     primeira = cliente_escreve('oi')
     gatilho(primeira)
     segunda = nil
@@ -133,7 +162,8 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
 
   it 'opção desligada no meio do turno: ainda solta' do # Review Focus 2
     liga!('conversa_em_fila')
-    ia_responde!(durante: ->(agent) { agent.update!(config: agent.config.except('conversa_em_fila')) })
+    # Sem a chave a fila volta ao padrão (ligada): desligar é gravar `false`.
+    ia_responde!(durante: ->(agent) { agent.update!(config: agent.config.merge('conversa_em_fila' => false)) })
 
     gatilho(cliente_escreve('oi'))
     rodar_turno!
@@ -162,11 +192,11 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     mensagem = cliente_escreve('oi')
     gatilho(mensagem)
 
-    rodar_rodada! # o settle do debounce (T+6 s): outro turno falando, volta em 2 s sem responder nem ler o assunto
+    rodar_rodada! # o settle do gatilho: outro turno falando, volta em 2 s sem responder nem ler o assunto
     expect(respostas).to be_empty
     expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(2.seconds.from_now)
 
-    # Enquanto espera na fila, o assunto é decidido; a fila libera depois do teto de 20 s do assunto (T+30 s).
+    # Enquanto espera na fila, o assunto é decidido; a fila libera depois do teto de 20 s do assunto.
     allow(contrato).to receive(:decidido_ate).with(conversation.id).and_return(mensagem.id)
     travel 24.seconds
     fala.soltar(conversation.id, 999_999)

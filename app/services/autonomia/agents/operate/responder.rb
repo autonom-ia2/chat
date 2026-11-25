@@ -522,13 +522,11 @@ module Autonomia
         def answer
           question = query
           turns = history
-          # Only retrieval excludes the pending incoming turn; the model still receives every message unchanged.
-          prior_turns = turns.first(turns.length - current_turn_incoming.length)
           ::Autonomia::Agents::Answerer.new(
             agent: @agent,
             query: question,
             history: turns,
-            retrieval_query: ::Autonomia::Agents::RetrievalQuery.new(query: question, history: prior_turns).call,
+            retrieval_query: ::Autonomia::Agents::RetrievalQuery.new(query: question, history: historico_da_busca(turns)).call,
             images: media.images,
             documents: media.documents,
             trust_instruction: true,
@@ -536,6 +534,16 @@ module Autonomia
             **rodadas_do_turno,
             **{ contexto_do_turno: contexto_do_turno_com_passagem, memoria: (memoria unless memoria.vazio?) }.compact
           ).answer
+        end
+
+        # Only retrieval excludes the pending incoming turn; the model still receives every message unchanged.
+        # #3211: tira as mensagens da rajada pelo id, não pela contagem. Com a P1, um pedaço de continuação pode ficar no
+        # meio da rajada, e ela nem sempre é a cauda da janela. Sem a P1 (a Lia), a rajada é a cauda e o resultado é o de
+        # antes. `history` tem um item por mensagem de `recent_messages`, na mesma ordem (os prepends que reescrevem item
+        # contam com o mesmo par).
+        def historico_da_busca(turns)
+          da_rajada = current_turn_incoming.to_set(&:id)
+          turns.zip(recent_messages).reject { |_item, message| da_rajada.include?(message&.id) }.map(&:first)
         end
 
         # A memória do turno (#1601/#1755): vazia sem a Fase 2 ou sem a flag `memoria_ia` (o pedido fica igual).
@@ -657,7 +665,7 @@ module Autonomia
         # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para
         # antes do 1º pedaço apaga o fim dele (ChunkedDeliveryJob).
         def prever_o_fim_da_fala(result, outcome)
-          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
           return unless @cadeia_agendada || outcome.message.present?
 
           ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, result.reply)
@@ -797,9 +805,14 @@ module Autonomia
         end
 
         # #3211 (P1): com `conversa_espera_a_fala`, o texto é a rajada inteira do cliente desde a última fala do agente;
-        # sem a opção, a última mensagem, como sempre.
+        # com ela desligada (a Lia, ou `false` gravado no agente), a última mensagem, como sempre.
+        # Caixa de e-mail fica de fora (ParidadeDaConversa): cada e-mail é uma carta completa, com o próprio histórico
+        # citado, e juntar vários mistura remetentes (um terceiro em cópia entraria cru, sem o aviso da autoria). Lá a
+        # pergunta continua sendo só o último e-mail, como antes do #3211.
+        # Rajada vazia (a última saída veio depois da última mensagem do cliente: o turno da passagem depois de uma pessoa
+        # da equipe escrever, #1630) também cai na última mensagem do cliente, como antes do #3211.
         def texto_base_da_pergunta(message)
-          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox) && current_turn_incoming.any?
             rajada = current_turn_incoming.select { |m| conta_na_pergunta?(m) }
             return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(rajada) { |m| email_autoria.texto(m) }
           end
@@ -885,7 +898,7 @@ module Autonomia
         # (cobre o caso "cliente manda a imagem e o texto em mensagens separadas" dentro do debounce).
         def current_turn_incoming
           # #3211 (P1): com a opção, a rajada conta a fala, não o pedaço (pedaços intercalados não a fecham).
-          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
             return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(recent_messages)
           end
 

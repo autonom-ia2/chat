@@ -144,13 +144,38 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     expect(silencios(linhas, 'dono_mudou').size).to eq(1)
   end
 
+  # Sem a fila na área (destino): com ela (o padrão, #3211) a janela do turno em andamento ganha o teto da fila, 150 s.
   it 'evento de troca muito depois do turno (fora da janela) não refaz turno velho' do
+    desligar_paridade!(area, 'conversa_em_fila')
     ia_responde!
     mensagem = turno_do_cliente
     clear_enqueued_jobs
     travel 4.minutes
     conversation.update!(ai_assignee: espelho_area)
 
+    expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
+    expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :evento_troca)).to be(false)
+    expect(settles_na_fila).to be_empty
+  end
+
+  # Revisão do #3218 (item 8). Com o padrão ligado (#3211) a janela do turno em andamento cresce de 126 s para ~271 s em
+  # todo agente: a espera gravada pelo gatilho (1 s, sem fala anterior) + o teto da fila (150 s) + a folga (120 s). Pega:
+  # a janela sem o teto da fila (corte em ~121 s) ou sem corte nenhum (turno velho refeito a qualquer hora).
+  it 'com o padrão ligado, a janela do turno em andamento corta em ~271 s', :aggregate_failures do
+    espera = Autonomia::Agents::Operate::EsperaDaFala
+    janela = espera::ESPERA_MINIMA + espera::TETO_DA_FILA + Autonomia::Agents::AgentInbox::FOLGA_DO_TURNO
+    ia_responde!
+    mensagem = turno_do_cliente
+    clear_enqueued_jobs
+    expect(janela).to eq(271.seconds)
+    expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq(1000)
+
+    travel janela - 2.seconds
+    expect(vinculo_area.turno_em_andamento?(conversation.reload, mensagem)).to be(true)
+
+    travel 3.seconds
+    expect(vinculo_area.turno_em_andamento?(conversation.reload, mensagem)).to be(false)
+    conversation.update!(ai_assignee: espelho_area)
     expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
     expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :evento_troca)).to be(false)
     expect(settles_na_fila).to be_empty
@@ -374,7 +399,9 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       segunda
     end
 
+    # A porta grava a marca sem a espera pela fala (P1, ligada por padrão): a janela é o debounce de 6 s.
     it 'troca de dono pelo evento dentro da janela: o turno refeito espera o fim da janela, e a mensagem nova vence' do
+      desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
       ia_responde!
       turno_do_cliente
       fim_da_janela = Time.current + Autonomia::Agents::Config.debounce_seconds_for(area)
@@ -431,8 +458,10 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(silencios(linhas, 'turno_superado').size).to eq(1)
     end
 
-    it 'fora da Fase 2, M2 durante a IA segue como antes: as duas respostas saem' do
+    # Com a fila (P2, ligada por padrão) a resposta superada sai também fora da Fase 2: aqui, a fila desligada.
+    it 'fora da Fase 2 e com a fila desligada, M2 durante a IA segue como antes: as duas respostas saem' do
       Autonomia::Agents::Fase2.desligar!(account)
+      desligar_paridade!(agente_da_porta)
       segunda = cliente_escreve_durante_a_ia!
       primeira = turno_do_cliente
 

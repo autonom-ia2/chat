@@ -55,6 +55,7 @@ describe Autonomia::Agents::Operate::TypingIndicator do
     let(:waha_contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '5511999990000@c.us' }) }
     let(:conversation) { create(:conversation, account: account, inbox: channel.inbox, contact: waha_contact) }
 
+    # O vínculo daqui não tem agente: sem agente, a opção do ritmo do canal (#3211) fica desligada.
     it 'keeps using the panel event and never calls the WAHA engine' do
       allow(Rails.configuration.dispatcher).to receive(:dispatch)
       allow(Waha::Client).to receive(:new).and_call_original
@@ -73,11 +74,12 @@ describe Autonomia::Agents::Operate::TypingIndicator do
     end
   end
 
+  # #3211: a opção nasce ligada em todo agente (menos na Lia). Agente de verdade (não dublê): só o Agent é agente.
   context 'when the WAHA agent has conversa_ritmo_do_canal' do
     let(:channel) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511888880000' }) }
     let(:waha_contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '5511999990000@c.us' }) }
     let(:conversation) { create(:conversation, account: account, inbox: channel.inbox, contact: waha_contact) }
-    let(:agente) { instance_double(Autonomia::Agents::Agent, config: { 'conversa_ritmo_do_canal' => true }) }
+    let(:agente) { Autonomia::Agents::Agent.new(account: account, config: { 'conversa_ritmo_do_canal' => true }) }
     let(:vinculo) { Struct.new(:agent_bot, :agent).new(agent_bot, agente) }
     let(:waha) { instance_double(Waha::Client, start_typing: {}, stop_typing: {}) }
 
@@ -92,9 +94,44 @@ describe Autonomia::Agents::Operate::TypingIndicator do
         described_class.new(conversation: conversation, agent_inbox: vinculo).off
       end
 
-      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
-      expect(waha).to have_received(:stop_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
+      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
+      expect(waha).to have_received(:stop_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
       expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Conversation::CONVERSATION_TYPING_ON, any_args).once
+    end
+
+    # Revisão do #3218 (item 7). Pega: o agente nativo chamar o WAHA sem prazo e cair nos 20 s do Waha::Client; um WAHA
+    # lento seguraria cada pedaço da cadeia. O prazo é o mesmo do robô externo.
+    it 'passa ao Deliverer o prazo curto do robô externo' do
+      allow(Conversations::ChannelTyping::Deliverer).to receive(:new).and_call_original
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        described_class.new(conversation: conversation, agent_inbox: vinculo).on
+      end
+
+      expect(Conversations::ChannelTyping::Deliverer).to have_received(:new)
+        .with(conversation: conversation, typing_status: 'on', timeout: Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS)
+      expect(Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS).to eq(3)
+    end
+
+    it 'sem a chave (padrão ligado): liga o digitando no WAHA' do
+      agente.config = {}
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        described_class.new(conversation: conversation, agent_inbox: vinculo).on
+      end
+
+      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
+    end
+
+    it 'opção desligada ou a Lia sem a chave: só o evento do painel', :aggregate_failures do
+      desligado = Autonomia::Agents::Agent.new(account: account, config: { 'conversa_ritmo_do_canal' => false })
+      lia = Autonomia::Agents::Agent.new(account: account, agent_type: 'insurance_quote', config: {})
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        [desligado, lia].each do |agente_do_vinculo|
+          described_class.new(conversation: conversation, agent_inbox: Struct.new(:agent_bot, :agent).new(agent_bot, agente_do_vinculo)).on
+        end
+      end
+
+      expect(Waha::Client).not_to have_received(:new)
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Conversation::CONVERSATION_TYPING_ON, any_args).twice
     end
 
     it 'com AI_HUMANIZE_CHANNEL_TYPING=false, não chama o WAHA' do

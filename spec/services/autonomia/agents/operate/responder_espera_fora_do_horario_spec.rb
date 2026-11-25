@@ -66,7 +66,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: conversation.reload).texto
   end
 
+  # Com a espera pela fala (#3211, ligada por padrão) a pergunta junta a rajada: aqui, ela desligada (a pergunta é a última).
   it 'esperando pessoa e fora do horário: o contexto vai como developer logo antes da pergunta, e a IA responde' do
+    desligar_paridade!(agent, 'conversa_espera_a_fala')
     espera_pessoa!
     escreve(:incoming, 'Oi')
     resultado = responder(escreve(:incoming, 'Alguém vai me atender?'))

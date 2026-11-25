@@ -107,7 +107,8 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno do
       expect(run.reload.handle[runs::ENTREGUE_POR]).to eq('mensagem:12')
     end
 
-    it 'sem a Fase 2 e sem a fila, como antes: o turno novo le que ja foi informado' do
+    it 'sem a Fase 2 e com a fila desligada, como antes: o turno novo le que ja foi informado' do
+      desligar_paridade!(agent, 'conversa_em_fila')
       primeiro, segundo, = dois_turnos_na_mesma_linha
       cliente_escreveu(12, fase2: false)
 

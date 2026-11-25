@@ -134,7 +134,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   # Pega: várias mensagens com link misturarem as prévias ou só a última ganhar a dela.
+  # Com a espera pela fala (#3211, ligada por padrão) a pergunta junta a rajada: aqui, ela desligada (a pergunta é a última).
   it 'cada mensagem do cliente leva a própria prévia', :aggregate_failures do
+    desligar_paridade!(agent, 'conversa_espera_a_fala')
     casa = apto.merge('url' => 'https://casas.exemplo.org/c-7', 'final_url' => 'https://casas.exemplo.org/c-7',
                       'title' => 'Casa 3 quartos, Butantã', 'description' => nil)
     escreve(:incoming, 'https://imoveis.exemplo.com.br/apto-42', link_preview: apto)

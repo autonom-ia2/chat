@@ -128,7 +128,8 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     return 0.seconds unless @origem == :evento_troca
 
     stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-    fim = stamp['at'].to_f + ::Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle(agent: destino.agent, marca: stamp).to_f
+    janela = ::Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle(agent: destino.agent, marca: stamp, inbox: @conversation.inbox)
+    fim = stamp['at'].to_f + janela.to_f
     [fim - Time.current.to_f, 0].max.seconds
   end
 
