@@ -125,7 +125,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(itens).to include(['user', moldura.do_celular('Te respondo amanhã cedo.', marca)])
       expect(itens).to include(['user', moldura.automatica(aviso, marca)])
       expect(itens).not_to include(['user', moldura.automatica('Te respondo amanhã cedo.', marca)])
-      expect(itens[-2]).to eq(['developer', "#{moldura.regra(marca)}\n\n#{moldura.regra_automatica(marca)}"])
+      # [-1] a pergunta, [-2] o item "Agora: …" (#3211), [-3] a regra do turno.
+      expect(itens[-3]).to eq(['developer', "#{moldura.regra(marca)}\n\n#{moldura.regra_automatica(marca)}"])
     end
 
     it 'só o eco: moldura do celular e só a regra da equipe, sem a automática' do
@@ -135,7 +136,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       itens = itens(pedidos.sole)
       expect(itens).to include(['user', moldura.do_celular('Te respondo amanhã cedo.', marca)])
-      expect(itens[-2]).to eq(['developer', moldura.regra(marca)])
+      expect(itens[-3]).to eq(['developer', moldura.regra(marca)])
     end
   end
 
