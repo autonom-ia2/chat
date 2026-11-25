@@ -50,11 +50,15 @@ class Autonomia::Agents::EmbeddingService
   # dimensão diferente na coluna errada. Também habilita o backfill (força 3-large sem virar o global).
   # `prazo:` (segundos, opcional) — #2850: prazo por tentativa, sem as repetições do RubyLLM. Sem ele (ingestão em
   # lote, fora do turno do cliente), ficam os padrões do RubyLLM.
-  def initialize(account:, model: nil, prazo: nil)
+  # `credencial:` (opcional, #3211) — a credencial já resolvida por quem chama ({ api_key:, api_base: }), usada no lugar
+  # do `CredentialResolver`: quem exige a chave da própria conta passa a do hook e a chamada não tem como cair na chave
+  # da instalação.
+  def initialize(account:, model: nil, prazo: nil, credencial: nil)
     Llm::Config.initialize!
     @account = account
     @model = model.presence || Autonomia::Agents::Config.active_embedding_model
     @prazo = prazo
+    @credencial = credencial
   end
 
   # text -> Array<Float> (dim do modelo: 1536 no 3-small, 3072 no 3-large). Retorna [] se vazio.
@@ -112,7 +116,7 @@ class Autonomia::Agents::EmbeddingService
   # quando é o host padrão da OpenAI (deixa o RubyLLM usar o default correto).
   def context
     @context ||= begin
-      cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
+      cred = credencial_da_chamada
       raise EmbeddingError, 'ai_not_configured' if cred.blank?
 
       @api_host = host_da(cred)
@@ -134,6 +138,11 @@ class Autonomia::Agents::EmbeddingService
         com_prazo(config)
       end
     end
+  end
+
+  # A passada por quem chama (#3211) ou, sem ela, a do resolvedor (que pode ser a da instalação).
+  def credencial_da_chamada
+    @credencial || Crm::Ai::CredentialResolver.new(account: @account).resolve
   end
 
   # #2850 — com prazo, a tentativa inteira cabe nele (o Timeout, como no `total_timeout` do Crm::Ai::ResponsesClient).

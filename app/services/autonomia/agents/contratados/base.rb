@@ -4,8 +4,9 @@
 # bloco `### ` (cada bloco é autocontido: a busca devolve a cláusula inteira).
 #
 # A versão é o hash dos arquivos: mudou um arquivo no deploy, o cron (`BaseEmDiaJob`) re-semeia os contratados. Semear
-# passa pela chamada PAGA de embedding (a chave de IA da conta), por isso só roda em segundo plano (`SemearBaseJob`) e
-# só quando a versão do agente é outra.
+# passa pela chamada PAGA de embedding, por isso só roda em segundo plano (`SemearBaseJob`) e só quando a versão do
+# agente é outra. A chave é SEMPRE a da própria conta (regra do Rodrigo, 24/11): sem ela, não semeia, e a corretora põe
+# a dela; a chave da instalação nunca paga a base de um cliente.
 module Autonomia::Agents::Contratados::Base
   MODELO = 'seguro_viagem_universal'.freeze
   PASTA = Autonomia::Agents::Contratados::MODELOS.fetch(MODELO)[:pasta].join('base')
@@ -14,6 +15,9 @@ module Autonomia::Agents::Contratados::Base
   MARCA_DA_FONTE = 'contratado_base'.freeze
   INICIO_DO_BLOCO = '### '.freeze
   TRAVA = 'autonomia:contratados:base:'.freeze
+  # Por que a semeadura não aconteceu (log e retorno), nunca a mensagem do provedor.
+  SEM_CHAVE_DA_CONTA = 'sem_chave_da_conta'.freeze
+  BASE_PARCIAL = 'base_parcial'.freeze
 
   module_function
 
@@ -49,38 +53,58 @@ module Autonomia::Agents::Contratados::Base
       agent.knowledge_entries.ready.exists?(source_id: fontes(agent).select(:id))
   end
 
-  # Semeia sempre (apaga a fonte anterior e recria). Quem decide se precisa é `semear_se_preciso!`.
+  # Semeia mesmo em dia (apaga a fonte anterior e recria), com o retorno de `semear_sem_trava!`. Quem decide se precisa é
+  # `semear_se_preciso!`.
   def semear!(agent, pasta: PASTA)
     com_trava(agent) { semear_sem_trava!(agent, pasta) }
   end
 
   # O caminho do job: relê o agente sob a trava, e dois jobs do mesmo agente não pagam o embedding duas vezes.
+  # -> false quando não precisa (apagado, não contratado, em dia); senão, o retorno de `semear_sem_trava!`.
   def semear_se_preciso!(agent)
     com_trava(agent) do
       atual = Autonomia::Agents::Agent.kept.find_by(id: agent.id)
       next false if atual.nil? || !atual.contratado? || em_dia?(atual)
 
       semear_sem_trava!(atual, PASTA)
-      true
     end
   end
 
+  # A chave de IA da PRÓPRIA conta (o hook `crm_kanban_ai`, `source: :hook`), ou nil. O `CredentialResolver` cai na chave
+  # da instalação quando a conta não tem o hook; aqui isso não vale (o desenho de `Crm::MetaAds::ComentariosIa::ChaveDaConta`).
+  def chave_da_conta(account)
+    credencial = Crm::Ai::CredentialResolver.new(account: account).resolve
+    credencial if credencial.present? && credencial[:source] == :hook
+  end
+
+  # -> true quando semeou; senão o motivo (`SEM_CHAVE_DA_CONTA`, `BASE_PARCIAL`), com a base anterior intacta.
   def semear_sem_trava!(agent, pasta)
     textos = arquivos(pasta).flat_map { |arquivo| blocos(arquivo.read) }
-    return if textos.empty?
+    return false if textos.empty?
+
+    # Lida sob a trava, logo antes da chamada, e passada ao serviço: a chamada não resolve a chave de novo, então um hook
+    # tirado no meio do caminho não a faz cair na chave da instalação.
+    credencial = chave_da_conta(agent.account)
+    return SEM_CHAVE_DA_CONTA if credencial.nil?
 
     modelo = Autonomia::Agents::Config.active_embedding_model
-    large = Autonomia::Agents::Config.embedding_column(modelo) == Autonomia::Agents::Config::EMBEDDING_LARGE_COLUMN
     # Fora da transação: é a chamada externa (paga). Se falhar, a base anterior fica como estava.
-    vetores = Autonomia::Agents::EmbeddingService.new(account: agent.account, model: modelo).embed_batch(textos)
+    vetores = Autonomia::Agents::EmbeddingService.new(account: agent.account, model: modelo, credencial: credencial)
+                                                 .embed_batch(textos)
+    # Um trecho sem vetor deixaria a base pela metade com a versão nova gravada, e o cron nunca a consertaria.
+    return BASE_PARCIAL if vetores.size != textos.size || vetores.any?(&:blank?)
 
+    trocar_base!(agent, textos, vetores, modelo, versao_de(pasta))
+    true
+  end
+
+  def trocar_base!(agent, textos, vetores, modelo, versao)
+    large = Autonomia::Agents::Config.embedding_column(modelo) == Autonomia::Agents::Config::EMBEDDING_LARGE_COLUMN
     ActiveRecord::Base.transaction do
       fontes(agent).find_each(&:destroy!)
       fonte = criar_fonte!(agent)
-      textos.each_with_index do |texto, indice|
-        criar_entrada!(fonte, texto, vetores[indice], indice, large) if vetores[indice].present?
-      end
-      gravar_versao!(agent, versao_de(pasta))
+      textos.each_with_index { |texto, indice| criar_entrada!(fonte, texto, vetores[indice], indice, large) }
+      gravar_versao!(agent, versao)
     end
   end
 

@@ -16,6 +16,10 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
   end
 
   let(:pasta) { Pathname.new(Dir.mktmpdir) }
+  let!(:hook) do
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => 'chave-da-conta-teste' })
+  end
 
   after { FileUtils.remove_entry(pasta) }
 
@@ -29,6 +33,37 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
 
   def entradas
     Autonomia::Agents::KnowledgeEntry.where(autonomia_agent_id: agente.id)
+  end
+
+  it 'semeia com a chave da própria conta, passada ao serviço (sem resolver de novo)' do
+    expect(described_class.semear!(agente, pasta: pasta)).to be(true)
+    expect(Autonomia::Agents::EmbeddingService).to have_received(:new)
+      .with(hash_including(credencial: hash_including(api_key: 'chave-da-conta-teste', source: :hook)))
+  end
+
+  it 'conta sem a própria chave, com a chave da instalação configurada: não chama o provedor nem grava nada' do
+    hook.destroy!
+    create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+
+    expect(described_class.semear!(agente, pasta: pasta)).to eq(described_class::SEM_CHAVE_DA_CONTA)
+    expect(described_class.semear_se_preciso!(agente)).to eq(described_class::SEM_CHAVE_DA_CONTA)
+
+    expect(Autonomia::Agents::EmbeddingService).not_to have_received(:new)
+    expect(described_class.fontes(agente)).to be_empty
+    expect(entradas).to be_empty
+    expect(agente.reload.config).not_to have_key(Autonomia::Agents::Contratados::BASE_VERSAO)
+  end
+
+  it 'trecho sem vetor: não troca a base nem grava a versão' do
+    described_class.semear!(agente, pasta: pasta)
+    antigas = entradas.pluck(:id)
+    versao = agente.reload.config[Autonomia::Agents::Contratados::BASE_VERSAO]
+    pasta.join('clausulas.md').write("#{tres_blocos}\n### Cláusula 4\nTexto quatro.\n")
+    allow(embedder).to receive(:embed_batch) { |textos| textos.map.with_index { |_t, i| i.zero? ? [] : [0.01] } }
+
+    expect(described_class.semear!(agente, pasta: pasta)).to eq(described_class::BASE_PARCIAL)
+    expect(entradas.pluck(:id)).to match_array(antigas)
+    expect(agente.reload.config[Autonomia::Agents::Contratados::BASE_VERSAO]).to eq(versao)
   end
 
   it 'fatia nos blocos que começam por ### e deixa de fora o que vem antes do primeiro' do

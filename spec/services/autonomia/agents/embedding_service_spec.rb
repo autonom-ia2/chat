@@ -12,6 +12,17 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
     end
   end
 
+  describe 'credencial passada por quem chama (#3211)' do
+    it 'usa a passada e nunca resolve outra (não cai na chave da instalação)' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_call_original
+      com_credencial = described_class.new(account: account, credencial: { api_key: 'chave-da-conta-teste', source: :hook })
+
+      expect(com_credencial.send(:credencial_da_chamada)).to include(api_key: 'chave-da-conta-teste')
+      expect(Crm::Ai::CredentialResolver).not_to have_received(:new)
+    end
+  end
+
   describe '#embed_batch (B1 — real batching)' do
     let(:ctx) { instance_double(RubyLLM::Context) }
 

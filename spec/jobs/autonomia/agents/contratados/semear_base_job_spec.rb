@@ -11,7 +11,13 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
                                      config: { 'contratado' => marca })
   end
 
-  before { allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!) }
+  before do
+    enable_test_encryption!
+    account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
+                             'agente_ferramentas_prontas_consultas')
+    allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!)
+    allow(Rails.logger).to receive(:warn)
+  end
 
   it 'semeia o contratado (a conferência de em dia é da Base, sob a trava)' do
     described_class.perform_now(contratado.id)
@@ -31,26 +37,71 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
     expect(Autonomia::Agents::Contratados::Base).not_to have_received(:semear_se_preciso!)
   end
 
+  it 'conta com o modelo desligado: nada' do
+    account.disable_features!('agente_seguro_viagem_universal')
+    described_class.perform_now(contratado.id)
+    expect(Autonomia::Agents::Contratados::Base).not_to have_received(:semear_se_preciso!)
+  end
+
   it 'falha do embedding: só o motivo curto no log, sem levantar' do
     allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!)
       .and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')
-    allow(Rails.logger).to receive(:warn)
 
     expect { described_class.perform_now(contratado.id) }.not_to raise_error
     expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=ai_not_configured'))
   end
 
-  it 'com o embedding de verdade parado, semeia a base inteira do modelo uma vez' do
-    allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!).and_call_original
-    embedder = instance_double(Autonomia::Agents::EmbeddingService)
-    coluna = Autonomia::Agents::Config.embedding_column(Autonomia::Agents::Config.active_embedding_model)
-    dimensao = coluna == Autonomia::Agents::Config::EMBEDDING_LARGE_COLUMN ? 3072 : 1536
-    allow(embedder).to receive(:embed_batch) { |textos| textos.map { Array.new(dimensao, 0.01) } }
-    allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedder)
+  it 'falha de rede que escapa do serviço: motivo rede, sem a exceção crua no log' do
+    allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!)
+      .and_raise(Faraday::ConnectionFailed, 'detalhe-interno-do-erro')
 
-    2.times { described_class.perform_now(contratado.id) }
+    expect { described_class.perform_now(contratado.id) }.not_to raise_error
+    expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=rede'))
+    expect(Rails.logger).not_to have_received(:warn).with(a_string_including('detalhe-interno-do-erro'))
+  end
 
-    expect(embedder).to have_received(:embed_batch).once
-    expect(Autonomia::Agents::Contratados::Base.em_dia?(contratado.reload)).to be(true)
+  it 'conta sem a própria chave: o motivo no log' do
+    allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!).and_return('sem_chave_da_conta')
+
+    described_class.perform_now(contratado.id)
+
+    expect(Rails.logger).to have_received(:warn).with(a_string_including('motivo=sem_chave_da_conta'))
+  end
+
+  describe 'com a Base de verdade e o embedding parado' do
+    let(:pasta) { Pathname.new(Dir.mktmpdir) }
+    let(:embedder) { instance_double(Autonomia::Agents::EmbeddingService) }
+
+    before do
+      pasta.join('base.md').write("### Bloco 1\nUm.\n### Bloco 2\nDois.\n### Bloco 3\nTrês.\n")
+      stub_const('Autonomia::Agents::Contratados::Base::PASTA', pasta)
+      stub_const('Autonomia::Agents::Contratados::Base::VERSAO', Autonomia::Agents::Contratados::Base.versao_de(pasta))
+      allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!).and_call_original
+      coluna = Autonomia::Agents::Config.embedding_column(Autonomia::Agents::Config.active_embedding_model)
+      dimensao = coluna == Autonomia::Agents::Config::EMBEDDING_LARGE_COLUMN ? 3072 : 1536
+      allow(embedder).to receive(:embed_batch) { |textos| textos.map { Array.new(dimensao, 0.01) } }
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedder)
+    end
+
+    after { FileUtils.remove_entry(pasta) }
+
+    it 'semeia uma vez só, com a chave da conta' do
+      create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                                 settings: { 'api_key' => 'chave-da-conta-teste' })
+
+      2.times { described_class.perform_now(contratado.id) }
+
+      expect(embedder).to have_received(:embed_batch).once
+      expect(Autonomia::Agents::Contratados::Base.em_dia?(contratado.reload)).to be(true)
+    end
+
+    it 'sem a chave da conta e com a da instalação: nunca chama o provedor' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+
+      described_class.perform_now(contratado.id)
+
+      expect(Autonomia::Agents::EmbeddingService).not_to have_received(:new)
+      expect(Autonomia::Agents::Contratados::Base.em_dia?(contratado.reload)).to be(false)
+    end
   end
 end
