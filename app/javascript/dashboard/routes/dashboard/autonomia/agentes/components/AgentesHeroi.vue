@@ -3,7 +3,8 @@ import { useId } from 'vue';
 
 // #1181 — o bloco navy da tela (um por tela, DECISOES.md item 10), com os anéis do AutomacaoHeroi.
 // `compacto` é o herói da lista com agentes (T02); o cheio é o da lista vazia (T01), com os modelos
-// no slot padrão. Ações (Criar agente) vão no slot `acoes`.
+// no slot padrão. Ações (Criar agente) vão no slot `acoes`. #3219: o slot `topo` fica acima do título (o papel
+// escolhido no passo 1, com "Trocar"); o título aceita foco (tabindex -1) para a troca de passo levar o foco a ele.
 defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
@@ -31,9 +32,11 @@ const tituloId = `heroi-${useId()}`;
     <div class="relative flex flex-col gap-6">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="flex flex-col max-w-4xl gap-2">
+          <slot name="topo" />
           <h1
             :id="tituloId"
-            class="m-0 font-bold leading-tight tracking-tight text-white"
+            tabindex="-1"
+            class="m-0 font-bold leading-tight tracking-tight text-white outline-none"
             :class="compacto ? 'text-3xl' : 'text-3xl md:text-[2.5rem]'"
           >
             {{ titulo }}

@@ -27,26 +27,28 @@ vi.mock('dashboard/components/autonomia/guide/cantoDaBolinha', () => ({
   },
 }));
 
-// #1543: sem modelo, rascunho nem atuação na URL, a flag ligada abre antes a página "Criar agente".
+// #1543/#3219: sem escolha na URL, a flag ligada abre antes "Criar agente" em dois passos. Os passos abrem a criação
+// sozinhos (push na mesma rota) e avisam a entrada (`escolher`), que só guarda a marca para focar o título.
 const rota = vi.hoisted(() => ({ atual: null }));
-const roteador = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => rota.atual,
-  useRouter: () => roteador,
 }));
-vi.mock('../../pages/AgenteEscolherPage.vue', async () => {
+vi.mock('../../pages/AgenteCriarEmPassosPage.vue', async () => {
   const { defineComponent: definir, h: hh } = await import('vue');
   return {
     __esModule: true,
     default: definir({
-      name: 'AgenteEscolherPage',
+      name: 'AgenteCriarEmPassosPage',
       emits: ['escolher'],
       setup:
         (_props, { emit }) =>
         () =>
           hh('button', {
             'data-escolher': '',
-            onClick: () => emit('escolher', { atuacao: 'interno' }),
+            onClick: () => {
+              emit('escolher', { atuacao: 'interno' });
+              rota.atual.query = { atuacao: 'interno' };
+            },
           }),
     }),
   };
@@ -66,14 +68,27 @@ vi.mock('../../pages/AgenteCriarPage.vue', async () => {
     }),
   };
 });
-// #3214: `?escrever=1` abre a página de escrever as instruções.
+// #3214: `?escrever=1` abre a página de escrever as instruções; #3219: com o papel de `?papel=`.
 vi.mock('../../pages/AgenteEscreverPage.vue', async () => {
   const { defineComponent: definir, h: hh } = await import('vue');
   return {
     __esModule: true,
     default: definir({
       name: 'AgenteEscreverPage',
-      setup: () => () => hh('div', { 'data-escrever': '' }),
+      props: { papel: { type: String, default: '' } },
+      setup: props => () =>
+        hh('div', { 'data-escrever': '', 'data-papel': props.papel }),
+    }),
+  };
+});
+// #1648: `?conectar=outro`, só com o agente por caixa ligado na conta.
+vi.mock('../../pages/AgenteConectarPage.vue', async () => {
+  const { defineComponent: definir, h: hh } = await import('vue');
+  return {
+    __esModule: true,
+    default: definir({
+      name: 'AgenteConectarPage',
+      setup: () => () => hh('div', { 'data-conectar': '' }),
     }),
   };
 });
@@ -117,9 +132,6 @@ describe('AgentesCriarEntrada', () => {
     vi.clearAllMocks();
     const { reactive } = await import('vue');
     rota.atual = reactive({ query: { modelo: 'support' } });
-    roteador.push.mockImplementation(async ({ query }) => {
-      rota.atual.query = query;
-    });
   });
 
   it('keeps the old Builder with the flag off, without loading the new page nor calling any API', async () => {
@@ -195,16 +207,13 @@ describe('AgentesCriarEntrada', () => {
       expect(carregouNova).not.toHaveBeenCalled();
     });
 
-    it('pushes the choice to the URL and only then mounts the creation, asking it to focus its title', async () => {
+    it('mounts the creation only after the choice reaches the URL, asking it to focus its title', async () => {
       comConta(ligada);
       rota.atual.query = {};
       const wrapper = mount(AgentesCriarEntrada);
       await flushPromises();
       await wrapper.get('[data-escolher]').trigger('click');
       await flushPromises();
-      expect(roteador.push).toHaveBeenCalledWith({
-        query: { atuacao: 'interno' },
-      });
       expect(wrapper.find('[data-escolher]').exists()).toBe(false);
       expect(wrapper.get('[data-nova]').attributes('data-focar')).toBe('true');
     });
@@ -214,9 +223,17 @@ describe('AgentesCriarEntrada', () => {
       [{ type: 'support' }],
       [{ agente: '7' }],
       [{ atuacao: 'interno' }],
-      // #1433: o agente da equipe.
+      // #1433: o agente da equipe; tema 14: o ajudante. Continuam abrindo a criação (#3219: sem passo 2).
       [{ papel: 'area' }],
       [{ papel: 'area', agente: '7' }],
+      [{ papel: 'area', caixas: '10,11' }],
+      [{ papel: 'ajudante' }],
+      [{ papel: 'ajudante', ajuda: '3', quando: 'trocas' }],
+      // #3219: os jeitos de começar do passo 2.
+      [{ modelo: 'custom' }],
+      [{ ramo: 'seguro_auto' }],
+      // O rascunho de um Copiloto escolhido no passo 2 (a criação tira a atuação e guarda o agente).
+      [{ papel: 'copiloto', agente: '9' }],
     ])('goes straight to the creation with %o', async query => {
       comConta(ligada);
       rota.atual.query = query;
@@ -240,6 +257,62 @@ describe('AgentesCriarEntrada', () => {
       await flushPromises();
       expect(wrapper.find('[data-escolher]').exists()).toBe(true);
       expect(wrapper.find('[data-nova]').exists()).toBe(false);
+    });
+
+    // #3219: `?papel=atender|copiloto` sozinho é o passo 2, não a criação.
+    it.each([[{ papel: 'atender' }], [{ papel: 'copiloto' }]])(
+      'opens step 2 of "Criar agente" with %o',
+      async query => {
+        comConta(ligada);
+        rota.atual.query = query;
+        const wrapper = mount(AgentesCriarEntrada);
+        await flushPromises();
+        expect(wrapper.find('[data-escolher]').exists()).toBe(true);
+        expect(wrapper.find('[data-nova]').exists()).toBe(false);
+        expect(carregouNova).not.toHaveBeenCalled();
+      }
+    );
+
+    it('keeps an unknown ?papel= on the creation, as before', async () => {
+      comConta(ligada);
+      rota.atual.query = { papel: 'outra-coisa' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+    });
+
+    it.each([
+      [{ escrever: '1' }, ''],
+      [{ escrever: '1', papel: 'atender' }, 'atender'],
+      [{ escrever: '1', papel: 'copiloto' }, 'copiloto'],
+    ])(
+      'opens the write page with %o and the role "%s"',
+      async (query, papel) => {
+        comConta(ligada);
+        rota.atual.query = query;
+        const wrapper = mount(AgentesCriarEntrada);
+        await flushPromises();
+        expect(wrapper.get('[data-escrever]').attributes('data-papel')).toBe(
+          papel
+        );
+      }
+    );
+
+    it('opens the connect page with ?conectar=outro only with the per inbox agent on', async () => {
+      comConta({ ...ligada, autonomia_agente_ia_por_caixa: true });
+      rota.atual.query = { conectar: 'outro' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-conectar]').exists()).toBe(true);
+    });
+
+    it('ignores ?conectar=outro without the per inbox agent and shows the steps', async () => {
+      comConta(ligada);
+      rota.atual.query = { conectar: 'outro' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-conectar]').exists()).toBe(false);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(true);
     });
 
     // #2881: `?ramo=` (agente pronto por ramo de seguro) também é uma escolha.

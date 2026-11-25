@@ -1121,6 +1121,16 @@
         "QUANDO": {
           "EXEMPLO": "Ex.: quando a dúvida for sobre as condições gerais ou os documentos"
         }
+      },
+      "ESCREVER": {
+        "EXEMPLO": "Ex.: Você atende os clientes da minha corretora. Responda com frases curtas. Se não souber, passe para alguém da equipe."
+      },
+      "CRIAR_EM_PASSOS": {
+        "ESCREVER": {
+          "COPILOTO": {
+            "EXEMPLO": "Ex.: Você ajuda a equipe da minha corretora. Quando pedirem, resuma a conversa e diga o que falta para cotar. Nunca prometa preço sem cotar."
+          }
+        }
       }
     },
     "OUTRO_SISTEMA": {

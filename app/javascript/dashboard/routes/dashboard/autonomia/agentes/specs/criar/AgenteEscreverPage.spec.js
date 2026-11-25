@@ -77,7 +77,8 @@ const CONTAR = {
   query: { modelo: 'custom' },
 };
 
-const montar = () => mount(AgenteEscreverPage, { attachTo: document.body });
+const montar = (props = {}) =>
+  mount(AgenteEscreverPage, { props, attachTo: document.body });
 
 describe('AgenteEscreverPage', () => {
   beforeAll(() => {
@@ -462,11 +463,12 @@ describe('AgenteEscreverPage', () => {
   it('has every new text in en and pt_BR', () => {
     [agentesEn, agentesPtBR].forEach(catalogo => {
       const jornada = catalogo.AGENTS.JORNADA;
-      [
-        'ESCREVER_INSTRUCOES',
-        'ESCREVER_INSTRUCOES_TEXTO',
-        'DO_MEU_JEITO_TEXTO',
-      ].forEach(chave => expect(jornada.MODELOS[chave]).toBeTruthy());
+      ['TITULO', 'TEXTO', 'EXEMPLO'].forEach(chave =>
+        expect(jornada.CRIAR_EM_PASSOS.ESCREVER.COPILOTO[chave]).toBeTruthy()
+      );
+      ['ESCOLHIDO', 'TROCAR', 'TROCAR_ARIA', 'VOLTAR'].forEach(chave =>
+        expect(jornada.CRIAR_EM_PASSOS.COMO[chave]).toBeTruthy()
+      );
       [
         'TITULO',
         'TEXTO',
@@ -490,8 +492,120 @@ describe('AgenteEscreverPage', () => {
       expect(jornada.ESCREVER.CRIADO).toContain('{nome}');
       expect(jornada.ESCREVER.ABRIR).toContain('{nome}');
     });
-    expect(agentesPtBR.AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES).toBe(
-      'Escrever as instruções com as minhas palavras'
+    expect(
+      agentesPtBR.AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO.ESCREVER.TITULO
+    ).toBe('Escrever eu mesmo');
+  });
+
+  // #3219 — escrever com papel (`?papel=atender|copiloto`, que a entrada passa como prop).
+  describe('with a role (#3219)', () => {
+    const PASSO_1 = { name: 'autonomia_agents_builder', query: {} };
+
+    it('creates the Team copilot as an internal manual agent, stopped and without a channel', async () => {
+      const wrapper = montar({ papel: 'copiloto' });
+      await digitar('[data-nome]', 'Duda');
+      await digitar('[data-instrucao]', TEXTO);
+      await criar();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/create', {
+        name: 'Duda',
+        agent_type: 'custom',
+        mode: 'manual',
+        instruction: TEXTO,
+        status: 'paused',
+        enabled: false,
+        actuation: 'internal',
+      });
+      wrapper.unmount();
+    });
+
+    it('creates the customer agent without actuation, as before', async () => {
+      const wrapper = montar({ papel: 'atender' });
+      await digitar('[data-nome]', 'Duda');
+      await digitar('[data-instrucao]', TEXTO);
+      await criar();
+      expect(store.dispatch.mock.calls[0][1]).not.toHaveProperty('actuation');
+      wrapper.unmount();
+    });
+
+    it('shows the Team copilot texts and the chosen role with "Trocar"', () => {
+      const wrapper = montar({ papel: 'copiloto' });
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.ESCREVER.COPILOTO.TITULO'
+      );
+      expect(wrapper.text()).toContain(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.ESCREVER.COPILOTO.TEXTO'
+      );
+      expect(no('[data-instrucao]').getAttribute('placeholder')).toBe(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.ESCREVER.COPILOTO.EXEMPLO'
+      );
+      expect(wrapper.get('[data-papel-escolhido]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.PAPEIS.COPILOTO.TITULO'
+      );
+      expect(wrapper.get('[data-voltar-lista]').text()).toBe(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO.VOLTAR'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps the page of always without a role (no band, back to Agents)', async () => {
+      const wrapper = montar();
+      expect(wrapper.find('[data-papel-escolhido]').exists()).toBe(false);
+      expect(wrapper.get('[data-voltar-lista]').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.VOLTAR'
+      );
+      await clicar('[data-voltar-lista]');
+      expect(navegou).toHaveBeenCalledWith(LISTA);
+      wrapper.unmount();
+    });
+
+    it.each([
+      ['atender', { papel: 'atender' }],
+      ['copiloto', { papel: 'copiloto' }],
+    ])('goes back to step 2 of %s with "Voltar"', async (papel, query) => {
+      const wrapper = montar({ papel });
+      await clicar('[data-voltar-lista]');
+      expect(navegou).toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+        query,
+      });
+      wrapper.unmount();
+    });
+
+    it('goes back to step 1 with "Trocar"', async () => {
+      const wrapper = montar({ papel: 'copiloto' });
+      await clicar('[data-trocar-papel]');
+      expect(navegou).toHaveBeenCalledWith(PASSO_1);
+      wrapper.unmount();
+    });
+
+    it.each([
+      ['atender', { modelo: 'custom' }],
+      ['copiloto', { atuacao: 'interno' }],
+    ])(
+      'opens the conversation of the same role (%s) from "Não tem um texto pronto?"',
+      async (papel, query) => {
+        const wrapper = montar({ papel });
+        await clicar('[data-contar-com-minhas-palavras]');
+        expect(navegou).toHaveBeenCalledWith({
+          name: 'autonomia_agents_builder',
+          query,
+        });
+        wrapper.unmount();
+      }
     );
+
+    it('still asks before leaving with something written, also on "Voltar" and "Trocar"', async () => {
+      const wrapper = montar({ papel: 'copiloto' });
+      await digitar('[data-instrucao]', TEXTO);
+      await clicar('[data-voltar-lista]');
+      expect(navegou).not.toHaveBeenCalled();
+      expect(dialogo().open).toBe(true);
+
+      dialogo().open = false;
+      await clicar('[data-trocar-papel]');
+      expect(navegou).not.toHaveBeenCalled();
+      expect(dialogo().open).toBe(true);
+      wrapper.unmount();
+    });
   });
 });

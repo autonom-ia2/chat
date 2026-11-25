@@ -626,20 +626,6 @@
         "NA_EQUIPE": "On the team",
         "AJUDANDO": "Helping"
       },
-      "ESCOLHER": {
-        "TITULO": "Create agent",
-        "TEXTO": "Pick a ready-made template. Then tell it your way and choose the channel at the end.",
-        "OUTRO_TIPO": "Need another kind?",
-        "OUTRO_TEXTO": "For special cases. Most agents start from a template above.",
-        "EQUIPE": {
-          "TITULO": "Team agent",
-          "TEXTO": "Stays on a channel with a main agent or served only by people, and receives the conversation when someone hands over."
-        },
-        "AJUDA": {
-          "TITULO": "Helps other agents",
-          "TEXTO": "Answers only another agent, never the customer."
-        }
-      },
       "ESCREVER": {
         "TITULO": "Write your agent's instructions",
         "TEXTO": "The agent will follow your text just as you wrote it. It only starts answering when you say so. Before that, you teach it what it needs to know and choose its tools and where it answers.",
@@ -663,19 +649,81 @@
           "SAIR": "Leave"
         }
       },
+      "CRIAR_EM_PASSOS": {
+        "PAPEL": {
+          "TITULO": "What will your agent do?",
+          "TEXTO": "Tap what you need. In the next step, you build the agent.",
+          "ROTULO": "What the agent will do",
+          "OUTROS": "Other ways to use an agent",
+          "OUTRO": "Another way to use an agent",
+          "ESCOLHER": "Choose",
+          "TEXTO_INICIO": "An agent can do it for you, at any time.",
+          "ESCOLHER_ARIA": "Choose: {titulo}"
+        },
+        "PAPEIS": {
+          "ATENDER": {
+            "TITULO": "Serve my customers",
+            "TEXTO": "Replies on WhatsApp, Instagram and your website, and hands over to your team when needed."
+          },
+          "COPILOTO": {
+            "TITULO": "Help my team in conversations",
+            "TEXTO": "Summarizes the conversation and suggests the reply for whoever is attending. Never talks to customers.",
+            "NOME": "Team copilot"
+          },
+          "EQUIPE": {
+            "TITULO": "Serve only when the team hands over",
+            "TEXTO": "Stays on standby. Only replies to the customer after someone on the team hands the conversation over.",
+            "NOME": "Team agent"
+          },
+          "AJUDANTE": {
+            "TITULO": "Help my other agents",
+            "TEXTO": "Knows one subject in depth. Your agents ask it when they don't know. Never talks to customers.",
+            "NOME": "Helps other agents"
+          },
+          "CONECTAR": {
+            "TITULO": "I already have an agent in another system",
+            "TEXTO": "Connect an agent that was built in another system. New conversations go to it."
+          }
+        },
+        "COMO": {
+          "TITULO": "How do you want to start?",
+          "TEXTO_ATENDER": "Start from a ready one and adjust it to your business. You test the replies and decide when it starts serving.",
+          "TEXTO_OUTROS": "Pick one. It only starts working when you say so.",
+          "ESCOLHIDO": "You chose:",
+          "TROCAR": "Change",
+          "TROCAR_ARIA": "Change what the agent will do",
+          "DO_ZERO": "Prefer to start from scratch?",
+          "OPCOES": "Ways to start",
+          "COMECAR": "Start",
+          "COMECAR_ARIA": "Start: {titulo}",
+          "CONVERSAR": {
+            "TITULO": "Talk with the AI",
+            "TEXTO": "You answer a few short questions and the AI builds the agent."
+          },
+          "ESCREVER": {
+            "TITULO": "Write it myself",
+            "TEXTO": "Already have a text? Paste or write the instructions."
+          },
+          "TEXTO_RAMOS": "Choose the insurance you sell.",
+          "OUTRO_JEITO": "Didn't find your insurance? Start another way",
+          "MAIS_FACIL": "Easiest",
+          "VOLTAR": "Back",
+          "ERRO": "Couldn't start right now. Try again."
+        },
+        "ESCREVER": {
+          "COPILOTO": {
+            "TITULO": "Write the instructions for the Team copilot",
+            "TEXTO": "It follows your text. It helps whoever is attending in conversations and never talks to customers. It only starts when you say so.",
+            "EXEMPLO": "E.g.: You help my store's team. When asked, summarize the conversation and suggest a short, polite reply. Never promise a deadline without checking."
+          }
+        }
+      },
       "MODELOS": {
         "ROTULO": "Ready-made templates",
         "USAR": "Use this one",
         "USAR_ARIA": "Use this template: {titulo}",
         "EXEMPLO": "Example",
         "EXEMPLO_SR": "Example conversation, not a real agent",
-        "DO_MEU_JEITO": "My own way: tell it in my own words",
-        "DO_MEU_JEITO_TEXTO": "You answer a few short questions and the agent is ready.",
-        "COPILOTO": "Team copilot",
-        "COPILOTO_TEXTO": "Helps your team inside conversations. Never talks to customers.",
-        "ESCREVER_INSTRUCOES": "Write the instructions in my own words",
-        "ESCREVER_INSTRUCOES_TEXTO": "Already have a text? Paste it here. The agent follows it just as you wrote it.",
-        "ESCOLHA": "Pick a ready-made template. You chat for a bit, test the answers and decide when to start answering.",
         "SUPPORT": {
           "TITULO": "Answer customer questions",
           "TEXTO": "Answers about prices, opening hours, delivery and whatever else people ask.",
@@ -698,8 +746,6 @@
       "RAMOS": {
         "TITULO": "Ready for your line of business",
         "TEXTO": "They already know how to explain the insurance, answer questions and ask for the quote details. With the details in hand, they hand over to your team to quote.",
-        "TEXTO_DA_PAGINA": "Pick the insurance you sell. The agent comes ready, and you decide when it starts serving.",
-        "OUTROS_TITULO": "Or pick by kind of work",
         "ITENS": {
           "AUTO": {
             "TITULO": "Auto insurance",
@@ -940,8 +986,6 @@
       "ERRO": {
         "LISTA": "Your agents could not be shown right now.",
         "LISTA_GARANTIA": "No agent was changed.",
-        "COMECAR_MODELO": "Could not start right now.",
-        "COMECAR_MODELO_GARANTIA": "Nothing was created.",
         "COMECAR_ATENDER": "Could not start answering.",
         "COMECAR_ATENDER_GARANTIA": "Nothing changed: {nome} is still not answering.",
         "CANAL": "This channel could not be used.",

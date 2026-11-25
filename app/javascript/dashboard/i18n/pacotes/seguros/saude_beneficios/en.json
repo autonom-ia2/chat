@@ -722,6 +722,16 @@
             "CLIENTE": "Hi! I'd like to talk about a health plan for my company."
           }
         }
+      },
+      "ESCREVER": {
+        "EXEMPLO": "E.g.: You serve the customers of my health plan brokerage. Answer in short sentences. If you don't know, hand over to someone on the team."
+      },
+      "CRIAR_EM_PASSOS": {
+        "ESCREVER": {
+          "COPILOTO": {
+            "EXEMPLO": "E.g.: You help my health plan brokerage team. When asked, summarize the conversation and say what is still missing for the quote. Never promise a price without quoting."
+          }
+        }
       }
     },
     "OUTRO_SISTEMA": {
