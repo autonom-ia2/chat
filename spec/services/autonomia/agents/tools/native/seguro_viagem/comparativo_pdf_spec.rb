@@ -41,6 +41,25 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
     expect(normalizar(leitor.pages[1].text)).to include('Compare as opções', 'Antes de contratar')
   end
 
+  it 'com 4 planos, "Antes de contratar" vai ao lado do último cartão: 2 folhas' do
+    planos.push(planos[0].merge('nome' => 'Especial UA 60K BRL', 'preco_total' => '285.0',
+                                'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => '95.0' }],
+                                'coberturas' => [dmh.merge('valor' => 'R$ 60.000')]),
+                planos[0].merge('nome' => 'Especial UA 250K BRL', 'preco_total' => '540.0',
+                                'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => '180.0' }],
+                                'coberturas' => [dmh.merge('valor' => 'R$ 250.000')]))
+    expect(leitor.page_count).to eq(2)
+    expect(normalizar(leitor.pages[1].text)).to include('Especial UA 250K BRL', 'Antes de contratar')
+  end
+
+  it 'corretora de nome muito longo: o nome encurta com "…" no rodapé e a marca fica inteira' do
+    longo = 'Corretora Exemplo de Seguros, Previdência Privada e Planos de Saúde do Brasil Ltda'
+    pdf = PDF::Reader.new(StringIO.new(described_class.new(cotacao: cotacao, nome_corretora: longo).render))
+    # Pelos trechos de texto (`runs`): o `text` da página aperta a linha longa contra o número da página.
+    rodapes = pdf.pages.map { |pagina| normalizar(pagina.runs.map(&:text).join("\n")) }
+    expect(rodapes).to all(include('Cotação preparada por Corretora Exemplo', '… · Planos Universal Assistance'))
+  end
+
   it 'a corretora aparece como quem envia' do
     expect(texto).to include('Cotação preparada por Corretora Exemplo')
   end

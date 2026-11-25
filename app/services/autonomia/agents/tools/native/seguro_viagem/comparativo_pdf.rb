@@ -21,6 +21,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
 
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   TITULO = 'Seguro Viagem: comparativo de planos'.freeze
+  MARCA_NO_RODAPE = 'Planos Universal Assistance'.freeze
+  RODAPE = { size: 8 }.freeze
+  # A linha da esquerda do rodapé vai até 10 pt antes do número da página (100 pt à direita).
+  LARGURA_DO_RODAPE = FOLHA[:largura] - (2 * MARGEM) - 110
 
   def initialize(cotacao:, nome_corretora:)
     @cotacao = cotacao
@@ -150,9 +154,34 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @doc.stroke_color cor(:linha)
     @doc.line_width 0.6
     @doc.stroke_horizontal_line MARGEM, FOLHA[:largura] - MARGEM, at: y_de(FOLHA[:altura] - 34)
-    esquerda = [preparada_por, 'Planos Universal Assistance'].compact.join(' · ')
-    escrever(esquerda, at: [MARGEM, FOLHA[:altura] - 28], largura: 400, size: 8, cor: :suave, height: 11,
-                       overflow: :shrink_to_fit, min_font_size: 8)
-    escrever(numero, at: [FOLHA[:largura] - MARGEM - 100, FOLHA[:altura] - 28], largura: 100, size: 8, cor: :suave, align: :right)
+    escrever(texto_do_rodape, at: [MARGEM, FOLHA[:altura] - 28], largura: LARGURA_DO_RODAPE, cor: :suave, **RODAPE)
+    escrever(numero, at: [FOLHA[:largura] - MARGEM - 100, FOLHA[:altura] - 28], largura: 100, cor: :suave, align: :right,
+                     **RODAPE)
+  end
+
+  # "Cotação preparada por <corretora> · Planos Universal Assistance" numa linha só: nome longo de corretora perde o
+  # fim (com "…"); a marca nunca é cortada.
+  def texto_do_rodape
+    @texto_do_rodape ||= begin
+      nome = corretora_que_cabe
+      [nome.empty? ? nil : "Cotação preparada por #{nome}", MARCA_NO_RODAPE].compact.join(' · ')
+    end
+  end
+
+  # O nome inteiro, ou encurtado letra a letra (com "…") até a linha do rodapé caber.
+  def corretora_que_cabe
+    return @nome_corretora if cabe_no_rodape?(@nome_corretora)
+
+    tamanho = @nome_corretora.length - 1
+    tamanho -= 1 while tamanho.positive? && !cabe_no_rodape?(encurtado(tamanho))
+    tamanho.positive? ? encurtado(tamanho) : ''
+  end
+
+  def encurtado(tamanho)
+    "#{@nome_corretora[0, tamanho].rstrip}…"
+  end
+
+  def cabe_no_rodape?(nome)
+    nome.empty? || @doc.width_of("Cotação preparada por #{nome} · #{MARCA_NO_RODAPE}", **RODAPE) <= LARGURA_DO_RODAPE
   end
 end

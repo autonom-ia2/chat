@@ -32,11 +32,16 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
 
   private
 
-  # Devolve o topo logo abaixo da última fileira.
+  # Devolve onde ficou a última fileira: `topo` dela, quantos cartões `ocupadas` tem e o `fim` (a borda de baixo).
   def comparacao
     @doc.start_new_page
-    topo = cabecalho_da_comparacao(false)
-    cartoes.each_slice(colunas).reduce(topo) { |atual, fileira| fileira_de_cartoes(fileira, atual) }
+    inicio = cabecalho_da_comparacao(false)
+    ultima = cartoes.each_slice(colunas).reduce(nil) do |anterior, fileira|
+      topo = anterior.nil? ? inicio : anterior[:fim] + ENTRE_FILEIRAS
+      topo = fileira_de_cartoes(fileira, topo)
+      { topo: topo, ocupadas: fileira.size, fim: topo + altura_do_cartao }
+    end
+    ultima || { topo: inicio, ocupadas: colunas, fim: inicio - ENTRE_FILEIRAS }
   end
 
   # [[plano, rótulo], ...] na ordem dos cartões.
@@ -57,7 +62,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
     largura_do_cartao - (2 * respiro_do_cartao)
   end
 
-  # Uma fileira de cartões, inteira nesta folha ou inteira na seguinte. Devolve o topo da próxima fileira.
+  # Uma fileira de cartões, inteira nesta folha ou inteira na seguinte. Devolve o topo onde ela ficou.
   def fileira_de_cartoes(fileira, topo)
     if topo + altura_do_cartao > FIM_DA_AREA
       @doc.start_new_page
@@ -67,7 +72,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
       caixa = [MARGEM + (coluna * (largura_do_cartao + ESPACO)), topo, largura_do_cartao, altura_do_cartao]
       cartao_do_plano(caixa, plano, rotulo_do_plano)
     end
-    topo + altura_do_cartao + ENTRE_FILEIRAS
+    topo
   end
 
   def colunas
