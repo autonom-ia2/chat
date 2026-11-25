@@ -13,6 +13,10 @@
 # '0' desligam; `true` e 'true' ligam; valor que não converte (ex.: '') desliga. Só a chave ausente ou nula segue o padrão
 # do tipo. Agente de verdade com `config` nil ou que não é Hash também segue o padrão do tipo. O que não é
 # Autonomia::Agents::Agent (nil, vínculo sem agente, dublê de teste) fica DESLIGADO: não há agente para ligar.
+#
+# KILL-SWITCH da instalação: ENV `AI_AGENT_CONVERSA_PADRAO_LIGADO` (ausente ou `true` = o padrão acima). Com `false`, a
+# chave ausente passa a ser DESLIGADA em todo agente (o comportamento do #3213), no próximo turno, sem deploy e sem
+# gravar no banco. Valor gravado no agente continua mandando; a Lia segue desligada sem a chave.
 module Autonomia::Agents::ParidadeDaConversa
   BOOLEAN = ActiveModel::Type::Boolean.new
   ESPERA_A_FALA = 'conversa_espera_a_fala'.freeze
@@ -43,6 +47,10 @@ module Autonomia::Agents::ParidadeDaConversa
   end
   private_class_method :ligada?
 
-  def padrao(agent) = agent.agent_type != TIPO_DESLIGADO_POR_PADRAO
+  def padrao(agent) = padrao_ligado? && agent.agent_type != TIPO_DESLIGADO_POR_PADRAO
   private_class_method :padrao
+
+  def padrao_ligado?
+    BOOLEAN.cast(ENV.fetch('AI_AGENT_CONVERSA_PADRAO_LIGADO', true))
+  end
 end

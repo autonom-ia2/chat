@@ -6,7 +6,8 @@
 # Caixa oficial com WhatsApp Híbrido (chat#1067) segue pela Meta, como qualquer caixa oficial.
 # Chave de instalação AI_HUMANIZE_CHANNEL_TYPING (ligada quando ausente): desligada, ninguém mostra
 # "digitando" no canal.
-# timeout (segundos) limita a chamada ao canal; o job informa, o agente nativo não (segue como era).
+# timeout (segundos) limita a chamada ao canal; o job informa; o agente nativo informa só na caixa WAHA (#3211), no
+# WhatsApp oficial e no Instagram segue sem (como era).
 # É cosmético: nunca levanta. Falha vira log sem token e sem conteúdo: na Meta e no Instagram, a classe do
 # erro ou o status HTTP da recusa; no WAHA, só a classe do erro (a mensagem dele traz URL e corpo).
 class Conversations::ChannelTyping::Deliverer

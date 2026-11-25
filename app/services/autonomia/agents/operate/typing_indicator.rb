@@ -43,7 +43,11 @@ module Autonomia
           when Channel::Api
             web_widget_typing(typing_on)
             # `try`: o vínculo pode não ter o agente. Sem agente ou com a opção desligada, nada além do evento do painel.
-            channel_typing(typing_on) if ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(@agent_inbox.try(:agent))
+            # #3211: com o prazo curto do robô externo (DeliverJob::CHANNEL_TIMEOUT_SECONDS), não os 20 s do Waha::Client:
+            # um WAHA lento não segura cada pedaço da cadeia.
+            if ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(@agent_inbox.try(:agent))
+              channel_typing(typing_on, timeout: ::Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS)
+            end
           when Channel::Whatsapp, Channel::Instagram
             channel_typing(typing_on)
           end
@@ -65,8 +69,10 @@ module Autonomia
 
         # WhatsApp Cloud e Instagram: o envio por canal (e o gate AI_HUMANIZE_CHANNEL_TYPING) mora em
         # Conversations::ChannelTyping::Deliverer, o mesmo objeto que atende o robô externo (chat#1442).
-        def channel_typing(typing_on)
-          ::Conversations::ChannelTyping::Deliverer.new(conversation: @conversation, typing_status: typing_on ? 'on' : 'off').perform
+        # `timeout`: só a caixa WAHA informa (#3211); o WhatsApp oficial e o Instagram seguem sem, como era.
+        def channel_typing(typing_on, timeout: nil)
+          ::Conversations::ChannelTyping::Deliverer.new(conversation: @conversation, typing_status: typing_on ? 'on' : 'off',
+                                                        timeout: timeout).perform
         end
       end
     end
