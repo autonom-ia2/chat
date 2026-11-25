@@ -91,7 +91,10 @@ describe('ContratadosAPI', () => {
 
   it('never keeps the password after the POST', async () => {
     const senha = 'senha-que-nao-pode-ficar';
-    await ContratadosAPI.conferirAcesso(7, { login: 'corretora.exemplo', senha });
+    await ContratadosAPI.conferirAcesso(7, {
+      login: 'corretora.exemplo',
+      senha,
+    });
 
     const guardado = JSON.stringify({ ...ContratadosAPI });
     expect(guardado).not.toContain(senha);
