@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_25_100100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -364,6 +364,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_autonomia_account_links_on_account_id"
     t.index ["identity_organization_id"], name: "idx_autonomia_account_links_identity_org", unique: true
+  end
+
+  create_table "autonomia_acessos_da_seguradora", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.string "seguradora", default: "universal", null: false
+    t.text "login"
+    t.text "senha"
+    t.string "login_dica"
+    t.string "estado", default: "nao_conferido", null: false
+    t.datetime "conferido_em"
+    t.string "motivo"
+    t.jsonb "capacidades", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_acessos_da_seguradora_on_account_id"
+    t.index ["autonomia_agent_id"], name: "index_autonomia_acessos_da_seguradora_on_autonomia_agent_id", unique: true
   end
 
   create_table "autonomia_agent_build_threads", force: :cascade do |t|
@@ -750,6 +767,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
     t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
     t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
     t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"
+  end
+
+  create_table "autonomia_cotacoes_de_viagem", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.string "id_cotacao", null: false
+    t.jsonb "pedido", default: {}, null: false
+    t.jsonb "planos", default: [], null: false
+    t.jsonb "proposta"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_cotacoes_de_viagem_on_account_id"
+    t.index ["autonomia_agent_id"], name: "index_autonomia_cotacoes_de_viagem_on_autonomia_agent_id"
+    t.index ["conversation_id", "id"], name: "index_autonomia_cotacoes_de_viagem_on_conversation_id_and_id"
   end
 
   create_table "autonomia_decisor_decisoes", force: :cascade do |t|
@@ -5623,6 +5655,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "autonomia_account_links", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_acessos_da_seguradora", "accounts"
+  add_foreign_key "autonomia_acessos_da_seguradora", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agent_build_threads", "accounts"
   add_foreign_key "autonomia_agent_build_threads", "autonomia_agents"
   add_foreign_key "autonomia_agent_build_threads", "users", column: "created_by_id"
@@ -5673,6 +5707,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_212000) do
   add_foreign_key "autonomia_automacoes", "accounts"
   add_foreign_key "autonomia_automacoes", "autonomia_automacao_versoes", column: "versao_ativa_id", on_delete: :nullify
   add_foreign_key "autonomia_automacoes", "users", column: "ligada_por_id", on_delete: :nullify
+  add_foreign_key "autonomia_cotacoes_de_viagem", "accounts"
+  add_foreign_key "autonomia_cotacoes_de_viagem", "autonomia_agents", on_delete: :cascade
+  add_foreign_key "autonomia_cotacoes_de_viagem", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "automation_rules", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "autonomia_decisores", column: "decisor_id", on_delete: :cascade
