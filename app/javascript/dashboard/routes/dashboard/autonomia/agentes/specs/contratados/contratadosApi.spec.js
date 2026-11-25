@@ -47,6 +47,14 @@ describe('ContratadosAPI', () => {
     );
   });
 
+  it('escapes the model in the URL', () => {
+    ContratadosAPI.contratar('a/b c', { nomeAgente: 'Bia' });
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/contratados/a%2Fb%20c',
+      { nome_agente: 'Bia' }
+    );
+  });
+
   it('saves only the fields it was given, in snake_case', () => {
     ContratadosAPI.salvarDados(7, { nomeCorretora: 'Corretora Nova' });
     expect(axiosMock.patch).toHaveBeenCalledWith(

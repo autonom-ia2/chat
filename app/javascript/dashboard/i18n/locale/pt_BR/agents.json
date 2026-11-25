@@ -4045,7 +4045,7 @@
         "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
         "CONVERSA": {
           "CLIENTE_1": "Oi! Quero seguro para Portugal, de 10 a 24 de janeiro. Somos 2.",
-          "AGENTE_1": "Oi! Eu sou a {nome}, da {corretora}. Quantos anos cada um tem?",
+          "AGENTE_1": "Oi! Aqui é {nome}, da {corretora}. Quantos anos cada um tem?",
           "CLIENTE_2": "45 e 43",
           "AGENTE_2": "Para vocês dois, o plano mais escolhido para a Europa sai R$ 189,90 por pessoa. Quer esse?",
           "CLIENTE_3": "Quero",
@@ -4076,7 +4076,7 @@
         }
       },
       "ERRO": {
-        "MARCADOR": "Este texto tem um código reservado (uma palavra que começa com $). Tire esse trecho e tente de novo.",
+        "MARCADOR": "Este texto tem um código reservado (um trecho com $). Tire esse trecho e tente de novo.",
         "INDISPONIVEL": "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia.",
         "NOME_AGENTE": "Escreva o nome do agente, com até {maximo} caracteres.",
         "NOME_CORRETORA": "Escreva o nome da corretora, com até {maximo} caracteres.",
@@ -4086,7 +4086,7 @@
       },
       "ACESSO": {
         "TITULO": "Acesso ao portal da Universal",
-        "CRIADA": "Pronto, a {nome} foi criada. Ela começa parada. Falta o acesso à Universal e o canal.",
+        "CRIADA": "O agente {nome} foi criado. Ele começa parado. Falta o acesso à Universal e o canal.",
         "PASSO": "Passo 2 de 3: acesso à Universal.",
         "EXPLICA": "{nome} entra no portal da Universal com o login da sua corretora para cotar e fazer a proposta.",
         "CONFERIDO": {
@@ -4095,7 +4095,7 @@
         },
         "SO_COTA": {
           "TITULO": "Esse login só faz cotação",
-          "TEXTO": "{nome} cota e tira dúvidas. Quando o cliente quiser fechar, ela passa a conversa para a sua equipe. Para {nome} fazer a proposta sozinha, peça à Universal para liberar a emissão nesse login.",
+          "TEXTO": "{nome} cota e tira dúvidas. Quando o cliente quiser fechar, {nome} passa a conversa para a sua equipe. Para a proposta sair sem ajuda, peça à Universal para liberar a proposta nesse login.",
           "ITEM": "Precisa de um login que faz proposta."
         },
         "LOGIN": {
@@ -4143,19 +4143,19 @@
         "ALTERAR_CORRETORA_ARIA": "Alterar a corretora",
         "ALTERAR_ACESSO_ARIA": "Alterar o acesso ao portal da Universal",
         "AVISO_RECUSADO": {
-          "TITULO": "A Universal recusou o acesso da {nome}.",
+          "TITULO": "A Universal recusou o acesso de {nome}.",
           "GARANTIA": "Enquanto isso, quem quiser cotar passa para a sua equipe.",
           "ACAO": "Cadastrar a senha nova"
         }
       },
       "ONDE": {
-        "PASSO": "Passo 3 de 3: onde a {nome} atende."
+        "PASSO": "Passo 3 de 3: onde {nome} atende."
       },
       "CORRETORA": {
         "TITULO": "Corretora",
         "NOME": "Nome da corretora",
         "SOBRE": "Sobre a corretora",
-        "SOBRE_AJUDA": "A {nome} usa para se apresentar.",
+        "SOBRE_AJUDA": "{nome} usa para se apresentar.",
         "CANCELAR": "Cancelar",
         "SALVAR": "Salvar"
       }

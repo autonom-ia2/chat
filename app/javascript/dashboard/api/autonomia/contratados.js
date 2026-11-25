@@ -38,7 +38,7 @@ class ContratadosAPI extends ApiClient {
 
   contratar(modelo, { nomeAgente, nomeCorretora, sobreCorretora }) {
     return axios.post(
-      `${this.url}/contratados/${modelo}`,
+      `${this.url}/contratados/${encodeURIComponent(modelo)}`,
       corpoDaCorretora({ nomeAgente, nomeCorretora, sobreCorretora })
     );
   }

@@ -15,8 +15,8 @@ import { MODELOS_DE_RAMO, TOM_DO_RAMO } from '../constants/modelosDeRamo';
 import { ESTADO } from '../utils/estadoDoAgente';
 
 // #3211 (Tarefa 24) — mockup do agente pronto "Seguro Viagem Universal", para o Rodrigo aprovar a jornada em prints
-// antes de qualquer tela de verdade. Monta com os componentes reais da área de Agentes; os textos ficam aqui, soltos,
-// porque é só a história. Dados fictícios: a agente "Bia" da "Corretora Exemplo". Nenhum login de verdade.
+// antes de qualquer tela de verdade. Monta com os componentes reais da área de Agentes; os textos vêm do i18n
+// (AGENTS.CONTRATADOS.*), os mesmos das telas de verdade. Dados fictícios: o agente "Bia" da "Corretora Exemplo". Nenhum login de verdade.
 // Rodada 2 (diretor de arte, 6,5/10): o cartão vem primeiro, em "Vendem sozinhos", acima dos ramos; passos 1 a 3 nas
 // gavetas; a página da Bia ganha o bloco "Corretora e acesso"; estados novos (Universal fora do ar, atendendo,
 // página em repouso, alterar a corretora, acesso recusado meses depois).
@@ -47,9 +47,12 @@ const SOBRE =
 const CANAL = 'WhatsApp Vendas';
 const DO_NOME = { nome: NOME };
 
-const FAZ = ['DUVIDAS', 'COTA', 'ESCOLHE', 'PROPOSTA'].map(chave =>
-  t(`AGENTS.CONTRATADOS.MODELO.FAZ.${chave}`)
-);
+const FAZ = [
+  t('AGENTS.CONTRATADOS.MODELO.FAZ.DUVIDAS'),
+  t('AGENTS.CONTRATADOS.MODELO.FAZ.COTA'),
+  t('AGENTS.CONTRATADOS.MODELO.FAZ.ESCOLHE'),
+  t('AGENTS.CONTRATADOS.MODELO.FAZ.PROPOSTA'),
+];
 
 const PRECISA = [
   { texto: t('AGENTS.CONTRATADOS.MODELO.PRECISA.DADOS') },
@@ -62,19 +65,47 @@ const PRECISA = [
 
 const DA_CONVERSA = { nome: NOME, corretora: CORRETORA };
 const CONVERSA = [
-  ['cliente', 'CLIENTE_1', '19:20'],
-  ['agente', 'AGENTE_1', '19:20'],
-  ['cliente', 'CLIENTE_2', '19:21'],
-  ['agente', 'AGENTE_2', '19:21'],
-  ['cliente', 'CLIENTE_3', '19:22'],
-  ['agente', 'AGENTE_3', '19:22'],
-  ['cliente', 'CLIENTE_4', '19:24'],
-  ['agente', 'AGENTE_4', '19:25'],
-].map(([de, chave, hora]) => ({
-  de,
-  texto: t(`AGENTS.CONTRATADOS.MODELO.CONVERSA.${chave}`, DA_CONVERSA),
-  hora,
-}));
+  {
+    de: 'cliente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.CLIENTE_1'),
+    hora: '19:20',
+  },
+  {
+    de: 'agente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.AGENTE_1', DA_CONVERSA),
+    hora: '19:20',
+  },
+  {
+    de: 'cliente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.CLIENTE_2'),
+    hora: '19:21',
+  },
+  {
+    de: 'agente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.AGENTE_2'),
+    hora: '19:21',
+  },
+  {
+    de: 'cliente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.CLIENTE_3'),
+    hora: '19:22',
+  },
+  {
+    de: 'agente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.AGENTE_3'),
+    hora: '19:22',
+  },
+  {
+    de: 'cliente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.CLIENTE_4'),
+    hora: '19:24',
+  },
+  {
+    de: 'agente',
+    texto: t('AGENTS.CONTRATADOS.MODELO.CONVERSA.AGENTE_4'),
+    hora: '19:25',
+  },
+];
 
 // Uma caixa livre só: ela já vem marcada.
 const CANAIS = [
@@ -852,7 +883,9 @@ const naoPerderOQueDigitou = () => false;
                       {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TITULO') }}
                     </p>
                     <p class="m-0 text-sm text-n-slate-12">
-                      {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO', DO_NOME) }}
+                      {{
+                        t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO', DO_NOME)
+                      }}
                     </p>
                   </div>
                 </div>

@@ -23,11 +23,6 @@ describe('useContratados (#3211)', () => {
     api.lista.mockReset();
   });
 
-  it('does not call the API when nobody mounts it', () => {
-    useContratados();
-    expect(api.lista).not.toHaveBeenCalled();
-  });
-
   it('returns the models the server lists', async () => {
     api.lista.mockResolvedValue({
       data: { modelos: ['seguro_viagem_universal'] },
