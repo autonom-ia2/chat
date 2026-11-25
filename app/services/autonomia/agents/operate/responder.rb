@@ -259,7 +259,10 @@ module Autonomia
         # Link lido em voz não serve ao cliente (não dá para tocar nem copiar do áudio). Vale para TODA resposta em voz,
         # com ou sem as opções de paridade: a resposta com link sai em texto, o caminho de fuga de sempre. A interação de
         # link (`result.interacao`) não conta: ela já sai numa mensagem própria depois do áudio. Só método de string.
+        # Fora da Lia (`insurance_quote`): regra da casa, o comportamento dela não muda (o mesmo corte do item Agora).
         def resposta_com_link?(result)
+          return false if @agent.agent_type == 'insurance_quote'
+
           texto = result.reply.to_s.downcase
           texto.include?('http://') || texto.include?('https://')
         end
@@ -797,7 +800,8 @@ module Autonomia
         # sem a opção, a última mensagem, como sempre.
         def texto_base_da_pergunta(message)
           if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
-            return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(current_turn_incoming) { |m| email_autoria.texto(m) }
+            rajada = current_turn_incoming.select { |m| conta_na_pergunta?(m) }
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(rajada) { |m| email_autoria.texto(m) }
           end
 
           message ? email_autoria.texto(message) : ''
@@ -811,6 +815,10 @@ module Autonomia
         def last_incoming_message
           recent_messages.reverse.find(&:incoming?)
         end
+
+        # #3211 (P1): a mensagem do cliente entra na pergunta da rajada? Aqui, toda; o guard do WAHA
+        # (Waha::RichNative::AgentTurnGuard) tira o que não é pergunta, a mesma regra da última mensagem dele.
+        def conta_na_pergunta?(_message) = true
 
         # Contexto da mensagem referenciada via `in_reply_to` (reply citado OU reação entregue como texto
         # pelo canal, ex.: WAHA). Escopado à conversa, truncado, fail-safe. Sem referência -> nil (a query

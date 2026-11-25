@@ -63,4 +63,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
     expect(enviadas.sole.content_attributes['autonomia_voice']).to be(true)
   end
+
+  # Revisão final F6: regra da casa, a Lia não muda. Com link, a resposta em voz dela segue em áudio, como na main.
+  context 'when o agente é a Lia (insurance_quote)' do
+    let(:agent) { criar_principal(account, agent_type: 'insurance_quote') }
+
+    it 'resposta com link segue em áudio' do
+      responde('Seu link de pagamento: https://pagamento.exemplo.com/?IdCarrinho=123')
+      perform
+
+      expect(enviadas.first.content_attributes['autonomia_voice']).to be(true)
+    end
+  end
 end
