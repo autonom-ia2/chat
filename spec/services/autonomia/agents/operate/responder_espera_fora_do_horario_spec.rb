@@ -69,7 +69,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     resultado = responder(escreve(:incoming, 'Alguém vai me atender?'))
 
     input = pedidos.sole
-    expect(input[-2]).to eq(role: 'developer', content: [{ type: 'input_text', text: contexto_esperado }])
+    expect(input[-3]).to eq(role: 'developer', content: [{ type: 'input_text', text: contexto_esperado }])
     expect(contexto_esperado).to include('A equipe volta amanhã (sexta-feira, 16/10) às 09:00.')
     expect(input.last[:content].first[:text]).to eq('Alguém vai me atender?')
     expect(instrucoes.sole).not_to include('esperando alguém da equipe')

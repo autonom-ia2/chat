@@ -77,7 +77,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   it 'a regra da mensagem automática vai como developer, logo antes da pergunta' do
     conversa_com_aviso
 
-    expect(itens(pedidos.sole)[-2]).to eq(['developer', moldura.regra_automatica(marca)])
+    expect(itens(pedidos.sole)[-3]).to eq(['developer', moldura.regra_automatica(marca)])
   end
 
   # Revisão final: o que o atendimento já enviou; continuar o assunto, sem saudação dupla, sem desculpa nem negar a

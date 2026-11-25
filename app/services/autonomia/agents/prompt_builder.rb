@@ -322,7 +322,7 @@ module Autonomia
       end
 
       # input (array estilo Responses API): SEGMENTO DA CONTA + memória de antes + histórico + CONTEXTO + DOCUMENTOS
-      # anexados + regra do turno + estado e fatos da memória + pergunta.
+      # anexados + regra do turno + estado e fatos da memória + AGORA (data e hora no fuso da conta) + pergunta.
       def input
         messages = [segmento_message, memoria_message('user', @memoria.antes)].compact + history_messages
         messages << context_message if @snippets.any?
@@ -333,9 +333,19 @@ module Autonomia
       end
 
       # A pergunta e, com trecho do material no turno, UM lembrete depois dela: a ordem das fontes (#2801) e o uso do dado
-      # do trecho (#2807), juntos quando as duas flags estão ligadas, nunca duas mensagens.
+      # do trecho (#2807), juntos quando as duas flags estão ligadas, nunca duas mensagens. Antes da pergunta, o item
+      # "Agora: …" (#3211, P6).
       def fim_da_entrada
-        [user_message(@query), (message('developer', lembrete_do_fim) if @snippets.any? && lembrete_do_fim)].compact
+        [agora_message, user_message(@query), (message('developer', lembrete_do_fim) if @snippets.any? && lembrete_do_fim)].compact
+      end
+
+      # nil com a chave da instalação desligada ou na Lia (regra da casa: o comportamento dela não muda, o mesmo corte do
+      # segmento).
+      def agora_message
+        return unless Config.data_do_turno_enabled?
+        return if @agent.agent_type == 'insurance_quote'
+
+        message('developer', PromptParts::Agora.texto(@agent.account))
       end
 
       # nil sem nenhuma das duas flags: o input termina na pergunta, como antes. Com as duas, o "Antes de responder:" sai

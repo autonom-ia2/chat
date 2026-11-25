@@ -10,6 +10,9 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
   let(:segmento) { 'seguros/corretora' }
   let(:marca) { { 'segmento' => segmento, 'versao' => 'aaaabbbbcccc', 'texto' => nil } }
 
+  # O item Agora (#3211) leva o minuto: os pedidos comparados entre si saem do mesmo instante.
+  before { freeze_time }
+
   def create_agent(**attrs)
     Autonomia::Agents::Agent.create!(
       { account: account, name: 'Bot', agent_type: 'custom', status: :active, enabled: true,

@@ -49,6 +49,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   it 'com a Fase 2 desligada o pedido fica byte a byte o de antes, e não há interação' do
+    freeze_time # o item Agora leva o minuto: os dois inputs saem do mesmo instante
     agente = criar_principal(conta_da_fase2(ligada: false))
     modelo_responde(opcoes)
     resultado = atender(agente: agente)
