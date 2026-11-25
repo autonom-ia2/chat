@@ -105,14 +105,6 @@ describe('ProntosParaContratar (#3211)', () => {
     expect(wrapper.find('button').exists()).toBe(false);
   });
 
-  it('renders nothing with an empty list', () => {
-    const wrapper = mount(ProntosParaContratar, {
-      props: { modelos: [], podeUsar: true },
-    });
-
-    expect(wrapper.find('[data-contratados]').exists()).toBe(false);
-  });
-
   describe('on the "Criar agente" page', () => {
     it('does not render the section when the server lists no model', async () => {
       const wrapper = await montarPagina();

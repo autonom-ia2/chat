@@ -191,6 +191,7 @@ defineExpose({ enviar, temMudanca });
         @input="mexeu('nome_agente')"
       />
       <CampoErro
+        v-if="erroDe('nome_agente')"
         :id="`${base}-nome_agente-erro`"
         :texto="erroDe('nome_agente')"
       />
@@ -220,6 +221,7 @@ defineExpose({ enviar, temMudanca });
         @input="mexeu('nome_corretora')"
       />
       <CampoErro
+        v-if="erroDe('nome_corretora')"
         :id="`${base}-nome_corretora-erro`"
         :texto="erroDe('nome_corretora')"
       />
@@ -251,6 +253,7 @@ defineExpose({ enviar, temMudanca });
         @input="mexeu('sobre_corretora')"
       />
       <CampoErro
+        v-if="erroDe('sobre_corretora')"
         :id="`${base}-sobre_corretora-erro`"
         :texto="erroDe('sobre_corretora')"
       />

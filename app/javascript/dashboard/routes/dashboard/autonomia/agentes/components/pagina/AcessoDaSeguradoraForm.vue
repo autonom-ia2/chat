@@ -310,7 +310,11 @@ const anel = anelDoCampo;
               :class="[CAMPO, anel(loginInvalido)]"
               @input="mexeu('login')"
             />
-            <CampoErro :id="`${base}-login-erro`" :texto="erroDe('login')" />
+            <CampoErro
+              v-if="erroDe('login')"
+              :id="`${base}-login-erro`"
+              :texto="erroDe('login')"
+            />
             <p :id="`${base}-login-ajuda`" class="m-0 text-sm text-n-slate-11">
               {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.AJUDA') }}
             </p>
@@ -362,7 +366,11 @@ const anel = anelDoCampo;
                 />
               </button>
             </div>
-            <CampoErro :id="`${base}-senha-erro`" :texto="erroDe('senha')" />
+            <CampoErro
+              v-if="erroDe('senha')"
+              :id="`${base}-senha-erro`"
+              :texto="erroDe('senha')"
+            />
             <p :id="`${base}-senha-ajuda`" class="m-0 text-sm text-n-slate-11">
               {{
                 recusado
