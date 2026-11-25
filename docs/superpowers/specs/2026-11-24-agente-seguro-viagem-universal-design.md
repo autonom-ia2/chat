@@ -224,5 +224,5 @@ Como entra, sem mudar os outros agentes: P1–P3 e P5–P7 viram **opções por 
 | Corretor mexe na base? | Não. A base deste agente é só a nossa; a tela e a API de material ficam só leitura para ele. |
 | Nome e descrição da corretora editáveis depois? | Sim, pela mesma tela dos 3 campos (endpoint próprio que regrava `config['contratado']`, menos o `modelo`). Não re-semeia a base, que não depende deles. |
 | Flag nasce ligada? | Declarada `enabled: true` (regra da casa, vale para conta nova). Nas contas existentes, a Orquestração liga só depois do piloto aprovado. |
-| Login da Universal do teste pago | O do Rodrigo, cadastrado por ele na tela de acesso do agente na conta 18 (24/11). |
+| Login da Universal do teste pago | Um login real de corretora, cadastrado pelo dono dele na tela de acesso do agente, na conta piloto (24/11). Ninguém digita login ou senha em chat, script ou arquivo. |
 | IA do CRM: contratado protegido como a Lia? | Não: **agente comum** (Rodrigo, 24/11). Só a Lia segue protegida (`protegido_no_crm?`). |

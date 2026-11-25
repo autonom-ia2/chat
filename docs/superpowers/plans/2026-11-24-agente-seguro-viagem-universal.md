@@ -283,8 +283,8 @@ regra do P7 "link não vira áudio" (a resposta com o link de pagamento não pod
 
 ### Tarefa 0 — Insumos reais da Universal (gate de dados)
 
-Login (Rodrigo, 24/11): o **dele**, cadastrado por ele na tela de acesso do agente, na conta piloto, depois do deploy. Por
-isso esta tarefa se divide:
+Login (24/11): um login real de corretora, cadastrado pelo dono dele na tela de acesso do agente, na conta piloto, depois
+do deploy. Por isso esta tarefa se divide:
 
 - **0a — antes do código (agora):** as fixtures saem de
   `.superpowers/sdd/2026-11-24-agente-seguro-viagem-universal/cotacao_nacional_anonima.json` (chaves `"pedido"` e
@@ -293,11 +293,11 @@ isso esta tarefa se divide:
   catálogo. As constantes nascem como listas: `IDS_DMH = [2898]`, `IDS_BAGAGEM = [2595]`, `IDS_CANCELAMENTO = [2601]`;
   benefício sem id conhecido aparece no PDF e em `detalhes_da_cotacao` pela lista completa, só não vira coluna de
   destaque. Setup, destinos e um terceiro produto sem despesas médicas (para o filtro) entram montados à mão.
-- **0b — depois do deploy, com o login do Rodrigo (passo da Tarefa 30):** a primeira cotação internacional (`PT`) pela
+- **0b — depois do deploy, com o login do piloto (passo da Tarefa 30):** a primeira cotação internacional (`PT`) pela
   conversa de teste confirma os ids internacionais, o `tipoTarifa` do Setup e o `FormaPagamento: 8`. Se os ids forem
   outros, um PR pequeno acrescenta à lista. Os passos abaixo descrevem a conferência; nenhum script com credencial.
 
-- [ ] (0b) Com o login do Rodrigo já salvo na tela do agente, chamar só leitura:
+- [ ] (0b) Com o login do piloto já salvo na tela do agente, chamar só leitura:
   `GET /v1/Emissor/Setup`, `GET /v1/destinos`, `POST /v1/Cotacao` com `{destinos:['PT'], passageiros:[{nome:'Viajante 1',
   dataNascimento:'1981-08-02'}], dataSaida:'2027-02-02', dataRetorno:'2027-02-06', tipoViagem:1, tipoTarifa:<do Setup>,
   produtoAvulso:false, cupom:'', classificacoes:[1]}`. Cotar não tem custo nem efeito. **Não chamar `/v1/Compras`.**
@@ -307,7 +307,7 @@ isso esta tarefa se divide:
   Bagagem", `2601` "Cancelamento de viagem - plus reason". A cotação internacional (`PT`) desta tarefa confirma se os
   ids internacionais são os mesmos; se forem outros, um PR pequeno os acrescenta às listas.
   Nota: a mesma cotação real foi aceita com `tipoTarifa: 0` e devolveu `mostrarTarifaAcordo: true`; manter a regra do
-  Setup (1/2) e conferir aqui que `2` funciona para o login do Rodrigo.
+  Setup (1/2) e conferir aqui que `2` funciona para o login do piloto.
 - [ ] (0b) Conferir os **nomes dos campos do Setup** na resposta real: `soCotacao`, `emiteFaturado`, `emiteBoleto`,
   `tarifaAcordo` (nomes do levantamento de fatos; o resumo mascarado da coleção Postman não traz o Setup). Se algum
   nome for outro, um PR pequeno troca só a chave da esquerda de `ConferirAcesso::CAPACIDADES` (Tarefa 12) e o
@@ -2163,16 +2163,16 @@ título `AGENTS.CONTRATADOS.MODELO.TITULO`), porque a rota importa o arquivo; a 
 13. `DadosIncompletos` é subclasse de `EscolhasIncompletas`, para as portas que já tratam a da Lia tratarem esta.
 14. ~~F1 e a promessa da IA do CRM tratam o contratado como a Lia.~~ Rodrigo decidiu (24/11): **agente comum** no CRM;
     predicado `protegido_no_crm?` só para a Lia (Tarefa 8).
-15. Login do teste: o **do próprio Rodrigo**, cadastrado por ele na tela de acesso do agente na conta piloto (Rodrigo,
-    24/11: "vamos fazer o processo"). Ninguém digita login/senha em chat, script ou arquivo; a Tarefa 0 vira fixture
+15. Login do teste: um login real de corretora, cadastrado pelo dono dele na tela de acesso do agente na conta piloto
+    (24/11: "vamos fazer o processo"). Ninguém digita login/senha em chat, script ou arquivo; a Tarefa 0 vira fixture
     da cotação real guardada no n8n + conferência depois do deploy (ver Tarefa 0).
 
 ## O que não deu para determinar pelo código
 
 - Os `idBeneficio` **internacionais** de despesas médicas, bagagem e cancelamento (nacionais conhecidos: 2898, 2595,
   2601) — Tarefa 0b, depois do deploy.
-- Se o `FormaPagamento: 8` vale para o emissor do Rodrigo — Tarefa 0b. `BR` vale (cotação real aceita).
-- ~~O login da Universal para o teste.~~ O do Rodrigo, cadastrado por ele na tela (decisão 15).
+- Se o `FormaPagamento: 8` vale para o emissor do piloto — Tarefa 0b. `BR` vale (cotação real aceita).
+- ~~O login da Universal para o teste.~~ Um login real de corretora, cadastrado pelo dono dele na tela (decisão 15).
 - ~~Os nomes das chaves de `config` do PR 1.~~ Fixados (seção "Interfaces que vêm do PR 1").
 
 ---
