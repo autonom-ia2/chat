@@ -64,6 +64,38 @@ RSpec.describe Autonomia::Agents::SoftDelete do
     expect(Audited.audit_class.where(auditable: agent, action: 'destroy').count).to eq(1)
   end
 
+  describe 'insurer credentials of a hired agent (#3211)' do
+    let!(:acesso) do
+      enable_test_encryption!
+      Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
+                                                    senha: 's3nha-teste', estado: 'ok')
+    end
+
+    it 'deletes them with the agent' do
+      service.perform
+
+      expect(agent.reload.deleted_at).to be_present
+      expect(Autonomia::Agents::AcessoDaSeguradora.exists?(acesso.id)).to be(false)
+    end
+
+    it 'keeps them when the deletion rolls back' do
+      allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
+
+      expect { service.perform }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Autonomia::Agents::AcessoDaSeguradora.exists?(acesso.id)).to be(true)
+    end
+
+    it 'deletes them when the stale draft reaper archives the agent' do
+      agent.update_columns(status: Autonomia::Agents::Agent.statuses[:draft], enabled: false, instruction: nil, # rubocop:disable Rails/SkipsModelValidations
+                           updated_at: 3.days.ago)
+
+      Autonomia::Agents::ReapStaleDraftsJob.perform_now
+
+      expect(agent.reload.deleted_at).to be_present
+      expect(Autonomia::Agents::AcessoDaSeguradora.exists?(acesso.id)).to be(false)
+    end
+  end
+
   it 'rolls back deletion when the audit cannot be persisted' do
     allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
 
