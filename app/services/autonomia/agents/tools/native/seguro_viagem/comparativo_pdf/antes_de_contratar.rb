@@ -1,20 +1,18 @@
 # A ÚLTIMA PARTE do comparativo de Seguro Viagem (#3211): "Antes de contratar". Logo abaixo da última fileira de
 # cartões quando cabe até o rodapé; senão, numa folha nova. Um cartão com os pontos importantes (só o que a base do
 # agente sustenta: o preço do dia, as regras completas, contratar antes do embarque, não é plano de saúde), a
-# seguradora, o registro na SUSEP e o link das regras completas; e o cartão da marca com como contratar.
+# seguradora, o registro na SUSEP e o link das regras completas.
 module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::AntesDeContratar
   include Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Desenho
 
   CondicoesGerais = Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::CondicoesGerais
   Comparacao = Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparacao
   RESPIRO = 22
-  ESPACO = 14
   ENTRE_PONTOS = 8
   TITULO = 32
   ALTURA_DO_BOTAO = 26
   PONTO = { size: 10, leading: 2 }.freeze
   SOBRE = { size: 9.5, leading: 2 }.freeze
-  CHAMADA = { size: 14, style: :semibold, leading: 3 }.freeze
   LINK = 'Ler as regras completas do seguro  ↗'.freeze
 
   private
@@ -26,12 +24,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::AntesDeCo
       topo = 44
     end
     escrever('Antes de contratar', at: [MARGEM, topo], largura: largura_util, size: 20, style: :bold, cor: :marinho)
-    topo = pontos_importantes(topo + TITULO)
-    proximo_passo(topo + ESPACO)
+    pontos_importantes(topo + TITULO)
   end
 
   def altura_do_antes
-    TITULO + altura_dos_pontos + ESPACO + altura_do_proximo_passo
+    TITULO + altura_dos_pontos
   end
 
   def pontos
@@ -97,19 +94,5 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::AntesDeCo
 
     topo_do_botao = topo + 14 + altura_de(sobre, largura: largura_interna, **SOBRE) + 12
     botao(LINK, [MARGEM + RESPIRO, topo_do_botao, 250, ALTURA_DO_BOTAO], url)
-  end
-
-  def altura_do_proximo_passo
-    RESPIRO + 18 + altura_de(chamada, largura: largura_interna, **CHAMADA) + RESPIRO
-  end
-
-  # O cartão em degradê da marca com como contratar.
-  def proximo_passo(topo)
-    altura = altura_do_proximo_passo
-    @doc.fill_gradient from: [MARGEM, y_de(topo)], to: [MARGEM + largura_util, y_de(topo + altura)],
-                       stops: [cor(:marinho), cor(:azul_marca)]
-    @doc.fill_rounded_rectangle [MARGEM, y_de(topo)], largura_util, altura, RAIO
-    rotulo('Próximo passo', at: [MARGEM + RESPIRO, topo + RESPIRO], largura: largura_interna, cor: :ciano)
-    escrever(chamada, at: [MARGEM + RESPIRO, topo + RESPIRO + 18], largura: largura_interna, cor: :branco, **CHAMADA)
   end
 end

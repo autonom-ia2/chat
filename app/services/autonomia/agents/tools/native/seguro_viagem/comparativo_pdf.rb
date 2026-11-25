@@ -1,10 +1,11 @@
 # O COMPARATIVO EM PDF do Seguro Viagem (#3211): o material que o cliente guarda e mostra em casa, com a marca da
 # Universal Assistance e a corretora como quem envia. Sai da cotação guardada (`planos` no formato de `Planos.de`) e
 # não lê banco nem chama a seguradora. A4 em pé:
-# 1. capa: faixa da marca, o plano mais recomendado em destaque com o porquê, os dados da viagem, o resumo com os
-#    rótulos e como contratar;
+# 1. capa: faixa da marca, o plano mais recomendado em destaque com o porquê, os dados da viagem e o resumo com os
+#    rótulos;
 # 2. "Compare as opções": um cartão por plano (`Comparacao`), 6 por folha, sem cartão partido entre páginas;
 # 3. "Antes de contratar": logo abaixo dos cartões quando cabe; senão, na folha seguinte.
+# O PDF só informa: o próximo passo quem conduz é a conversa com o agente (sem chamada para responder, 25/11).
 # Os planos vão do mais barato ao mais caro (`Ordem`); os rótulos (mais econômica, mais recomendada, maior cobertura)
 # seguem a regra fixa de `Rotulos`.
 #
@@ -122,15 +123,9 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     "hoje, #{momento_da_cotacao.strftime('%d/%m')}, 23h59"
   end
 
-  # O plano que a capa destaca e que a chamada usa de exemplo: a recomendada (com 1 plano, ele).
+  # O plano que a capa destaca: a recomendada (com 1 plano, ele).
   def indice_do_destaque
     rotulos.index(:recomendada) || 0
-  end
-
-  # Como contratar, na capa e na última parte.
-  def chamada
-    nome = planos[indice_do_destaque].to_h['nome'].to_s.strip
-    "Para contratar, responda na conversa com o nome do plano. Exemplo: “Quero o #{nome}”."
   end
 
   def preparada_por

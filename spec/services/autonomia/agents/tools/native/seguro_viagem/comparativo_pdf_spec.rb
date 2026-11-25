@@ -30,7 +30,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
   let(:bytes) { described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo').render }
   let(:leitor) { PDF::Reader.new(StringIO.new(bytes)) }
   let(:texto) { normalizar(leitor.pages.map(&:text).join("\n")) }
-  let(:chamada) { 'Para contratar, responda na conversa com o nome do plano. Exemplo: “Quero o Especial UA 100K BRL”.' }
 
   # Espaço normalizado: o PDF quebra texto longo em linhas, e o leitor devolve a quebra; o espaço depois de "R$" é o que
   # não quebra linha.
@@ -103,9 +102,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
                              'R$ 30.000 para R$ 100.000.')
   end
 
-  it 'a chamada para contratar vem na capa e na última parte, com o nome da recomendada' do
-    expect(texto.scan(chamada).size).to eq(2)
-    expect(texto).not_to include('Nas próximas páginas')
+  it 'só informa: sem chamada para responder (o próximo passo é da conversa com o agente)' do
+    expect(texto).not_to include('Para contratar', 'responda na conversa', 'Próximo passo', 'Nas próximas páginas')
   end
 
   it 'um plano só: "opção disponível"' do

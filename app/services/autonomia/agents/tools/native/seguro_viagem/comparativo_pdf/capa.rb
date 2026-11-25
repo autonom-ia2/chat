@@ -1,6 +1,6 @@
 # A CAPA do comparativo de Seguro Viagem (#3211): a faixa em degradê com o logo da Universal Assistance, a corretora
 # que envia, o título e o selo da viagem; e o cartão do plano em destaque sobre a borda da faixa, com o porquê. Os dados
-# da viagem, o resumo com os rótulos e a chamada para contratar, logo abaixo, são do `Resumo`.
+# da viagem e o resumo com os rótulos, logo abaixo, são do `Resumo`.
 #
 # A faixa não encosta na borda da folha (`RECUO`): impressora não imprime até a borda, e o fundo cortado parece erro.
 module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Capa
@@ -23,9 +23,8 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Capa
     faixa_da_capa
     textos_da_capa
     topo = destaque(TOPO_DO_DESTAQUE)
-    topo = dados_da_viagem(topo + 20)
-    topo = resumo(topo + 26) if planos.size > 1
-    chamada_da_capa(topo + 18)
+    topo = dados_da_viagem(topo + 30)
+    resumo(topo + 40) if planos.size > 1
   end
 
   def caixa_da_faixa
