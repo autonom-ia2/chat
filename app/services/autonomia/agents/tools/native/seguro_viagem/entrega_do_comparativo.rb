@@ -64,7 +64,13 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   def criar_se_nova
     return false if postado?
 
-    criar(gravar_blob).present?
+    blob = gravar_blob
+    begin
+      criar(blob).present?
+    rescue StandardError
+      blob.purge
+      raise
+    end
   end
 
   def gravar_blob

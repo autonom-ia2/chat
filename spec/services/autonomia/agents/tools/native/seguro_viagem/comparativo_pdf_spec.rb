@@ -54,7 +54,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
   end
 
   it 'o preço por pessoa vem rotulado pela idade, na ordem das idades' do
-    expect(texto).to include('47 anos: R$ 120,00 19 anos: R$ 120,00 12 anos: R$ 120,00')
+    expect(texto).to include('47 anos: R$ 120,00', '19 anos: R$ 120,00', '12 anos: R$ 120,00')
+    expect(texto.index('47 anos: R$ 120,00')).to be < texto.index('19 anos: R$ 120,00')
+    expect(texto.index('19 anos: R$ 120,00')).to be < texto.index('12 anos: R$ 120,00')
   end
 
   it 'cobertura que o plano não tem sai com traço' do
