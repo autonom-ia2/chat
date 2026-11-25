@@ -12,17 +12,17 @@ class Autonomia::Agents::Contratados::SemearBaseJob < ApplicationJob
     return unless Autonomia::Agents::Contratados.disponivel?(agente.account, agente.marca_do_contratado['modelo'])
 
     resultado = Autonomia::Agents::Contratados::Base.semear_se_preciso!(agente)
-    registrar(agent_id, resultado) if resultado.is_a?(String)
+    avisar_no_log(agent_id, resultado) if resultado.is_a?(String)
   rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
-    registrar(agent_id, e.motivo)
+    avisar_no_log(agent_id, e.motivo)
   rescue Faraday::Error
     # O resto do Faraday (resposta cortada, por exemplo) escapa do serviço sem rótulo; a exceção crua não vai ao log.
-    registrar(agent_id, 'rede')
+    avisar_no_log(agent_id, 'rede')
   end
 
   private
 
-  def registrar(agent_id, motivo)
+  def avisar_no_log(agent_id, motivo)
     Rails.logger.warn("[autonomia][contratados] base não semeada agente=#{agent_id} motivo=#{motivo}")
   end
 end
