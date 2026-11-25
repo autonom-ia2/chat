@@ -23,4 +23,20 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Faixas
     maxima = plano['idade_maxima']
     (minima.nil? || idade >= minima.to_i) && (maxima.nil? || idade <= maxima.to_i)
   end
+
+  # A idade completa em `data` (a da saída da viagem): antes do aniversário naquele ano, um a menos.
+  def idade_em(nascimento, data)
+    antes_do_aniversario = ([data.month, data.day] <=> [nascimento.month, nascimento.day]).negative?
+    data.year - nascimento.year - (antes_do_aniversario ? 1 : 0)
+  end
+
+  # A proposta só sai pelo preço cotado se as idades reais (pela data de nascimento) caem nas MESMAS faixas das idades
+  # cotadas, em qualquer ordem: compara as contagens de cada faixa. Alguma idade sem faixa: false.
+  def mesma_faixa?(plano, idades_cotadas, idades_reais)
+    cotadas = idades_cotadas.map { |idade| faixa(plano, idade) }
+    reais = idades_reais.map { |idade| faixa(plano, idade) }
+    return false if cotadas.include?(nil) || reais.include?(nil)
+
+    cotadas.tally == reais.tally
+  end
 end
