@@ -1,0 +1,4 @@
+{
+  "status": 400,
+  "message": "Valor enviado no cartão é incompatível com a tarifa do produto"
+}
