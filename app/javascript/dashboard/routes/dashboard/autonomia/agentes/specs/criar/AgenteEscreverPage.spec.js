@@ -26,12 +26,21 @@ const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 
 // O roteador falso passa pelas guardas como o vue-router: sair da rota pela de saída, trocar a consulta da mesma rota
-// (a criação conversando, `?modelo=custom`) pela de troca. `navegou` só recebe o destino que as guardas deixaram.
+// (a criação conversando, `?modelo=custom`) pela de troca. `navegou` só recebe o destino que as guardas deixaram; a
+// navegação barrada devolve uma falha, como o vue-router.
+const FALHA = { falhaDeNavegacao: true };
 const guardas = vi.hoisted(() => ({ saida: null, troca: null }));
 const navegou = vi.hoisted(() => vi.fn());
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const router = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+  resolve: vi.fn(rota => ({
+    href: `/app/${rota.name}/${rota.params?.agentId}`,
+  })),
+}));
 vi.mock('vue-router', () => ({
   useRouter: () => router,
+  isNavigationFailure: valor => Boolean(valor?.falhaDeNavegacao),
   onBeforeRouteLeave: guarda => {
     guardas.saida = guarda;
   },
@@ -42,8 +51,9 @@ vi.mock('vue-router', () => ({
 const navegar = async destino => {
   const guarda =
     destino.name === 'autonomia_agents_builder' ? guardas.troca : guardas.saida;
-  if (guarda?.(destino) === false) return;
+  if (guarda?.(destino) === false) return FALHA;
   navegou(destino);
+  return undefined;
 };
 
 const no = seletor => document.querySelector(seletor);
@@ -266,6 +276,60 @@ describe('AgenteEscreverPage', () => {
     wrapper.unmount();
   });
 
+  describe('a página do agente não abriu depois de criar', () => {
+    const criarSemAbrir = async falhaDaNavegacao => {
+      router.replace.mockImplementationOnce(falhaDaNavegacao);
+      const wrapper = montar();
+      await digitar('[data-nome]', 'Duda');
+      await digitar('[data-instrucao]', TEXTO);
+      await criar();
+      return wrapper;
+    };
+
+    it.each([
+      ['an aborted navigation', async () => FALHA],
+      ['a navigation error', async () => Promise.reject(new Error('chunk'))],
+    ])(
+      'after %s, swaps the button for "Abrir {nome}", without "Tentar de novo" nor the created notice',
+      async (_caso, falhaDaNavegacao) => {
+        const wrapper = await criarSemAbrir(falhaDaNavegacao);
+        const abrir = wrapper.get('[data-abrir-criado]');
+        expect(abrir.text()).toBe('AGENTS.JORNADA.ESCREVER.ABRIR');
+        expect(abrir.attributes('href')).toBe('/app/autonomia_agent_panel/42');
+        expect(abrir.classes()).toContain('min-h-12');
+        expect(wrapper.find('[data-criar]').exists()).toBe(false);
+        expect(wrapper.find('[data-erro]').exists()).toBe(false);
+        expect(alerta).not.toHaveBeenCalled();
+        expect(no('[data-instrucao]').readOnly).toBe(true);
+
+        // Um Enter no nome não cria outro.
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(store.dispatch).toHaveBeenCalledTimes(1);
+        wrapper.unmount();
+      }
+    );
+
+    it('opens the page with the link and only then says it was created', async () => {
+      const wrapper = await criarSemAbrir(async () => FALHA);
+      await clicar('[data-abrir-criado]');
+      const pagina = { name: 'autonomia_agent_panel', params: { agentId: 42 } };
+      expect(router.replace).toHaveBeenLastCalledWith(pagina);
+      expect(navegou).toHaveBeenCalledWith(pagina);
+      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.ESCREVER.CRIADO');
+      expect(store.dispatch).toHaveBeenCalledTimes(1);
+      wrapper.unmount();
+    });
+
+    it('leaves without asking once created', async () => {
+      const wrapper = await criarSemAbrir(async () => FALHA);
+      await clicar('[data-voltar-lista]');
+      expect(navegou).toHaveBeenCalledWith(LISTA);
+      expect(dialogo().open).toBeFalsy();
+      wrapper.unmount();
+    });
+  });
+
   describe('sair sem criar', () => {
     it('goes back to the list at once when nothing was written', async () => {
       const wrapper = montar();
@@ -313,11 +377,12 @@ describe('AgenteEscreverPage', () => {
       wrapper.unmount();
     });
 
-    it('leaves to where it was going when "Sair" is chosen', async () => {
+    it('leaves to where it was going when "Sair" is chosen, replacing the page in the history', async () => {
       const wrapper = montar();
       await digitar('[data-instrucao]', TEXTO);
       await clicar('[data-voltar-lista]');
       await clicar('dialog [data-confirmar]');
+      expect(router.replace).toHaveBeenCalledWith(LISTA);
       expect(navegou).toHaveBeenCalledTimes(1);
       expect(navegou).toHaveBeenCalledWith(LISTA);
       expect(dialogo().open).toBe(false);
@@ -336,6 +401,31 @@ describe('AgenteEscreverPage', () => {
       expect(dialogo().open).toBe(true);
       await clicar('dialog [data-confirmar]');
       expect(navegou).toHaveBeenCalledWith(CONTAR);
+      wrapper.unmount();
+    });
+
+    it('does not leave nor ask while it is creating', async () => {
+      store.dispatch.mockImplementation(() => new Promise(() => {}));
+      const wrapper = montar();
+      await digitar('[data-nome]', 'Duda');
+      await digitar('[data-instrucao]', TEXTO);
+      await criar();
+      expect(no('[data-voltar-lista]').disabled).toBe(true);
+      expect(no('[data-contar-com-minhas-palavras]').disabled).toBe(true);
+      // O voltar do navegador (ou outro link do painel) passa pela guarda.
+      await router.push(LISTA);
+      await router.push(CONTAR);
+      await flushPromises();
+      expect(navegou).not.toHaveBeenCalled();
+      expect(dialogo().open).toBeFalsy();
+      wrapper.unmount();
+    });
+
+    it('does not ask when only the query of the writing page changes', async () => {
+      const wrapper = montar();
+      await digitar('[data-instrucao]', TEXTO);
+      expect(guardas.troca({ query: { escrever: '1', x: '2' } })).toBe(true);
+      expect(dialogo().open).toBeFalsy();
       wrapper.unmount();
     });
 
@@ -390,6 +480,7 @@ describe('AgenteEscreverPage', () => {
         'CRIAR',
         'CRIANDO',
         'CRIADO',
+        'ABRIR',
         'ERRO',
         'ERRO_GARANTIA',
       ].forEach(chave => expect(jornada.ESCREVER[chave]).toBeTruthy());
@@ -397,6 +488,7 @@ describe('AgenteEscreverPage', () => {
         expect(jornada.ESCREVER.SAIR[chave]).toBeTruthy()
       );
       expect(jornada.ESCREVER.CRIADO).toContain('{nome}');
+      expect(jornada.ESCREVER.ABRIR).toContain('{nome}');
     });
     expect(agentesPtBR.AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES).toBe(
       'Escrever as instruções com as minhas palavras'

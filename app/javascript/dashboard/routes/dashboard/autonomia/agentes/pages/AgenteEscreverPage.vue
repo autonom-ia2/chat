@@ -1,7 +1,12 @@
 <script setup>
 import { computed, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router';
+import {
+  isNavigationFailure,
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  useRouter,
+} from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -23,6 +28,9 @@ import { MAX_INSTRUCAO, idiomaDoNavegador } from '../utils/pagina';
 // A rota já exige autonomia_manage; quem só vê não chega aqui, mas a página também não oferece o formulário.
 // Sair com algo escrito e sem ter criado pergunta antes (o texto se perderia). "Conte com suas palavras" vai para a
 // criação conversando na mesma rota (`?modelo=custom`), então a pergunta vale também para a troca de consulta.
+// Enquanto cria, ninguém sai (nem pelo navegador): a página do agente abriria por cima de onde a pessoa estivesse e,
+// se a criação falhasse, o texto se perderia. Criado e a página dele não abriu: no lugar do botão fica "Abrir {nome}",
+// nunca "Tentar de novo", que criaria outro agente.
 // O pb-24 no celular tira o "Criar agente" de baixo da bolinha do Guia (canto de baixo à direita).
 const MAX_NOME = 40;
 const NS = 'AGENTS.JORNADA.ESCREVER';
@@ -43,6 +51,8 @@ const textoVazio = ref(false);
 const criando = ref(false);
 const criado = ref(false);
 const falhou = ref(false);
+const naoAbriu = ref(false);
+const agenteCriado = ref(null);
 const titulo = ref(null);
 const campoNome = ref(null);
 const campoTexto = ref(null);
@@ -86,10 +96,37 @@ const conferir = () => {
   return !nomeVazio.value && !textoVazio.value;
 };
 
+const rotaDoCriado = () => ({
+  name: 'autonomia_agent_panel',
+  params: { agentId: agenteCriado.value.id },
+});
+// -> true quando a página do agente abriu. Falha de navegação (abortada, cancelada) ou erro (o pedaço da página não
+// carregou) contam como não abriu.
+const abrirOCriado = async () => {
+  try {
+    return !isNavigationFailure(await router.replace(rotaDoCriado()));
+  } catch {
+    return false;
+  }
+};
+const hrefDoCriado = computed(() =>
+  agenteCriado.value ? router.resolve(rotaDoCriado()).href : ''
+);
+const aoAbrirCriado = async evento => {
+  if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
+    return;
+  }
+  evento.preventDefault();
+  if (await abrirOCriado()) {
+    useAlert(t(`${NS}.CRIADO`, { nome: agenteCriado.value.nome }));
+  }
+};
+
 // Um clique só: o botão fica "Criando…" até a página do agente abrir. Só a falha ao criar o solta; a navegação fica
-// fora do try, para uma falha dela nunca oferecer "Tentar de novo" e criar o agente duas vezes.
+// fora do try da criação, para uma falha dela nunca oferecer "Tentar de novo" e criar o agente duas vezes.
 const criar = async () => {
-  if (criando.value || !conferir()) return;
+  // Criado, um Enter no nome não cria outro.
+  if (criando.value || criado.value || !conferir()) return;
   falhou.value = false;
   criando.value = true;
   let agente;
@@ -108,28 +145,32 @@ const criar = async () => {
     return;
   }
   criado.value = true;
-  const nomeCriado = nome.value.trim();
-  router.replace({
-    name: 'autonomia_agent_panel',
-    params: { agentId: agente.id },
-  });
-  useAlert(t(`${NS}.CRIADO`, { nome: nomeCriado }));
+  agenteCriado.value = { id: agente.id, nome: nome.value.trim() };
+  if (await abrirOCriado()) {
+    useAlert(t(`${NS}.CRIADO`, { nome: agenteCriado.value.nome }));
+    return;
+  }
+  naoAbriu.value = true;
+  criando.value = false;
 };
 
-// A pergunta só vale enquanto há algo escrito que se perderia: nada criado e nada sendo criado.
-const perderiaOTexto = () =>
-  !criado.value &&
-  !criando.value &&
-  Boolean(nome.value.trim() || texto.value.trim());
+const temAlgoEscrito = () => Boolean(nome.value.trim() || texto.value.trim());
 
+// Criado, sai sem perguntar (é assim que a página do agente abre). Criando, não sai e não pergunta. Com algo escrito,
+// pergunta antes.
 const guardarSaida = destino => {
-  if (saidaLiberada || !perderiaOTexto()) return true;
+  if (saidaLiberada || criado.value) return true;
+  if (criando.value) return false;
+  if (!temAlgoEscrito()) return true;
   saidaPendente = destino;
   confirmarSaida.value?.abrir();
   return false;
 };
 onBeforeRouteLeave(guardarSaida);
-onBeforeRouteUpdate(guardarSaida);
+// Trocar a consulta sem sair do escrever (o mesmo `?escrever`) não é sair.
+onBeforeRouteUpdate(destino =>
+  destino.query?.escrever ? true : guardarSaida(destino)
+);
 
 // A licença de sair sem perguntar vale só para esta saída: se a navegação não acontecer, a próxima pergunta de novo.
 const sairMesmo = async () => {
@@ -139,7 +180,7 @@ const sairMesmo = async () => {
   if (!destino) return;
   saidaLiberada = true;
   try {
-    await router.push(destino);
+    await router.replace(destino);
   } finally {
     saidaLiberada = false;
   }
@@ -166,7 +207,8 @@ const contarComMinhasPalavras = () =>
       <button
         type="button"
         data-voltar-lista
-        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        :disabled="criando"
+        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 disabled:opacity-50 disabled:cursor-not-allowed"
         @click="voltar"
       >
         <span
@@ -219,7 +261,7 @@ const contarComMinhasPalavras = () =>
                 data-nome
                 :maxlength="MAX_NOME"
                 autocomplete="off"
-                :readonly="criando"
+                :readonly="criando || criado"
                 :aria-invalid="nomeVazio ? 'true' : undefined"
                 :aria-describedby="descricaoDoNome"
                 class="px-3 mt-1 text-base rounded-xl min-h-11 bg-n-solid-1 ring-1 ring-inset border-0 !mb-0 text-n-slate-12"
@@ -250,7 +292,8 @@ const contarComMinhasPalavras = () =>
               <button
                 type="button"
                 data-contar-com-minhas-palavras
-                class="px-0 text-sm font-semibold underline text-start min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+                :disabled="criando"
+                class="px-0 text-sm font-semibold underline text-start min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 disabled:opacity-50 disabled:cursor-not-allowed"
                 @click="contarComMinhasPalavras"
               >
                 {{ t(`${NS}.SEM_TEXTO`) }}
@@ -263,7 +306,7 @@ const contarComMinhasPalavras = () =>
                 rows="16"
                 :maxlength="MAX_INSTRUCAO"
                 :placeholder="t(`${NS}.EXEMPLO`)"
-                :readonly="criando"
+                :readonly="criando || criado"
                 :aria-invalid="textoVazio ? 'true' : undefined"
                 :aria-describedby="descricaoDoTexto"
                 class="w-full h-64 min-h-[16rem] md:h-auto md:min-h-[22rem] px-3 py-2 text-base leading-relaxed rounded-xl bg-n-solid-1 ring-1 ring-inset border-0 !mb-0 text-n-slate-12 resize-y"
@@ -303,7 +346,17 @@ const contarComMinhasPalavras = () =>
           v-if="podeGerenciar && !falhou"
           class="flex flex-col gap-2 px-5 py-4 border-t sm:flex-row sm:justify-end md:px-8 border-n-weak"
         >
+          <a
+            v-if="naoAbriu"
+            data-abrir-criado
+            :href="hrefDoCriado"
+            class="inline-flex items-center justify-center gap-2 px-5 text-base font-semibold text-white rounded-xl min-h-12 bg-n-blue-11 dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+            @click="aoAbrirCriado"
+          >
+            {{ t(`${NS}.ABRIR`, { nome: agenteCriado.nome }) }}
+          </a>
           <AgenteBotao
+            v-else
             data-criar
             type="submit"
             tamanho="lg"

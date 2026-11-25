@@ -655,6 +655,7 @@
         "SEM_TEXTO": "No text ready? Tell it in your own words",
         "EXEMPLO": "E.g.: You serve the customers of my store. Answer in short sentences. If you do not know, hand over to someone on the team.",
         "CRIADO": "{nome} was created. It does not answer anyone yet.",
+        "ABRIR": "Open {nome}",
         "SAIR": {
           "TITULO": "Leave without creating the agent?",
           "TEXTO": "What you wrote will be lost.",

@@ -655,6 +655,7 @@
         "SEM_TEXTO": "Não tem um texto pronto? Conte com suas palavras",
         "EXEMPLO": "Ex.: Você atende os clientes da minha loja. Responda com frases curtas. Se não souber, passe para alguém da equipe.",
         "CRIADO": "{nome} foi criado. Ele ainda não atende ninguém.",
+        "ABRIR": "Abrir {nome}",
         "SAIR": {
           "TITULO": "Sair sem criar o agente?",
           "TEXTO": "O que você escreveu vai se perder.",

@@ -18,6 +18,15 @@ vi.mock('dashboard/api/autonomia/buildThreads', () => ({
   default: construtor,
 }));
 
+// #3192: o pedido da tela pelo canto da bolinha do Guia. O estado do canto é do módulo inteiro (as montagens dos
+// outros casos ficariam nele); aqui fica só o que esta montagem pediu.
+const canto = vi.hoisted(() => ({ pedido: null }));
+vi.mock('dashboard/components/autonomia/guide/cantoDaBolinha', () => ({
+  useOcuparCantoDaBolinha: ocupado => {
+    canto.pedido = ocupado;
+  },
+}));
+
 // #1543: sem modelo, rascunho nem atuação na URL, a flag ligada abre antes a página "Criar agente".
 const rota = vi.hoisted(() => ({ atual: null }));
 const roteador = vi.hoisted(() => ({ push: vi.fn() }));
@@ -265,6 +274,21 @@ describe('AgentesCriarEntrada', () => {
       await flushPromises();
       expect(wrapper.find('[data-escrever]').exists()).toBe(true);
       expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
+    // #3192/#3214: a página de escrever não tem a caixa de envio no canto, então a bolinha do Guia fica.
+    it('leaves the Guide bubble corner free with ?escrever=1, and takes it on the creation', async () => {
+      comConta(ligada);
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(canto.pedido.value).toBe(false);
+
+      rota.atual.query = { modelo: 'custom' };
+      await flushPromises();
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+      expect(canto.pedido.value).toBe(true);
     });
 
     it('keeps the old Builder with the flag off even with ?escrever=1', async () => {

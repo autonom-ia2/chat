@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (307 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (308 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1397,13 +1397,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `autonomia_agents_builder`
 
 ### Escolher como começar um agente novo
-- intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"
+- intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"; "Já tenho as instruções escritas, como uso?"
 - onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular ou Ver modelos prontos)
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); administrador ou função com autonomia_manage.
 - passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer um plano ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
-- gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes sai sem criar nada; quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
+- gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes na página Criar agente sai sem criar nada, mas na tela de escrever as instruções, com algo escrito, pergunta antes de sair (o texto se perderia); quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
 - nav_target: `autonomia_agents_builder`
 
 ### Criar um agente da equipe (recebe quando alguém passa)
@@ -1624,6 +1624,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; endereco HTTPS do webhook do outro sistema
 - passos: 1. Abra Agentes e clique em Conectar agente de outro sistema; 2. Quem e: foto (opcional), nome e o que o agente faz, e Continuar; 3. Endereco: cole o endereco do webhook e clique em Conectar; 4. Chave: copie a chave de acesso e cole no outro sistema; 5. Clique em Concluir para abrir a pagina do agente; 6. Para o agente comecar a atender, escolha esse agente na aba Agente de IA de um canal.
 - gotchas: sem foto aparece a inicial do nome; sem a chave colada no outro sistema o agente nao consegue responder; recem-conectado, o agente aparece como Parado ate atender primeiro em algum canal; Voltar para Agentes nas duas primeiras etapas sai sem criar nada.
+- nav_target: `autonomia_agents_builder`
+
+### Criar um agente colando as instruções que você já tem
+- intent: Já tenho as instruções do agente escritas, como uso?; Como colo um texto pronto para criar o agente?; Quero criar o agente sem conversar com a IA; Escrevi o prompt do meu agente em outro sistema, dá para trazer?; Onde escrevo as instruções do agente com as minhas palavras?
+- onde_fica: Agentes > Escrever as instruções com as minhas palavras (na tela inicial de Agentes, quando ainda não há agente) ou Agentes > Criar agente > Escrever as instruções com as minhas palavras (logo abaixo de Do meu jeito)
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- perfil: administrador ou função com autonomia_manage; quem só vê não tem o link nem o formulário
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); o texto das instruções (pode ser colado de outro lugar)
+- passos: 1. Abra Agentes e clique em Escrever as instruções com as minhas palavras (ou em Criar agente e depois nesse link); 2. Escreva o nome do agente; 3. Cole ou escreva em O que o agente deve fazer o que ele faz e o que ele nunca faz; 4. Clique em Criar agente; 5. A página do agente abre: ensine o que ele precisa saber em O que sabe, escolha as ferramentas, escolha em Onde e quando responde onde ele atende, teste em Testar e, quando estiver pronto, ligue o interruptor para ele começar a atender.
+- gotchas: o texto vale do jeito que foi escrito, sem passar pela conversa com a IA, e não custa nada na criação; o agente nasce Parado e não atende ninguém até a pessoa escolher onde ele atende e ligar; depois, mudar o texto é em Editar instruções na página dele (Mudar conversando não serve para esse agente); nome e texto são obrigatórios; sair com algo escrito (Voltar para Agentes, Não tem um texto pronto? ou o voltar do navegador) pergunta antes, porque o texto se perderia; enquanto o agente está sendo criado não dá para sair da tela; se a criação falhar, o texto continua na tela e Tentar de novo cria; se o agente foi criado mas a página dele não abriu, aparece Abrir com o nome dele, sem criar outro; quem não tem um texto pronto pode usar Não tem um texto pronto? Conte com suas palavras, que abre a criação conversando.
 - nav_target: `autonomia_agents_builder`
 
 ### Pagina do agente de outro sistema
