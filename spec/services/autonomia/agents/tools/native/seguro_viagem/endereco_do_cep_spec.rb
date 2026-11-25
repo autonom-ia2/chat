@@ -31,16 +31,40 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep do
     expect(described_class.buscar(agent: agent, cep: '01310-100')).to eq(completo)
   end
 
-  it 'cache vazio: roda a pronta do agente uma vez e lê o cache de novo' do
-    pronta = instance_double(Autonomia::Agents::Tool)
-    relacao = double('tools') # rubocop:disable RSpec/VerifiedDoubles
-    allow(agent).to receive(:tools).and_return(relacao)
-    allow(relacao).to receive(:find_by).with(fonte_pronta: 'cep').and_return(pronta)
-    execucao = instance_double(Autonomia::FerramentasProntas::Execucao)
-    expect(Autonomia::FerramentasProntas::Execucao).to receive(:new)
-      .with(tool: pronta, params: hash_including('consulta' => 'endereco', 'cep' => anything)).once.and_return(execucao)
-    expect(execucao).to receive(:call).once.and_invoke(-> { guardar(completo) })
-    expect(described_class.buscar(agent: agent, cep: '01310100')).to eq(completo)
+  describe 'cache vazio: a pronta de CEP do agente roda de verdade (ponta a ponta)' do
+    before do
+      resolver_hosts_das_prontas
+      ligar_prontas(account)
+      ligar_consultas(account)
+    end
+
+    it 'CEP achado: devolve cidade e UF, consulta o ViaCEP uma vez e guarda no cache' do
+      incluir_pronta('cep', conta: account, agente: agent)
+      viacep = fonte_responde('https://viacep.com.br/ws/01310100/json/',
+                              { cep: '01310-100', logradouro: 'Avenida Paulista', bairro: 'Bela Vista',
+                                localidade: 'São Paulo', uf: 'SP' })
+
+      expect(described_class.buscar(agent: agent, cep: '01310-100')).to eq(completo)
+      expect(described_class.buscar(agent: agent, cep: '01310100')).to eq(completo)
+      expect(viacep).to have_been_requested.once
+    end
+
+    it 'CEP que nenhuma fonte conhece: nil, sem exceção' do
+      incluir_pronta('cep', conta: account, agente: agent)
+      fonte_responde('https://viacep.com.br/ws/01310100/json/', { erro: true })
+      fonte_responde('https://cep.awesomeapi.com.br/json/01310100', { code: 'not_found' }, status: 404)
+      fonte_responde('https://brasilapi.com.br/api/cep/v2/01310100', { name: 'CepPromiseError' }, status: 404)
+
+      expect(described_class.buscar(agent: agent, cep: '01310100')).to be_nil
+    end
+
+    it 'todas as fontes fora (a pronta responde "não consegui"): nil, sem exceção e sem cache' do
+      incluir_pronta('cep', conta: account, agente: agent)
+      %w[https://viacep.com.br/ws/01310100/json/ https://cep.awesomeapi.com.br/json/01310100
+         https://brasilapi.com.br/api/cep/v2/01310100].each { |url| fonte_fora(url) }
+
+      expect { expect(described_class.buscar(agent: agent, cep: '01310100')).to be_nil }.not_to raise_error
+    end
   end
 
   it 'CEP de cidade com CEP único vem sem logradouro e sem bairro' do
