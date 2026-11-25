@@ -31,6 +31,8 @@ import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import AjudantePassos from '../components/onde/AjudantePassos.vue';
 import BaseDoAgenteLinha from '../components/pagina/BaseDoAgenteLinha.vue';
 import GavetaNovaBase from '../components/pagina/GavetaNovaBase.vue';
+import GavetaDoContratado from '../components/pagina/GavetaDoContratado.vue';
+import ContratadoNaPagina from '../components/pagina/ContratadoNaPagina.vue';
 import { useBaseDoAgente } from '../composables/useBaseDoAgente';
 import {
   ESTADO_PAGINA,
@@ -60,6 +62,7 @@ import { resumoOnde } from '../utils/resumoOnde';
 import {
   GAVETA,
   chaveDoQuando,
+  ehContratado,
   ehCotacao,
   ehInterno,
   ehManual,
@@ -85,6 +88,9 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // página é a de antes, igual à main (textos, gaveta, "Onde {nome} trabalha").
 // Tema 14 (#1434): o ajudante aparece "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
 // equipe"; "Quem {nome} ajuda" e "Quando chamar" ("GET /ajuda") com "Mudar" abrindo os passos do ajudante.
+// #3211 (Tarefa 28): o agente contratado tem a gaveta própria (GavetaDoContratado: o acesso à seguradora ou os
+// dados da corretora) e o bloco "Corretora e acesso" (ContratadoNaPagina). Não tem Mudar conversando, Instruções,
+// Versões, Conversas, Agenda nem Ferramentas (a API recusa todas para ele); a base ele só lê.
 const props = defineProps({
   agentId: { type: [String, Number], required: true },
   gaveta: { type: String, default: null },
@@ -182,11 +188,20 @@ const ajuda = computed(() =>
     : null
 );
 const cotacao = computed(() => ehCotacao(agente.value));
+const contratado = computed(() => ehContratado(agente.value));
+// A parte da gaveta do contratado: o acesso (o passo 2, que abre por `?gaveta=contratado`) ou a corretora.
+const parteDoContratado = ref('acesso');
+// O passo 3 aberto pela gaveta do contratado: a gaveta de onde diz o passo, e, quando ela termina, a página
+// avisa onde ele começou a atender.
+const passoDoContratado = ref(false);
+const contratadoComecou = ref(false);
 // #1429 F3 — a base de seguros: a linha no resumo e a gaveta do antes e depois. Só com a Fase 2 (sem ela o servidor
 // responde 404); a Lia (cotação) não recebe nada disso.
 const BASE = 'base';
 const baseDoAgente = useBaseDoAgente(idRef);
-const temBase = computed(() => fase2.value && !cotacao.value);
+const temBase = computed(
+  () => fase2.value && !cotacao.value && !contratado.value
+);
 const mostraBase = computed(
   () => temBase.value && baseDoAgente.temOQueMostrar.value
 );
@@ -319,7 +334,7 @@ const textoOnde = computed(() => {
 const horarios = computed(() => horariosDasCaixas(caixas.value, t));
 
 const acaoPrincipal = computed(() => {
-  if (cotacao.value) return null;
+  if (cotacao.value || contratado.value) return null;
   return manual.value ? 'instrucoes' : 'mudar';
 });
 
@@ -339,8 +354,9 @@ const itensMais = computed(() => {
         },
       ]
     : [];
-  if (!podeGerenciar.value)
-    return cotacao.value ? [] : [versoes, ...ferramentas];
+  if (!podeGerenciar.value) {
+    return cotacao.value || contratado.value ? [] : [versoes, ...ferramentas];
+  }
   const soNome = usaFotoDoCanal(agente.value);
   const fotoENome = {
     chave: GAVETA.FOTO,
@@ -350,6 +366,14 @@ const itensMais = computed(() => {
     icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
   };
   if (cotacao.value) return [fotoENome, ...ferramentas];
+  const excluirItem = {
+    chave: 'excluir',
+    texto: t('AGENTS.JORNADA.PAGINA.EXCLUIR.MENU'),
+    icone: 'i-lucide-trash-2',
+    perigo: true,
+    separar: true,
+  };
+  if (contratado.value) return [fotoENome, excluirItem];
   return [
     fotoENome,
     versoes,
@@ -361,13 +385,7 @@ const itensMais = computed(() => {
       icone: 'i-lucide-pencil',
     },
     ...ferramentas,
-    {
-      chave: 'excluir',
-      texto: t('AGENTS.JORNADA.PAGINA.EXCLUIR.MENU'),
-      icone: 'i-lucide-trash-2',
-      perigo: true,
-      separar: true,
-    },
+    excluirItem,
   ];
 });
 
@@ -409,6 +427,8 @@ const fechar = () => {
   aberta.value = null;
   ferramentaNova.value = false;
   nomeSugerido.value = '';
+  parteDoContratado.value = 'acesso';
+  passoDoContratado.value = false;
   limparAbaDaUrl();
   // #1429 F3 — outra gaveta (Versões, comportamento) pode ter mudado o agente: a linha da base é relida.
   if (temBase.value) baseDoAgente.recarregar();
@@ -467,7 +487,9 @@ const listaDeFontes = computed(() => fontesLidas.value || []);
 const conferencias = useConferenciasDoMaterial({
   agentId: () => Number(props.agentId),
 });
-const comConferencias = computed(() => fase2.value && !cotacao.value);
+const comConferencias = computed(
+  () => fase2.value && !cotacao.value && !contratado.value
+);
 const lerConferencias = () => {
   if (comConferencias.value) conferencias.ler();
 };
@@ -510,7 +532,7 @@ const lerFontes = async () => {
 
 // Perguntas de clientes para conferir: só para quem gerencia e nos agentes que aprendem pela base.
 const lerPerguntas = async () => {
-  if (!podeGerenciar.value || cotacao.value) return;
+  if (!podeGerenciar.value || cotacao.value || contratado.value) return;
   try {
     const { data } = await FaqSuggestionsAPI.list(Number(props.agentId), {
       status: 'pending',
@@ -667,11 +689,39 @@ const salvarMudancaDaAjuda = async ({ principais, quando: frase }) => {
 // #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
 // herói não continuar dizendo "Atendendo". A releitura é só para a tela; falhando, a próxima acerta.
 const depoisDeMudarOnde = async () => {
+  if (passoDoContratado.value) contratadoComecou.value = true;
   canais.carregar();
   try {
     await store.dispatch('autonomiaAgents/show', agente.value.id);
   } catch {
     // O canal já mudou; a tela relê o agente ao abrir de novo.
+  }
+};
+
+// #3211 — a gaveta do contratado: "Escolher o canal" (passo 3) abre a gaveta de onde com o texto do passo;
+// "Alterar" do bloco "Corretora e acesso" abre a parte certa. Depois de gravar, a página relê o agente.
+const agenteEmConfiguracao = computed(() => agente.value?.status === 'draft');
+const atendendoNoCanal = computed(() =>
+  contratadoComecou.value && atendendo.value ? umCanal.value || '' : ''
+);
+const textoDoPasso = computed(() =>
+  passoDoContratado.value
+    ? t('AGENTS.CONTRATADOS.ONDE.PASSO', { nome: nome.value })
+    : null
+);
+const escolherCanalDoContratado = () => {
+  passoDoContratado.value = true;
+  abrir(gavetaDoCanal());
+};
+const abrirDoContratado = parte => {
+  parteDoContratado.value = parte;
+  abrir(GAVETA.CONTRATADO);
+};
+const relerAgente = async () => {
+  try {
+    await store.dispatch('autonomiaAgents/show', agente.value.id);
+  } catch {
+    // Os dados já foram gravados; a tela relê o agente ao abrir de novo.
   }
 };
 
@@ -919,10 +969,19 @@ const tirarPergunta = id => {
               : t('AGENTS.JORNADA.PAGINA.SO_VER')
           }}
         </p>
+        <ContratadoNaPagina
+          v-if="contratado"
+          :agente="agente"
+          :nome="nome"
+          :pode-gerenciar="podeGerenciar"
+          :atendendo-no="atendendoNoCanal"
+          @alterar-corretora="abrirDoContratado('corretora')"
+          @alterar-acesso="abrirDoContratado('acesso')"
+        />
         <AgenteSemana
           :numeros="semana.numerosDe(agente.id)"
           :nome="nome"
-          :pode-abrir="podeGerenciar && !cotacao"
+          :pode-abrir="permitidas.includes(GAVETA.CONVERSAS)"
           :href-desempenho="hrefDesempenho"
           @abrir="abrir(GAVETA.CONVERSAS, { aba: $event })"
           @desempenho="router.push(rotaDoDesempenho)"
@@ -956,6 +1015,7 @@ const tirarPergunta = id => {
           :fase2="fase2"
           :caixas="caixas"
           :ajuda="ajuda"
+          :contratado="contratado"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
@@ -1001,6 +1061,7 @@ const tirarPergunta = id => {
         :agente="agente"
         :nome="nome"
         :pode-gerenciar="podeGerenciar"
+        :somente-leitura="contratado"
         :perguntas="perguntas"
         :fontes="listaDeFontes"
         :carregando-fontes="fontesLidas === null"
@@ -1029,6 +1090,7 @@ const tirarPergunta = id => {
         :recebe-em-outras="recebeEmOutras"
         :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
         :caixas="caixas"
+        :texto-do-passo="textoDoPasso"
         @fechar="fechar"
         @pronto="depoisDeMudarOnde"
         @reler="canais.carregar()"
@@ -1049,6 +1111,7 @@ const tirarPergunta = id => {
         :recebe-em-outras="recebeEmOutras"
         :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
         :caixas="caixas"
+        :texto-do-passo="textoDoPasso"
         @fechar="fechar"
         @pronto="depoisDeMudarOnde"
         @reler="canais.carregar()"
@@ -1105,6 +1168,17 @@ const tirarPergunta = id => {
           @pronto="salvarMudancaDaAjuda"
         />
       </AgenteGaveta>
+      <GavetaDoContratado
+        v-else-if="aberta === GAVETA.CONTRATADO"
+        :key="parteDoContratado"
+        :agente="agente"
+        :nome="nome"
+        :parte="parteDoContratado"
+        :em-configuracao="agenteEmConfiguracao"
+        @fechar="fechar"
+        @escolher-canal="escolherCanalDoContratado"
+        @atualizado="relerAgente"
+      />
       <GavetaNovaBase
         v-else-if="aberta === BASE && baseDoAgente.base.value"
         :base="baseDoAgente.base.value"

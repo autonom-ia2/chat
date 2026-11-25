@@ -3334,6 +3334,7 @@
         "DESLIGADA": "Ready-made tools are not available for this account right now.",
         "NAO_ENCONTRADO": "I could not find this agent or this tool. Reload the page and try again.",
         "COTACAO": "The quote agent comes with its own tools and does not take ready-made tools.",
+        "CONTRATADO": "This agent comes ready-made with its own tools and does not take ready-made tools.",
         "NOME_EM_USO": "This agent already has another tool with the same name. Talk to whoever manages the account's tools.",
         "REDE": "No connection right now. Check the internet and try again.",
         "GERAL": "That did not work right now. Try again in a moment."
@@ -4091,6 +4092,7 @@
         "CRIADA": "The agent {nome} was created. It starts paused. It still needs the Universal access and the channel.",
         "PASSO": "Step 2 of 3: Universal access.",
         "EXPLICA": "{nome} signs in to the Universal portal with your brokerage's login to quote and write the proposal.",
+        "SO_ADMIN": "Only the account administrators register the Universal login and password.",
         "CONFERIDO": {
           "TITULO": "Access checked",
           "TEXTO": "{nome} can now quote and send the payment link."
@@ -4141,12 +4143,13 @@
         "PORTAL": "Universal portal",
         "RECUSADO": "Refused",
         "CONFERIDO": "Checked",
+        "NAO_CONFERIDO": "Not registered yet",
         "ALTERAR": "Change",
         "ALTERAR_CORRETORA_ARIA": "Change the brokerage",
         "ALTERAR_ACESSO_ARIA": "Change the access to the Universal portal",
         "AVISO_RECUSADO": {
           "TITULO": "Universal refused the access of {nome}.",
-          "GARANTIA": "Meanwhile, anyone who wants a quote is handed to your team.",
+          "GARANTIA": "The password may have changed. Meanwhile, anyone who wants a quote is handed to your team.",
           "ACAO": "Register the new password"
         }
       },
@@ -4159,7 +4162,8 @@
         "SOBRE": "About the brokerage",
         "SOBRE_AJUDA": "{nome} uses it to introduce itself.",
         "CANCELAR": "Cancel",
-        "SALVAR": "Save"
+        "SALVAR": "Save",
+        "FEITO": "Done. {nome} already uses the brokerage's new details."
       }
     }
   }

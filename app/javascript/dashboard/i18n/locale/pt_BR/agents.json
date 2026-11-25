@@ -3334,6 +3334,7 @@
         "DESLIGADA": "As ferramentas prontas não estão liberadas para esta conta agora.",
         "NAO_ENCONTRADO": "Não achei este agente ou esta ferramenta. Recarregue a página e tente de novo.",
         "COTACAO": "O agente de cotação já vem com as ferramentas dele e não recebe ferramentas prontas.",
+        "CONTRATADO": "Este agente já vem pronto, com as ferramentas dele, e não recebe ferramentas prontas.",
         "NOME_EM_USO": "Este agente já tem outra ferramenta com o mesmo nome. Fale com quem cuida das ferramentas da conta.",
         "REDE": "Sem conexão agora. Confira a internet e tente de novo.",
         "GERAL": "Não deu certo agora. Tente de novo daqui a pouco."
@@ -4091,6 +4092,7 @@
         "CRIADA": "O agente {nome} foi criado. Ele começa parado. Falta o acesso à Universal e o canal.",
         "PASSO": "Passo 2 de 3: acesso à Universal.",
         "EXPLICA": "{nome} entra no portal da Universal com o login da sua corretora para cotar e fazer a proposta.",
+        "SO_ADMIN": "Só quem administra a conta cadastra o login e a senha da Universal.",
         "CONFERIDO": {
           "TITULO": "Acesso conferido",
           "TEXTO": "{nome} já pode cotar e mandar o link de pagamento."
@@ -4141,12 +4143,13 @@
         "PORTAL": "Portal da Universal",
         "RECUSADO": "Recusado",
         "CONFERIDO": "Conferido",
+        "NAO_CONFERIDO": "Falta cadastrar",
         "ALTERAR": "Alterar",
         "ALTERAR_CORRETORA_ARIA": "Alterar a corretora",
         "ALTERAR_ACESSO_ARIA": "Alterar o acesso ao portal da Universal",
         "AVISO_RECUSADO": {
           "TITULO": "A Universal recusou o acesso de {nome}.",
-          "GARANTIA": "Enquanto isso, quem quiser cotar passa para a sua equipe.",
+          "GARANTIA": "A senha pode ter mudado. Enquanto isso, quem quiser cotar passa para a sua equipe.",
           "ACAO": "Cadastrar a senha nova"
         }
       },
@@ -4159,7 +4162,8 @@
         "SOBRE": "Sobre a corretora",
         "SOBRE_AJUDA": "{nome} usa para se apresentar.",
         "CANCELAR": "Cancelar",
-        "SALVAR": "Salvar"
+        "SALVAR": "Salvar",
+        "FEITO": "Pronto. {nome} já usa os dados novos da corretora."
       }
     }
   }

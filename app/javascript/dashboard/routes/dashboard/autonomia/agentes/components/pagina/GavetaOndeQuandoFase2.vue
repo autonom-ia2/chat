@@ -19,7 +19,7 @@ import {
   useComecarAAtender,
 } from '../../composables/useComecarAAtender';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
-import { trocaNoCanal } from '../../utils/canais';
+import { trocaNoCanal, unicaCaixaLivre } from '../../utils/canais';
 import { outrasCaixasDaEquipe } from '../../utils/ondeTrabalha';
 import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 import { QUANDO, quandoDoAgente } from '../../utils/pagina';
@@ -69,6 +69,8 @@ const props = defineProps({
   // Ids das caixas em que ele já está na equipe (área), pela L2.
   equipeAtual: { type: Array, default: () => [] },
   caixas: { type: Array, default: () => [] },
+  // #3211 (nota 5 do mockup) — o texto do passo no topo da gaveta ("Passo 3 de 3" do agente contratado), ou null.
+  textoDoPasso: { type: String, default: null },
 });
 
 const emit = defineEmits(['fechar', 'pronto', 'voltarAAtender', 'reler']);
@@ -82,12 +84,19 @@ const { comecar, comecando } = useComecarAAtender();
 const NS = 'AGENTS.JORNADA.PAGINA.ONDE';
 
 const inboxAtual = computed(() => props.atuais[0]?.inbox_id ?? null);
-const onde = ref(inboxAtual.value);
+// #3211 (nota 5 do mockup) — quem começa a atender sem canal nenhum, com uma caixa livre só na conta: ela já vem
+// marcada. A caixa atual, quando há, vence.
+const inicial = computed(
+  () =>
+    inboxAtual.value ??
+    unicaCaixaLivre(props, { comecando: props.modo === 'voltar' })
+);
+const onde = ref(inicial.value);
 // #1720: 'sim' (atende primeiro no canal `onde`) ou 'nao' (só quando alguém passar).
 const primeiroDe = inboxId => (inboxId ? 'sim' : 'nao');
-const primeiro = ref(primeiroDe(inboxAtual.value));
+const primeiro = ref(primeiroDe(inicial.value));
 const escolheu = ref(false);
-watch(inboxAtual, atual => {
+watch(inicial, atual => {
   if (escolheu.value) return;
   onde.value = atual;
   primeiro.value = primeiroDe(atual);
@@ -431,6 +440,13 @@ const rotuloVoltar = computed(() => {
 <template>
   <AgenteGaveta :titulo="titulo" @fechar="emit('fechar')">
     <div class="flex flex-col gap-5" :aria-busy="ocupado ? 'true' : undefined">
+      <p
+        v-if="textoDoPasso"
+        data-texto-do-passo
+        class="m-0 text-base font-semibold text-n-blue-11"
+      >
+        {{ textoDoPasso }}
+      </p>
       <AgenteErro
         v-if="erro"
         data-erro

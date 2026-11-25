@@ -31,6 +31,19 @@ export const trocaNoCanal = (canais, inboxId, agenteId) => {
   };
 };
 
+// #3211 (nota 5 do mockup) — a caixa que já vem marcada para quem começa a atender sem canal nenhum: a única livre
+// da conta, com a leitura das caixas pronta e completa (sem a L2, as ocupadas não aparecem e toda caixa parece livre).
+// Com nenhuma ou mais de uma livre, a pessoa escolhe. O primeiro argumento são as props da gaveta de onde e quando.
+export const unicaCaixaLivre = (
+  { canais, atuais, agente, estadoCanais, semLeitura },
+  { comecando = false } = {}
+) => {
+  if (!comecando || estadoCanais !== 'pronto' || semLeitura) return null;
+  if ((atuais || []).length || agente?.channels_count) return null;
+  const livres = (canais || []).filter(canal => !canal.occupied_by);
+  return livres.length === 1 ? livres[0].inbox_id : null;
+};
+
 // #1369 — o tipo de cada caixa na lista de onde atende ("HUBBER COMUNIDADE · WhatsApp"), pelo
 // `channel_type` da própria caixa (AGENTS.JORNADA.ONDE_QUANDO.TIPO.<chave>). Tipo sem nome claro para
 // quem lê (Twilio, que pode ser SMS ou WhatsApp; X) fica sem etiqueta.

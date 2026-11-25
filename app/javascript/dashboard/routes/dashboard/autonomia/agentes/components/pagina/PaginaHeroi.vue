@@ -99,7 +99,12 @@ const aoVoltar = evento => {
               >
                 {{ nome }}
               </h1>
-              <AgenteStatus v-if="!podeGerenciar" :estado="estado" />
+              <!-- #3211: o agente que ainda falta terminar (o contratado nasce assim) mostra a pílula também para
+                quem gerencia, que ainda não tem o interruptor. -->
+              <AgenteStatus
+                v-if="!podeGerenciar || estado === ESTADO.FALTA_TERMINAR"
+                :estado="estado"
+              />
             </div>
             <p v-if="onde" data-onde class="m-0 text-base text-white/80">
               {{ onde }}

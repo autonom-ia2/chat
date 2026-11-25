@@ -21,6 +21,10 @@ vi.mock('dashboard/composables/store', async () => {
 const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
+const contratadosApi = vi.hoisted(() => ({ salvarDados: vi.fn() }));
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: contratadosApi,
+}));
 vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
@@ -309,6 +313,65 @@ describe('GavetaFotoNome (T12)', () => {
       expect(no('[data-foto-do-canal]').textContent).toContain(
         'FOTO.FOTO_DO_CANAL_GERAL'
       );
+      wrapper.unmount();
+    });
+  });
+
+  // #3211 — o nome do contratado vive também nos dados da corretora: grava pelo PATCH do contratado, com as três chaves.
+  describe('agente contratado (#3211)', () => {
+    const CONTRATADA = {
+      ...AGENTE,
+      actuation: 'external',
+      contratado: {
+        modelo: 'seguro_viagem_universal',
+        nome_agente: 'Bia',
+        nome_corretora: 'Corretora Exemplo',
+        sobre_corretora: 'Corretora em Campinas desde 2010.',
+        acesso: null,
+      },
+    };
+    const montarContratada = () =>
+      mount(GavetaFotoNome, {
+        attachTo: document.body,
+        props: { agente: CONTRATADA, temCanal: true },
+      });
+
+    it('saves the name with the brokerage data and rereads the agent', async () => {
+      contratadosApi.salvarDados.mockResolvedValue({ data: CONTRATADA });
+      store.dispatch.mockResolvedValue({});
+      const wrapper = montarContratada();
+      expect(no('[data-nota]')).toBeNull();
+      await digitar('[data-nome]', 'Rosa');
+      await clicar('[data-salvar]');
+
+      expect(contratadosApi.salvarDados).toHaveBeenCalledWith(7, {
+        nomeAgente: 'Rosa',
+        nomeCorretora: 'Corretora Exemplo',
+        sobreCorretora: 'Corretora em Campinas desde 2010.',
+      });
+      expect(store.dispatch.mock.calls).toEqual([['autonomiaAgents/show', 7]]);
+      expect(wrapper.emitted('fechar')).toHaveLength(1);
+      wrapper.unmount();
+    });
+
+    it('shows the server refusal under the name', async () => {
+      contratadosApi.salvarDados.mockRejectedValue(
+        Object.assign(new Error('422'), {
+          response: {
+            status: 422,
+            data: { error: 'x', code: 'marcador', campo: 'nome_agente' },
+          },
+        })
+      );
+      const wrapper = montarContratada();
+      await digitar('[data-nome]', 'Rosa');
+      await clicar('[data-salvar]');
+
+      expect(no('[data-erro-nome]').textContent).toContain(
+        'CONTRATADOS.ERRO.MARCADOR'
+      );
+      expect(no('[data-erro]')).toBeNull();
+      expect(wrapper.emitted('fechar')).toBeUndefined();
       wrapper.unmount();
     });
   });

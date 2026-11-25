@@ -23,6 +23,7 @@ import {
   canaisDoAgenteDeOutroSistema,
 } from '../utils/outroSistema';
 import { caixasDaEquipe } from '../utils/ondeTrabalha';
+import { GAVETA, ehContratado } from '../utils/pagina';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
@@ -309,6 +310,17 @@ const soltarContinuar = () => {
   continuando.value = null;
 };
 
+// #3211 (R16) — o rascunho do agente contratado termina na própria página (o acesso e o canal, na gaveta do
+// contratado), nunca no Construtor, que recusa o contratado com 422.
+const rotaDeContinuar = agente =>
+  ehContratado(agente)
+    ? {
+        name: 'autonomia_agent_panel',
+        params: { agentId: agente.id },
+        query: { gaveta: GAVETA.CONTRATADO },
+      }
+    : { name: 'autonomia_agents_builder', query: { agente: agente.id } };
+
 const continuar = async agente => {
   if (continuando.value) return;
   tentativaDeContinuar += 1;
@@ -319,10 +331,7 @@ const continuar = async agente => {
     ESPERA_MAXIMA_DO_CONSTRUTOR_MS
   );
   try {
-    await router.push({
-      name: 'autonomia_agents_builder',
-      query: { agente: agente.id },
-    });
+    await router.push(rotaDeContinuar(agente));
   } finally {
     if (minha === tentativaDeContinuar) soltarContinuar();
   }

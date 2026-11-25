@@ -42,6 +42,9 @@ const props = defineProps({
   // #1426 (4b) — as conferências do material (composables/useConferenciasDoMaterial). Só na Fase 2 e fora da Lia;
   // null: a gaveta fica sem o "um problema por vez".
   conferencias: { type: Object, default: null },
+  // #3211 — a base do agente contratado é a oficial da seguradora, mantida pela Autonom.ia: quem gerencia lê a lista,
+  // sem mandar, tirar, ler de novo nem conferir perguntas (a API recusa desde a Tarefa 9).
+  somenteLeitura: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler', 'corrigir']);
@@ -64,6 +67,8 @@ const dialogoTirar = ref(null);
 const botaoArquivo = ref(null);
 
 const lista = computed(() => props.fontes || []);
+// Quem pode mudar o material: quem gerencia, fora da base só para ler.
+const escreve = computed(() => props.podeGerenciar && !props.somenteLeitura);
 const problemas = computed(() => props.conferencias?.problemas.value || []);
 // O estado da linha é o da leitura e da revisão. Duplicado, contradição e páginas de fora não reprovam: o material
 // continua em uso e o que pede a pessoa fica no cartão "um problema por vez", não na linha.
@@ -320,7 +325,7 @@ const tudoCerto = computed(
         v-if="problemas.length"
         :problemas="problemas"
         :nome="nome"
-        :pode-gerenciar="podeGerenciar"
+        :pode-gerenciar="escreve"
         :resolvendo="resolvendo"
         @resolver="resolver"
         @mandar-outro="mandarOutroDoProblema"
@@ -349,7 +354,7 @@ const tudoCerto = computed(
     </template>
 
     <div
-      v-if="podeGerenciar && adicionando"
+      v-if="escreve && adicionando"
       data-adicionar
       class="flex flex-col gap-3 p-4 rounded-2xl bg-n-slate-2 ring-1 ring-inset ring-n-weak"
     >
@@ -449,8 +454,8 @@ const tudoCerto = computed(
         mostrar-original
         :relendo="fonte.id in relendo"
         :estado="estadoDe(fonte)"
-        :reler-parado="podeGerenciar && paradoAlemDoTeto(fonte)"
-        :pode-gerenciar="podeGerenciar"
+        :reler-parado="escreve && paradoAlemDoTeto(fonte)"
+        :pode-gerenciar="escreve"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"
         @mandar-outro="escolherArquivo"
@@ -466,14 +471,14 @@ const tudoCerto = computed(
     </div>
 
     <PerguntasParaConferir
-      v-if="podeGerenciar && perguntas.length"
+      v-if="escreve && perguntas.length"
       :agent-id="agente.id"
       :nome-agente="nome"
       :perguntas="perguntas"
       @resolvida="emit('perguntaResolvida', $event)"
     />
 
-    <template v-if="podeGerenciar" #rodape>
+    <template v-if="escreve" #rodape>
       <AgenteBotao
         data-mandar
         tamanho="lg"
