@@ -44,6 +44,12 @@ module Autonomia
           pendente.present? && pendente.to_s != message_id.to_s
         end
 
+        # A marca do debounce de uma rajada: a mensagem pendente, quando e a espera dela (#3211, `espera_ms`). Uma forma só
+        # para o gatilho (stamp_debounce) e para quem acorda o turno por fora (WhatsappHybrid::RecoveryAiWake).
+        def self.marca_do_debounce(message_id, espera)
+          { 'pending_message_id' => message_id, 'at' => Time.current.to_f, 'espera_ms' => (espera.to_f * 1000).round }
+        end
+
         # `posse` (#1606): o id do vínculo cuja posse do turno quem enfileirou já tomou (Operate::ReenfileirarTurno).
         def perform(conversation_id, message_id, phase = 'trigger', posse = nil)
           conversation = Conversation.find_by(id: conversation_id)
@@ -188,7 +194,7 @@ module Autonomia
         # apagaria essas chaves (perda de dados concorrente). #3211: `espera_ms` é a espera desta rajada; o prazo da fila
         # (EsperaDaFala.na_fila?) conta dela.
         def stamp_debounce(conversation, message_id, espera)
-          stamp = { 'pending_message_id' => message_id, 'at' => Time.current.to_f, 'espera_ms' => (espera.to_f * 1000).round }
+          stamp = self.class.marca_do_debounce(message_id, espera)
           Conversation.where(id: conversation.id).update_all(
             [
               "additional_attributes = jsonb_set(COALESCE(additional_attributes, '{}'::jsonb), " \
