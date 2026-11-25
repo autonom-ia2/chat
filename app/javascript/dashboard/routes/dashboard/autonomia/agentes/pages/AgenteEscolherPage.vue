@@ -6,7 +6,9 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
 import RamosProntos from '../components/RamosProntos.vue';
+import ProntosParaContratar from '../components/ProntosParaContratar.vue';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
+import { MODELOS_CONTRATADOS } from '../constants/contratados';
 import {
   ATUACAO_INTERNA_NA_QUERY,
   PAPEL_AJUDANTE_NA_QUERY,
@@ -14,6 +16,7 @@ import {
 } from '../constants/criacao';
 import { useFase2 } from '../composables/useFase2';
 import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
+import { useContratados } from '../composables/useContratados';
 
 // #1543 — "Criar agente" em página inteira, no lugar da gaveta da lista (protótipo aprovado na
 // rodada 3, #1366/#1424). O agente normal é o destaque: os modelos e "Do meu jeito" seguem a criação
@@ -28,6 +31,9 @@ import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 // useRamosDeSeguro), a fileira vem primeiro, dentro do herói, e cada cartão leva `?ramo=<chave>`. Os três modelos
 // gerais continuam embaixo, iguais. Sem ramo liberado, a página é a de sempre.
 // #3214 — "Escrever as instruções com as minhas palavras", logo abaixo de "Do meu jeito" (`?escrever=1`).
+// #3211 — "Vendem sozinhos" (mockup aprovado, estado 01): os agentes prontos que a corretora contrata vêm primeiro,
+// dentro do herói e acima dos ramos (quem diz quais é o servidor, useContratados). O cartão leva à página do modelo
+// (autonomia_contratado_modelo), e não à criação: contratar pede os dados da corretora lá.
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
@@ -43,6 +49,12 @@ const RAMOS = 'AGENTS.JORNADA.RAMOS';
 const comecando = ref(null);
 const { ramos } = useRamosDeSeguro();
 const comRamos = computed(() => ramos.value.length > 0);
+const { modelos: liberados } = useContratados();
+const contratados = computed(() =>
+  liberados.value.filter(modelo => MODELOS_CONTRATADOS.includes(modelo))
+);
+// Com "Vendem sozinhos" em cima, o bloco seguinte do herói começa com a linha divisória.
+const DIVISAO = 'pt-6 border-t border-white/15';
 
 const escolher = (chave, query) => {
   if (comecando.value) return;
@@ -60,6 +72,8 @@ const usarAjudante = () =>
 const usarEscrever = () => escolher(ESCREVER, { escrever: '1' });
 
 const voltar = () => router.push({ name: 'autonomia_agents_index' });
+const abrirContratado = modelo =>
+  router.push({ name: 'autonomia_contratado_modelo', params: { modelo } });
 </script>
 
 <template>
@@ -89,16 +103,24 @@ const voltar = () => router.push({ name: 'autonomia_agents_index' });
             : t('AGENTS.JORNADA.HEROI.SO_VER')
         "
       >
-        <RamosProntos
-          v-if="comRamos"
-          :ramos="ramos"
+        <ProntosParaContratar
+          v-if="contratados.length"
+          :modelos="contratados"
           :pode-usar="podeGerenciar"
-          :comecando="comecando"
-          @usar="usarRamo"
+          @abrir="abrirContratado"
         />
+        <div v-if="comRamos" :class="contratados.length ? DIVISAO : ''">
+          <RamosProntos
+            :ramos="ramos"
+            :pode-usar="podeGerenciar"
+            :comecando="comecando"
+            @usar="usarRamo"
+          />
+        </div>
         <ul
           :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
           class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"
+          :class="contratados.length && !comRamos ? DIVISAO : ''"
         >
           <ModeloCartao
             v-for="modelo in MODELOS"
