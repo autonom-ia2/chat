@@ -45,6 +45,14 @@ RSpec.describe Autonomia::Agents::Operate::RitmoDoCanal do
     expect(saida.pluck('delay_ms')).to eq([5000, 6000, 11_000, 12_000])
   end
 
+  # #3218: e-mail fica fora da paridade. Pega: o ritmo do WhatsApp (pausas e "digitando") aplicado a e-mail.
+  it 'caixa de e-mail, mesmo com a chave true gravada: os pedaços voltam iguais' do
+    agente = Autonomia::Agents::Agent.new(config: { 'conversa_ritmo_do_canal' => true })
+    conversa = create(:conversation, inbox: create(:channel_email).inbox)
+
+    expect(described_class.para(pedacos, agent: agente, conversation: conversa)).to equal(pedacos)
+  end
+
   describe '.whatsapp_oficial?' do
     it 'só a caixa WhatsApp com provedor whatsapp_cloud' do
       oficial = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)

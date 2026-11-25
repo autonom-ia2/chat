@@ -71,7 +71,10 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
       create(:conversation, account: conta, inbox: caixa_de_email, additional_attributes: { 'autonomia_debounce' => marca })
     end
 
-    after { fala.soltar(conversa_de_email.id, 8) }
+    after do
+      fala.soltar(conversa_de_email.id, 8)
+      Redis::Alfred.delete(fala.chave_do_fim(conversa_de_email.id))
+    end
 
     it 'a espera é o debounce de sempre, mesmo com fim previsto gravado', :aggregate_failures do
       fala.prever_fim!(conversa_de_email.id, 8, 'x' * 100)

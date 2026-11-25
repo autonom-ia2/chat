@@ -49,12 +49,12 @@ module Autonomia::Agents::Operate::EsperaDaFala
   # A MAIOR janela de espera que um turno do `agent` pode ter, para o teto do turno (TurnoEmCurso.teto_do_turno). Sem
   # agente ou com as opções desligadas, é a maior janela de debounce de sempre (Config::OPERATE_DEBOUNCE_MAX_SECONDS),
   # o mesmo valor de antes do #3211. Com `conversa_espera_a_fala`, cobre ESPERA_MAXIMA; com `conversa_em_fila`, soma
-  # TETO_DA_FILA (o settle pode esperar o turno em curso até lá).
-  def janela_maxima(agent, inbox = nil)
+  # TETO_DA_FILA (o settle pode esperar o turno em curso até lá). Sem caixa (nil): o pior caso de qualquer caixa.
+  def janela_maxima(agent)
     paridade = ::Autonomia::Agents::ParidadeDaConversa
     debounce = ::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS
-    janela = paridade.espera_a_fala?(agent, inbox) ? [debounce, ESPERA_MAXIMA].max : debounce
-    paridade.em_fila?(agent, inbox) ? janela + TETO_DA_FILA : janela
+    janela = paridade.espera_a_fala?(agent, nil) ? [debounce, ESPERA_MAXIMA].max : debounce
+    paridade.em_fila?(agent, nil) ? janela + TETO_DA_FILA : janela
   end
 
   # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila. nil sem
