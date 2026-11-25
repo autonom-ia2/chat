@@ -26,7 +26,9 @@ vi.mock('dashboard/api/autonomia/jornada', () => ({ default: jornada }));
 const contratados = vi.hoisted(() => ({
   lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
 }));
-vi.mock('dashboard/api/autonomia/contratados', () => ({ default: contratados }));
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: contratados,
+}));
 
 const UNIVERSAL = 'seguro_viagem_universal';
 
