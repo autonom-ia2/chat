@@ -94,9 +94,22 @@ describe Autonomia::Agents::Operate::TypingIndicator do
         described_class.new(conversation: conversation, agent_inbox: vinculo).off
       end
 
-      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
-      expect(waha).to have_received(:stop_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
+      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
+      expect(waha).to have_received(:stop_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
       expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Conversation::CONVERSATION_TYPING_ON, any_args).once
+    end
+
+    # Revisão do #3218 (item 7). Pega: o agente nativo chamar o WAHA sem prazo e cair nos 20 s do Waha::Client; um WAHA
+    # lento seguraria cada pedaço da cadeia. O prazo é o mesmo do robô externo.
+    it 'passa ao Deliverer o prazo curto do robô externo' do
+      allow(Conversations::ChannelTyping::Deliverer).to receive(:new).and_call_original
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        described_class.new(conversation: conversation, agent_inbox: vinculo).on
+      end
+
+      expect(Conversations::ChannelTyping::Deliverer).to have_received(:new)
+        .with(conversation: conversation, typing_status: 'on', timeout: Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS)
+      expect(Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS).to eq(3)
     end
 
     it 'sem a chave (padrão ligado): liga o digitando no WAHA' do
@@ -105,7 +118,7 @@ describe Autonomia::Agents::Operate::TypingIndicator do
         described_class.new(conversation: conversation, agent_inbox: vinculo).on
       end
 
-      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
+      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us', timeout: 3)
     end
 
     it 'opção desligada ou a Lia sem a chave: só o evento do painel', :aggregate_failures do

@@ -158,6 +158,29 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     expect(settles_na_fila).to be_empty
   end
 
+  # Revisão do #3218 (item 8). Com o padrão ligado (#3211) a janela do turno em andamento cresce de 126 s para ~271 s em
+  # todo agente: a espera gravada pelo gatilho (1 s, sem fala anterior) + o teto da fila (150 s) + a folga (120 s). Pega:
+  # a janela sem o teto da fila (corte em ~121 s) ou sem corte nenhum (turno velho refeito a qualquer hora).
+  it 'com o padrão ligado, a janela do turno em andamento corta em ~271 s', :aggregate_failures do
+    espera = Autonomia::Agents::Operate::EsperaDaFala
+    janela = espera::ESPERA_MINIMA + espera::TETO_DA_FILA + Autonomia::Agents::AgentInbox::FOLGA_DO_TURNO
+    ia_responde!
+    mensagem = turno_do_cliente
+    clear_enqueued_jobs
+    expect(janela).to eq(271.seconds)
+    expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq(1000)
+
+    travel janela - 2.seconds
+    expect(vinculo_area.turno_em_andamento?(conversation.reload, mensagem)).to be(true)
+
+    travel 3.seconds
+    expect(vinculo_area.turno_em_andamento?(conversation.reload, mensagem)).to be(false)
+    conversation.update!(ai_assignee: espelho_area)
+    expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
+    expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :evento_troca)).to be(false)
+    expect(settles_na_fila).to be_empty
+  end
+
   describe 'a posse do turno (PosseDoTurno)' do
     let(:janela) { Autonomia::Agents::Config.debounce_seconds_for(agente_da_porta) + Autonomia::Agents::AgentInbox::FOLGA_DO_TURNO }
 

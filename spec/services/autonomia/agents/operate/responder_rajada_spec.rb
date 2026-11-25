@@ -69,6 +69,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
                      content: "pedaço #{indice}", content_attributes: { 'autonomia_chunk_index' => indice })
   end
 
+  # A mensagem automática do Chatwoot: `template`, sem remetente (como a coleta de e-mail do site).
+  def mensagem_automatica!
+    travel 1.second
+    create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :template, sender: nil,
+                     content: 'Informe seu e-mail para receber a resposta.')
+  end
+
   it 'com a opção, a pergunta é a rajada inteira' do
     liga!('conversa_espera_a_fala')
     escreve('quero cotar')
@@ -111,6 +118,47 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     settle_direto(nova)
 
     expect(perguntas.sole).to eq('e pra 2 pessoas?')
+  end
+
+  # Revisão do #3218 (item 1). Pega: a mensagem automática do Chatwoot (template, ex.: a coleta de e-mail do site) logo
+  # depois da do cliente fechar a rajada e a IA receber pergunta vazia no 1º turno.
+  it 'sem a chave (padrão ligado), a mensagem automática depois da do cliente não esvazia a pergunta' do
+    primeira = escreve('quero cotar')
+    mensagem_automatica!
+
+    settle_direto(primeira)
+
+    expect(perguntas.sole).to eq('quero cotar')
+  end
+
+  it 'sem a chave (padrão ligado), mensagens automáticas no meio da rajada não a cortam' do
+    escreve('quero cotar')
+    mensagem_automatica!
+    ultima = escreve('pra Portugal')
+    mensagem_automatica!
+
+    settle_direto(ultima)
+
+    expect(perguntas.sole).to eq("quero cotar\npra Portugal")
+  end
+
+  # Revisão do #3218 (item 6). Pega: a busca na base cortada pela contagem da rajada, que com um pedaço de continuação no
+  # meio dela levava uma mensagem da rajada e deixava de fora o pedaço.
+  it 'a busca na base tira a rajada pelo id, com um pedaço de continuação no meio dela' do
+    historicos = []
+    allow(Autonomia::Agents::RetrievalQuery).to receive(:new).and_wrap_original do |original, query:, history:|
+      historicos << history.pluck(:content)
+      original.call(query: query, history: history)
+    end
+    escreve('oi')
+    fala_do_agente(0)
+    escreve('e pra 2 pessoas?')
+    fala_do_agente(1)
+    ultima = escreve('saindo dia 02')
+
+    settle_direto(ultima)
+
+    expect(historicos.sole).to eq(['oi', 'pedaço 0', 'pedaço 1'])
   end
 
   it 'grava o fim previsto da fala ao responder, com o turno', :aggregate_failures do

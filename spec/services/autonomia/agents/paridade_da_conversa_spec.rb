@@ -74,6 +74,25 @@ RSpec.describe Autonomia::Agents::ParidadeDaConversa do
     expect(described_class.em_fila?(Struct.new(:config, :agent_type).new({}, 'custom'))).to be(false)
   end
 
+  # Revisão do #3218 (item 3). Pega: a chave da instalação não desligar o padrão, ou passar por cima do valor gravado.
+  describe 'chave da instalação AI_AGENT_CONVERSA_PADRAO_LIGADO' do
+    it 'false: a chave ausente vale desligada (como no #3213); valor gravado continua mandando', :aggregate_failures do
+      with_modified_env AI_AGENT_CONVERSA_PADRAO_LIGADO: 'false' do
+        expect(todas(agente({}))).to all(be(false))
+        expect(described_class.em_fila?(agente('conversa_em_fila' => true))).to be(true)
+        expect(described_class.espera_a_fala?(agente('conversa_espera_a_fala' => false))).to be(false)
+        expect(todas(lia)).to all(be(false))
+      end
+    end
+
+    it 'true (ou ausente): a chave ausente vale ligada; a Lia segue desligada', :aggregate_failures do
+      with_modified_env AI_AGENT_CONVERSA_PADRAO_LIGADO: 'true' do
+        expect(todas(agente({}))).to all(be(true))
+        expect(todas(lia)).to all(be(false))
+      end
+    end
+  end
+
   it 'CHAVES lista as quatro' do
     expect(described_class::CHAVES).to eq(%w[conversa_espera_a_fala conversa_em_fila conversa_entrega_inteira conversa_ritmo_do_canal])
   end

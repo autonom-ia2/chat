@@ -3,8 +3,9 @@ require 'rails_helper'
 # A rajada do cliente (#3211, P1): o que ele escreveu desde a última FALA do agente, contando a fala e não o pedaço.
 RSpec.describe Autonomia::Agents::Operate::RajadaDoCliente do
   def recebida(texto) = instance_double(Message, incoming?: true, content: texto, content_attributes: {})
-  def pedaco(indice) = instance_double(Message, incoming?: false, content_attributes: { 'autonomia_chunk_index' => indice })
-  def fala_de_gente = instance_double(Message, incoming?: false, content_attributes: {})
+  def pedaco(indice) = instance_double(Message, incoming?: false, template?: false, content_attributes: { 'autonomia_chunk_index' => indice })
+  def fala_de_gente = instance_double(Message, incoming?: false, template?: false, content_attributes: {})
+  def automatica = instance_double(Message, incoming?: false, template?: true, content_attributes: {})
 
   describe '.mensagens' do
     # Pega: a pergunta ser só a última mensagem, ou voltar além da última fala e repetir o que já foi respondido.
@@ -35,12 +36,22 @@ RSpec.describe Autonomia::Agents::Operate::RajadaDoCliente do
       expect(described_class.mensagens([recebida('oi'), pedaco(0)])).to eq([])
     end
 
+    # Revisão do #3218. Pega: a mensagem automática do Chatwoot (coleta de e-mail, saudação, fora do horário), criada logo
+    # depois da mensagem do cliente, fechar a rajada e a pergunta do 1º turno ir vazia.
+    it 'mensagem automática (template) não fecha a rajada', :aggregate_failures do
+      m1 = recebida('quero cotar')
+      m2 = recebida('pra Portugal')
+
+      expect(described_class.mensagens([m1, automatica])).to eq([m1])
+      expect(described_class.mensagens([recebida('antiga'), fala_de_gente, m1, automatica, m2])).to eq([m1, m2])
+    end
+
     it 'sem nenhuma fala, todas as recebidas' do
       expect(described_class.mensagens([recebida('a'), recebida('b')]).size).to eq(2)
     end
 
     it 'content_attributes ausente não quebra' do
-      sem_atributos = instance_double(Message, incoming?: false, content_attributes: nil)
+      sem_atributos = instance_double(Message, incoming?: false, template?: false, content_attributes: nil)
 
       expect(described_class.mensagens([recebida('a'), sem_atributos, recebida('b')]).size).to eq(1)
     end
