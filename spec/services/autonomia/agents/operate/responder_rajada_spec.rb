@@ -55,16 +55,24 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
   def settle_direto(mensagem) = responder_de(mensagem).perform
 
+  # Local: cada mensagem ganha um created_at estritamente maior (o relógio anda 1 s antes de criá-la). `recent_messages`
+  # ordena só por created_at; com horários iguais a ordem seria indefinida no Postgres.
+  def escreve(texto)
+    travel 1.second
+    cliente_escreve(texto)
+  end
+
   def fala_do_agente(indice)
+    travel 1.second
     create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing,
                      content: "pedaço #{indice}", content_attributes: { 'autonomia_chunk_index' => indice })
   end
 
   it 'com a opção, a pergunta é a rajada inteira' do
     liga!('conversa_espera_a_fala')
-    cliente_escreve('quero cotar')
-    cliente_escreve('pra Portugal')
-    ultima = cliente_escreve('saio dia 02/02')
+    escreve('quero cotar')
+    escreve('pra Portugal')
+    ultima = escreve('saio dia 02/02')
 
     settle_direto(ultima)
 
@@ -72,8 +80,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
   end
 
   it 'sem a opção, só a última' do
-    cliente_escreve('quero cotar')
-    ultima = cliente_escreve('pra Portugal')
+    escreve('quero cotar')
+    ultima = escreve('pra Portugal')
 
     settle_direto(ultima)
 
@@ -83,9 +91,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
   # Review Focus 3. Pega: pergunta vazia ou a já respondida quando a mensagem nova cai entre os pedaços de uma fala.
   it 'com a opção, mensagem nova entre os pedaços: a pergunta é ela, não a respondida' do
     liga!('conversa_espera_a_fala')
-    cliente_escreve('oi')
+    escreve('oi')
     fala_do_agente(0)
-    nova = cliente_escreve('e pra 2 pessoas?')
+    nova = escreve('e pra 2 pessoas?')
     fala_do_agente(1)
     fala_do_agente(2)
 
@@ -96,7 +104,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
   it 'grava o fim previsto da fala ao responder' do
     liga!('conversa_espera_a_fala')
-    settle_direto(cliente_escreve('oi'))
+    settle_direto(escreve('oi'))
 
     fim = fala.fim_previsto(conversation.id)
 
@@ -108,13 +116,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     liga!('conversa_espera_a_fala')
     responde_com('conversation_closed_for_now')
 
-    settle_direto(cliente_escreve('ok'))
+    settle_direto(escreve('ok'))
 
     expect(fala.fim_previsto(conversation.id)).to be_nil
   end
 
   it 'sem a opção, não grava' do
-    settle_direto(cliente_escreve('oi'))
+    settle_direto(escreve('oi'))
 
     expect(fala.fim_previsto(conversation.id)).to be_nil
   end
