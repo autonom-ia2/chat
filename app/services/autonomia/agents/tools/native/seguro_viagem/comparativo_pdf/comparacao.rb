@@ -1,47 +1,73 @@
-# "COMPARE AS OPÇÕES" no comparativo de Seguro Viagem (#3211): um cartão por plano, 3 por linha (2 quando a cotação
-# tem até 2 planos), com o selo do rótulo, o preço total, o preço de cada viajante pela idade, as coberturas principais,
-# o link para as condições gerais e a seguradora.
+# "COMPARE AS OPÇÕES" no comparativo de Seguro Viagem (#3211): um cartão por plano, 3 por fileira (2 quando a cotação
+# tem até 2 planos), do mais barato ao mais caro, com o selo do rótulo, o preço total, o valor para médico e hospital,
+# o preço por pessoa e as outras coberturas principais. O link das condições gerais e a SUSEP ficam na última parte.
 #
-# CARTÃO INTEIRO: a altura de cada linha de cartões é medida antes de desenhar; se não cabe no resto da folha, a linha
-# vai inteira para a folha seguinte. Na mesma linha os cartões têm a mesma altura e as seções alinhadas.
+# CARTÃO INTEIRO: todos os cartões têm a mesma altura (a do maior), medida antes de desenhar, e as seções alinhadas;
+# uma fileira que não cabe no resto da folha vai inteira para a seguinte. Com a altura fixa, a 1ª folha tem um número
+# certo de vagas, e a recomendada sempre cai numa delas (`Ordem.com_recomendada_ate`).
+#
+# FALTA DE COBERTURA: a Universal manda, em cada plano, a lista inteira dos benefícios dele (o catálogo da resposta é
+# a soma dessas listas; conferido na cotação real gravada). Com a lista, cobertura ausente é "Não inclui"; sem lista
+# nenhuma, não dá para afirmar: "Não informado".
 module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparacao
   include Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Desenho
 
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   Rotulos = SeguroViagem::ComparativoPdf::Rotulos
-  CondicoesGerais = SeguroViagem::ComparativoPdf::CondicoesGerais
-  ESPACO = 14
+  Ordem = SeguroViagem::ComparativoPdf::Ordem
+  Textos = SeguroViagem::ComparativoPdf::Textos
+  ESPACO = 12
+  ENTRE_FILEIRAS = 16
+  INICIO = 122
   FIM_DA_AREA = 790
-  ALTURA_DO_BOTAO = 26
-  # As alturas fixas do cartÃ£o: atÃ© o nome (faixa e selo), o bloco do preÃ§o, o rÃ³tulo "por pessoa", cada idade, o botÃ£o
-  # com os respiros e a folga entre blocos.
-  FIXAS = { selo: 26, preco: 50, por_pessoa: 13, idade: 13.5, botao: ALTURA_DO_BOTAO + 26, folga: 10 }.freeze
+  NAO_INCLUI = 'Não inclui'.freeze
+  NAO_INFORMADO = 'Não informado'.freeze
+  # As alturas fixas do cartão: até o nome (faixa e selo), o rótulo e o preço total, o rótulo "Por pessoa", a folga
+  # entre blocos, o respiro em cima e embaixo do texto de cada linha de cobertura e o espaço entre linhas de preço.
+  FIXAS = { selo: 25, preco: 37, por_pessoa: 12, folga: 7, linha_de_detalhe: 5, entre_precos: 0.5 }.freeze
+  NOME_DO_DETALHE = { size: 9.5 }.freeze
+  VALOR_DO_DETALHE = { size: 10, style: :semibold }.freeze
+  DMH = { size: 11, style: :semibold }.freeze
+  POR_PESSOA = { size: 9.5 }.freeze
 
   private
 
+  # Devolve o topo logo abaixo da última fileira.
   def comparacao
     @doc.start_new_page
-    inicio = cabecalho_da_comparacao(false)
-    planos.each_with_index.each_slice(colunas).reduce(inicio) { |topo, linha| linha_de_cartoes(linha, topo) }
+    topo = cabecalho_da_comparacao(false)
+    cartoes.each_slice(colunas).reduce(topo) { |atual, fileira| fileira_de_cartoes(fileira, atual) }
+  end
+
+  # [[plano, rótulo], ...] na ordem dos cartões.
+  def cartoes
+    Ordem.com_recomendada_ate(planos.zip(rotulos), rotulos.index(:recomendada), vagas_da_primeira_folha)
+  end
+
+  def vagas_da_primeira_folha
+    fileiras = ((FIM_DA_AREA - INICIO + ENTRE_FILEIRAS) / (altura_do_cartao + ENTRE_FILEIRAS)).floor
+    [fileiras, 1].max * colunas
   end
 
   def largura_do_cartao
     (largura_util - ((colunas - 1) * ESPACO)) / colunas
   end
 
-  # Uma linha de cartões, inteira nesta folha ou inteira na seguinte. Devolve o topo da próxima linha.
-  def linha_de_cartoes(linha, topo)
-    alturas = alturas_da_linha(linha.map(&:first), largura_do_cartao)
-    altura = altura_do_cartao(alturas)
-    if topo + altura > FIM_DA_AREA
+  def interna
+    largura_do_cartao - (2 * respiro_do_cartao)
+  end
+
+  # Uma fileira de cartões, inteira nesta folha ou inteira na seguinte. Devolve o topo da próxima fileira.
+  def fileira_de_cartoes(fileira, topo)
+    if topo + altura_do_cartao > FIM_DA_AREA
       @doc.start_new_page
       topo = cabecalho_da_comparacao(true)
     end
-    linha.each_with_index do |(plano, indice), coluna|
-      caixa = [MARGEM + (coluna * (largura_do_cartao + ESPACO)), topo, largura_do_cartao, altura]
-      cartao_do_plano(caixa, plano, indice, alturas)
+    fileira.each_with_index do |(plano, rotulo_do_plano), coluna|
+      caixa = [MARGEM + (coluna * (largura_do_cartao + ESPACO)), topo, largura_do_cartao, altura_do_cartao]
+      cartao_do_plano(caixa, plano, rotulo_do_plano)
     end
-    topo + altura + ESPACO + 4
+    topo + altura_do_cartao + ENTRE_FILEIRAS
   end
 
   def colunas
@@ -49,7 +75,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
   end
 
   def respiro_do_cartao
-    colunas == 3 ? 14 : 18
+    colunas == 3 ? 12 : 18
+  end
+
+  def tamanho_do_nome
+    colunas == 3 ? 12 : 14
   end
 
   # Devolve o topo onde os cartões começam.
@@ -57,55 +87,82 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
     rotulo(continuacao ? 'Continuação' : 'Os planos desta cotação', at: [MARGEM, 44], largura: largura_util, cor: :teal_texto)
     escrever('Compare as opções', at: [MARGEM, 57], largura: largura_util, size: 24, style: :bold, cor: :marinho)
     escrever("Valores para #{viajantes_texto} (#{idades_texto}) · #{periodo_texto}",
-             at: [MARGEM, 90], largura: largura_util, size: 9.5, cor: :suave)
-    122
+             at: [MARGEM, 90], largura: largura_util, size: 10, cor: :suave)
+    INICIO
   end
 
   def detalhes(plano)
-    [['Despesas médicas e hospitalares', Rotulos.despesas_medicas_texto(plano) || SEM_VALOR],
-     ['Perda de bagagem', cobertura_texto(plano, SeguroViagem::Planos::IDS_BAGAGEM, 'bagagem')],
-     ['Cancelamento de viagem', cobertura_texto(plano, SeguroViagem::Planos::IDS_CANCELAMENTO, 'cancelamento')],
+    [['Bagagem perdida', cobertura_texto(plano, SeguroViagem::Planos::IDS_BAGAGEM, 'bagagem')],
+     ['Cancelamento', cobertura_texto(plano, SeguroViagem::Planos::IDS_CANCELAMENTO, 'cancelamento')],
      ['Parcelamento', parcelas_texto(plano['max_parcelas'])],
      ['Idades aceitas', idades_aceitas(plano)]]
   end
 
   def cobertura_texto(plano, ids, principal)
-    cobertura = plano['coberturas'].to_a.find { |item| ids.include?(item['id_beneficio']) }
-    cobertura.to_h['valor'].to_s.strip.presence || plano.dig('principais', principal).presence || SEM_VALOR
+    lista = plano['coberturas'].to_a
+    cobertura = lista.find { |item| ids.include?(item['id_beneficio']) }
+    texto = cobertura.to_h['valor'].to_s.strip.presence || plano.dig('principais', principal).presence
+    return texto unless texto.nil?
+
+    lista.empty? ? NAO_INFORMADO : NAO_INCLUI
   end
 
   def idades_aceitas(plano)
     minima = plano['idade_minima']
     maxima = plano['idade_maxima']
-    return SEM_VALOR if maxima.nil?
+    return NAO_INFORMADO if maxima.nil?
 
     minima.nil? ? "até #{maxima} anos" : "#{minima} a #{maxima} anos"
   end
 
-  # As alturas que variam (nome, cada linha de detalhe, rodapé), a maior de cada uma entre os cartões da linha.
-  def alturas_da_linha(planos_da_linha, largura)
-    medidas = planos_da_linha.map { |plano| medidas_do_cartao(plano, largura - (2 * respiro_do_cartao)) }
-    { nome: medidas.pluck(:nome).max, detalhes: medidas.pluck(:detalhes).transpose.map(&:max),
-      rodape: medidas.pluck(:rodape).max }
+  def dmh_do_cartao(plano)
+    para_medico_e_hospital(plano, interna, **DMH)
   end
 
-  # A linha de detalhe: o nome ocupa 58% da largura e o valor, alinhado à direita, o resto.
-  def colunas_do_detalhe(interna)
-    [(interna * 0.58) - 4, interna * 0.42]
+  # "47, 19 e 12 anos: R$ 120,00 cada"; sem caber numa linha, quebra depois das idades.
+  def linhas_por_pessoa(plano)
+    Textos.precos_por_pessoa(plano, idades).map do |quem, valor|
+      texto = "#{quem}: #{valor}"
+      @doc.width_of(texto, **POR_PESSOA) <= interna ? texto : "#{quem}:\n#{valor}"
+    end
   end
 
-  def medidas_do_cartao(plano, interna)
-    nome_largura, valor_largura = colunas_do_detalhe(interna)
-    { nome: altura_de(plano['nome'], largura: interna, size: 13, style: :bold),
+  # A linha de detalhe: o nome à esquerda na largura dele; o valor, à direita, no resto (quebra se precisar).
+  def colunas_do_detalhe(nome)
+    largura_do_nome = @doc.width_of(nome, **NOME_DO_DETALHE) + 1
+    [largura_do_nome, interna - largura_do_nome - 6]
+  end
+
+  # As alturas que variam, a maior de cada uma entre todos os cartões (todos ficam com a mesma altura).
+  def alturas
+    @alturas ||= begin
+      medidas = planos.map { |plano| medidas_do_cartao(plano) }
+      { nome: medidas.pluck(:nome).max, dmh: medidas.pluck(:dmh).max, por_pessoa: medidas.pluck(:por_pessoa).max,
+        detalhes: medidas.pluck(:detalhes).transpose.map(&:max) }
+    end
+  end
+
+  def medidas_do_cartao(plano)
+    { nome: altura_de(plano['nome'], largura: interna, size: tamanho_do_nome, style: :bold),
+      dmh: altura_de(dmh_do_cartao(plano), largura: interna, **DMH),
+      por_pessoa: altura_por_pessoa(plano),
       detalhes: detalhes(plano).map do |nome, valor|
-        [altura_de(nome, largura: nome_largura, size: 8),
-         altura_de(valor, largura: valor_largura, size: 8.5, style: :semibold)].max + 12
-      end,
-      rodape: altura_de(CondicoesGerais.rodape, largura: interna, size: 6.5, leading: 1) }
+        largura_do_nome, largura_do_valor = colunas_do_detalhe(nome)
+        [altura_de(nome, largura: largura_do_nome, **NOME_DO_DETALHE),
+         altura_de(valor, largura: largura_do_valor, **VALOR_DO_DETALHE)].max + (2 * FIXAS[:linha_de_detalhe])
+      end }
   end
 
-  def altura_do_cartao(alturas)
-    (2 * respiro_do_cartao) + FIXAS[:selo] + alturas[:nome] + FIXAS[:folga] + FIXAS[:preco] + FIXAS[:por_pessoa] +
-      (idades.size * FIXAS[:idade]) + FIXAS[:folga] + alturas[:detalhes].sum + FIXAS[:botao] + alturas[:rodape]
+  def altura_por_pessoa(plano)
+    linhas = linhas_por_pessoa(plano)
+    return 0 if linhas.empty?
+
+    FIXAS[:por_pessoa] + linhas.sum { |linha| altura_de(linha, largura: interna, **POR_PESSOA) + FIXAS[:entre_precos] } +
+      FIXAS[:folga]
+  end
+
+  def altura_do_cartao
+    @altura_do_cartao ||= (2 * respiro_do_cartao) + FIXAS[:selo] + alturas[:nome] + FIXAS[:folga] + FIXAS[:preco] +
+                          alturas[:dmh] + FIXAS[:folga] + alturas[:por_pessoa] + alturas[:detalhes].sum
   end
 end

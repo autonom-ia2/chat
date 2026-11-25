@@ -1,10 +1,12 @@
 # O COMPARATIVO EM PDF do Seguro Viagem (#3211): o material que o cliente guarda e mostra em casa, com a marca da
 # Universal Assistance e a corretora como quem envia. Sai da cotação guardada (`planos` no formato de `Planos.de`) e
 # não lê banco nem chama a seguradora. A4 em pé:
-# 1. capa: faixa da marca, o plano mais recomendado em destaque, os dados da viagem e o resumo com os rótulos;
-# 2. "Compare as opções": um cartão por plano (`Comparacao`), sem cartão partido entre páginas;
-# 3. "Antes de contratar": os pontos importantes e o próximo passo.
-# Os rótulos (mais econômica, mais recomendada, maior cobertura) seguem a regra fixa de `Rotulos`.
+# 1. capa: faixa da marca, o plano mais recomendado em destaque com o porquê, os dados da viagem, o resumo com os
+#    rótulos e como contratar;
+# 2. "Compare as opções": um cartão por plano (`Comparacao`), 6 por folha, sem cartão partido entre páginas;
+# 3. "Antes de contratar": logo abaixo dos cartões quando cabe; senão, na folha seguinte.
+# Os planos vão do mais barato ao mais caro (`Ordem`); os rótulos (mais econômica, mais recomendada, maior cobertura)
+# seguem a regra fixa de `Rotulos`.
 #
 # O QUE NUNCA ENTRA (R2): comissão, markup, ranking, `id_produto`, o código interno do plano (`P1`) e dado pessoal.
 # `Planos.de` já não traz comissão nem ranking; aqui só se leem as chaves que os blocos citam. Do cliente só as idades.
@@ -29,16 +31,16 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @doc = Prawn::Document.new(page_size: 'A4', page_layout: :portrait, margin: 0, info: { Title: TITULO })
     registrar_fontes
     capa
-    comparacao
-    antes_de_contratar
+    antes_de_contratar(comparacao)
     rodapes
     @doc.render
   end
 
   private
 
+  # Do mais barato ao mais caro.
   def planos
-    @planos ||= @cotacao.planos.to_a
+    @planos ||= Ordem.por_preco(@cotacao.planos.to_a)
   end
 
   def rotulos
@@ -68,8 +70,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   end
 
   def idades_texto
-    lista = idades.map(&:to_s).to_sentence(words_connector: ', ', two_words_connector: ' e ', last_word_connector: ' e ')
-    "#{lista} #{idades.size == 1 && idades.first == 1 ? 'ano' : 'anos'}"
+    Textos.idades(idades)
   end
 
   def saida
@@ -91,20 +92,19 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     parcelas.to_i.positive? ? "até #{parcelas.to_i}x" : SEM_VALOR
   end
 
-  def parcelas_maximas
-    parcelas_texto(planos.map { |plano| plano['max_parcelas'].to_i }.max)
-  end
-
   def preco(plano)
     plano['preco_total'].blank? ? SEM_VALOR : SeguroViagem::Dinheiro.brl(plano['preco_total'])
   end
 
-  # -> ["47 anos: R$ 120,00", ...] na ordem das idades.
-  def precos_por_idade(plano)
-    SeguroViagem::Faixas.precos_por_pessoa(plano, idades).each_with_index.map do |valor, indice|
-      idade = idades[indice]
-      "#{idade} #{idade == 1 ? 'ano' : 'anos'}: #{valor.nil? ? SEM_VALOR : SeguroViagem::Dinheiro.brl(valor)}"
-    end
+  # "R$ 100.000 para médico e hospital" (o mesmo nome em todo o documento); sem caber numa linha de `largura`, quebra
+  # depois do valor, para o número não ficar separado da moeda nem o "hospital" sozinho na linha de baixo.
+  def para_medico_e_hospital(plano, largura, **estilo)
+    texto = Rotulos.para_medico_e_hospital(plano)
+    valor = Rotulos.despesas_medicas_texto(plano)
+    medida = @doc.width_of(texto, size: estilo.fetch(:size), style: estilo.fetch(:style, :normal))
+    return texto if valor.nil? || medida <= largura
+
+    "#{valor}\npara #{Rotulos::MEDICO_E_HOSPITAL}"
   end
 
   # A cotação vale para o dia em que foi feita, no fuso da conta (o do servidor é UTC e viraria o dia perto da
@@ -119,7 +119,18 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   end
 
   def valida_ate
-    "#{dia_da_cotacao}, 23h59"
+    "hoje, #{momento_da_cotacao.strftime('%d/%m')}, 23h59"
+  end
+
+  # O plano que a capa destaca e que a chamada usa de exemplo: a recomendada (com 1 plano, ele).
+  def indice_do_destaque
+    rotulos.index(:recomendada) || 0
+  end
+
+  # Como contratar, na capa e na última parte.
+  def chamada
+    nome = planos[indice_do_destaque].to_h['nome'].to_s.strip
+    "Para contratar, responda na conversa com o nome do plano. Exemplo: “Quero o #{nome}”."
   end
 
   def preparada_por
@@ -145,7 +156,8 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @doc.line_width 0.6
     @doc.stroke_horizontal_line MARGEM, FOLHA[:largura] - MARGEM, at: y_de(FOLHA[:altura] - 34)
     esquerda = [preparada_por, 'Planos Universal Assistance'].compact.join(' · ')
-    escrever(esquerda, at: [MARGEM, FOLHA[:altura] - 27], largura: 380, size: 7, cor: :fraca)
-    escrever(numero, at: [FOLHA[:largura] - MARGEM - 100, FOLHA[:altura] - 27], largura: 100, size: 7, cor: :fraca, align: :right)
+    escrever(esquerda, at: [MARGEM, FOLHA[:altura] - 28], largura: 400, size: 8, cor: :suave, height: 11,
+                       overflow: :shrink_to_fit, min_font_size: 8)
+    escrever(numero, at: [FOLHA[:largura] - MARGEM - 100, FOLHA[:altura] - 28], largura: 100, size: 8, cor: :suave, align: :right)
   end
 end

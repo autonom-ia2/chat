@@ -9,6 +9,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
       'motivo' => nil, 'universal' => {} }
   end
   let(:dmh) { { 'id_beneficio' => 2898, 'nome' => 'Despesas Médicas e Hospitalares (por evento)', 'descricao_completa' => '', 'moeda' => 'BRL' } }
+  # Na ordem da Universal o mais caro vem primeiro: o PDF reordena pelo preço.
   let(:planos) do
     [{ 'codigo' => 'P1', 'id_produto' => 5_382_451, 'nome' => 'Especial UA 100K BRL', 'preco_total' => '360.0',
        'max_parcelas' => 12, 'idade_minima' => 0, 'idade_maxima' => 65, 'comissao' => '99.9',
@@ -28,22 +29,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
   end
   let(:bytes) { described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo').render }
   let(:leitor) { PDF::Reader.new(StringIO.new(bytes)) }
-  # Espaço normalizado: o PDF quebra texto longo em linhas, e o leitor devolve a quebra.
-  let(:texto) { leitor.pages.map(&:text).join("\n").split.join(' ') }
+  let(:texto) { normalizar(leitor.pages.map(&:text).join("\n")) }
+  let(:chamada) { 'Para contratar, responda na conversa com o nome do plano. Exemplo: “Quero o Especial UA 100K BRL”.' }
 
-  it 'devolve um PDF de capa, comparação e "antes de contratar"' do
+  # Espaço normalizado: o PDF quebra texto longo em linhas, e o leitor devolve a quebra; o espaço depois de "R$" é o que
+  # não quebra linha.
+  def normalizar(texto) = texto.tr(Prawn::Text::NBSP, ' ').split.join(' ')
+
+  it 'com 2 planos cabe em 2 folhas: capa, e a comparação com "antes de contratar" embaixo' do
     expect(bytes).to start_with('%PDF-')
-    expect(leitor.page_count).to eq(3)
-    expect(texto).to include('Seguro Viagem', 'Compare as opções', 'Antes de contratar')
+    expect(leitor.page_count).to eq(2)
+    expect(normalizar(leitor.pages[1].text)).to include('Compare as opções', 'Antes de contratar')
   end
 
   it 'a corretora aparece como quem envia' do
     expect(texto).to include('Cotação preparada por Corretora Exemplo')
   end
 
-  it 'traz os planos, os preços e as coberturas principais' do
-    expect(texto).to include('Especial UA 100K BRL', 'Especial UA 30K BRL', 'R$ 360,00', 'R$ 210,00', 'R$ 100.000',
-                             'R$ 30.000 em despesas médicas', 'Perda de bagagem R$ 1.500')
+  it 'traz os planos, os preços, o valor para médico e hospital e as coberturas principais' do
+    expect(texto).to include('Especial UA 100K BRL', 'Especial UA 30K BRL', 'R$ 360,00', 'R$ 210,00',
+                             'R$ 100.000 para médico e hospital', 'R$ 30.000 para médico e hospital',
+                             'Bagagem perdida R$ 1.500')
+  end
+
+  it 'os cartões vão do mais barato ao mais caro' do
+    comparacao = normalizar(leitor.pages[1].text)
+    expect(comparacao.index('Especial UA 30K BRL')).to be < comparacao.index('Especial UA 100K BRL')
   end
 
   it 'o país vai por extenso no selo da capa' do
@@ -61,41 +72,65 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
     expect(texto).to include('Portugal, Espanha e França · 3 viajantes')
   end
 
-  it 'o preço por pessoa vem rotulado pela idade, na ordem das idades' do
-    expect(texto).to include('47 anos: R$ 120,00', '19 anos: R$ 120,00', '12 anos: R$ 120,00')
-    expect(texto.index('47 anos: R$ 120,00')).to be < texto.index('19 anos: R$ 120,00')
-    expect(texto.index('19 anos: R$ 120,00')).to be < texto.index('12 anos: R$ 120,00')
+  it 'as idades do mesmo preço vão juntas numa linha' do
+    expect(texto).to include('47, 19 e 12 anos: R$ 120,00 cada', '47, 19 e 12 anos: R$ 70,00 cada')
+    expect(texto).not_to include('47 anos: R$ 120,00')
   end
 
-  it 'cobertura que o plano não tem sai com traço' do
-    expect(texto).to include('Cancelamento de viagem —')
+  it 'se a soma por pessoa não fecha com o total, mostra só o total' do
+    planos[0]['faixas'] = [{ 'de' => 0, 'ate' => 65, 'valor' => '100.0' }]
+    expect(texto).not_to include('R$ 100,00 cada')
+    expect(texto).to include('R$ 360,00', '47, 19 e 12 anos: R$ 70,00 cada')
   end
 
-  it 'os rótulos seguem a regra: mais despesas médicas por real é a recomendada, o mais barato é o econômico' do
-    expect(texto).to include('OPÇÃO MAIS RECOMENDADA PARA ESTA VIAGEM', 'MAIS RECOMENDADA', 'MAIS ECONÔMICA')
-    expect(texto).not_to include('MAIOR COBERTURA')
+  it 'cobertura fora da lista do plano: "Não inclui"' do
+    expect(texto).to include('Cancelamento Não inclui')
+    expect(texto).not_to include('—')
+  end
+
+  it 'plano sem a lista de coberturas: "Não informado", nunca "Não inclui"' do
+    planos[1]['coberturas'] = []
+    expect(texto).to include('Bagagem perdida Não informado', 'Médico e hospital: não informado')
+  end
+
+  it 'os rótulos seguem a regra, sem caixa alta: mais despesas médicas por real é a recomendada, o mais barato é o econômico' do
+    expect(texto).to include('Opção mais recomendada para esta viagem', 'Mais recomendada', 'Mais econômica')
+    expect(texto).not_to include('Maior cobertura', 'MAIS RECOMENDADA', 'MAIS ECONÔMICA')
+  end
+
+  it 'o porquê da recomendada sai só dos números da cotação' do
+    expect(texto).to include('Por R$ 150,00 a mais que a opção mais barata, a proteção para médico e hospital sobe de ' \
+                             'R$ 30.000 para R$ 100.000.')
+  end
+
+  it 'a chamada para contratar vem na capa e na última parte, com o nome da recomendada' do
+    expect(texto.scan(chamada).size).to eq(2)
+    expect(texto).not_to include('Nas próximas páginas')
   end
 
   it 'um plano só: "opção disponível"' do
     planos.pop
-    expect(texto).to include('OPÇÃO DISPONÍVEL')
-    expect(texto).not_to include('MAIS RECOMENDADA', 'MAIS ECONÔMICA')
+    expect(texto).to include('Opção disponível', 'R$ 100.000 para médico e hospital por R$ 360,00 no total.')
+    expect(texto).not_to include('Mais recomendada', 'Mais econômica')
   end
 
-  it 'a cotação vale até o fim do dia em que foi feita' do
-    expect(texto).to include('25/11/2026', '25/11/2026, 23h59')
+  it 'o preço vale até o fim do dia em que a cotação foi feita' do
+    expect(texto).to include('Preço vale até', 'hoje, 25/11, 23h59',
+                             'O preço vale para hoje, 25/11/2026. Se contratar depois, ele pode mudar.')
   end
 
-  it '"Ver coberturas" é link para as condições gerais oficiais' do
+  it 'um link só, na última parte, para as regras completas oficiais' do
     anotacoes = leitor.pages.flat_map { |pagina| Array(pagina.attributes[:Annots]).map { |item| leitor.objects.deref(item) } }
     enderecos = anotacoes.map { |anotacao| leitor.objects.deref(anotacao[:A])[:URI] }
-    expect(texto).to include('Ver coberturas')
-    expect(enderecos.size).to eq(3) # um por plano e o da última folha
-    expect(enderecos.uniq).to eq([described_class::CondicoesGerais.url])
+    expect(texto).to include('Ler as regras completas do seguro')
+    expect(texto).not_to include('Ver coberturas')
+    expect(enderecos).to eq([described_class::CondicoesGerais.url])
   end
 
-  it 'a seguradora e o processo SUSEP no rodapé dos cartões' do
-    expect(texto).to include('Seguradora: Zurich Minas Brasil Seguros S.A · Processo SUSEP 15414.644662/2023-04')
+  it 'a seguradora e a SUSEP, em palavras de leigo, só na última parte' do
+    expect(texto).to include('Seguradora: Zurich Minas Brasil Seguros S.A',
+                             'Registro na SUSEP (órgão do governo que fiscaliza seguros): 15414.644662/2023-04')
+    expect(texto.scan('SUSEP').size).to eq(1)
   end
 
   it 'não traz comissão, id de produto nem o código interno do plano' do

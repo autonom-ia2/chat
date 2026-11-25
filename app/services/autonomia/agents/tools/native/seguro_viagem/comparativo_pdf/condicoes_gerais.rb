@@ -20,7 +20,12 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Condicoes
     primeira_linha.split(', ').map(&:strip).find { |parte| parte.start_with?('https://') }
   end
 
-  def rodape
-    "Seguradora: #{SEGURADORA} · Processo SUSEP #{PROCESSO_SUSEP}"
+  def seguradora
+    "Seguradora: #{SEGURADORA}"
+  end
+
+  # Em palavras de leigo: o que é a SUSEP vai junto do número.
+  def registro_susep
+    "Registro na SUSEP (órgão do governo que fiscaliza seguros): #{PROCESSO_SUSEP}"
   end
 end

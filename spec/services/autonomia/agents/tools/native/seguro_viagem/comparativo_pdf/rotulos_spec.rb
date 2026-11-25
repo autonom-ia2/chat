@@ -66,14 +66,59 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
     expect(described_class.despesas_medicas_texto({ 'principais' => { 'despesas_medicas' => 'R$ 60.000' } })).to eq('R$ 60.000')
   end
 
-  it 'a frase do porquê é fixa por rótulo e só usa números do plano' do
-    recomendado = plano('360.0', 'R$ 100.000')
-    expect(described_class.frase(:recomendada, recomendado))
-      .to eq('Equilibra proteção e preço: R$ 100.000 de despesas médicas por R$ 360,00 no total.')
-    expect(described_class.frase(:economica, recomendado))
-      .to eq('O menor preço desta cotação: R$ 360,00 no total, com R$ 100.000 de despesas médicas.')
-    expect(described_class.frase(:maior_cobertura, recomendado))
-      .to eq('A maior cobertura de despesas médicas desta cotação: R$ 100.000, por R$ 360,00 no total.')
-    expect(described_class.frase(:disponivel, recomendado)).to eq('R$ 100.000 de despesas médicas por R$ 360,00 no total.')
+  describe '.recomendada (a regra trocável)' do
+    it 'devolve o índice que `de` marca como recomendada' do
+      planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000'), plano('285.0', 'R$ 60.000'),
+                plano('540.0', 'R$ 250.000')]
+      expect(described_class.recomendada(planos)).to eq(0)
+      expect(described_class.de(planos).index(:recomendada)).to eq(0)
+    end
+
+    it 'um plano: ele; nenhum: nil' do
+      expect(described_class.recomendada([plano('360.0', 'R$ 100.000')])).to eq(0)
+      expect(described_class.recomendada([])).to be_nil
+    end
+  end
+
+  it '"para médico e hospital": o mesmo nome em todo o documento' do
+    expect(described_class.para_medico_e_hospital(plano('1.0', 'R$ 100.000'))).to eq('R$ 100.000 para médico e hospital')
+    expect(described_class.para_medico_e_hospital({ 'coberturas' => [] })).to eq('Médico e hospital: não informado')
+  end
+
+  describe '.porque' do
+    def porque(planos)
+      described_class.porque(planos, described_class.de(planos))
+    end
+
+    it 'compara com a opção mais barata' do
+      planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000')]
+      expect(porque(planos)).to eq('Por R$ 150,00 a mais que a opção mais barata, a proteção para médico e hospital sobe de ' \
+                                   'R$ 30.000 para R$ 100.000.')
+    end
+
+    it 'cita a de maior cobertura quando ela é outra e custa mais' do
+      planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000'), plano('285.0', 'R$ 60.000'),
+                plano('540.0', 'R$ 250.000')]
+      expect(porque(planos)).to eq('Por R$ 150,00 a mais que a opção mais barata, a proteção para médico e hospital sobe de ' \
+                                   'R$ 30.000 para R$ 100.000. A de maior cobertura custa R$ 180,00 a mais.')
+    end
+
+    it 'a recomendada é a mais barata: diz isso, sem comparação inventada' do
+      expect(porque([plano('300.0', 'R$ 50.000'), plano('200.0', 'R$ 100.000')]))
+        .to eq('É a opção mais barata desta cotação, com R$ 100.000 para médico e hospital.')
+      expect(porque([plano('200.0', 'R$ 100.000'), plano('900.0', 'R$ 300.000')]))
+        .to eq('É a opção mais barata desta cotação, com R$ 100.000 para médico e hospital. ' \
+               'A de maior cobertura custa R$ 700,00 a mais.')
+    end
+
+    it 'a mais barata não cobre menos: não diz que a proteção "sobe"' do
+      planos = [plano('100.0', 'R$ 100.000'), plano('300.0', 'R$ 50.000')]
+      expect(described_class.porque(planos, %i[economica recomendada]))
+        .to eq('Custa R$ 200,00 a mais que a opção mais barata, com R$ 50.000 para médico e hospital.')
+    end
+
+    it 'um plano só: o valor e o preço dele' do
+      expect(porque([plano('360.0', 'R$ 100.000')])).to eq('R$ 100.000 para médico e hospital por R$ 360,00 no total.')
+    end
   end
 end

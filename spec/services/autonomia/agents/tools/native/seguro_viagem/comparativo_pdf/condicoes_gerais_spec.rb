@@ -16,6 +16,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::C
     expect(primeira_linha).to include("processo SUSEP #{described_class::PROCESSO_SUSEP}")
   end
 
+  it 'o registro na SUSEP diz em palavras de leigo o que a SUSEP é' do
+    expect(described_class.registro_susep)
+      .to eq("Registro na SUSEP (órgão do governo que fiscaliza seguros): #{described_class::PROCESSO_SUSEP}")
+  end
+
   it 'a seguradora é a que a definição "Seguradora" das condições gerais nomeia' do
     expect(base).to include("**Seguradora:** É a #{described_class::SEGURADORA},")
   end
