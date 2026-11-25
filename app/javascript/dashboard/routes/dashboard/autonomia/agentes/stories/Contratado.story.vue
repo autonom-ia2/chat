@@ -6,12 +6,12 @@ import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
 import CelularConversa from '../components/CelularConversa.vue';
-import ModeloCartao from '../components/ModeloCartao.vue';
 import OndeQuandoEscolha from '../components/OndeQuandoEscolha.vue';
-import RamosProntos from '../components/RamosProntos.vue';
+import ComoComecar from '../components/ComoComecar.vue';
+import PapelEscolhido from '../components/PapelEscolhido.vue';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
-import { MODELOS } from '../constants/modelos';
-import { MODELOS_DE_RAMO, TOM_DO_RAMO } from '../constants/modelosDeRamo';
+import { MODELO_UNIVERSAL } from '../constants/contratados';
+import { MODELOS_DE_RAMO } from '../constants/modelosDeRamo';
 import { ESTADO } from '../utils/estadoDoAgente';
 
 // #3211 (Tarefa 24) — mockup do agente pronto "Seguro Viagem Universal", para o Rodrigo aprovar a jornada em prints
@@ -263,142 +263,22 @@ const naoPerderOQueDigitou = () => false;
             />
             {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
           </button>
+          <!-- #3219: o "Criar agente" virou dois passos; o cartão fica no passo 2 de atender clientes, antes dos
+            ramos (ComoComecar de verdade, com a lista dos contratados). -->
           <AgentesHeroi
-            :titulo="t('AGENTS.JORNADA.ESCOLHER.TITULO')"
-            :texto="t('AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA')"
+            :titulo="t('AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO.TITULO')"
+            :texto="t('AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO.TEXTO_RAMOS')"
           >
-            <section
-              data-vendem-sozinhos
-              aria-labelledby="vendem-sozinhos-titulo"
-              class="flex flex-col gap-4"
-            >
-              <div class="flex flex-col max-w-2xl gap-1">
-                <h2
-                  id="vendem-sozinhos-titulo"
-                  class="m-0 text-xl font-semibold text-white"
-                >
-                  {{ t('AGENTS.CONTRATADOS.AREA.TITULO') }}
-                </h2>
-                <p class="m-0 text-base leading-relaxed text-white/80">
-                  {{ t('AGENTS.CONTRATADOS.AREA.TEXTO') }}
-                </p>
-              </div>
-              <ul class="p-0 m-0 list-none">
-                <li
-                  class="relative flex flex-col gap-4 p-5 transition shadow-sm md:flex-row md:items-center rounded-2xl bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-weak hover:ring-n-blue-11 hover:shadow-md"
-                >
-                  <div class="flex items-start gap-3 grow">
-                    <span
-                      aria-hidden="true"
-                      class="grid rounded-xl place-items-center size-12 shrink-0"
-                      :class="TOM_DO_RAMO.azul"
-                    >
-                      <span class="i-lucide-plane size-6" />
-                    </span>
-                    <div class="flex flex-col min-w-0 gap-1">
-                      <h3
-                        class="m-0 text-lg font-semibold leading-snug text-n-slate-12"
-                      >
-                        {{ t('AGENTS.CONTRATADOS.CARTAO.TITULO') }}
-                      </h3>
-                      <p class="m-0 text-sm leading-relaxed text-n-slate-11">
-                        {{ t('AGENTS.CONTRATADOS.CARTAO.TEXTO') }}
-                      </p>
-                      <p
-                        class="flex items-center gap-1.5 m-0 text-sm text-n-slate-12"
-                      >
-                        <span
-                          class="i-lucide-key-round size-4 shrink-0 text-n-slate-11"
-                          aria-hidden="true"
-                        />
-                        {{ t('AGENTS.CONTRATADOS.CARTAO.PRECISA') }}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    :aria-label="
-                      t('AGENTS.CONTRATADOS.CARTAO.VER_ARIA', {
-                        nome: t('AGENTS.CONTRATADOS.CARTAO.TITULO'),
-                      })
-                    "
-                    class="inline-flex items-center justify-between w-full gap-3 px-4 text-base font-semibold transition md:w-auto shrink-0 min-h-12 rounded-xl bg-n-blue-2 text-n-blue-11 after:absolute after:inset-0 after:rounded-2xl"
-                  >
-                    {{ t('AGENTS.CONTRATADOS.CARTAO.VER') }}
-                    <span
-                      class="i-lucide-arrow-right size-5 shrink-0 rtl:rotate-180"
-                      aria-hidden="true"
-                    />
-                  </button>
-                </li>
-              </ul>
-            </section>
-            <div class="pt-6 border-t border-white/15">
-              <RamosProntos :ramos="MODELOS_DE_RAMO" pode-usar />
-            </div>
-            <ul
-              :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
-              class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"
-            >
-              <ModeloCartao
-                v-for="modelo in MODELOS"
-                :key="modelo.chave"
-                :modelo="modelo"
-                pode-usar
-              />
-            </ul>
-            <p class="pt-5 m-0 border-t border-white/15">
-              <button
-                type="button"
-                class="px-0 text-base font-semibold text-white underline text-start min-h-11"
-              >
-                {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-              </button>
-            </p>
+            <template #topo>
+              <PapelEscolhido papel="atender" class="mb-2" />
+            </template>
+            <ComoComecar
+              papel="atender"
+              :ramos="MODELOS_DE_RAMO"
+              :contratados="[MODELO_UNIVERSAL]"
+              pode-usar
+            />
           </AgentesHeroi>
-          <section
-            aria-labelledby="outro-tipo-titulo"
-            class="flex flex-col gap-3"
-          >
-            <div class="flex flex-col gap-1">
-              <h2
-                id="outro-tipo-titulo"
-                class="m-0 text-base font-semibold text-n-slate-12"
-              >
-                {{ t('AGENTS.JORNADA.ESCOLHER.OUTRO_TIPO') }}
-              </h2>
-              <p class="m-0 text-sm text-n-slate-11">
-                {{ t('AGENTS.JORNADA.ESCOLHER.OUTRO_TEXTO') }}
-              </p>
-            </div>
-            <ul class="grid grid-cols-1 gap-3 p-0 m-0 list-none md:grid-cols-2">
-              <li>
-                <button
-                  type="button"
-                  class="flex items-start w-full h-full gap-3 p-4 transition text-start rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:ring-n-slate-8 hover:shadow-sm min-h-11"
-                >
-                  <span
-                    aria-hidden="true"
-                    class="grid rounded-xl place-items-center size-10 shrink-0 bg-n-alpha-2 text-n-slate-11"
-                  >
-                    <span class="i-lucide-users size-5" />
-                  </span>
-                  <span class="flex flex-col gap-0.5 grow min-w-0">
-                    <span class="text-sm font-semibold text-n-slate-12">
-                      {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
-                    </span>
-                    <span class="text-sm text-n-slate-11">
-                      {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
-                    </span>
-                  </span>
-                  <span
-                    class="self-center i-lucide-chevron-right size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-            </ul>
-          </section>
         </div>
 
         <!-- 02 a 04 · Página do modelo (e o passo 1 por cima) -->
