@@ -7,21 +7,25 @@ import AgenteErro from '../components/AgenteErro.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
 import CelularConversa from '../components/CelularConversa.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
+import OndeQuandoEscolha from '../components/OndeQuandoEscolha.vue';
+import RamosProntos from '../components/RamosProntos.vue';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
-import GavetaOndeQuando from '../components/pagina/GavetaOndeQuando.vue';
 import { MODELOS } from '../constants/modelos';
-import { TOM_DO_RAMO } from '../constants/modelosDeRamo';
+import { MODELOS_DE_RAMO, TOM_DO_RAMO } from '../constants/modelosDeRamo';
 import { ESTADO } from '../utils/estadoDoAgente';
 
 // #3211 (Tarefa 24) — mockup do agente pronto "Seguro Viagem Universal", para o Rodrigo aprovar a jornada em prints
 // antes de qualquer tela de verdade. Monta com os componentes reais da área de Agentes; os textos ficam aqui, soltos,
 // porque é só a história. Dados fictícios: a agente "Bia" da "Corretora Exemplo". Nenhum login de verdade.
-// Uma variante por estado: 01 a área com "Prontos para contratar"; 02 a página do modelo; 03 e 04 os três campos
-// (com erro de campo); 05 a 09 o acesso à Universal (vazio, conferindo, conferido, recusado, só cota); 10 a escolha
-// do canal, que é a gaveta "Onde" de sempre.
+// Rodada 2 (diretor de arte, 6,5/10): o cartão vem primeiro, em "Vendem sozinhos", acima dos ramos; passos 1 a 3 nas
+// gavetas; a página da Bia ganha o bloco "Corretora e acesso"; estados novos (Universal fora do ar, atendendo,
+// página em repouso, alterar a corretora, acesso recusado meses depois).
+// A gaveta "Onde" é montada aqui com o OndeQuandoEscolha de verdade, porque a GavetaOndeQuando ainda não tem o
+// "Passo 3 de 3" nem a caixa livre única já marcada: os dois entram na Tarefa 28.
+const { t } = useI18n();
 useI18n().locale.value = 'pt_BR';
 
-// A gaveta "Onde" e o Teleport leem a loja; fora do painel (Histoire), uma loja mínima de mentira.
+// O Teleport da gaveta e a escolha de canal leem a loja; fora do painel (Histoire), uma loja mínima de mentira.
 const globais = getCurrentInstance().appContext.config.globalProperties;
 if (!globais.$store) {
   const getters = {
@@ -31,7 +35,7 @@ if (!globais.$store) {
     'accounts/isRTL': false,
     'accounts/getAccount': () => ({ id: 1, features: {} }),
     'accounts/isFeatureEnabledonAccount': () => false,
-    'globalConfig/get': { installationName: 'Hub2You' },
+    'globalConfig/get': {},
   };
   globais.$store = { getters, dispatch: () => Promise.resolve() };
 }
@@ -39,7 +43,8 @@ if (!globais.$store) {
 const NOME = 'Bia';
 const CORRETORA = 'Corretora Exemplo';
 const SOBRE =
-  'Corretora de seguros em Campinas desde 2010. Atendemos famílias e empresas, com seguro viagem para o mundo todo.';
+  'Corretora em Campinas desde 2010. Atendemos famílias e empresas, com seguro viagem para o mundo todo.';
+const CANAL = 'WhatsApp Vendas';
 
 const FAZ = [
   'Tira as dúvidas do viajante com as regras oficiais da Universal',
@@ -49,9 +54,14 @@ const FAZ = [
 ];
 
 const PRECISA = [
-  'O nome da sua corretora e uma frase sobre ela',
-  'O login e a senha do portal da Universal',
-  'Um canal para atender, como o WhatsApp',
+  {
+    texto: 'Um nome para o agente e uma frase sobre a sua corretora',
+  },
+  {
+    texto: 'O login e a senha do portal da Universal',
+    detalhe: 'É o mesmo que você usa no site da Universal.',
+  },
+  { texto: 'Um canal para atender, como o WhatsApp' },
 ];
 
 const CONVERSA = [
@@ -62,23 +72,41 @@ const CONVERSA = [
   },
   {
     de: 'agente',
-    texto:
-      'Oi! Eu sou a Bia, da Corretora Exemplo. Para vocês dois, o plano mais escolhido para a Europa sai R$ 189,90 por pessoa.',
-    hora: '19:21',
+    texto: 'Oi! Eu sou a Bia, da Corretora Exemplo. Quantos anos cada um tem?',
+    hora: '19:20',
   },
-  { de: 'cliente', texto: 'Pode ser esse', hora: '19:22' },
+  { de: 'cliente', texto: '45 e 43', hora: '19:21' },
   {
     de: 'agente',
     texto:
-      'Combinado! Fiz a proposta. Este é o link para pagar: pagamento.exemplo.com.br/a1b2',
+      'Para vocês dois, o plano mais escolhido para a Europa sai R$ 189,90 por pessoa. Quer esse?',
+    hora: '19:21',
+  },
+  { de: 'cliente', texto: 'Quero', hora: '19:22' },
+  {
+    de: 'agente',
+    texto:
+      'Para a proposta, me manda o nome completo, CPF e data de nascimento de cada um.',
+    hora: '19:22',
+  },
+  {
+    de: 'cliente',
+    texto:
+      'Ana Lima, 000.000.000-00, 02/03/1980\nJoão Lima, 000.000.000-00, 15/07/1982',
     hora: '19:24',
+  },
+  {
+    de: 'agente',
+    texto: 'Pronto! Este é o link para pagar: pagamento.exemplo.com.br/a1b2',
+    hora: '19:25',
   },
 ];
 
+// Uma caixa livre só: ela já vem marcada.
 const CANAIS = [
   {
     inbox_id: 11,
-    name: 'WhatsApp Vendas',
+    name: CANAL,
     channel_type: 'Channel::Whatsapp',
     occupied_by: null,
   },
@@ -94,72 +122,96 @@ const CANAIS = [
       caixas: 2,
     },
   },
-  {
-    inbox_id: 13,
-    name: 'Site da corretora',
-    channel_type: 'Channel::WebWidget',
-    occupied_by: null,
-  },
 ];
+const HORARIOS = { 11: 'seg. a sex., 9h às 18h', 12: null };
 
-const AGENTE = {
-  id: 77,
-  name: NOME,
-  config: { response_window: 'always' },
-  tem_onde_trabalhar: false,
-  channels_count: 0,
-};
-
-// tela: area | modelo | agente. dados: sem erro, com erro. acesso: vazio | conferindo | ok | recusado | so_cota.
+// tela: area | modelo | agente.
+// modelo → dados: ok | erro. agente → acesso (gaveta do acesso), gaveta: onde | corretora, pagina: o aviso no topo.
+// `ligada`: a Bia já atende (depois do "Começar a atender").
 const VARIANTES = [
-  {
-    id: '01',
-    titulo: '01 · Área de Agentes: Prontos para contratar',
-    tela: 'area',
-  },
+  { id: '01', titulo: '01 · Criar agente: Vendem sozinhos', tela: 'area' },
   { id: '02', titulo: '02 · Página do modelo', tela: 'modelo' },
-  { id: '03', titulo: '03 · Os três campos', tela: 'modelo', dados: 'ok' },
+  {
+    id: '03',
+    titulo: '03 · Passo 1: a corretora',
+    tela: 'modelo',
+    dados: 'ok',
+  },
   {
     id: '04',
-    titulo: '04 · Os três campos com erro',
+    titulo: '04 · Passo 1: a corretora com erro',
     tela: 'modelo',
     dados: 'erro',
   },
   {
     id: '05',
-    titulo: '05 · Acesso à Universal: vazio',
+    titulo: '05 · Passo 2: acesso vazio',
     tela: 'agente',
     acesso: 'vazio',
   },
   {
     id: '06',
-    titulo: '06 · Acesso à Universal: conferindo',
+    titulo: '06 · Passo 2: acesso sem preencher',
+    tela: 'agente',
+    acesso: 'faltando',
+  },
+  {
+    id: '07',
+    titulo: '07 · Passo 2: conferindo',
     tela: 'agente',
     acesso: 'conferindo',
   },
   {
-    id: '07',
-    titulo: '07 · Acesso à Universal: conferido',
+    id: '08',
+    titulo: '08 · Passo 2: Universal fora do ar',
+    tela: 'agente',
+    acesso: 'indisponivel',
+  },
+  {
+    id: '09',
+    titulo: '09 · Passo 2: acesso conferido',
     tela: 'agente',
     acesso: 'ok',
   },
   {
-    id: '08',
-    titulo: '08 · Acesso à Universal: recusado',
+    id: '10',
+    titulo: '10 · Passo 2: acesso recusado',
     tela: 'agente',
     acesso: 'recusado',
   },
   {
-    id: '09',
-    titulo: '09 · Acesso à Universal: só cota',
+    id: '11',
+    titulo: '11 · Passo 2: login só cota',
     tela: 'agente',
     acesso: 'so_cota',
   },
   {
-    id: '10',
-    titulo: '10 · Escolher o canal (gaveta Onde)',
+    id: '12',
+    titulo: '12 · Passo 3: escolher o canal',
     tela: 'agente',
-    acesso: 'onde',
+    gaveta: 'onde',
+  },
+  {
+    id: '13',
+    titulo: '13 · Bia atendendo',
+    tela: 'agente',
+    ligada: true,
+    pagina: 'atendendo',
+  },
+  { id: '14', titulo: '14 · Página da Bia', tela: 'agente', ligada: true },
+  {
+    id: '15',
+    titulo: '15 · Alterar a corretora',
+    tela: 'agente',
+    ligada: true,
+    gaveta: 'corretora',
+  },
+  {
+    id: '16',
+    titulo: '16 · Acesso recusado meses depois',
+    tela: 'agente',
+    ligada: true,
+    pagina: 'recusado',
   },
 ];
 
@@ -168,7 +220,13 @@ const CAMPO =
 const anel = erro => (erro ? 'ring-2 ring-n-ruby-9' : 'ring-n-slate-7');
 const comAcessoConferido = acesso => ['ok', 'so_cota'].includes(acesso);
 const comCampos = acesso =>
-  ['vazio', 'conferindo', 'recusado'].includes(acesso);
+  ['vazio', 'faltando', 'conferindo', 'indisponivel', 'recusado'].includes(
+    acesso
+  );
+const soCotaNoItem = (variante, indice) =>
+  variante.acesso === 'so_cota' && indice === FAZ.length - 1;
+// Com texto digitado, Esc e o clique fora não fecham a gaveta (o X continua fechando).
+const naoPerderOQueDigitou = () => false;
 </script>
 
 <template>
@@ -185,7 +243,7 @@ const comCampos = acesso =>
         :data-variante="variante.id"
         class="w-full min-h-screen bg-n-background"
       >
-        <!-- 01 · Criar agente, com a seção nova antes dos modelos gerais -->
+        <!-- 01 · Criar agente numa conta de seguros: "Vendem sozinhos" antes dos ramos -->
         <div
           v-if="variante.tela === 'area'"
           class="flex flex-col w-full max-w-5xl gap-8 px-4 py-6 mx-auto md:px-6"
@@ -198,27 +256,27 @@ const comCampos = acesso =>
               class="i-lucide-arrow-left size-4 rtl:rotate-180"
               aria-hidden="true"
             />
-            Voltar para Agentes
+            {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
           </button>
           <AgentesHeroi
-            titulo="Criar agente"
-            texto="Escolha um modelo pronto. Depois você conta do seu jeito e escolhe o canal no fim."
+            :titulo="t('AGENTS.JORNADA.ESCOLHER.TITULO')"
+            :texto="t('AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA')"
           >
             <section
-              data-prontos-para-contratar
-              aria-labelledby="prontos-titulo"
+              data-vendem-sozinhos
+              aria-labelledby="vendem-sozinhos-titulo"
               class="flex flex-col gap-4"
             >
               <div class="flex flex-col max-w-2xl gap-1">
                 <h2
-                  id="prontos-titulo"
+                  id="vendem-sozinhos-titulo"
                   class="m-0 text-xl font-semibold text-white"
                 >
-                  Prontos para contratar
+                  Vendem sozinhos
                 </h2>
                 <p class="m-0 text-base leading-relaxed text-white/80">
-                  Agentes completos, que já vendem sozinhos. Você só informa os
-                  dados da sua corretora.
+                  Cotam, fazem a proposta e mandam o link de pagamento. Você só
+                  informa os dados da sua corretora.
                 </p>
               </div>
               <ul class="p-0 m-0 list-none">
@@ -243,10 +301,20 @@ const comCampos = acesso =>
                         Vende o seguro viagem da Universal do começo ao fim:
                         cota, faz a proposta e manda o link de pagamento.
                       </p>
+                      <p
+                        class="flex items-center gap-1.5 m-0 text-sm text-n-slate-12"
+                      >
+                        <span
+                          class="i-lucide-key-round size-4 shrink-0 text-n-slate-11"
+                          aria-hidden="true"
+                        />
+                        Precisa do login do portal da Universal.
+                      </p>
                     </div>
                   </div>
                   <button
                     type="button"
+                    aria-label="Ver como funciona: Seguro Viagem Universal"
                     class="inline-flex items-center justify-between w-full gap-3 px-4 text-base font-semibold transition md:w-auto shrink-0 min-h-12 rounded-xl bg-n-blue-2 text-n-blue-11 after:absolute after:inset-0 after:rounded-2xl"
                   >
                     Ver como funciona
@@ -257,13 +325,14 @@ const comCampos = acesso =>
                   </button>
                 </li>
               </ul>
-              <h2
-                class="pt-6 m-0 text-xl font-semibold text-white border-t border-white/15"
-              >
-                Ou escolha pelo tipo de trabalho
-              </h2>
             </section>
-            <ul class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3">
+            <div class="pt-6 border-t border-white/15">
+              <RamosProntos :ramos="MODELOS_DE_RAMO" pode-usar />
+            </div>
+            <ul
+              :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
+              class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"
+            >
               <ModeloCartao
                 v-for="modelo in MODELOS"
                 :key="modelo.chave"
@@ -271,10 +340,61 @@ const comCampos = acesso =>
                 pode-usar
               />
             </ul>
+            <p class="pt-5 m-0 border-t border-white/15">
+              <button
+                type="button"
+                class="px-0 text-base font-semibold text-white underline text-start min-h-11"
+              >
+                {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
+              </button>
+            </p>
           </AgentesHeroi>
+          <section
+            aria-labelledby="outro-tipo-titulo"
+            class="flex flex-col gap-3"
+          >
+            <div class="flex flex-col gap-1">
+              <h2
+                id="outro-tipo-titulo"
+                class="m-0 text-base font-semibold text-n-slate-12"
+              >
+                {{ t('AGENTS.JORNADA.ESCOLHER.OUTRO_TIPO') }}
+              </h2>
+              <p class="m-0 text-sm text-n-slate-11">
+                {{ t('AGENTS.JORNADA.ESCOLHER.OUTRO_TEXTO') }}
+              </p>
+            </div>
+            <ul class="grid grid-cols-1 gap-3 p-0 m-0 list-none md:grid-cols-2">
+              <li>
+                <button
+                  type="button"
+                  class="flex items-start w-full h-full gap-3 p-4 transition text-start rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:ring-n-slate-8 hover:shadow-sm min-h-11"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="grid rounded-xl place-items-center size-10 shrink-0 bg-n-alpha-2 text-n-slate-11"
+                  >
+                    <span class="i-lucide-users size-5" />
+                  </span>
+                  <span class="flex flex-col gap-0.5 grow min-w-0">
+                    <span class="text-sm font-semibold text-n-slate-12">
+                      {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
+                    </span>
+                    <span class="text-sm text-n-slate-11">
+                      {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
+                    </span>
+                  </span>
+                  <span
+                    class="self-center i-lucide-chevron-right size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
+            </ul>
+          </section>
         </div>
 
-        <!-- 02 a 04 · Página do modelo (e os três campos por cima) -->
+        <!-- 02 a 04 · Página do modelo (e o passo 1 por cima) -->
         <div
           v-else-if="variante.tela === 'modelo'"
           class="flex flex-col w-full max-w-5xl gap-8 px-4 py-6 mx-auto md:px-6"
@@ -337,7 +457,7 @@ const comCampos = acesso =>
                 <ol class="flex flex-col gap-3 p-0 m-0 list-none">
                   <li
                     v-for="(item, indice) in PRECISA"
-                    :key="item"
+                    :key="item.texto"
                     class="flex items-start gap-3 text-base text-n-slate-12"
                   >
                     <span
@@ -346,7 +466,12 @@ const comCampos = acesso =>
                     >
                       {{ indice + 1 }}
                     </span>
-                    {{ item }}
+                    <span class="flex flex-col gap-0.5">
+                      {{ item.texto }}
+                      <span v-if="item.detalhe" class="text-sm text-n-slate-11">
+                        {{ item.detalhe }}
+                      </span>
+                    </span>
                   </li>
                 </ol>
                 <p
@@ -356,8 +481,8 @@ const comCampos = acesso =>
                     class="i-lucide-sparkles mt-0.5 size-4 shrink-0 text-n-slate-11"
                     aria-hidden="true"
                   />
-                  A Hub2You cuida das instruções: você não escreve nada, e cada
-                  melhoria chega sozinha.
+                  Você não escreve nada: o jeito de atender já vem pronto e
+                  melhora sozinho.
                 </p>
               </section>
             </div>
@@ -368,16 +493,23 @@ const comCampos = acesso =>
               <CelularConversa
                 :mensagens="CONVERSA"
                 :nome="NOME"
-                estado="Corretora Exemplo"
+                :estado="CORRETORA"
                 rotulo-sr="Exemplo de conversa, não é um agente de verdade"
               />
             </section>
           </div>
+          <AgenteBotao tamanho="xl" bloco class="md:hidden">
+            Contratar
+          </AgenteBotao>
 
-          <AgenteGaveta v-if="variante.dados" titulo="Contratar o agente">
+          <AgenteGaveta
+            v-if="variante.dados"
+            titulo="Contratar o agente"
+            :pode-fechar="naoPerderOQueDigitou"
+          >
             <div class="flex flex-col gap-5">
-              <p class="m-0 text-base text-n-slate-12">
-                Só três respostas. O resto já vem pronto.
+              <p class="m-0 text-base font-semibold text-n-blue-11">
+                Passo 1 de 3: sobre a sua corretora.
               </p>
               <div class="flex flex-col gap-1">
                 <label
@@ -435,51 +567,131 @@ const comCampos = acesso =>
                   for="contratar-sobre"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Sobre a corretora
+                  Sobre a corretora (pode deixar para depois)
                 </label>
                 <textarea
                   id="contratar-sobre"
-                  :value="SOBRE"
                   rows="4"
                   maxlength="1000"
+                  placeholder="Ex.: Corretora em Campinas desde 2010. Atendemos famílias e empresas."
                   class="py-2 min-h-32 resize-y"
                   :class="[CAMPO, anel(false)]"
                 />
-                <div class="flex justify-between gap-3">
-                  <p class="m-0 text-sm text-n-slate-11">
-                    Uma ou duas frases. O agente usa para se apresentar.
-                  </p>
-                  <span class="text-sm text-n-slate-11 shrink-0">
-                    {{ SOBRE.length }} de 1000
-                  </span>
-                </div>
+                <p class="m-0 text-sm text-n-slate-11">
+                  O agente usa para se apresentar.
+                </p>
               </div>
             </div>
             <template #rodape>
-              <div class="flex flex-wrap justify-end gap-2">
-                <AgenteBotao variante="contorno" tamanho="lg">
-                  Cancelar
-                </AgenteBotao>
-                <AgenteBotao data-contratar-enviar tamanho="lg">
-                  Contratar
-                </AgenteBotao>
-              </div>
+              <AgenteBotao data-contratar-enviar tamanho="xl" bloco>
+                Contratar
+              </AgenteBotao>
             </template>
           </AgenteGaveta>
         </div>
 
-        <!-- 05 a 10 · Página da Bia, recém-contratada, com a gaveta do acesso ou a do canal -->
+        <!-- 05 a 16 · Página da Bia: o acesso, o canal e o dia a dia -->
         <div
           v-else
           class="flex flex-col w-full max-w-5xl gap-6 px-4 py-6 mx-auto md:px-6"
         >
+          <!-- Até ter acesso e canal, "Falta terminar" no lugar do interruptor. -->
           <PaginaHeroi
             :nome="NOME"
-            :estado="ESTADO.PARADO"
-            onde="Ainda não está em nenhum canal."
+            :estado="variante.ligada ? ESTADO.ATENDENDO : ESTADO.FALTA_TERMINAR"
+            :onde="
+              variante.ligada
+                ? t('AGENTS.JORNADA.PAGINA.RESPONDE_NO', {
+                    canal: CANAL,
+                    quando: 'Sempre',
+                  })
+                : t('AGENTS.JORNADA.PAGINA.NENHUM_CANAL')
+            "
             href-lista="#"
-            pode-gerenciar
+            :pode-gerenciar="!!variante.ligada"
           />
+          <p
+            v-if="variante.pagina === 'atendendo'"
+            role="status"
+            class="flex items-start gap-3 p-4 m-0 text-base rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6 text-n-slate-12"
+          >
+            <span
+              class="i-lucide-circle-check mt-0.5 size-5 shrink-0 text-n-teal-11"
+              aria-hidden="true"
+            />
+            Bia está atendendo no {{ CANAL }}.
+          </p>
+          <AgenteErro
+            v-if="variante.pagina === 'recusado'"
+            titulo="A Universal recusou o acesso da Bia."
+            garantia="Enquanto isso, quem quiser cotar passa para a sua equipe."
+            acao="Alterar"
+            icone-acao="i-lucide-key-round"
+          />
+
+          <section
+            v-if="variante.ligada"
+            data-corretora-e-acesso
+            aria-labelledby="corretora-e-acesso-titulo"
+            class="flex flex-col gap-1 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+          >
+            <h2
+              id="corretora-e-acesso-titulo"
+              class="m-0 text-lg font-semibold text-n-slate-12"
+            >
+              Corretora e acesso
+            </h2>
+            <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
+              <li class="flex items-center justify-between gap-3 py-3">
+                <span class="flex flex-col min-w-0 gap-0.5">
+                  <span class="text-sm text-n-slate-11">Corretora</span>
+                  <span class="text-base font-medium truncate text-n-slate-12">
+                    {{ CORRETORA }}
+                  </span>
+                </span>
+                <AgenteBotao
+                  variante="contorno"
+                  aria-label="Alterar a corretora"
+                >
+                  Alterar
+                </AgenteBotao>
+              </li>
+              <li class="flex items-center justify-between gap-3 py-3">
+                <span class="flex flex-col min-w-0 gap-0.5">
+                  <span class="text-sm text-n-slate-11">
+                    Portal da Universal
+                  </span>
+                  <span
+                    v-if="variante.pagina === 'recusado'"
+                    class="flex items-center gap-1.5 text-base font-medium text-n-ruby-11"
+                  >
+                    <span
+                      class="i-lucide-circle-alert size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    Recusado
+                  </span>
+                  <span
+                    v-else
+                    class="flex items-center gap-1.5 text-base font-medium text-n-slate-12"
+                  >
+                    <span
+                      class="i-lucide-circle-check size-4 shrink-0 text-n-teal-11"
+                      aria-hidden="true"
+                    />
+                    Conferido
+                  </span>
+                </span>
+                <AgenteBotao
+                  variante="contorno"
+                  aria-label="Alterar o acesso ao portal da Universal"
+                >
+                  Alterar
+                </AgenteBotao>
+              </li>
+            </ul>
+          </section>
+
           <section
             class="flex flex-col gap-3 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
           >
@@ -488,35 +700,137 @@ const comCampos = acesso =>
             </h2>
             <ul class="flex flex-col gap-3 p-0 m-0 list-none">
               <li
-                v-for="item in FAZ"
+                v-for="(item, indice) in FAZ"
                 :key="item"
                 class="flex items-start gap-3 text-base text-n-slate-12"
               >
                 <span
+                  v-if="soCotaNoItem(variante, indice)"
+                  class="i-lucide-triangle-alert mt-0.5 size-5 shrink-0 text-n-amber-11"
+                  aria-hidden="true"
+                />
+                <span
+                  v-else
                   class="i-lucide-circle-check mt-0.5 size-5 shrink-0 text-n-teal-11"
                   aria-hidden="true"
                 />
-                {{ item }}
+                <span class="flex flex-col gap-0.5">
+                  {{ item }}
+                  <span
+                    v-if="soCotaNoItem(variante, indice)"
+                    class="text-sm text-n-slate-11"
+                  >
+                    Precisa de um login que faz proposta.
+                  </span>
+                </span>
               </li>
             </ul>
           </section>
 
-          <GavetaOndeQuando
-            v-if="variante.acesso === 'onde'"
-            :agente="AGENTE"
-            :nome="NOME"
-            modo="voltar"
-            :canais="CANAIS"
-            :horarios="{ 11: 'seg. a sex., 9h às 18h', 12: null, 13: null }"
-          />
-
-          <AgenteGaveta v-else titulo="Acesso ao portal da Universal">
+          <!-- Passo 3: a escolha de canal de sempre, com a única caixa livre já marcada. -->
+          <AgenteGaveta
+            v-if="variante.gaveta === 'onde'"
+            :titulo="t('AGENTS.JORNADA.ONDE_QUANDO.TITULO', { nome: NOME })"
+          >
             <div class="flex flex-col gap-5">
+              <p class="m-0 text-base font-semibold text-n-blue-11">
+                Passo 3 de 3: onde a Bia atende.
+              </p>
+              <OndeQuandoEscolha
+                :onde="11"
+                quando="always"
+                :canais="CANAIS"
+                :agente-id="77"
+                :nome="NOME"
+                :horarios="HORARIOS"
+              />
+            </div>
+            <template #rodape>
+              <AgenteBotao tamanho="xl" bloco>
+                {{ t('AGENTS.JORNADA.PAGINA.ONDE.COMECAR') }}
+              </AgenteBotao>
+              <p class="m-0 text-sm text-center text-n-slate-11">
+                {{
+                  t('AGENTS.JORNADA.PAGINA.ONDE.VOLTAR_TEXTO', { nome: NOME })
+                }}
+              </p>
+            </template>
+          </AgenteGaveta>
+
+          <!-- Alterar a corretora: só os dois campos dela; o nome da Bia fica na gaveta de foto e nome. -->
+          <AgenteGaveta
+            v-else-if="variante.gaveta === 'corretora'"
+            titulo="Corretora"
+          >
+            <div class="flex flex-col gap-5">
+              <div class="flex flex-col gap-1">
+                <label
+                  for="corretora-nome"
+                  class="text-sm font-medium text-n-slate-12"
+                >
+                  Nome da corretora
+                </label>
+                <input
+                  id="corretora-nome"
+                  :value="CORRETORA"
+                  maxlength="120"
+                  autocomplete="off"
+                  :class="[CAMPO, anel(false)]"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label
+                  for="corretora-sobre"
+                  class="text-sm font-medium text-n-slate-12"
+                >
+                  Sobre a corretora
+                </label>
+                <textarea
+                  id="corretora-sobre"
+                  :value="SOBRE"
+                  rows="4"
+                  maxlength="1000"
+                  class="py-2 min-h-32 resize-y"
+                  :class="[CAMPO, anel(false)]"
+                />
+                <p class="m-0 text-sm text-n-slate-11">
+                  A Bia usa para se apresentar.
+                </p>
+              </div>
+            </div>
+            <template #rodape>
+              <div class="flex flex-wrap justify-end gap-2">
+                <AgenteBotao variante="contorno" tamanho="lg">
+                  Cancelar
+                </AgenteBotao>
+                <AgenteBotao tamanho="lg">Salvar</AgenteBotao>
+              </div>
+            </template>
+          </AgenteGaveta>
+
+          <!-- Passo 2: o acesso ao portal da Universal. -->
+          <AgenteGaveta
+            v-else-if="variante.acesso"
+            titulo="Acesso ao portal da Universal"
+          >
+            <div class="flex flex-col gap-5">
+              <p
+                v-if="['vazio', 'faltando'].includes(variante.acesso)"
+                role="status"
+                class="flex items-start gap-3 p-4 m-0 text-sm rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6 text-n-slate-12"
+              >
+                <span
+                  class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+                  aria-hidden="true"
+                />
+                Pronto, a Bia foi criada. Ela começa parada. Falta o acesso à
+                Universal e o canal.
+              </p>
+
               <!-- Conferido: só o resultado e o login mascarado; a senha nunca volta para a tela. -->
               <template v-if="comAcessoConferido(variante.acesso)">
                 <div
                   v-if="variante.acesso === 'ok'"
-                  data-acesso-ok
                   role="status"
                   class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
                 >
@@ -535,7 +849,6 @@ const comCampos = acesso =>
                 </div>
                 <div
                   v-else
-                  data-acesso-so-cota
                   role="status"
                   class="flex items-start gap-3 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
                 >
@@ -548,9 +861,10 @@ const comCampos = acesso =>
                       Esse login só faz cotação
                     </p>
                     <p class="m-0 text-sm text-n-slate-12">
-                      Bia cota, mas não faz a proposta nem manda o link de
-                      pagamento. Para vender até o fim, peça à Universal um
-                      login que faz proposta.
+                      Bia cota e tira dúvidas. Quando o cliente quiser fechar,
+                      ela passa a conversa para a sua equipe. Para a Bia fazer a
+                      proposta sozinha, peça à Universal para liberar a emissão
+                      nesse login.
                     </p>
                   </div>
                 </div>
@@ -568,15 +882,28 @@ const comCampos = acesso =>
                       Senha guardada com segurança
                     </span>
                   </div>
-                  <AgenteBotao variante="contorno">Alterar</AgenteBotao>
+                  <AgenteBotao
+                    variante="contorno"
+                    aria-label="Alterar o login e a senha"
+                  >
+                    Alterar
+                  </AgenteBotao>
                 </div>
               </template>
 
               <template v-if="comCampos(variante.acesso)">
+                <p class="m-0 text-base font-semibold text-n-blue-11">
+                  Passo 2 de 3: acesso à Universal.
+                </p>
                 <AgenteErro
                   v-if="variante.acesso === 'recusado'"
                   titulo="A Universal não aceitou esse login e senha."
-                  garantia="Confira no portal da Universal e digite de novo. Nada foi guardado."
+                  garantia="Confira os dois e digite de novo. Nada foi guardado."
+                />
+                <AgenteErro
+                  v-else-if="variante.acesso === 'indisponivel'"
+                  titulo="A Universal não respondeu agora."
+                  garantia="Nada foi guardado. Tente de novo em alguns minutos."
                 />
                 <p v-else class="m-0 text-base text-n-slate-12">
                   Bia entra no portal da Universal com o login da sua corretora
@@ -592,12 +919,35 @@ const comCampos = acesso =>
                   <input
                     id="acesso-login"
                     :value="
-                      variante.acesso === 'vazio' ? '' : 'corretora.exemplo'
+                      ['vazio', 'faltando'].includes(variante.acesso)
+                        ? ''
+                        : 'corretora.exemplo'
                     "
                     autocomplete="off"
+                    autocapitalize="none"
+                    autocorrect="off"
+                    spellcheck="false"
                     :disabled="variante.acesso === 'conferindo'"
-                    :class="[CAMPO, anel(false)]"
+                    :aria-invalid="
+                      variante.acesso === 'faltando' ? 'true' : undefined
+                    "
+                    :class="[CAMPO, anel(variante.acesso === 'faltando')]"
                   />
+                  <p
+                    v-if="variante.acesso === 'faltando'"
+                    role="alert"
+                    class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
+                  >
+                    <span
+                      class="i-lucide-circle-alert size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    Escreva o login do portal.
+                  </p>
+                  <p class="m-0 text-sm text-n-slate-11">
+                    É o mesmo login do site da Universal. Não tem? Peça ao seu
+                    contato comercial na Universal.
+                  </p>
                 </div>
                 <div class="flex flex-col gap-1">
                   <label
@@ -606,20 +956,55 @@ const comCampos = acesso =>
                   >
                     Senha do portal
                   </label>
-                  <input
-                    id="acesso-senha"
-                    type="password"
-                    :value="
-                      variante.acesso === 'conferindo' ? 'exemplo123' : ''
-                    "
-                    autocomplete="off"
-                    :disabled="variante.acesso === 'conferindo'"
-                    :aria-invalid="
-                      variante.acesso === 'recusado' ? 'true' : undefined
-                    "
-                    :class="[CAMPO, anel(variante.acesso === 'recusado')]"
-                  />
-                  <p class="m-0 text-sm text-n-slate-11">
+                  <div class="relative">
+                    <input
+                      id="acesso-senha"
+                      type="password"
+                      :value="
+                        variante.acesso === 'conferindo' ? 'exemplo123' : ''
+                      "
+                      autocomplete="off"
+                      class="pe-12"
+                      :disabled="variante.acesso === 'conferindo'"
+                      :aria-invalid="
+                        ['faltando', 'recusado'].includes(variante.acesso)
+                          ? 'true'
+                          : undefined
+                      "
+                      :class="[
+                        CAMPO,
+                        anel(
+                          ['faltando', 'recusado'].includes(variante.acesso)
+                        ),
+                      ]"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Mostrar senha"
+                      :disabled="variante.acesso === 'conferindo'"
+                      class="absolute inset-y-0 grid p-0 end-0 w-11 place-items-center rounded-e-xl text-n-slate-11 hover:text-n-slate-12 disabled:opacity-60"
+                    >
+                      <span class="i-lucide-eye size-5" aria-hidden="true" />
+                    </button>
+                  </div>
+                  <p
+                    v-if="variante.acesso === 'faltando'"
+                    role="alert"
+                    class="flex items-center gap-1.5 m-0 text-sm text-n-ruby-11"
+                  >
+                    <span
+                      class="i-lucide-circle-alert size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    Escreva a senha do portal.
+                  </p>
+                  <p
+                    v-else-if="variante.acesso === 'recusado'"
+                    class="m-0 text-sm text-n-slate-11"
+                  >
+                    Esqueceu a senha? Troque no site da Universal.
+                  </p>
+                  <p v-else class="m-0 text-sm text-n-slate-11">
                     Depois de conferida, a senha fica guardada e não aparece
                     mais.
                   </p>
@@ -647,7 +1032,6 @@ const comCampos = acesso =>
                 bloco
                 :carregando="variante.acesso === 'conferindo'"
                 rotulo-carregando="Conferindo com a Universal…"
-                :desabilitado="variante.acesso === 'vazio'"
               >
                 Conferir acesso
               </AgenteBotao>
