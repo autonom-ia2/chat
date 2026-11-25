@@ -222,6 +222,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   # #3221 (regra do Rodrigo, 25/11): a Lia, e qualquer agente no turno do evento da cotação, segue o #2154. Com a flag,
   # avisa, registra o aviso com a mensagem do evento e a Atribuição avalia; sem a flag, passa como antes.
   describe Autonomia::Agents::Operate::ResponderAoEvento do
+    # A Lia de verdade (o Agente de Cotação), o agente que passa por este turno.
+    let(:agent) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active, enabled: true,
+                                       instruction: 'Cote o seguro.')
+    end
     let(:evento) do
       instance_double(Autonomia::Agents::Tools::Evento, tipo: 'falhou', run: nil, nota_do_sistema: 'A consulta falhou.',
                                                         publicado?: false, marca: 'evento-3221')
