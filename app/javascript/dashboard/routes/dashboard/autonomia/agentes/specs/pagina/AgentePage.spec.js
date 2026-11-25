@@ -44,6 +44,11 @@ vi.mock('../../composables/usePermissoesDaJornada', async () => {
 });
 const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
+// #3211 — o acesso à seguradora do agente contratado: só o administrador grava o login e a senha.
+vi.mock('dashboard/composables/useAdmin', async () => {
+  const { computed } = await import('vue');
+  return { useAdmin: () => ({ isAdmin: computed(() => true) }) };
+});
 
 const rota = vi.hoisted(() => ({ params: {} }));
 const router = vi.hoisted(() => ({
@@ -1841,6 +1846,123 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(no('[data-linha="base"]')).toBeNull();
       expect(alerta).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+  });
+
+  // #3211 (Tarefa 28) — o agente contratado: a gaveta própria (o acesso e os dados da corretora), sem mudar
+  // conversando, sem Ferramentas, Versões nem Instruções (a API recusa todas para ele) e com a base só para ler.
+  describe('agente contratado (#3211)', () => {
+    const ACESSO_OK = {
+      seguradora: 'universal',
+      login_dica: 'co•••lo',
+      estado: 'ok',
+      motivo: null,
+      conferido_em: '2026-11-25T12:00:00Z',
+      so_cotacao: false,
+    };
+    const contratada = (acesso = null, extra = {}) =>
+      bia({
+        agent_type: 'sdr',
+        status: 'draft',
+        enabled: false,
+        channels_count: 0,
+        tem_onde_trabalhar: false,
+        contratado: {
+          modelo: 'seguro_viagem_universal',
+          nome_agente: 'Bia',
+          nome_corretora: 'Corretora Exemplo',
+          sobre_corretora: '',
+          acesso,
+        },
+        ...extra,
+      });
+    const LIVRE = [{ inbox_id: 2, name: 'Instagram', occupied_by: null }];
+
+    it('opens its own drawer from ?gaveta=contratado, on the access step', async () => {
+      preparar({ agente: contratada(), canais: LIVRE });
+      const wrapper = await montar({ gaveta: 'contratado' });
+      const gaveta = no('[role="dialog"]').textContent;
+      expect(gaveta).toContain('CONTRATADOS.ACESSO.TITULO');
+      expect(gaveta).toContain('CONTRATADOS.ACESSO.PASSO');
+      expect(gaveta).toContain('CONTRATADOS.ACESSO.CRIADA');
+      wrapper.unmount();
+    });
+
+    it('goes from the checked access to the channel, with step 3 and the free inbox marked', async () => {
+      preparar({ agente: contratada(ACESSO_OK), canais: LIVRE });
+      const wrapper = await montar({ gaveta: 'contratado' });
+      await clicar('[data-ir-para-o-canal]');
+
+      const gaveta = no('[role="dialog"]');
+      expect(gaveta.textContent).toContain('ONDE_QUANDO.TITULO');
+      expect(no('[data-texto-do-passo]').textContent).toContain(
+        'CONTRATADOS.ONDE.PASSO'
+      );
+      const instagram = [...gaveta.querySelectorAll('[role="radio"]')].find(
+        item => item.textContent.includes('Instagram')
+      );
+      expect(instagram.getAttribute('aria-checked')).toBe('true');
+      wrapper.unmount();
+    });
+
+    it('has no Mudar conversando, Tools, versions nor instructions, even for a SuperAdmin', async () => {
+      preparar({
+        agente: contratada(ACESSO_OK, {
+          status: 'active',
+          enabled: true,
+          channels_count: 1,
+          tem_onde_trabalhar: true,
+        }),
+      });
+      store.state.getCurrentUser = { id: 1, type: 'SuperAdmin' };
+      const wrapper = await montar();
+
+      expect(no('[data-acao-principal]')).toBeNull();
+      expect(no('[data-alterar="jeito"]')).toBeNull();
+      expect(no('[data-corretora-e-acesso]')).not.toBeNull();
+      await clicar('[data-mais]');
+      expect(todos('[role="menuitem"]').map(i => i.dataset.item)).toEqual([
+        'foto',
+        'excluir',
+      ]);
+      expect(agentesApi.getTools).not.toHaveBeenCalled();
+      expect(faqApi.list).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('opens what it knows read-only', async () => {
+      preparar({
+        agente: contratada(ACESSO_OK, {
+          status: 'active',
+          enabled: true,
+          channels_count: 1,
+          tem_onde_trabalhar: true,
+        }),
+      });
+      const wrapper = await montar({ gaveta: 'sabe' });
+      expect(no('[role="dialog"]').textContent).toContain('PAGINA.SABE.TITULO');
+      expect(no('[data-mandar]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('opens the brokerage drawer from "Corretora e acesso"', async () => {
+      preparar({
+        agente: contratada(ACESSO_OK, {
+          status: 'active',
+          enabled: true,
+          channels_count: 1,
+          tem_onde_trabalhar: true,
+        }),
+      });
+      const wrapper = await montar();
+      await clicar('[data-alterar-corretora]');
+      expect(no('[role="dialog"]').textContent).toContain(
+        'CONTRATADOS.CORRETORA.TITULO'
+      );
+      expect(no('[data-campo="nome_corretora"]').value).toBe(
+        'Corretora Exemplo'
+      );
       wrapper.unmount();
     });
   });
