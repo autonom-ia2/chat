@@ -1,5 +1,10 @@
-# Confere o login do corretor na Universal pelo Setup e grava o resultado no acesso do agente contratado (#3211).
-# Nunca levanta o erro do cliente: o resultado da conferência é o próprio estado gravado.
+# Confere o login do corretor na Universal pelo Setup e grava no acesso do agente contratado (#3211) SÓ o login que a
+# Universal aceitou. Nunca levanta o erro do cliente: o que volta é o resultado da conferência.
+#
+# A CONFERÊNCIA QUE NÃO DEU CERTO NÃO GRAVA NADA (recusada, sem resposta ou pedido que a Universal não aceitou): o
+# acesso que já funcionava (login, senha, estado, capacidades e a data da conferência) fica como estava, e sem acesso
+# gravado nenhuma linha nasce. É o que a tela promete ("Nada foi guardado"): uma tentativa errada ao trocar o login não
+# derruba o agente que já atende com o login antigo.
 class Autonomia::Agents::Contratados::ConferirAcesso
   Codigos = Autonomia::Seguradoras::Universal::Codigos
 
@@ -18,11 +23,21 @@ class Autonomia::Agents::Contratados::ConferirAcesso
     @senha = senha
   end
 
-  # A seguradora é chamada uma vez só. Dois pedidos ao mesmo tempo no primeiro cadastro do agente: o segundo INSERT bate
-  # no índice único (ou, se o outro já gravou antes da validação, na de unicidade do model); relê a linha que o outro
-  # gravou e grava por cima (o último a conferir vale), sem 500.
+  # -> AcessoDaSeguradora: a linha gravada, quando a Universal aceitou o login; senão, o resultado desta tentativa, sem
+  # gravar (e sem o login nem a senha dentro). A seguradora é chamada uma vez só.
   def call
     conferido = resultado
+    return tentativa_sem_gravar(conferido) unless conferido[:estado] == 'ok'
+
+    gravar_aceito!(conferido)
+  end
+
+  private
+
+  # Dois pedidos ao mesmo tempo no primeiro cadastro do agente: o segundo INSERT bate no índice único (ou, se o outro já
+  # gravou antes da validação, na de unicidade do model); relê a linha que o outro gravou e grava por cima (o último a
+  # conferir vale), sem 500.
+  def gravar_aceito!(conferido)
     gravar!(conferido)
   rescue ActiveRecord::RecordNotUnique
     gravar!(conferido)
@@ -32,7 +47,9 @@ class Autonomia::Agents::Contratados::ConferirAcesso
     gravar!(conferido)
   end
 
-  private
+  def tentativa_sem_gravar(conferido)
+    Autonomia::Agents::AcessoDaSeguradora.new(account_id: @agent.account_id, autonomia_agent_id: @agent.id, **conferido)
+  end
 
   def gravar!(conferido)
     acesso = Autonomia::Agents::AcessoDaSeguradora.find_or_initialize_by(autonomia_agent_id: @agent.id)

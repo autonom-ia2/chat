@@ -4,8 +4,8 @@
 #                                                                     enquanto ninguém gravou o login.
 # POST .../agents/:agent_id/acesso_da_seguradora { login, senha }   -> confere na hora pelo Setup da seguradora
 #                                                                     (`Contratados::ConferirAcesso`) e devolve o
-#                                                                     `payload_publico` (200 também com o login recusado:
-#                                                                     o resultado é o estado gravado).
+#                                                                     `payload_publico` (200 também com o login recusado,
+#                                                                     que não grava nada: o acesso anterior fica).
 # A resposta nunca traz a senha nem o login inteiro, só a dica (R5); os dois saem filtrados do log do Rails e do Sentry
 # (`filter_parameter_logging.rb`, `SentryHttpAuthScrubber`), e o Guia não grava o login (só na tela,
 # `AcessoDaSeguradora::SO_NA_TELA_DO_GUIA`). A conferência cabe no prazo da requisição (`Universal::Cliente::LEITURA`):

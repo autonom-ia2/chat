@@ -58,24 +58,39 @@ RSpec.describe 'Autonomia agente contratado: acesso à seguradora', type: :reque
       expect(request.filtered_parameters.to_s).not_to include('s3nha-teste', 'corretor.teste')
     end
 
-    it 'login recusado pela seguradora: 200 com o estado recusado, sem a senha' do
+    it 'login recusado pela seguradora: 200 com o estado recusado, sem a senha, e nada gravado' do
       stub_request(:get, setup_url).to_return(status: 401)
 
       post acesso_url, params: credenciais, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to include('estado' => 'recusado', 'motivo' => 'acesso_recusado')
+      expect(response.parsed_body).to include('estado' => 'recusado', 'motivo' => 'acesso_recusado', 'login_dica' => nil)
       expect(response.body).not_to include('s3nha-teste')
+      expect(Autonomia::Agents::AcessoDaSeguradora.count).to eq(0)
     end
 
-    it 'seguradora sem resposta (timeout): 200 com o estado nomeado, nunca 5xx' do
+    it 'seguradora sem resposta (timeout): 200 com o estado nomeado, nunca 5xx, e nada gravado' do
       stub_request(:get, setup_url).to_timeout
 
       post acesso_url, params: credenciais, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to include('estado' => 'nao_conferido', 'motivo' => 'indisponivel', 'login_dica' => 'co•••te')
+      expect(response.parsed_body).to include('estado' => 'nao_conferido', 'motivo' => 'indisponivel', 'login_dica' => nil)
       expect(response.body).not_to include('s3nha-teste')
+      expect(Autonomia::Agents::AcessoDaSeguradora.count).to eq(0)
+    end
+
+    # "Nada foi guardado" (a tela): a tentativa errada ao trocar o login não derruba o acesso que já funciona.
+    it 'troca recusada depois de um acesso ok: devolve a recusa e o GET segue com o acesso anterior' do
+      post acesso_url, params: credenciais, headers: admin.create_new_auth_token, as: :json
+      stub_request(:get, setup_url).to_return(status: 401)
+
+      post acesso_url, params: { login: 'outro.corretor', senha: 'errada' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('estado' => 'recusado', 'motivo' => 'acesso_recusado')
+      expect(agente.reload.acesso_da_seguradora).to have_attributes(login: 'corretor.teste', senha: 's3nha-teste', estado: 'ok')
+      get acesso_url, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('estado' => 'ok', 'login_dica' => 'co•••te', 'motivo' => nil)
     end
 
     it 'login ou senha em branco: 422 sem chamar a seguradora nem gravar' do
