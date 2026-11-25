@@ -9,7 +9,6 @@ import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgenteIaPorCaixa } from '../composables/useAgenteIaPorCaixa';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
-import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
   ESTADO,
   canaisDoAgente,
@@ -23,12 +22,9 @@ import {
   canaisDoAgenteDeOutroSistema,
 } from '../utils/outroSistema';
 import { caixasDaEquipe } from '../utils/ondeTrabalha';
-import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
-import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
+import CriarEmPassos from '../components/CriarEmPassos.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
-import ModeloCartao from '../components/ModeloCartao.vue';
-import RamosProntos from '../components/RamosProntos.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
@@ -36,22 +32,16 @@ import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue
 import AgentePostCartao from '../components/AgentePostCartao.vue';
 import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
 import { useAgentesDoPost } from '../composables/useAgentesDoPost';
-import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
-// T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
+// T01 (nenhum agente): o passo 1 de "Criar agente" (#3219, CriarEmPassos no modo `inicio`): a pergunta forte, o que o
+// agente vai fazer e, escolhido o papel, a página "Criar agente" com o passo 2 (o aviso de canal fica lá).
 // T02 (com agentes): herói compacto com a contagem e os cartões na ordem Atendendo → Parado →
 // Cotação → Falta terminar. Números da semana (L1) e nomes dos canais (L2) chegam em paralelo e,
 // se falharem, o cartão só perde a linha correspondente. Quem só vê não tem ação de escrita.
-// "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
-// #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" no herói T01, vai com ?atuacao=interno: o
-// agente ajuda a equipe dentro das conversas e nunca fala com cliente.
-// #3214 — "Escrever as instruções com as minhas palavras", logo abaixo de "Do meu jeito", vai com ?escrever=1: o agente
-// nasce com o texto da pessoa, como escrito (AgenteEscreverPage).
-// #3208 — conta de seguros com os agentes prontos por ramo liberados (#2881) vê a fileira "Prontos para o seu ramo"
-// também aqui, no herói T01, antes dos três modelos: quem ainda não tem agente não passa pela página "Criar agente".
+// "Continuar" leva ?agente= (PR2).
 // #1543 — com agentes, "Criar agente" (herói e barra do celular) e "Ver modelos prontos" abrem a
-// página inteira "Criar agente" (AgenteEscolherPage, na rota do Construtor sem query), no lugar
+// página inteira "Criar agente" (AgenteCriarEmPassosPage, na rota do Construtor sem query), no lugar
 // da gaveta.
 // #1369 — os cartões só aparecem quando a L1 e a L2 já responderam (ou falharam). Antes, eles
 // surgiam com a lista e cresciam depois: a linha da semana e o nome do canal chegavam e empurravam
@@ -62,13 +52,10 @@ const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 const podeGerenciar = useCanManage('autonomia_manage');
-const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
 // #2469 (PR 3a do #2436): o cuidado de cada post ou anúncio vira um cartão no fim da lista, com o filtro "Posts e
 // anúncios" quando há pelo menos um. Ligado conta à parte ("N cuidando de post ou anúncio"); pausado soma nos parados.
 const doPost = useAgentesDoPost();
-const { ramos } = useRamosDeSeguro();
-const comRamos = computed(() => ramos.value.length > 0);
 const filtro = ref('todos');
 const FILTROS = ['todos', 'posts'];
 const rotaDoPost = (cuidado, grupo = '') => ({
@@ -95,8 +82,6 @@ const outrosSistemas = computed(() =>
 
 const carregando = ref(true);
 const falhou = ref(false);
-const comecandoModelo = ref(null);
-const modeloQueFalhou = ref(null);
 const confirmacao = ref(null);
 const pendenteExcluir = ref(null);
 const excluindo = ref(false);
@@ -173,7 +158,6 @@ const esperando = computed(
     carregando.value ||
     (!falhou.value && !vazia.value && !leiturasDosCartoes.value)
 );
-const semCanal = computed(() => !(caixas.value || []).length);
 
 // #1433: "N na equipe" só aparece quando há agente da equipe; tema 14 (#1434): "N ajudando", só com ajudante.
 const contagemTexto = computed(() => {
@@ -198,10 +182,6 @@ const contagemTexto = computed(() => {
     .filter(Boolean)
     .join(' · ');
 });
-
-const linkConectarCanal = computed(
-  () => router.resolve({ name: 'settings_inbox_new' }).href
-);
 
 // Mesma tolerância da lista antiga: uma falha passageira (deploy, 502) tenta de novo uma vez antes
 // de mostrar o erro.
@@ -232,29 +212,6 @@ const tentarDeNovo = () => {
   semana.carregar();
   ocupacao.carregar();
 };
-
-const COPILOTO = 'copiloto';
-const ESCREVER = 'escrever';
-
-const abrirCriacao = async (chave, query) => {
-  if (comecandoModelo.value) return;
-  comecandoModelo.value = chave;
-  modeloQueFalhou.value = null;
-  try {
-    await router.push({ name: 'autonomia_agents_builder', query });
-  } catch {
-    modeloQueFalhou.value = chave;
-  } finally {
-    comecandoModelo.value = null;
-  }
-};
-
-const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
-const usarRamo = chave => abrirCriacao(chave, { ramo: chave });
-const usarCopiloto = () =>
-  abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
-// #3214 — criar com as instruções que a pessoa já tem, sem o Construtor.
-const escreverInstrucoes = () => abrirCriacao(ESCREVER, { escrever: '1' });
 
 const abrirPaginaCriar = () =>
   router.push({ name: 'autonomia_agents_builder' });
@@ -408,114 +365,8 @@ onBeforeUnmount(() => {
       class="relative flex flex-col w-full gap-6 px-4 py-6 pb-8 mx-auto md:px-6 md:pb-6"
       :class="vazia ? 'max-w-5xl' : 'max-w-6xl'"
     >
-      <!-- T01 · nenhum agente ainda -->
-      <AgentesHeroi
-        v-if="vazia"
-        :titulo="t('AGENTS.JORNADA.HEROI.TITULO')"
-        :texto="
-          podeGerenciar
-            ? t(
-                comRamos
-                  ? 'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
-                  : 'AGENTS.JORNADA.MODELOS.ESCOLHA'
-              )
-            : t('AGENTS.JORNADA.HEROI.SO_VER')
-        "
-      >
-        <RamosProntos
-          v-if="comRamos"
-          :ramos="ramos"
-          :pode-usar="podeGerenciar"
-          :comecando="comecandoModelo"
-          :falhou="modeloQueFalhou"
-          @usar="usarRamo"
-        />
-        <ul
-          :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
-          class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"
-        >
-          <ModeloCartao
-            v-for="modelo in MODELOS"
-            :key="modelo.chave"
-            :modelo="modelo"
-            :pode-usar="podeGerenciar"
-            :comecando="comecandoModelo === modelo.chave"
-            :bloqueado="!!comecandoModelo && comecandoModelo !== modelo.chave"
-            :falhou="modeloQueFalhou === modelo.chave"
-            @usar="usarModelo"
-          />
-        </ul>
-        <div
-          v-if="semCanal"
-          data-sem-canal
-          class="flex flex-col gap-2 p-4 text-sm rounded-2xl bg-n-amber-2 text-n-slate-12"
-        >
-          <p class="m-0">{{ t('AGENTS.JORNADA.HEROI.SEM_CANAL') }}</p>
-          <a
-            v-if="podeConectarCanal"
-            :href="linkConectarCanal"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="relative inline-flex items-center gap-1 font-semibold underline min-h-11 w-fit text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-          >
-            {{ t('AGENTS.JORNADA.HEROI.CONECTAR_CANAL') }}
-            <span class="i-lucide-external-link size-4" aria-hidden="true" />
-            <span class="sr-only">{{
-              t('AGENTS.JORNADA.COMUM.NOVA_ABA')
-            }}</span>
-          </a>
-          <p v-else class="m-0 text-n-slate-11">
-            {{ t('AGENTS.JORNADA.HEROI.SEM_CANAL_SEM_PERMISSAO') }}
-          </p>
-        </div>
-        <div
-          v-if="podeGerenciar"
-          class="flex flex-col gap-3 pt-5 border-t border-white/15"
-        >
-          <p class="flex flex-col m-0">
-            <button
-              data-do-meu-jeito
-              type="button"
-              aria-describedby="do-meu-jeito-heroi-texto"
-              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              @click="usarModelo(MODELO_DO_MEU_JEITO)"
-            >
-              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-            </button>
-            <span id="do-meu-jeito-heroi-texto" class="text-sm text-white/80">
-              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO') }}
-            </span>
-          </p>
-          <p class="flex flex-col m-0">
-            <button
-              data-escrever-instrucoes
-              type="button"
-              aria-describedby="escrever-heroi-texto"
-              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              @click="escreverInstrucoes"
-            >
-              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES') }}
-            </button>
-            <span id="escrever-heroi-texto" class="text-sm text-white/80">
-              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO') }}
-            </span>
-          </p>
-          <p class="flex flex-col m-0">
-            <button
-              data-copiloto
-              type="button"
-              aria-describedby="copiloto-heroi-texto"
-              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              @click="usarCopiloto"
-            >
-              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
-            </button>
-            <span id="copiloto-heroi-texto" class="text-sm text-white/80">
-              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
-            </span>
-          </p>
-        </div>
-      </AgentesHeroi>
+      <!-- T01 · nenhum agente ainda: o passo 1 de "Criar agente" (#3219) -->
+      <CriarEmPassos v-if="vazia" inicio />
 
       <!-- T02 · lista (também carregando e erro) -->
       <template v-else>

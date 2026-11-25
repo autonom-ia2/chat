@@ -626,20 +626,6 @@
         "NA_EQUIPE": "Na equipe",
         "AJUDANDO": "Ajudando"
       },
-      "ESCOLHER": {
-        "TITULO": "Criar agente",
-        "TEXTO": "Escolha um modelo pronto. Depois você conta do seu jeito e escolhe o canal no fim.",
-        "OUTRO_TIPO": "Precisa de outro tipo?",
-        "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima.",
-        "EQUIPE": {
-          "TITULO": "Agente da equipe",
-          "TEXTO": "Fica num canal com agente principal ou atendido só por pessoas e recebe a conversa quando alguém passa."
-        },
-        "AJUDA": {
-          "TITULO": "Ajuda outros agentes",
-          "TEXTO": "Responde só para outro agente, nunca para o cliente."
-        }
-      },
       "ESCREVER": {
         "TITULO": "Escreva as instruções do seu agente",
         "TEXTO": "O agente vai seguir o seu texto do jeito que você escreveu. Ele só começa a atender quando você mandar. Antes disso, você ensina o que ele precisa saber, escolhe as ferramentas e onde ele atende.",
@@ -663,19 +649,81 @@
           "SAIR": "Sair"
         }
       },
+      "CRIAR_EM_PASSOS": {
+        "PAPEL": {
+          "TITULO": "O que o seu agente vai fazer?",
+          "TEXTO": "Toque no que você precisa. No próximo passo, você monta o agente.",
+          "ROTULO": "O que o agente vai fazer",
+          "OUTROS": "Outros jeitos de usar um agente",
+          "OUTRO": "Outro jeito de usar um agente",
+          "ESCOLHER": "Escolher",
+          "TEXTO_INICIO": "Um agente pode fazer isso por você, a qualquer hora.",
+          "ESCOLHER_ARIA": "Escolher: {titulo}"
+        },
+        "PAPEIS": {
+          "ATENDER": {
+            "TITULO": "Atender meus clientes",
+            "TEXTO": "Responde no WhatsApp, no Instagram e no site, e passa para a equipe quando precisa."
+          },
+          "COPILOTO": {
+            "TITULO": "Ajudar minha equipe nas conversas",
+            "TEXTO": "Resume a conversa e sugere a resposta para quem atende. Nunca fala com o cliente.",
+            "NOME": "Copiloto da equipe"
+          },
+          "EQUIPE": {
+            "TITULO": "Atender só quando a equipe passar",
+            "TEXTO": "Fica de reserva. Só responde o cliente depois que alguém da equipe passa a conversa para ele.",
+            "NOME": "Agente da equipe"
+          },
+          "AJUDANTE": {
+            "TITULO": "Ajudar meus outros agentes",
+            "TEXTO": "Sabe um assunto a fundo. Seus agentes perguntam a ele quando não sabem. Nunca fala com o cliente.",
+            "NOME": "Ajuda outros agentes"
+          },
+          "CONECTAR": {
+            "TITULO": "Já tenho um agente em outro sistema",
+            "TEXTO": "Ligue aqui um agente que já foi montado em outro sistema. As conversas novas vão para ele."
+          }
+        },
+        "COMO": {
+          "TITULO": "Como você quer começar?",
+          "TEXTO_ATENDER": "Comece de um pronto e ajuste ao seu negócio. Você testa as respostas e decide quando ele começa a atender.",
+          "TEXTO_OUTROS": "Escolha um jeito. Ele só começa a trabalhar quando você mandar.",
+          "ESCOLHIDO": "Você escolheu:",
+          "TROCAR": "Trocar",
+          "TROCAR_ARIA": "Trocar o que o agente vai fazer",
+          "DO_ZERO": "Prefere começar do zero?",
+          "OPCOES": "Jeitos de começar",
+          "COMECAR": "Começar",
+          "COMECAR_ARIA": "Começar: {titulo}",
+          "CONVERSAR": {
+            "TITULO": "Conversar com a IA",
+            "TEXTO": "Você responde umas perguntas curtas e a IA monta o agente."
+          },
+          "ESCREVER": {
+            "TITULO": "Escrever eu mesmo",
+            "TEXTO": "Já tem um texto pronto? Cole ou escreva as instruções."
+          },
+          "TEXTO_RAMOS": "Escolha o seguro que você vende.",
+          "OUTRO_JEITO": "Não achou o seu seguro? Comece de outro jeito",
+          "MAIS_FACIL": "Mais fácil",
+          "VOLTAR": "Voltar",
+          "ERRO": "Não deu para começar agora. Tente de novo."
+        },
+        "ESCREVER": {
+          "COPILOTO": {
+            "TITULO": "Escreva as instruções do Copiloto da equipe",
+            "TEXTO": "Ele segue o seu texto. Ajuda quem atende nas conversas e nunca fala com o cliente. Só começa quando você mandar.",
+            "EXEMPLO": "Ex.: Você ajuda a equipe da minha loja. Quando pedirem, resuma a conversa e sugira uma resposta curta e educada. Nunca prometa prazo sem conferir."
+          }
+        }
+      },
       "MODELOS": {
         "ROTULO": "Modelos prontos",
         "USAR": "Usar este",
         "USAR_ARIA": "Usar este modelo: {titulo}",
         "EXEMPLO": "Exemplo",
         "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
-        "DO_MEU_JEITO": "Do meu jeito: contar com minhas palavras",
-        "DO_MEU_JEITO_TEXTO": "Você responde umas perguntas curtas e o agente fica pronto.",
-        "COPILOTO": "Copiloto da equipe",
-        "COPILOTO_TEXTO": "Ajuda as pessoas da equipe dentro das conversas. Nunca fala com cliente.",
-        "ESCREVER_INSTRUCOES": "Escrever as instruções com as minhas palavras",
-        "ESCREVER_INSTRUCOES_TEXTO": "Já tem um texto pronto? Cole aqui. O agente segue do jeito que você escreveu.",
-        "ESCOLHA": "Escolha um modelo pronto. Você conversa um pouco, testa as respostas e decide quando começar a atender.",
         "SUPPORT": {
           "TITULO": "Tirar dúvidas dos clientes",
           "TEXTO": "Responde sobre preços, horários, entrega e o que mais perguntarem.",
@@ -698,8 +746,6 @@
       "RAMOS": {
         "TITULO": "Prontos para o seu ramo",
         "TEXTO": "Já sabem explicar o seguro, tirar dúvidas e pedir os dados da cotação. Com os dados em mãos, passam para a sua equipe cotar.",
-        "TEXTO_DA_PAGINA": "Escolha o seguro que você vende. O agente já vem pronto, e você decide quando ele começa a atender.",
-        "OUTROS_TITULO": "Ou escolha pelo tipo de trabalho",
         "ITENS": {
           "AUTO": {
             "TITULO": "Seguro auto",

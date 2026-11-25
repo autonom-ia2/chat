@@ -2,9 +2,9 @@
 import { useI18n } from 'vue-i18n';
 import RamoCartao from './RamoCartao.vue';
 
-// #2881 — a fileira "Prontos para o seu ramo", dentro do herói navy, antes dos três modelos gerais. #3208: a mesma
-// fileira na página "Criar agente" e na tela inicial de quem ainda não tem agente. Quais cartões aparecem é decisão do
-// servidor (useRamosDeSeguro); quem usa só mostra a fileira quando há pelo menos um.
+// #2881 — a fileira "Prontos para o seu ramo", dentro do herói navy. #3219: no passo 2 de atender clientes ("Criar
+// agente"); os modelos gerais vêm embaixo, na seção "Não achou o seu seguro?" (ComoComecar). Quais cartões aparecem é
+// decisão do servidor (useRamosDeSeguro); quem usa só mostra a fileira quando há pelo menos um.
 // `comecando`: a chave do cartão (ramo ou modelo) que a pessoa acabou de escolher, ou null.
 // `falhou`: a chave do cartão cuja criação não abriu, ou null; o cartão mostra o aviso com "Tentar de novo".
 defineProps({
@@ -49,10 +49,5 @@ const NS = 'AGENTS.JORNADA.RAMOS';
         @usar="chave => emit('usar', chave)"
       />
     </ul>
-    <h2
-      class="pt-6 m-0 text-xl font-semibold text-white border-t border-white/15"
-    >
-      {{ t(`${NS}.OUTROS_TITULO`) }}
-    </h2>
   </section>
 </template>

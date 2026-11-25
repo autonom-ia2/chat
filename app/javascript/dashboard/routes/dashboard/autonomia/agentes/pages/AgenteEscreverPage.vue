@@ -13,7 +13,10 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
+import PapelEscolhido from '../components/PapelEscolhido.vue';
 import { MODELO_DO_MEU_JEITO } from '../constants/modelos';
+import { ATUACAO } from '../constants/criacao';
+import { PAPEL, queryDeConversar, queryDoPapel } from '../constants/papeis';
 import { MAX_INSTRUCAO, idiomaDoNavegador } from '../utils/pagina';
 
 // #3214 — "Escrever as instruções com as minhas palavras": criar o agente direto com o texto que a pessoa já tem,
@@ -32,11 +35,24 @@ import { MAX_INSTRUCAO, idiomaDoNavegador } from '../utils/pagina';
 // se a criação falhasse, o texto se perderia. Criado e a página dele não abriu: no lugar do botão fica "Abrir {nome}",
 // nunca "Tentar de novo", que criaria outro agente.
 // O pb-24 no celular tira o "Criar agente" de baixo da bolinha do Guia (canto de baixo à direita).
+// #3219 — `papel` (a chave de constants/papeis, vinda de `?papel=` pela entrada): a faixa "Você escolheu" com "Trocar"
+// (passo 1), o botão do topo vira "Voltar" (passo 2 do papel) e "Não tem um texto pronto?" vai à conversa no mesmo
+// papel. O Copiloto troca o título, a frase e o exemplo (não fala de canal) e nasce interno (`actuation: 'internal'`):
+// parado e sem canal, como o escrito para atender (um interno não aceita caixa). Sem `papel` (o `?escrever=1` de
+// antes), a página é a de sempre.
+const props = defineProps({
+  papel: { type: String, default: '' },
+});
+
 const MAX_NOME = 40;
 const NS = 'AGENTS.JORNADA.ESCREVER';
 const INSTRUCOES = 'AGENTS.JORNADA.PAGINA.INSTRUCOES';
 const ANEL_NORMAL = 'ring-n-slate-7';
 const ANEL_ERRO = 'ring-n-ruby-9';
+const TEXTOS_DO_PAPEL = {
+  [PAPEL.COPILOTO]: 'AGENTS.JORNADA.CRIAR_EM_PASSOS.ESCREVER.COPILOTO',
+};
+const textoDoPapel = chave => `${TEXTOS_DO_PAPEL[props.papel] || NS}.${chave}`;
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -138,6 +154,7 @@ const criar = async () => {
       instruction: texto.value,
       status: 'paused',
       enabled: false,
+      ...(props.papel === PAPEL.COPILOTO ? { actuation: ATUACAO.INTERNA } : {}),
     });
   } catch {
     falhou.value = true;
@@ -190,12 +207,19 @@ const aoFecharConfirmacao = () => {
   saidaPendente = null;
 };
 
-const voltar = () => router.push({ name: 'autonomia_agents_index' });
+const abrirCriacao = query =>
+  router.push({ name: 'autonomia_agents_builder', query });
+const voltar = () =>
+  props.papel
+    ? abrirCriacao(queryDoPapel(props.papel))
+    : router.push({ name: 'autonomia_agents_index' });
+const trocarPapel = () => abrirCriacao({});
 const contarComMinhasPalavras = () =>
-  router.push({
-    name: 'autonomia_agents_builder',
-    query: { modelo: MODELO_DO_MEU_JEITO },
-  });
+  abrirCriacao(
+    props.papel
+      ? queryDeConversar(props.papel)
+      : { modelo: MODELO_DO_MEU_JEITO }
+  );
 </script>
 
 <template>
@@ -215,7 +239,11 @@ const contarComMinhasPalavras = () =>
           class="i-lucide-arrow-left size-4 rtl:rotate-180"
           aria-hidden="true"
         />
-        {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
+        {{
+          papel
+            ? t('AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO.VOLTAR')
+            : t('AGENTS.JORNADA.CRIAR.VOLTAR')
+        }}
       </button>
 
       <form
@@ -225,6 +253,13 @@ const contarComMinhasPalavras = () =>
         @submit.prevent="criar"
       >
         <div class="flex flex-col gap-5 p-5 md:p-8">
+          <PapelEscolhido
+            v-if="papel"
+            :papel="papel"
+            claro
+            :desligado="criando"
+            @trocar="trocarPapel"
+          />
           <div class="flex flex-col gap-2">
             <h1
               :id="`${base}-titulo`"
@@ -232,12 +267,12 @@ const contarComMinhasPalavras = () =>
               tabindex="-1"
               class="m-0 text-2xl font-bold leading-tight tracking-tight outline-none text-n-slate-12"
             >
-              {{ t(`${NS}.TITULO`) }}
+              {{ t(textoDoPapel('TITULO')) }}
             </h1>
             <p class="m-0 text-base text-n-slate-11">
               {{
                 podeGerenciar
-                  ? t(`${NS}.TEXTO`)
+                  ? t(textoDoPapel('TEXTO'))
                   : t('AGENTS.JORNADA.HEROI.SO_VER')
               }}
             </p>
@@ -305,7 +340,7 @@ const contarComMinhasPalavras = () =>
                 data-instrucao
                 rows="16"
                 :maxlength="MAX_INSTRUCAO"
-                :placeholder="t(`${NS}.EXEMPLO`)"
+                :placeholder="t(textoDoPapel('EXEMPLO'))"
                 :readonly="criando || criado"
                 :aria-invalid="textoVazio ? 'true' : undefined"
                 :aria-describedby="descricaoDoTexto"
