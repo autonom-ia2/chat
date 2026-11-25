@@ -17,6 +17,8 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
 
   let(:pasta) { Pathname.new(Dir.mktmpdir) }
   let!(:hook) do
+    # A chave da conta é de mentira: a validação do gancho não chama o provedor.
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
                                settings: { 'api_key' => 'chave-da-conta-teste' })
   end

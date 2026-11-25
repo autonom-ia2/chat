@@ -86,6 +86,7 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
     after { FileUtils.remove_entry(pasta) }
 
     it 'semeia uma vez só, com a chave da conta' do
+      allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
       create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
                                  settings: { 'api_key' => 'chave-da-conta-teste' })
 

@@ -10,6 +10,8 @@ RSpec.describe Autonomia::Agents::Contratados::BaseEmDiaJob do
 
   before do
     enable_test_encryption!
+    # A chave da conta é de mentira: a validação do gancho não chama o provedor.
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     ligar(account)
   end
 

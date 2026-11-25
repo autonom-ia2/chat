@@ -60,6 +60,7 @@ RSpec.describe Autonomia::Agents::Contratados::Contratar do
   end
 
   it 'a versão da base vai por jsonb_set, sem regravar o resto do config' do
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
                                settings: { 'api_key' => 'chave-da-conta-teste' })
     pasta = Pathname.new(Dir.mktmpdir)
