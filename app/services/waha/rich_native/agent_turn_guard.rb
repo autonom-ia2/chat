@@ -124,9 +124,15 @@ module Waha::RichNative::AgentTurnGuard
   end
 
   # As mensagens do cliente do turno, da janela crua (antes do filtro do histórico).
+  # #3211 (P1, `conversa_espera_a_fala`): o turno é a rajada do cliente (Autonomia::Agents::Operate::RajadaDoCliente), a
+  # mesma que vira a pergunta: mensagem automática do Chatwoot (template) e pedaço de continuação não a fecham. Sem isso,
+  # uma rajada só de bolhas seguida de uma delas deixava o turno do guard vazio, ele não calava e a IA era chamada com a
+  # pergunta vazia. Com a opção desligada (a Lia), o turno de sempre.
   def c2y_turn_incoming
     recent_messages
     messages = Array(@c2y_raw_messages)
+    return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(messages) if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+
     last_reply = messages.rindex { |message| !message.incoming? }
     window = last_reply ? messages[(last_reply + 1)..] : messages
     Array(window).select(&:incoming?)

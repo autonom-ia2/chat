@@ -55,3 +55,5 @@ ENV `AI_AGENT_CONVERSA_PADRAO_LIGADO`: ausente ou `true`, a chave ausente no age
 `false`, a chave ausente vale **desligada** em todo agente: volta o comportamento do #3213. Para voltar atrás, grave
 `AI_AGENT_CONVERSA_PADRAO_LIGADO=false` na variável do serviço e reinicie os processos (web e workers). Não há escrita no
 banco nem deploy de código. Valor gravado num agente continua mandando; a Lia não muda.
+
+Valor vazio (`AI_AGENT_CONVERSA_PADRAO_LIGADO=`) também desliga o padrão, como `false` e `0`.
