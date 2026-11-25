@@ -1,37 +1,37 @@
-# O COMPARATIVO EM PDF do Seguro Viagem (#3211): uma folha A4 paisagem, um plano por coluna, para o cliente ler com
-# calma o que a Lia disse na conversa. Sai da cotação guardada (`planos` no formato de `Planos.de`) e não lê banco nem
-# chama a seguradora.
+# O COMPARATIVO EM PDF do Seguro Viagem (#3211): o material que o cliente guarda e mostra em casa, com a marca da
+# Universal Assistance e a corretora como quem envia. Sai da cotação guardada (`planos` no formato de `Planos.de`) e
+# não lê banco nem chama a seguradora. A4 em pé:
+# 1. capa: faixa da marca, o plano mais recomendado em destaque, os dados da viagem e o resumo com os rótulos;
+# 2. "Compare as opções": um cartão por plano (`Comparacao`), sem cartão partido entre páginas;
+# 3. "Antes de contratar": os pontos importantes e o próximo passo.
+# Os rótulos (mais econômica, mais recomendada, maior cobertura) seguem a regra fixa de `Rotulos`.
 #
 # O QUE NUNCA ENTRA (R2): comissão, markup, ranking, `id_produto`, o código interno do plano (`P1`) e dado pessoal.
-# `Planos.de` já não traz comissão nem ranking; aqui só se lê a lista branca de chaves abaixo. Do cliente só as idades.
-#
-# As cores e a fonte são as dos outros PDFs do produto (`Exportacao::Pdf::COR`, `Relatorios::Pdf::FONTES`).
+# `Planos.de` já não traz comissão nem ranking; aqui só se leem as chaves que os blocos citam. Do cliente só as idades.
 class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
+  include Desenho
+  include Capa
+  include Resumo
+  include Comparacao
+  include CartaoDoPlano
+  include AntesDeContratar
+
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
-  COR = Autonomia::Desempenho::Exportacao::Pdf::COR
-  FONTES = Relatorios::Pdf::FONTES
-  MARGEM = 32
-  LARGURA_DO_ROTULO = 210
-  SEM_VALOR = '—'.freeze
-  TEXTOS = {
-    titulo: 'Comparativo de seguro viagem', destino: 'Destino', destinos: 'Destinos', datas: 'Período', viajantes: 'Viajantes',
-    plano: 'Plano', total: 'Preço total', por_pessoa: 'Preço por pessoa', parcelas: 'Parcelamento',
-    cotado_em: 'Cotação de'
-  }.freeze
+  TITULO = 'Seguro Viagem: comparativo de planos'.freeze
 
   def initialize(cotacao:, nome_corretora:)
     @cotacao = cotacao
-    @nome_corretora = nome_corretora.to_s
+    @nome_corretora = nome_corretora.to_s.strip
   end
 
   # -> os bytes do PDF (`%PDF-`).
   def render
-    @doc = Prawn::Document.new(page_size: 'A4', page_layout: :landscape, margin: MARGEM,
-                               info: { Title: TEXTOS[:titulo] })
+    @doc = Prawn::Document.new(page_size: 'A4', page_layout: :portrait, margin: 0, info: { Title: TITULO })
     registrar_fontes
-    cabecalho
-    tabela
-    rodape
+    capa
+    comparacao
+    antes_de_contratar
+    rodapes
     @doc.render
   end
 
@@ -41,8 +41,16 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @planos ||= @cotacao.planos.to_a
   end
 
+  def rotulos
+    @rotulos ||= Rotulos.de(planos)
+  end
+
   def pedido
     @pedido ||= @cotacao.pedido.to_h
+  end
+
+  def idades
+    @cotacao.idades
   end
 
   # O nome por extenso (`destinos_nomes`); cotação antiga, sem ele, mostra as siglas.
@@ -51,103 +59,93 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     nomes.presence || pedido['destinos'].to_a
   end
 
-  def registrar_fontes
-    @doc.font_families.update(
-      'Inter' => { normal: FONTES.join('Inter-Regular.ttf').to_s, medium: FONTES.join('Inter-Medium.ttf').to_s,
-                   semibold: FONTES.join('Inter-SemiBold.ttf').to_s, bold: FONTES.join('Inter-Bold.ttf').to_s }
-    )
-    @doc.font 'Inter'
+  def destinos_texto
+    destinos.to_sentence(words_connector: ', ', two_words_connector: ' e ', last_word_connector: ' e ')
   end
 
-  def cabecalho
-    @doc.fill_color COR[:navy]
-    @doc.text @nome_corretora, size: 11, style: :semibold unless @nome_corretora.empty?
-    @doc.text TEXTOS[:titulo], size: 18, style: :bold
-    @doc.move_down 6
-    @doc.fill_color COR[:tinta]
-    linhas_do_pedido.each { |rotulo, valor| @doc.text "#{rotulo}: #{valor}", size: 9.5 }
-    @doc.move_down 12
+  def viajantes_texto
+    idades.size == 1 ? '1 viajante' : "#{idades.size} viajantes"
   end
 
-  def linhas_do_pedido
-    [[destinos.size == 1 ? TEXTOS[:destino] : TEXTOS[:destinos], destinos.join(', ')],
-     [TEXTOS[:datas], "#{data(pedido['data_saida'])} a #{data(pedido['data_retorno'])}"],
-     [TEXTOS[:viajantes], @cotacao.idades.map { |idade| "#{idade} #{anos(idade)}" }.join(', ')]]
+  def idades_texto
+    lista = idades.map(&:to_s).to_sentence(words_connector: ', ', two_words_connector: ' e ', last_word_connector: ' e ')
+    "#{lista} #{idades.size == 1 && idades.first == 1 ? 'ano' : 'anos'}"
   end
 
-  def tabela
-    linhas = [cabecalho_da_tabela, linha_total, linha_por_pessoa, linha_parcelas, *linhas_de_coberturas]
-    @doc.table(linhas, header: true, width: @doc.bounds.width, column_widths: larguras,
-                       cell_style: { size: 8.5, padding: [5, 6], borders: [:bottom], border_width: 0.5,
-                                     border_color: COR[:linha], text_color: COR[:tinta] }) do |tabela|
-      tabela.row(0).style(background_color: COR[:navy], text_color: COR[:branco], font_style: :semibold)
-      tabela.column(0).style(font_style: :medium)
+  def saida
+    data(pedido['data_saida'])
+  end
+
+  def retorno
+    data(pedido['data_retorno'])
+  end
+
+  def periodo_texto
+    return SEM_VALOR if saida.nil? || retorno.nil?
+
+    dias = (retorno - saida).to_i + 1
+    "#{saida.strftime('%d/%m')} a #{retorno.strftime('%d/%m/%Y')} · #{dias} #{dias == 1 ? 'dia' : 'dias'}"
+  end
+
+  def parcelas_texto(parcelas)
+    parcelas.to_i.positive? ? "até #{parcelas.to_i}x" : SEM_VALOR
+  end
+
+  def parcelas_maximas
+    parcelas_texto(planos.map { |plano| plano['max_parcelas'].to_i }.max)
+  end
+
+  def preco(plano)
+    plano['preco_total'].blank? ? SEM_VALOR : SeguroViagem::Dinheiro.brl(plano['preco_total'])
+  end
+
+  # -> ["47 anos: R$ 120,00", ...] na ordem das idades.
+  def precos_por_idade(plano)
+    SeguroViagem::Faixas.precos_por_pessoa(plano, idades).each_with_index.map do |valor, indice|
+      idade = idades[indice]
+      "#{idade} #{idade == 1 ? 'ano' : 'anos'}: #{valor.nil? ? SEM_VALOR : SeguroViagem::Dinheiro.brl(valor)}"
     end
   end
 
-  def larguras
-    resto = (@doc.bounds.width - LARGURA_DO_ROTULO) / [planos.size, 1].max
-    [LARGURA_DO_ROTULO, *Array.new(planos.size, resto)]
-  end
-
-  def cabecalho_da_tabela
-    [TEXTOS[:plano], *planos.map { |plano| plano['nome'].to_s }]
-  end
-
-  def linha_total
-    [TEXTOS[:total], *planos.map { |plano| dinheiro(plano['preco_total']) }]
-  end
-
-  def linha_por_pessoa
-    [TEXTOS[:por_pessoa], *planos.map { |plano| por_pessoa(plano) }]
-  end
-
-  def por_pessoa(plano)
-    precos = SeguroViagem::Faixas.precos_por_pessoa(plano, @cotacao.idades)
-    precos.each_with_index.map { |preco, indice| "#{@cotacao.idades[indice]} #{anos(@cotacao.idades[indice])}: #{dinheiro(preco)}" }.join("\n")
-  end
-
-  def linha_parcelas
-    [TEXTOS[:parcelas], *planos.map { |plano| plano['max_parcelas'].present? ? "até #{plano['max_parcelas']}x" : SEM_VALOR }]
-  end
-
-  # Uma linha por cobertura, pela união dos `id_beneficio` na ordem em que aparecem; "—" onde o plano não a tem.
-  def linhas_de_coberturas
-    nomes = {}
-    planos.each { |plano| plano['coberturas'].to_a.each { |cobertura| nomes[cobertura['id_beneficio']] ||= cobertura['nome'].to_s } }
-    nomes.map do |id, nome|
-      [nome, *planos.map { |plano| valor_da_cobertura(plano, id) }]
-    end
-  end
-
-  def valor_da_cobertura(plano, id)
-    cobertura = plano['coberturas'].to_a.find { |item| item['id_beneficio'] == id }
-    cobertura.present? && cobertura['valor'].present? ? cobertura['valor'].to_s : SEM_VALOR
-  end
-
-  def rodape
-    @doc.move_down 10
-    @doc.fill_color COR[:apoio]
-    @doc.text "#{TEXTOS[:cotado_em]} #{dia_da_cotacao}", size: 8
-  end
-
-  def anos(idade)
-    idade == 1 ? 'ano' : 'anos'
-  end
-
-  # O dia da cotação no fuso da conta (o do servidor é UTC e viraria o dia perto da meia-noite).
-  def dia_da_cotacao
+  # A cotação vale para o dia em que foi feita, no fuso da conta (o do servidor é UTC e viraria o dia perto da
+  # meia-noite); é a mesma regra de `CotacaoDeViagem#do_dia?`.
+  def momento_da_cotacao
     fuso = Crm::Timezone::Resolver.new(account: @cotacao.account).zone_or_default
-    @cotacao.created_at.in_time_zone(fuso).strftime('%d/%m/%Y')
+    @cotacao.created_at.in_time_zone(fuso)
   end
 
-  def dinheiro(valor)
-    valor.blank? ? SEM_VALOR : SeguroViagem::Dinheiro.brl(valor)
+  def dia_da_cotacao
+    momento_da_cotacao.strftime('%d/%m/%Y')
+  end
+
+  def valida_ate
+    "#{dia_da_cotacao}, 23h59"
+  end
+
+  def preparada_por
+    @nome_corretora.empty? ? nil : "Cotação preparada por #{@nome_corretora}"
   end
 
   def data(texto)
-    Date.iso8601(texto.to_s).strftime('%d/%m/%Y')
+    Date.iso8601(texto.to_s)
   rescue Date::Error
-    texto.to_s
+    nil
+  end
+
+  def rodapes
+    total = @doc.page_count
+    (1..total).each do |pagina|
+      @doc.go_to_page(pagina)
+      rodape_da_pagina("Página #{pagina} de #{total}")
+    end
+  end
+
+  def rodape_da_pagina(numero)
+    @doc.stroke_color cor(:linha)
+    @doc.line_width 0.6
+    @doc.stroke_horizontal_line MARGEM, FOLHA[:largura] - MARGEM, at: y_de(FOLHA[:altura] - 34)
+    esquerda = [preparada_por, 'Planos Universal Assistance'].compact.join(' · ')
+    escrever(esquerda, at: [MARGEM, FOLHA[:altura] - 27], largura: 380, size: 7, cor: :fraca)
+    escrever(numero, at: [FOLHA[:largura] - MARGEM - 100, FOLHA[:altura] - 27], largura: 100, size: 7, cor: :fraca, align: :right)
   end
 end
