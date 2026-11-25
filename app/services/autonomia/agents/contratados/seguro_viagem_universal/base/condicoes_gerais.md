@@ -1524,121 +1524,65 @@ Fonte: Condições Gerais (PDF), p. 56 a 58.
 
 1.2. Após conclusão do tratamento, ou esgotados os recursos terapêuticos disponíveis para recuperação, tendo sido constatada e avaliada a invalidez permanente quando da alta médica definitiva, a Seguradora pagará a indenização, nas hipóteses e nos graus estabelecidos na tabela seguinte, sendo que eventual grau de invalidez (percentagem relativa à perda ou redução da função de um membro ou órgão) já existente antes de acidente coberto será deduzido do grau de invalidez definitivo, apurado em consequência desse acidente coberto.
 
-INVALIDEZ TOTAL | INVALIDEZ PARCIAL DIVERSAS
-% SOBRE O | % SOBRE O
-CAPITAL | CAPITAL
-DISCRIMINAÇÃO DA INVALIDEZ | DISCRIMINAÇÃO DA INVALIDEZ
-SEGURADO | SEGURADO
-INDIVIDUAL | INDIVIDUAL
-Perda total da visão de ambos os | Perda total da visão de um
-100 | 30
-olhos | olho
+INVALIDEZ TOTAL
+DISCRIMINAÇÃO DA INVALIDEZ | % SOBRE O CAPITAL SEGURADO INDIVIDUAL
+Perda total da visão de ambos os olhos | 100
+Perda total do uso de ambos os membros superiores | 100
+Perda total do uso de ambos os membros inferiores | 100
+Perda total do uso de ambas as mãos | 100
+Perda total do uso de um membro superior e um membro inferior | 100
+Perda total do uso de uma das mãos e de um dos pés | 100
+Perda total do uso de ambos os pés | 100
+Alienação mental total e incurável | 100
 
-Perda total da visão de um Perda total do uso de ambos os
+INVALIDEZ PARCIAL DIVERSAS
+DISCRIMINAÇÃO DA INVALIDEZ | % SOBRE O CAPITAL SEGURADO INDIVIDUAL
+Perda total da visão de um olho | 30
+Perda total da visão de um olho, quando o segurado já não tiver a outra vista | 70
+Surdez total incurável de ambos os ouvidos | 40
+Surdez total incurável de um dos ouvidos | 20
+Mudez incurável | 50
+Fratura não consolidada do maxilar inferior | 20
+Imobilidade do segmento cervical da coluna vertebral | 20
+Imobilidade do segmento tóraco-lombo-sacro da coluna vertebral | 25
 
-100 | olho, quando o segurado já | 70
+INVALIDEZ PARCIAL MEMBROS SUPERIORES
+DISCRIMINAÇÃO DA INVALIDEZ | % SOBRE O CAPITAL SEGURADO INDIVIDUAL
+Perda total do uso de um dos membros superiores | 70
+Perda total do uso de uma das mãos | 60
+Fratura não consolidada de um dos úmeros | 50
+Fratura não consolidada de um dos segmentos rádio-ulnares | 30
+Anquilose total de um dos ombros | 25
+Anquilose total de um dos cotovelos | 25
+Anquilose total de um dos punhos | 20
+Perda total do uso de um dos polegares, inclusive o metacarpiano | 25
+Perda total do uso de um dos polegares, exclusive o metacarpiano | 18
+Perda total do uso da falange distal do polegar | 9
+Perda total do uso de um dos dedos indicadores | 15
+Perda total do uso de um dos dedos mínimos ou um dos dedos médios | 12
+Perda total do uso de um dos dedos anulares | 9
+Perda total do uso de qualquer falange, excluídas as do polegar: indenização equivalente a 1/3 do valor do dedo respectivo | -
 
-membros superiores não tiver a outra vista
-
-Perda total do uso de ambos os | Surdez total incurável de
-100 | 40
-membros inferiores | ambos os ouvidos
-Perda total do uso de ambas as | Surdez total incurável de um
-100 | 20
-mãos | dos ouvidos
-
-Perda total do uso de um membro
-
-100 | Mudez incurável | 50
-
-superior e um membro inferior
-
-Perda total do uso de uma das | Fratura não consolidada do
-100 | 20
-mãos e de um dos pés | maxilar inferior
-Perda total do uso de ambos os | Imobilidade do segmento
-
-100
-
-pés | cervical da coluna vertebral | 20
-
-Imobilidade do segmento
-
-Alienação mental total e incurável | 100 | tóraco-lombo-sacro da coluna | 25
-
-vertebral
-
-INVALIDEZ PARCIAL MEMBROS SUPERIORES | INVALIDEZ PARCIAL MEMBROS INFERIORES
-% SOBRE O | % SOBRE O
-CAPITAL | CAPITAL
-DISCRIMINAÇÃO DA INVALIDEZ | DISCRIMINAÇÃO DA INVALIDEZ
-SEGURADO | SEGURADO
-INDIVIDUAL | INDIVIDUAL
-Perda total do uso de um dos | Perda total do uso de um dos
-70 | 70
-membros superiores | membros inferiores
-Perda total do uso de uma das | Perda total do uso de um dos
-60 | 50
-mãos | pés
-Fratura não consolidada de um | Fratura não consolidada de um
-50 | 50
-dos úmeros | fêmur
-Fratura não consolidada de um | Fratura não consolidada de um
-30 | 25
-dos segmentos rádio-ulnares | dos segmentos tíbio-peroneiros
-
-Fratura não consolidada da
-
-Anquilose total de um dos ombros | 25 | 20
-
-rótula
-
-Anquilose total de um dos | Fratura não consolidada de um
-25 | 20
-cotovelos | pé
-
-Anquilose total de um dos
-
-Anquilose total de um dos punhos | 20 | 20
-
-joelhos Perda total do uso de um dos Anquilose total de um dos
-
-polegares, inclusive o | 25 | 20
-
-tornozelos metacarpiano Perda total do uso de um dos
-
-polegares, exclusive o | 18 | Anquilose total de um quadril | 20
-
-metacarpiano Perda parcial de um dos pés, Perda total do uso da falange
-
-9 | isto é, perda de todos os dedos | 25
-
-distal do polegar e de uma parte do mesmo pé Perda total do uso de um dos
-
-15 | Amputação do primeiro dedo | 10
-
-dedos indicadores Perda total do uso de um dos Amputação de qualquer outro
-
-dedos mínimos ou um dos dedos | 12 | 3
-
-dedo médios Perda total do uso de uma falange do primeiro dedo, Perda total do uso de um dos
-
-9 | indenização equivalente a ½ e | -
-
-dedos anulares dos demais dedos, equivalente a 1/3 do respectivo dedo Encurtamento de um dos membros inferiores 15
-
-Perda total do uso de qualquer | * de 5 (cinco) centímetros ou
-falange, excluídas as do polegar: | mais
-
-- 10
-
-indenização equivalente a 1/3 do | * de 4 (quatro) centímetros
-
-6
-
-valor do dedo respectivo | * de 3 (três) centímetros
-
-- * menos de 3 (três) centímetros: sem indenização
+INVALIDEZ PARCIAL MEMBROS INFERIORES
+DISCRIMINAÇÃO DA INVALIDEZ | % SOBRE O CAPITAL SEGURADO INDIVIDUAL
+Perda total do uso de um dos membros inferiores | 70
+Perda total do uso de um dos pés | 50
+Fratura não consolidada de um fêmur | 50
+Fratura não consolidada de um dos segmentos tíbio-peroneiros | 25
+Fratura não consolidada da rótula | 20
+Fratura não consolidada de um pé | 20
+Anquilose total de um dos joelhos | 20
+Anquilose total de um dos tornozelos | 20
+Anquilose total de um quadril | 20
+Perda parcial de um dos pés, isto é, perda de todos os dedos e de uma parte do mesmo pé | 25
+Amputação do primeiro dedo | 10
+Amputação de qualquer outro dedo | 3
+Perda total do uso de uma falange do primeiro dedo, indenização equivalente a ½ e dos demais dedos, equivalente a 1/3 do respectivo dedo | -
+Encurtamento de um dos membros inferiores
+* de 5 (cinco) centímetros ou mais | 15
+* de 4 (quatro) centímetros | 10
+* de 3 (três) centímetros | 6
+* menos de 3 (três) centímetros: sem indenização | -
 
 1.3. Não ocorrendo a perda por completo das funções do membro ou órgão lesado, a indenização por perda parcial será calculada pela aplicação, à percentagem prevista na tabela acima para sua perda total, do grau de redução funcional apresentado. Na falta de indicação exata do grau de redução funcional apresentado, e sendo o referido grau classificado apenas como máximo, médio ou mínimo, a indenização será calculada, respectivamente, na base das percentagens de 75%, 50% e 25%.
 
@@ -2830,9 +2774,9 @@ Fonte: Condições Gerais (PDF), p. 98.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
-### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 1. RISCOS COBERTOS (parte 1 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 1. RISCOS COBERTOS
 
-Fonte: Condições Gerais (PDF), p. 99 a 103.
+Fonte: Condições Gerais (PDF), p. 99.
 
 1.1. Se ratificada no Bilhete, esta cobertura garante a indenização das despesas médico-hospitalares complementares do Segurado, ou seja, as despesas efetuadas pelo Segurado para seu atendimento não cobertas pela cobertura de Despesas Médico-Hospitalares em viagem nacional (DMH-VN), desde que realizadas sob orientação médica, ocasionadas por acidente pessoal ou enfermidade súbita e aguda ocorrida durante o período de viagem nacional e uma vez constatada a sua saída de sua cidade de domicílio, respeitado o limite do Capital Segurado, as definições e limites das Condições Contratuais.
 
@@ -2852,7 +2796,11 @@ a) Emergência: situação onde o Segurado esteja em circunstância que exige um
 
 b) Urgência: situação onde o Segurado necessita de atendimento, não caracterizado como risco imediato de morte, podendo assim aguardar o atendimento de casos emergenciais, conforme critério estabelecido pelo estabelecimento médico em que o cliente estiver sendo atendido.
 
-2. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 2. RISCOS EXCLUÍDOS
+
+Fonte: Condições Gerais (PDF), p. 100 a 102.
+
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
 
 2.1. Os eventos ou crises decorrentes de doenças ou lesões preexistentes ou crônicas;
 
@@ -2908,17 +2856,43 @@ pelo acidente ou pela doença súbita;
 
 2.26. Da prática dos esportes e atividades listadas a seguir:
 
-### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 1. RISCOS COBERTOS (parte 2 de 2)
+a. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos;
+b. “Rafting” com grau de dificuldade 4 ou acima;
+c. Acrobacia circense;
+d. Asa delta ou parapente;
+e. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição;
+f. Aviação Esportiva;
+g. Caça ou tiro esportivo;
+h. Caminhadas ou passeios acima de 3.000 metros de altitude;
+i. Disputas ou campeonatos interescolares ou acadêmicos;
+j. Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+k. Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada;
+l. Esportes de luta, como, por exemplo, boxe e artes marciais;
+m. Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs;
+n. Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado;
+o. Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem;
+p. Paraquedismo, “skydiving” ou “ bungee jumping”;
+q. Passeios a cavalo, equitação, polo e outras atividades equestres;
+r. Práticas ou Passeio de Balão. Qualquer atividade que envolva armas;
+s. Rugby;
+t. Scuba Diving;
+u. Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”;
+v. Velejar em alto-mar;
+w. Viagens para áreas remotas ou particularmente perigosas, com ou sem guia.
 
-Fonte: Condições Gerais (PDF), p. 99 a 103.
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 3. CARÊNCIA
 
-a. “Canyoning”, espeleologia ou “spelunking”, “base jumping” ou salto de penhascos; b. “Rafting” com grau de dificuldade 4 ou acima; c. Acrobacia circense; d. Asa delta ou parapente; e. Automobilismo e motociclismo, motocross, boogies, mesmo que em competição; f. Aviação Esportiva; g. Caça ou tiro esportivo; h. Caminhadas ou passeios acima de 3.000 metros de altitude; i. Disputas ou campeonatos interescolares ou acadêmicos; j. Disputas em veículos automotores, incluindo treinos preparatórios ou de classificação;
+Fonte: Condições Gerais (PDF), p. 102.
 
-k. Esportes de inverno, incluindo, mas não limitado, tobogãs, trenós, “bobsleigh”, hóquei no gelo, esqui aquático, wave runner, quadrícículos de passeio, moto de neve (“snow mobiling”) e “heli-skiing” fora de pista regulamentada; l. Esportes de luta, como, por exemplo, boxe e artes marciais; m. Esportes de resistência e/ou alta exigência física, como, por exemplo, maratonas, triatlos ou biatlohs; n. Mergulho, exceto se o Segurado tem um “PADI certification” (ou qualificação similar), ou se o Segurado mergulha com a supervisão de um instrutor qualificado. No caso das exceções, o Segurado estará coberto se respeitar a profundidade máxima especificada na sua certificação ou 12(doze) metros, o que for menor, e estiver acompanhado; o. Montanhismo, rapel, ou escalada ao ar livre, que impliquem na utilização de equipamentos específicos, incluindo, mas não limitado a, “crampons”, picaretas, parafusos, cordas e outros equipamentos de ancoragem; p. Paraquedismo, “skydiving” ou “ bungee jumping”; q. Passeios a cavalo, equitação, polo e outras atividades equestres; r. Práticas ou Passeio de Balão. Qualquer atividade que envolva armas; s. Rugby; t. Scuba Diving; u. Surf, Windsurf, Kite surf, esqui aquático ou “Jet ski”; v. Velejar em alto-mar; w. Viagens para áreas remotas ou particularmente perigosas, com ou sem guia.
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
 
-3. CARÊNCIA Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) — 4. FRANQUIA
 
-4. FRANQUIA A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções: Plano de Franquia | Franquia em % dos prejuízos
+Fonte: Condições Gerais (PDF), p. 102 a 103.
+
+A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
 
 A | 0%
 B | 5%
@@ -3172,7 +3146,7 @@ Fonte: Condições Gerais (PDF), p. 110.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
-### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 1. RISCOS COBERTOS (parte 1 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 1. RISCOS COBERTOS
 
 Fonte: Condições Gerais (PDF), p. 111 a 113.
 
@@ -3180,181 +3154,186 @@ Fonte: Condições Gerais (PDF), p. 111 a 113.
 
 1.2. Para fins da presente extensão de cobertura, consideram‐se modalidades de esportes cobertos:
 
-Acrobacias | Caminhadas - até 6.000 metros | Escalada - interior
-Aeróbica | Camping - até 3.000 metros | Esgrima
-Air guitar | Campo de tiro / tiro desportivo | Espeleologia
-Andar a pé até 6.000 metros - em rotas conhecidas - sem | Canoa polinésia - interiores ou águas | Espeleologia - passeios / atração
-cobertura onde equipamento de escalada seja necessário | costeiras | turística
-Andar com pernas de pau | Canoagem | Esqui / Snowboard - dry slope
-
-Esqui / Snowboard - em uma pista
-
-Artes marciais - Judô, Karatê | Canoagem marítima
-
-ou parque dentro de um resort Esqui / Snowboard - terreno no
-
-Artes marciais - Kickboxing | Canyon swing | interior do resort, excluindo
-
-acrobacias
-
-Artes marciais - sem contato | Canyoning | Esqui Alpino
-
-Esqui aquático - com os pés
-
-Artes marciais - Treinamento | Capoeira
-
-descalços
-
-Atividades equestres | Ciclismo | Esqui aquático - excluindo saltos
-
-Ciclismo - incidente de viagem; passeio
-
-Atletismo | independente; turnê organizada, até | Esqui na areia
-
-4.000 metros de altitude Esquiar - cross country / esqui
-
-Badminton | Corfebol
-
-nórdico em trilhas marcadas
-
-Ballet / Balé Clássico | Corrida - até distância da maratona | Esquiar - snow blading
-Balonismo | Corrida - até distância da meia maratona | Frisbee
-
-Corrida de montanha - sem equipamento
-
-Basquetebol | Futebol
-
-de escalada Corrida de resistência ao ar livre - maior
-
-Beisebol | Futebol americano
-
-ou igual a ultra distância Corrida de resistência ao ar livre - menor
-
-Boating - águas costeiras (em white water) | Ginástica
-
-que ultra distância
-
-Boating - além de 3 milhas náuticas | Corridas de obstáculo | Golfe
-Boliche | Cricket | Handebol
-Boliche - gramado / dez pinos | Croquet | Hockey (campo)
-Bowling | Curling | Hóquei no gelo
-
-Dança - balé, baile de salão, capoeira,
-
-Buggy em dunas | Hóquei sobre patins
-
-salsa, dança interpretativa
-
-Caiaque - águas internas e costeiras até 3 milhas náuticas, | Hunting / Caça Desportiva -
-
-Dardos
-
-classes 1-5 | Excluindo Big Game
-Caiaque (além de 3 milhas náuticas) | Dragon boating | Iatismo - águas costeiras
-Caiaque (mar) | Empinar pipa | Iatismo - fora de águas costeiras
-
-Caiaque em corredeira - interior / águas costeiras até 3 milhas
-
-Equitação | Jet boat
-
-náuticas, classes 1-3 Equitação - adestramento, salto,
-
-Caminhada em geleiras | Jet ski
-
-eventing Equitação - lazer / passeio / Jogos de
-
-Caminhada pela floresta/mata - até 6.000 metros | Kart
-
-Guerra - jogos on-line
-
-Caminhadas | Escalada - boulder | Tênis de mesa
-Kite Boarding | Quad bike | Tiro ao pombo de argila
-Kite Boarding - em terra | Queimada | Tiro com arco / Arco e flecha
-Kite Boarding - na água | Rafting / Cave tubing | Tough Mudder
-Kite buggy | Rafting em corredeira - classes 1-3 | Trampolim acrobático
-
-Treinamento com pesos /
-
-Kite surf | Raquetebol
-
-Musculação - powerlifting Treinamento da ginástica /
-
-Kite wing - terra, água | Remo
-
-academia Remo - águas interiores / costeiras - sem
-
-Lacrosse | Treino de fitness
-
-corredeiras Trekking até 6.000 metros - em rotas conhecidas - sem cobertura
-
-Lutas medievais simulação | River boarding - classes 1-3
-
-onde equipamento de escalada seja necessário
-
-Mergulho - até 50 metros | Rounders | Trenós puxados por cães
-
-Mergulho - curso para aprender a mergulhar / mergulho com
-
-Rugby - league / union | Tubing em rios
-
-instrutor qualificado
-
-Mergulho com uso de Snorkel | Safari | Tubing na neve
-
-Natação - piscina; local fechado, águas internas e costeiras até 3
-
-Safari Aéreo | Tuk Tuk - como passageiro
-
-milhas náuticas
-
-Netball | Sandboard | Ultimate frisbee
-Orientação | Sinuca | Vela - além de 3 milhas náuticas
-Skateboarding - rampa / half pipe / Skate | Vela - interior / águas costeiras até
-
+Acrobacias
+Aeróbica
+Air guitar
+Andar a pé até 6.000 metros - em rotas conhecidas - sem cobertura onde equipamento de escalada seja necessário
+Andar com pernas de pau
+Artes marciais - Judô, Karatê
+Artes marciais - Kickboxing
+Artes marciais - sem contato
+Artes marciais - Treinamento
+Atividades equestres
+Atletismo
+Badminton
+Ballet / Balé Clássico
+Balonismo
+Caminhadas - até 6.000 metros
+Camping - até 3.000 metros
+Campo de tiro / tiro desportivo
+Canoa polinésia - interiores ou águas costeiras
+Canoagem
+Canoagem marítima
+Canyon swing
+Canyoning
+Capoeira
+Ciclismo
+Ciclismo - incidente de viagem; passeio independente; turnê organizada, até 4.000 metros de altitude
+Corfebol
+Corrida - até distância da maratona
+Corrida - até distância da meia maratona
+Escalada - interior
+Esgrima
+Espeleologia
+Espeleologia - passeios / atração turística
+Esqui / Snowboard - dry slope
+Esqui / Snowboard - em uma pista ou parque dentro de um resort
+Esqui / Snowboard - terreno no interior do resort, excluindo acrobacias
+Esqui Alpino
+Esqui aquático - com os pés descalços
+Esqui aquático - excluindo saltos
+Esqui na areia
+Esquiar - cross country / esqui nórdico em trilhas marcadas
+Esquiar - snow blading
+Frisbee
+Basquetebol
+Beisebol
+Boating - águas costeiras (em white water)
+Boating - além de 3 milhas náuticas
+Boliche
+Boliche - gramado / dez pinos
+Bowling
+Buggy em dunas
+Caiaque - águas internas e costeiras até 3 milhas náuticas, classes 1-5
+Caiaque (além de 3 milhas náuticas)
+Caiaque (mar)
+Caiaque em corredeira - interior / águas costeiras até 3 milhas náuticas, classes 1-3
+Caminhada em geleiras
+Caminhada pela floresta/mata - até 6.000 metros
+Caminhadas
+Kite Boarding
+Kite Boarding - em terra
+Kite Boarding - na água
+Kite buggy
+Kite surf
+Kite wing - terra, água
+Lacrosse
+Lutas medievais simulação
+Mergulho - até 50 metros
+Mergulho - curso para aprender a mergulhar / mergulho com instrutor qualificado
+Mergulho com uso de Snorkel
+Natação - piscina; local fechado, águas internas e costeiras até 3 milhas náuticas
+Netball
+Orientação
 Outward Bound
-
-Park / street | 3 milhas náuticas
-Paintball | Skidoos | Via ferrata
-
-Voar (como passageiro em um Skijöring / esqui arrastado por cavalo ou
-
-Passageiro em voo comercial agendado | avião ou helicóptero licenciado
-
-cães regulares ou fretados) Voar (como passageiro em uma
-
-Passeios de Banana Boat | Sledding / tobogã
-
-aeronave de pequeno porte)
-
-Passeios de camelo ou elefante | Snow mobiling | Voleibol
-Passeios de Segway | Snow rafting | Wake skating
-Passeios de trenó | Softball | Wakeboarding - excluindo saltos
-Patinação | Squash | Windsurf
-
-Windsurf - águas internas e
-
-Patinação in-line | Stand up paddle surf
-
-costeiras até 3 milhas náuticas Yoga - na sala de aula, sozinho, em
-
-Patinação no gelo - ao ar livre | Stoolball
-
-casa
-
-Patinação no gelo - interior | Surf Terrestre | Yoga - professor
-Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar | Surfboat | Zip line
-Pesca em alto mar | Surfe | Zorbing
-Pesca Esportiva com anzol | Tchoukball | Tênis
-
+Paintball
+Passageiro em voo comercial agendado
+Passeios de Banana Boat
+Passeios de camelo ou elefante
+Passeios de Segway
+Passeios de trenó
+Patinação
+Corrida de montanha - sem equipamento de escalada
+Corrida de resistência ao ar livre - maior ou igual a ultra distância
+Corrida de resistência ao ar livre - menor que ultra distância
+Corridas de obstáculo
+Cricket
+Croquet
+Curling
+Dança - balé, baile de salão, capoeira, salsa, dança interpretativa
+Dardos
+Dragon boating
+Empinar pipa
+Equitação
+Equitação - adestramento, salto, eventing
+Equitação - lazer / passeio / Jogos de Guerra - jogos on-line
+Escalada - boulder
+Quad bike
+Queimada
+Rafting / Cave tubing
+Rafting em corredeira - classes 1-3
+Raquetebol
+Remo
+Remo - águas interiores / costeiras - sem corredeiras
+River boarding - classes 1-3
+Rounders
+Rugby - league / union
+Safari
+Safari Aéreo
+Sandboard
+Sinuca
+Skateboarding - rampa / half pipe / Skate Park / street
+Skidoos
+Skijöring / esqui arrastado por cavalo ou cães
+Sledding / tobogã
+Snow mobiling
+Snow rafting
+Softball
+Squash
+Futebol
+Futebol americano
+Ginástica
+Golfe
+Handebol
+Hockey (campo)
+Hóquei no gelo
+Hóquei sobre patins
+Hunting / Caça Desportiva - Excluindo Big Game
+Iatismo - águas costeiras
+Iatismo - fora de águas costeiras
+Jet boat
+Jet ski
+Kart
+Tênis de mesa
+Tiro ao pombo de argila
+Tiro com arco / Arco e flecha
+Tough Mudder
+Trampolim acrobático
+Treinamento com pesos / Musculação - powerlifting
+Treinamento da ginástica / academia
+Treino de fitness
+Trekking até 6.000 metros - em rotas conhecidas - sem cobertura onde equipamento de escalada seja necessário
+Trenós puxados por cães
+Tubing em rios
+Tubing na neve
+Tuk Tuk - como passageiro
+Ultimate frisbee
+Vela - além de 3 milhas náuticas
+Vela - interior / águas costeiras até 3 milhas náuticas
+Via ferrata
+Voar (como passageiro em um avião ou helicóptero licenciado regulares ou fretados)
+Voar (como passageiro em uma aeronave de pequeno porte)
+Voleibol
+Wake skating
+Wakeboarding - excluindo saltos
+Windsurf
+Patinação in-line
+Patinação no gelo - ao ar livre
+Patinação no gelo - interior
+Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar
+Pesca em alto mar
+Pesca Esportiva com anzol
 Pólo aquático
+Stand up paddle surf
+Stoolball
+Surf Terrestre
+Surfboat
+Surfe
+Tchoukball
+Windsurf - águas internas e costeiras até 3 milhas náuticas
+Yoga - na sala de aula, sozinho, em casa
+Yoga - professor
+Zip line
+Zorbing
+Tênis
 
 1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e/ou de Despesas Odontológicas em viagem nacional (DO-VN). No caso de evento ocasionado pela prática amadora de um dos esportes cobertos, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
 
-### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 1. RISCOS COBERTOS (parte 2 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem Nacional – Extensão de Cobertura Para Esportes (DMHO-E-VN) — 2. RISCOS EXCLUÍDOS
 
-Fonte: Condições Gerais (PDF), p. 111 a 113.
+Fonte: Condições Gerais (PDF), p. 113.
 
-2. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e de Despesas Odontológicas em viagem nacional (DO-VN), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
 
 2.1. A prática de esporte profissional, independente do Segurado exercer também ou não outra atividade profissional;
 
@@ -3410,7 +3389,7 @@ Fonte: Condições Gerais (PDF), p. 114.
 
 Ratificam-se todos os demais termos das Condições Gerais deste seguro que não tenham sido alterados por estas Condições Especiais.
 
-### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 1. RISCOS COBERTOS (parte 1 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 1. RISCOS COBERTOS
 
 Fonte: Condições Gerais (PDF), p. 115 a 117.
 
@@ -3418,183 +3397,186 @@ Fonte: Condições Gerais (PDF), p. 115 a 117.
 
 1.2. Para fins da presente extensão de cobertura, consideram‐se modalidades de esportes cobertos:
 
-Acrobacias | Caminhadas - até 6.000 metros | Escalada - interior
-Aeróbica | Camping - até 3.000 metros | Esgrima
-Air guitar | Campo de tiro / tiro desportivo | Espeleologia
-Andar a pé até 6.000 metros - em rotas conhecidas - sem | Canoa polinésia - interiores ou águas | Espeleologia - passeios / atração
-cobertura onde equipamento de escalada seja necessário | costeiras | turística
-Andar com pernas de pau | Canoagem | Esqui / Snowboard - dry slope
-
-Esqui / Snowboard - em uma pista
-
-Artes marciais - Judô, Karatê | Canoagem marítima
-
-ou parque dentro de um resort Esqui / Snowboard - terreno no
-
-Artes marciais - Kickboxing | Canyon swing | interior do resort, excluindo
-
-acrobacias
-
-Artes marciais - sem contato | Canyoning | Esqui Alpino
-
-Esqui aquático - com os pés
-
-Artes marciais - Treinamento | Capoeira
-
-descalços
-
-Atividades equestres | Ciclismo | Esqui aquático - excluindo saltos
-
-Ciclismo - incidente de viagem; passeio
-
-Atletismo | independente; turnê organizada, até | Esqui na areia
-
-4.000 metros de altitude Esquiar - cross country / esqui
-
-Badminton | Corfebol
-
-nórdico em trilhas marcadas
-
-Ballet / Balé Clássico | Corrida - até distância da maratona | Esquiar - snow blading
-Balonismo | Corrida - até distância da meia maratona | Frisbee
-
-Corrida de montanha - sem equipamento
-
-Basquetebol | Futebol
-
-de escalada Corrida de resistência ao ar livre - maior
-
-Beisebol | Futebol americano
-
-ou igual a ultra distância Corrida de resistência ao ar livre - menor
-
-Boating - águas costeiras (em white water) | Ginástica
-
-que ultra distância
-
-Boating - além de 3 milhas náuticas | Corridas de obstáculo | Golfe
-Boliche | Cricket | Handebol
-Boliche - gramado / dez pinos | Croquet | Hockey (campo)
-Bowling | Curling | Hóquei no gelo
-
-Dança - balé, baile de salão, capoeira,
-
-Buggy em dunas | Hóquei sobre patins
-
-salsa, dança interpretativa
-
-Caiaque - águas internas e costeiras até 3 milhas náuticas, | Hunting / Caça Desportiva -
-
-Dardos
-
-classes 1-5 | Excluindo Big Game
-Caiaque (além de 3 milhas náuticas) | Dragon boating | Iatismo - águas costeiras
-Caiaque (mar) | Empinar pipa | Iatismo - fora de águas costeiras
-
-Caiaque em corredeira - interior / águas costeiras até 3 milhas
-
-Equitação | Jet boat
-
-náuticas, classes 1-3 Equitação - adestramento, salto,
-
-Caminhada em geleiras | Jet ski
-
-eventing Equitação - lazer / passeio / Jogos de
-
-Caminhada pela floresta/mata - até 6.000 metros | Kart
-
-Guerra - jogos on-line
-
-Caminhadas | Escalada - boulder | Tênis de mesa
-Kite Boarding | Quad bike | Tiro ao pombo de argila
-Kite Boarding - em terra | Queimada | Tiro com arco / Arco e flecha
-Kite Boarding - na água | Rafting / Cave tubing | Tough Mudder
-Kite buggy | Rafting em corredeira - classes 1-3 | Trampolim acrobático
-
-Treinamento com pesos /
-
-Kite surf | Raquetebol
-
-Musculação - powerlifting Treinamento da ginástica /
-
-Kite wing - terra, água | Remo
-
-academia Remo - águas interiores / costeiras - sem
-
-Lacrosse | Treino de fitness
-
-corredeiras Trekking até 6.000 metros - em rotas conhecidas - sem cobertura
-
-Lutas medievais simulação | River boarding - classes 1-3
-
-onde equipamento de escalada seja necessário
-
-Mergulho - até 50 metros | Rounders | Trenós puxados por cães
-
-Mergulho - curso para aprender a mergulhar / mergulho com
-
-Rugby - league / union | Tubing em rios
-
-instrutor qualificado
-
-Mergulho com uso de Snorkel | Safari | Tubing na neve
-
-Natação - piscina; local fechado, águas internas e costeiras até 3
-
-Safari Aéreo | Tuk Tuk - como passageiro
-
-milhas náuticas
-
-Netball | Sandboard | Ultimate frisbee
-Orientação | Sinuca | Vela - além de 3 milhas náuticas
-Skateboarding - rampa / half pipe / Skate | Vela - interior / águas costeiras até
-
+Acrobacias
+Aeróbica
+Air guitar
+Andar a pé até 6.000 metros - em rotas conhecidas - sem cobertura onde equipamento de escalada seja necessário
+Andar com pernas de pau
+Artes marciais - Judô, Karatê
+Artes marciais - Kickboxing
+Artes marciais - sem contato
+Artes marciais - Treinamento
+Caminhadas - até 6.000 metros
+Camping - até 3.000 metros
+Campo de tiro / tiro desportivo
+Canoa polinésia - interiores ou águas costeiras
+Canoagem
+Canoagem marítima
+Canyon swing
+Canyoning
+Capoeira
+Escalada - interior
+Esgrima
+Espeleologia
+Espeleologia - passeios / atração turística
+Esqui / Snowboard - dry slope
+Esqui / Snowboard - em uma pista ou parque dentro de um resort
+Esqui / Snowboard - terreno no interior do resort, excluindo acrobacias
+Esqui Alpino
+Esqui aquático - com os pés descalços
+Atividades equestres
+Atletismo
+Badminton
+Ballet / Balé Clássico
+Balonismo
+Basquetebol
+Beisebol
+Boating - águas costeiras (em white water)
+Boating - além de 3 milhas náuticas
+Boliche
+Boliche - gramado / dez pinos
+Bowling
+Buggy em dunas
+Caiaque - águas internas e costeiras até 3 milhas náuticas, classes 1-5
+Caiaque (além de 3 milhas náuticas)
+Caiaque (mar)
+Caiaque em corredeira - interior / águas costeiras até 3 milhas náuticas, classes 1-3
+Caminhada em geleiras
+Caminhada pela floresta/mata - até 6.000 metros
+Caminhadas
+Kite Boarding
+Kite Boarding - em terra
+Kite Boarding - na água
+Kite buggy
+Kite surf
+Kite wing - terra, água
+Lacrosse
+Lutas medievais simulação
+Mergulho - até 50 metros
+Mergulho - curso para aprender a mergulhar / mergulho com instrutor qualificado
+Mergulho com uso de Snorkel
+Natação - piscina; local fechado, águas internas e costeiras até 3 milhas náuticas
+Netball
+Orientação
 Outward Bound
-
-Park / street | 3 milhas náuticas
-Paintball | Skidoos | Via ferrata
-
-Voar (como passageiro em um Skijöring / esqui arrastado por cavalo ou
-
-Passageiro em voo comercial agendado | avião ou helicóptero licenciado
-
-cães regulares ou fretados)
-
-Voar (como passageiro em uma
-
-Passeios de Banana Boat | Sledding / tobogã
-
-aeronave de pequeno porte)
-
-Passeios de camelo ou elefante | Snow mobiling | Voleibol
-Passeios de Segway | Snow rafting | Wake skating
-Passeios de trenó | Softball | Wakeboarding - excluindo saltos
-Patinação | Squash | Windsurf
-
-Windsurf - águas internas e
-
-Patinação in-line | Stand up paddle surf
-
-costeiras até 3 milhas náuticas Yoga - na sala de aula, sozinho, em
-
-Patinação no gelo - ao ar livre | Stoolball
-
-casa
-
-Patinação no gelo - interior | Surf Terrestre | Yoga - professor
-Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar | Surfboat | Zip line
-Pesca em alto mar | Surfe | Zorbing
-Pesca Esportiva com anzol | Tchoukball | Tênis
-
+Paintball
+Passageiro em voo comercial agendado
+Ciclismo
+Ciclismo - incidente de viagem; passeio independente; turnê organizada, até 4.000 metros de altitude
+Corfebol
+Corrida - até distância da maratona
+Corrida - até distância da meia maratona
+Corrida de montanha - sem equipamento de escalada
+Corrida de resistência ao ar livre - maior ou igual a ultra distância
+Corrida de resistência ao ar livre - menor que ultra distância
+Corridas de obstáculo
+Cricket
+Croquet
+Curling
+Dança - balé, baile de salão, capoeira, salsa, dança interpretativa
+Dardos
+Dragon boating
+Empinar pipa
+Equitação
+Equitação - adestramento, salto, eventing
+Equitação - lazer / passeio / Jogos de Guerra - jogos on-line
+Escalada - boulder
+Quad bike
+Queimada
+Rafting / Cave tubing
+Rafting em corredeira - classes 1-3
+Raquetebol
+Remo
+Remo - águas interiores / costeiras - sem corredeiras
+River boarding - classes 1-3
+Rounders
+Rugby - league / union
+Safari
+Safari Aéreo
+Sandboard
+Sinuca
+Skateboarding - rampa / half pipe / Skate Park / street
+Skidoos
+Skijöring / esqui arrastado por cavalo ou cães
+Esqui aquático - excluindo saltos
+Esqui na areia
+Esquiar - cross country / esqui nórdico em trilhas marcadas
+Esquiar - snow blading
+Frisbee
+Futebol
+Futebol americano
+Ginástica
+Golfe
+Handebol
+Hockey (campo)
+Hóquei no gelo
+Hóquei sobre patins
+Hunting / Caça Desportiva - Excluindo Big Game
+Iatismo - águas costeiras
+Iatismo - fora de águas costeiras
+Jet boat
+Jet ski
+Kart
+Tênis de mesa
+Tiro ao pombo de argila
+Tiro com arco / Arco e flecha
+Tough Mudder
+Trampolim acrobático
+Treinamento com pesos / Musculação - powerlifting
+Treinamento da ginástica / academia
+Treino de fitness
+Trekking até 6.000 metros - em rotas conhecidas - sem cobertura onde equipamento de escalada seja necessário
+Trenós puxados por cães
+Tubing em rios
+Tubing na neve
+Tuk Tuk - como passageiro
+Ultimate frisbee
+Vela - além de 3 milhas náuticas
+Vela - interior / águas costeiras até 3 milhas náuticas
+Via ferrata
+Voar (como passageiro em um avião ou helicóptero licenciado regulares ou fretados)
+Passeios de Banana Boat
+Passeios de camelo ou elefante
+Passeios de Segway
+Passeios de trenó
+Patinação
+Patinação in-line
+Patinação no gelo - ao ar livre
+Patinação no gelo - interior
+Pesca (além de 3 milhas náuticas), incluindo pesca em alto mar
+Pesca em alto mar
+Pesca Esportiva com anzol
 Pólo aquático
+Sledding / tobogã
+Snow mobiling
+Snow rafting
+Softball
+Squash
+Stand up paddle surf
+Stoolball
+Surf Terrestre
+Surfboat
+Surfe
+Tchoukball
+Voar (como passageiro em uma aeronave de pequeno porte)
+Voleibol
+Wake skating
+Wakeboarding - excluindo saltos
+Windsurf
+Windsurf - águas internas e costeiras até 3 milhas náuticas
+Yoga - na sala de aula, sozinho, em casa
+Yoga - professor
+Zip line
+Zorbing
+Tênis
 
 1.3. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e/ou de Despesas Odontológicas em viagem ao exterior (DO-VE). No caso de evento ocasionado pela prática amadora de um dos esportes cobertos, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
 
-### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 1. RISCOS COBERTOS (parte 2 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médicas, Hospitalares e/ou Odontológicas em Viagem ao Exterior – Extensão de Cobertura Para Esportes (DMHO-E-VE) — 3. RISCOS EXCLUÍDOS
 
-Fonte: Condições Gerais (PDF), p. 115 a 117.
+Fonte: Condições Gerais (PDF), p. 117.
 
-3. RISCOS EXCLUÍDOS Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
+Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro e das coberturas de Despesas Médico-Hospitalares em viagem ao exterior (DMH-VE) e de Despesas Odontológicas em viagem ao exterior (DO-VE), que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
 
 3.1. A prática de esporte profissional, independente do Segurado exercer também ou não outra atividade profissional;
 
@@ -3660,9 +3642,9 @@ Fonte: Condições Gerais (PDF), p. 119.
 
 1.4. As indenizações por esta cobertura não se acumulam com as indenizações previstas pelas coberturas de Despesas Médico-Hospitalares em viagem nacional (DMH-VN) e/ou de Despesas Odontológicas em viagem nacional (DO-VN). No caso de evento relacionado à gravidez da Segurada, serão observados e respeitados os limites de capitais segurados e demais disposições desta cobertura.
 
-### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 2. RISCOS EXCLUÍDOS (parte 1 de 2)
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 2. RISCOS EXCLUÍDOS
 
-Fonte: Condições Gerais (PDF), p. 119 a 123.
+Fonte: Condições Gerais (PDF), p. 119 a 122.
 
 Além das exclusões constantes da cláusula 4. RISCOS EXCLUÍDOS das Condições Gerais deste Seguro que não tenham sido alteradas por estas Condições Especiais, estão, também, expressamente excluídos desta cobertura:
 
@@ -3764,13 +3746,19 @@ v. Velejar em alto-mar;
 
 w. Viagens para áreas remotas ou particularmente perigosas, com ou sem guia.
 
-3. CARÊNCIA Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 3. CARÊNCIA
 
-### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 2. RISCOS EXCLUÍDOS (parte 2 de 2)
+Fonte: Condições Gerais (PDF), p. 122.
 
-Fonte: Condições Gerais (PDF), p. 119 a 123.
+Esta cobertura está sujeita ao cumprimento de carência de 120 (cento e vinte) horas, cuja exigência constará no Bilhete exclusivamente em caso de contratação para viagem já iniciada.
 
-4. FRANQUIA A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções: Plano de Franquia | Franquia em % dos prejuízos
+### Condições Especiais Cobertura Adicional de Despesas Médico-Hospitalares e/ou Odontológicas Complementares em Viagem Nacional (DMHO-C-VN) — 4. FRANQUIA
+
+Fonte: Condições Gerais (PDF), p. 122 a 123.
+
+A Cobertura Adicional de Despesas Médico-Hospitalares Complementares em Viagem Nacional (DMH-C-VN) estará sujeita à aplicação de franquia definida pelo Representante de Seguros, que constará do Bilhete de Seguro, dentre as seguintes opções:
+
+Plano de Franquia | Franquia em % dos prejuízos
 
 A | 0%
 B | 5%
