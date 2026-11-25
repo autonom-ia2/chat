@@ -42,7 +42,7 @@ class Autonomia::Agents::Tools::Native::DetalhesDaCotacao < Autonomia::Agents::T
   def call
     return error('cotacao_sem_conversa') if conversa.nil?
 
-    cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id)
+    cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id, agent.id)
     return recusar('sem_cotacao', 'Esta conversa ainda não tem cotação. Cote primeiro.') if cotacao.nil?
 
     escolhidos, desconhecidos = escolher(cotacao)

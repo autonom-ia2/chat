@@ -63,8 +63,36 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparat
     expect(conversa.messages.where(marcador).count).to eq(2)
   end
 
-  it 'falha não levanta' do
-    allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(StandardError)
-    expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
+  describe 'falhas' do
+    let(:rastreador) { instance_double(ChatwootExceptionTracker, capture_exception: nil) }
+
+    before { allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador) }
+
+    it 'falha conhecida do Active Storage: false, sem mensagem, e o erro vai ao rastreador' do
+      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(ActiveStorage::IntegrityError)
+
+      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
+      expect(conversa.messages.where(marcador).count).to eq(0)
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveStorage::IntegrityError), account: account)
+      expect(rastreador).to have_received(:capture_exception)
+    end
+
+    it 'falha conhecida do desenho (Prawn) e da rede: false' do
+      desenho = instance_double(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf)
+      allow(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf).to receive(:new).and_return(desenho)
+      allow(desenho).to receive(:render).and_raise(Prawn::Errors::CannotFit)
+      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
+
+      allow(desenho).to receive(:render).and_return('%PDF-teste')
+      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(Errno::ECONNRESET)
+      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
+    end
+
+    it 'erro fora das falhas conhecidas é defeito nosso: sobe' do
+      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(NoMethodError)
+
+      expect { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }.to raise_error(NoMethodError)
+      expect(rastreador).not_to have_received(:capture_exception)
+    end
   end
 end

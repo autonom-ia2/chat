@@ -915,18 +915,14 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: -> { propor_viagem(proposta_de_viagem, entrega: nil) }
       },
       'gerar_proposta_seguro_viagem.rb#call#2' => {
-        espera: { motivo: 'so_cotacao', slug: 'gerar_proposta_seguro_viagem' },
-        dispara: -> { propor_viagem(proposta_de_viagem, so_cotacao: true) }
-      },
-      'gerar_proposta_seguro_viagem.rb#call#3' => {
         espera: { motivo: 'sem_cotacao', slug: 'gerar_proposta_seguro_viagem' },
         dispara: -> { propor_viagem(proposta_de_viagem, cotacao: nil) }
       },
-      'gerar_proposta_seguro_viagem.rb#call#4' => {
+      'gerar_proposta_seguro_viagem.rb#call#3' => {
         espera: { motivo: 'recotar', slug: 'gerar_proposta_seguro_viagem' },
         dispara: -> { propor_viagem(proposta_de_viagem, cotacao: 2.days.ago) }
       },
-      'gerar_proposta_seguro_viagem.rb#call#5' => {
+      'gerar_proposta_seguro_viagem.rb#call#4' => {
         espera: { motivo: 'plano_inexistente', slug: 'gerar_proposta_seguro_viagem', faltando: 'codigo_do_plano' },
         dispara: -> { propor_viagem(proposta_de_viagem.merge(codigo_do_plano: 'P9')) }
       },
@@ -987,10 +983,9 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
 
   # #3211: a proposta pelo `Bound`, com o acesso conferido e, quando `cotacao` é um instante, a cotação de um viajante
   # de 45 anos criada nele. Sem `endereco`, o endereço pelo CEP não sai (`buscar` nil).
-  def propor_viagem(argumentos, entrega: delivery, so_cotacao: false, cotacao: Time.current, endereco: nil)
+  def propor_viagem(argumentos, entrega: delivery, cotacao: Time.current, endereco: nil)
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
-                                                  senha: 's3nha-teste', estado: 'ok',
-                                                  capacidades: { 'so_cotacao' => so_cotacao })
+                                                  senha: 's3nha-teste', estado: 'ok')
     guardar_cotacao_de_viagem(cotacao) if cotacao
     allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar).and_return(endereco)
     bound_para(Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem)

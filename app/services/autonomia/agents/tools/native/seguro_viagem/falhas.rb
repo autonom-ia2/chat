@@ -19,6 +19,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
                        'conversa para a equipe, sem mostrar o erro.'.freeze
   TEXTO_SEM_LINK = 'A seguradora não devolveu o link de pagamento. Não tente de novo. Passe a conversa para a equipe ' \
                    'agora, sem mostrar o erro.'.freeze
+  TEXTO_INVALIDO = 'A seguradora não aceitou o pedido. Corrija com o cliente só o dado em questão.'.freeze
 
   module_function
 
@@ -51,13 +52,19 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     TEXTO_INDISPONIVEL
   end
 
+  # A mensagem da seguradora vem de fora: vai rotulada como dado (`Recusa::AVISO_DE_DADO_EXTERNO`). Sem mensagem, só o
+  # texto fixo.
   def invalido(erro, acao, agent, conversation)
     Autonomia::Agents::Tools::Recusa.registrar('pedido_invalido', slug: acao, agente: agent, conversa: conversation&.id)
-    "A seguradora não aceitou o pedido: #{erro.mensagem_da_seguradora}. Corrija com o cliente só o dado em questão."
+    mensagem = erro.mensagem_da_seguradora.to_s.strip.presence
+    return TEXTO_INVALIDO if mensagem.nil?
+
+    "#{TEXTO_INVALIDO} Resposta da seguradora (#{Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}): \"#{mensagem}\""
   end
 
+  # Como na conferência recusada (`ConferirAcesso`): o login recusado não guarda o que ele podia antes.
   def marcar_recusado(agent, conversation)
-    agent.acesso_da_seguradora.update!(estado: 'recusado', motivo: Codigos::ACESSO_RECUSADO)
+    agent.acesso_da_seguradora.update!(estado: 'recusado', motivo: Codigos::ACESSO_RECUSADO, capacidades: {})
   rescue StandardError => e
     Rails.logger.warn("[autonomia][seguro_viagem] acesso_nao_marcado agente=#{agent&.id} conv=#{conversation&.id} #{e.class}")
   end

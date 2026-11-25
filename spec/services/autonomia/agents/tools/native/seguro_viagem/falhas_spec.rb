@@ -29,6 +29,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
     expect(notas.count).to eq(1)
   end
 
+  it 'acesso recusado limpa as capacidades, como a conferência recusada' do
+    acesso.update!(capacidades: { 'so_cotacao' => false, 'tarifa_acordo' => true })
+    tratar('acesso_recusado')
+    expect(acesso.reload.capacidades).to eq({})
+  end
+
   it 'acesso recusado manda passar a conversa para a equipe' do
     expect(tratar('acesso_recusado')).to eq(described_class::TEXTO_PASSAR)
   end
@@ -64,9 +70,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
     expect(notas.count).to eq(2)
   end
 
-  it 'pedido inválido: repassa a mensagem curta da seguradora, sem nota' do
-    expect(tratar('pedido_invalido', 'Data de saída inválida')).to include('Data de saída inválida')
+  it 'pedido inválido: repassa a mensagem curta da seguradora rotulada como dado, sem nota' do
+    texto = tratar('pedido_invalido', 'Data de saída inválida')
+    expect(texto).to include('"Data de saída inválida"', Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO)
+    expect(texto).to start_with(described_class::TEXTO_INVALIDO)
     expect(notas.count).to eq(0)
+  end
+
+  it 'pedido inválido sem mensagem (nil ou só espaços): só o texto fixo, sem "pedido: ."' do
+    expect(tratar('pedido_invalido')).to eq(described_class::TEXTO_INVALIDO)
+    expect(tratar('pedido_invalido', '   ')).to eq(described_class::TEXTO_INVALIDO)
   end
 
   it 'pedido inválido registra a recusa e não mexe no acesso' do

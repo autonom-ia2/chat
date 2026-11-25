@@ -6,11 +6,22 @@
 # PRÓPRIA mensagem do PDF, e a conferência é feita sob o lock da conversa, SEM filtrar `private`: o PDF pode ter saído
 # público ou como nota, e nos dois casos ele já conta.
 #
-# NUNCA LEVANTA: é entrega sobre uma conversa que já funciona; falha vira log com ids e classe, e `false`.
+# FALHA CONHECIDA NÃO LEVANTA: é entrega sobre uma conversa que já funciona. A falha que o desenho, o arquivo, a rede, o
+# Active Storage ou o banco podem dar (`FALHAS_DA_ENTREGA`) vira log com ids e classe, vai ao rastreador e devolve
+# `false`, e a ferramenta diz ao modelo `pdf_enviado: false` (a instrução só cita o PDF com `true`). Outro erro é
+# defeito nosso e sobe.
 class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   CHAVE = 'autonomia_comparativo_viagem'.freeze
   NOME_DO_ARQUIVO = 'comparativo-seguro-viagem.pdf'.freeze
+  # O Prawn (texto que não cabe ou com caractere fora da fonte, fonte ou imagem), o arquivo e o disco (a fonte, o logo,
+  # o serviço local do Active Storage), a rede (o serviço de nuvem do Active Storage), o Active Storage e o banco (o
+  # lock da conversa e a mensagem).
+  FALHAS_DA_ENTREGA = [
+    *Prawn::Errors.constants.map { |nome| Prawn::Errors.const_get(nome) }.grep(Class),
+    EncodingError, IOError, SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError,
+    ActiveStorage::Error, ActiveRecord::ActiveRecordError
+  ].freeze
 
   # -> true quando o PDF foi postado agora; false quando já existia ou falhou.
   def self.postar(conversation:, cotacao:, agent:)
@@ -32,9 +43,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
     @conversation = @conversation.class.find(@conversation.id)
     @conversation.with_lock { postou = criar_se_nova }
     postou
-  rescue StandardError => e
+  rescue *FALHAS_DA_ENTREGA => e
     Rails.logger.warn("[autonomia][seguro_viagem] comparativo_falhou conv=#{@conversation&.id} cotacao=#{@cotacao&.id} " \
                       "agente=#{@agent&.id} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: @agent&.account).capture_exception
     false
   end
 

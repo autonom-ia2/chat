@@ -13,7 +13,17 @@ RSpec.describe Autonomia::Agents::CotacaoDeViagem do
   it 'a última da conversa é a de maior id' do
     criar_cotacao(planos: [{ 'codigo' => 'P1' }])
     b = criar_cotacao(planos: [{ 'codigo' => 'P1' }])
-    expect(described_class.ultima_da_conversa(conversa.id)).to eq(b)
+    expect(described_class.ultima_da_conversa(conversa.id, agente.id)).to eq(b)
+  end
+
+  it 'a última da conversa é a do agente pedido, nunca a de outro agente na mesma conversa' do
+    deste = criar_cotacao(planos: [{ 'codigo' => 'P1' }])
+    outro = Autonomia::Agents::Agent.create!(account: account, name: 'Outro', agent_type: 'custom')
+    described_class.create!(account: account, conversation: conversa, agent: outro, id_cotacao: 'c-outro',
+                            planos: [{ 'codigo' => 'P1' }], pedido: {})
+
+    expect(described_class.ultima_da_conversa(conversa.id, agente.id)).to eq(deste)
+    expect(described_class.ultima_da_conversa(conversa.id, outro.id).id_cotacao).to eq('c-outro')
   end
 
   it 'plano pelo código; código desconhecido é nil' do

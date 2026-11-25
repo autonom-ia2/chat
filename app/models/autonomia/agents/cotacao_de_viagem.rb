@@ -35,8 +35,10 @@ class Autonomia::Agents::CotacaoDeViagem < ApplicationRecord
   belongs_to :conversation
   belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id, inverse_of: false
 
-  def self.ultima_da_conversa(conversation_id)
-    where(conversation_id: conversation_id).order(:id).last
+  # A última cotação DESTE agente na conversa: a de outro agente (que cotou com outro login, de outra corretora) não
+  # vira proposta nem detalhe com o login deste.
+  def self.ultima_da_conversa(conversation_id, agent_id)
+    where(conversation_id: conversation_id, autonomia_agent_id: agent_id).order(:id).last
   end
 
   def plano(codigo)

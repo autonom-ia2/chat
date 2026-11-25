@@ -161,13 +161,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
   end
 
-  it 'acesso que só cota não gera' do
-    acesso.update!(capacidades: acesso.capacidades.merge('so_cotacao' => true))
-    expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('so_cotacao', anything)
-    ferramenta(params).call
-    expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
-  end
-
   it 'sem cotação na conversa recusa' do
     Autonomia::Agents::CotacaoDeViagem.delete_all
     expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('sem_cotacao', anything)

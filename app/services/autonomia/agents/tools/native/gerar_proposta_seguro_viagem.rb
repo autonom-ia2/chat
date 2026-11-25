@@ -46,7 +46,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     # ESCREVE: cria a compra na seguradora e grava a proposta na cotação.
     def escreve? = true
 
-    # Login que só cota não gera proposta: o acesso conferido diz o que ele pode.
+    # Login que só cota não gera proposta: o acesso conferido diz o que ele pode. Sem a ferramenta na lista do turno, a
+    # instrução manda passar para a equipe antes de pedir dado pessoal; por isso `call` não tem recusa de "só cota".
     def available_for?(agent)
       super && !agent.acesso_da_seguradora.so_cotacao?
     end
@@ -93,9 +94,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   def call
     return error('proposta_sem_conversa') if conversa.nil?
-    return recusar('so_cotacao', 'Este acesso à seguradora só cota. Passe a conversa para a equipe gerar a proposta.') if acesso.so_cotacao?
 
-    cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id)
+    cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id, agent.id)
     return recusar('sem_cotacao', 'Esta conversa ainda não tem cotação. Cote primeiro.') if cotacao.nil?
     return recusar('recotar', 'A cotação desta conversa é de outro dia e o preço pode ter mudado. Cote de novo.') unless cotacao.do_dia?(fuso)
 
