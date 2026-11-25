@@ -83,7 +83,10 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   def refuse_quote_agent
     return if Current.user.is_a?(SuperAdmin)
 
-    render_unprocessable(I18n.t('autonomia.agents.ferramenta_na_cotacao')) if @agent.agent_type == 'insurance_quote'
+    return render_unprocessable(I18n.t('autonomia.agents.ferramenta_na_cotacao')) if @agent.agent_type == 'insurance_quote'
+
+    # #3211: as ferramentas do contratado são as do catálogo; quem as grava é o "Contratar".
+    render_unprocessable(I18n.t('autonomia.agents.ferramenta_no_contratado')) if @agent.contratado?
   end
 
   def fetch_agent

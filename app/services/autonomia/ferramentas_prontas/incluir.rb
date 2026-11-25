@@ -5,8 +5,8 @@
 # "Ferramentas dos agentes") é conferido por quem chama, na tela da F2.
 #
 # Recusa (`Recusado#motivo`): flag desligada (a das prontas ou a da fase da fonte),
-# agente de outra conta, a Lia, fonte fora do catálogo, fonte de uso interno (`fora_da_vitrine`), ou o nome da função
-# já usado por uma ferramenta cadastrada à mão no mesmo agente.
+# agente de outra conta, a Lia, o contratado (fora do "Contratar"), fonte fora do catálogo, fonte de uso interno
+# (`fora_da_vitrine`), ou o nome da função já usado por uma ferramenta cadastrada à mão no mesmo agente.
 class Autonomia::FerramentasProntas::Incluir
   MAX_USAR_QUANDO = 500
 
@@ -24,12 +24,13 @@ class Autonomia::FerramentasProntas::Incluir
     usar_quando.to_s.squish.first(MAX_USAR_QUANDO).presence
   end
 
-  def initialize(account:, agent:, fonte:, usar_quando: nil, user: nil)
+  def initialize(account:, agent:, fonte:, usar_quando: nil, user: nil, pelo_contratar: false) # rubocop:disable Metrics/ParameterLists
     @account = account
     @agent = agent
     @fonte = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
     @usar_quando = self.class.frase(usar_quando)
     @user = user
+    @pelo_contratar = pelo_contratar
   end
 
   def call
@@ -51,6 +52,8 @@ class Autonomia::FerramentasProntas::Incluir
     raise Recusado, 'agente_de_outra_conta' unless @agent.account_id == @account.id
     raise Recusado, 'pessoa_de_outra_conta' unless pessoa_da_conta?
     raise Recusado, 'agente_de_cotacao' if @agent.agent_type == Autonomia::FerramentasProntas::AGENTE_DE_COTACAO
+    # #3211: as prontas do contratado vêm do catálogo; só o "Contratar" as inclui.
+    raise Recusado, 'agente_contratado' if @agent.contratado? && !@pelo_contratar
 
     conferir_fonte!
   end
