@@ -121,12 +121,14 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
   # Pelo :evento_troca, o turno refeito espera o fim da janela do debounce, como o settle do gatilho: o Sync do CRM troca
   # o dono segundos depois da mensagem, e o dono novo não pode responder enquanto o cliente ainda digita. Uma mensagem
   # nova na janela muda a marca, e este settle desiste. Pelo :responder a janela já passou (quem chama já fez a IA).
-  # A marca existe aqui: turno_em_andamento? já a conferiu.
+  # A marca existe aqui: turno_em_andamento? já a conferiu. #3211: a janela é a que o gatilho gravou na marca
+  # (EsperaDaFala.janela_do_settle), que com a espera pela fala (P1) passa dos 6 s; sem a fila, que o settle refeito
+  # confere sozinho.
   def espera_da_janela(destino)
     return 0.seconds unless @origem == :evento_troca
 
     stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-    fim = stamp['at'].to_f + ::Autonomia::Agents::Config.debounce_seconds_for(destino.agent).to_f
+    fim = stamp['at'].to_f + ::Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle(agent: destino.agent, marca: stamp).to_f
     [fim - Time.current.to_f, 0].max.seconds
   end
 

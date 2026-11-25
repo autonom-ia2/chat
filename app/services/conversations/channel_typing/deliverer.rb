@@ -1,7 +1,8 @@
 # chat#1442 — "Digitando" no canal da conversa: WhatsApp Cloud oficial, Instagram e caixa WhatsApp API
 # (Channel::Api provisionada para WAHA). Atende o robô externo (toggle_typing_status com deliver_to_channel)
 # e o agente nativo (Autonomia::Agents::Operate::TypingIndicator delega para cá o WhatsApp oficial e o
-# Instagram; a caixa WhatsApp API do agente nativo segue pelo evento do painel).
+# Instagram; a caixa WhatsApp API do agente nativo segue pelo evento do painel, a não ser que o agente tenha a opção
+# `conversa_ritmo_do_canal` (#3211), que também manda o "digitando" ao canal na caixa WAHA).
 # Caixa oficial com WhatsApp Híbrido (chat#1067) segue pela Meta, como qualquer caixa oficial.
 # Chave de instalação AI_HUMANIZE_CHANNEL_TYPING (ligada quando ausente): desligada, ninguém mostra
 # "digitando" no canal.

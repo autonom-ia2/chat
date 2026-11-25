@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     responder(escreve(:incoming, 'Obrigado, Ana!'))
 
     input = pedidos.sole
-    expect(input[-2]).to eq(role: 'developer', content: [{ type: 'input_text', text: regra }])
+    expect(input[-3]).to eq(role: 'developer', content: [{ type: 'input_text', text: regra }])
     expect(input.last[:content].first[:text]).to eq('Obrigado, Ana!')
   end
 
@@ -131,11 +131,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
   describe Autonomia::Agents::PromptBuilder do
     let(:historico) { [{ role: 'user', content: 'Oi' }, { role: 'assistant', content: 'Olá!' }] }
+    # O item Agora (#3211) é parte do contrato: vai antes da pergunta. `freeze_time` porque o minuto pode virar entre
+    # montar o esperado e o input.
     let(:esperado_de_antes) do
       [{ role: 'user', content: [{ type: 'input_text', text: 'Oi' }] },
        { role: 'assistant', content: [{ type: 'output_text', text: 'Olá!' }] },
+       { role: 'developer', content: [{ type: 'input_text', text: Autonomia::Agents::PromptParts::Agora.texto(account) }] },
        { role: 'user', content: [{ type: 'input_text', text: 'Tudo bem?' }] }]
     end
+
+    before { freeze_time }
 
     it 'sem contexto do turno (nil ou ausente), o input é exatamente o de antes' do
       sem = described_class.new(agent: agent, query: 'Tudo bem?', history: historico).input

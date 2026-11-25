@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Operate::PosseDoTurno, :um_turno do
   include_context 'with crm responsible agent'
 
-  let(:responder) { instance_double(Autonomia::Agents::Operate::Responder, perform: nil) }
+  let(:responder) { instance_double(Autonomia::Agents::Operate::Responder, perform: nil, cadeia_agendada?: false) }
 
   around do |example|
     with_modified_env AUTONOMIA_AGENTS_ENABLED: 'true', AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false' do

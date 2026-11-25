@@ -18,6 +18,15 @@ vi.mock('dashboard/api/autonomia/buildThreads', () => ({
   default: construtor,
 }));
 
+// #3192: o pedido da tela pelo canto da bolinha do Guia. O estado do canto é do módulo inteiro (as montagens dos
+// outros casos ficariam nele); aqui fica só o que esta montagem pediu.
+const canto = vi.hoisted(() => ({ pedido: null }));
+vi.mock('dashboard/components/autonomia/guide/cantoDaBolinha', () => ({
+  useOcuparCantoDaBolinha: ocupado => {
+    canto.pedido = ocupado;
+  },
+}));
+
 // #1543: sem modelo, rascunho nem atuação na URL, a flag ligada abre antes a página "Criar agente".
 const rota = vi.hoisted(() => ({ atual: null }));
 const roteador = vi.hoisted(() => ({ push: vi.fn() }));
@@ -54,6 +63,17 @@ vi.mock('../../pages/AgenteCriarPage.vue', async () => {
       props: { focarTitulo: { type: Boolean, default: false } },
       setup: props => () =>
         hh('div', { 'data-nova': '', 'data-focar': String(props.focarTitulo) }),
+    }),
+  };
+});
+// #3214: `?escrever=1` abre a página de escrever as instruções.
+vi.mock('../../pages/AgenteEscreverPage.vue', async () => {
+  const { defineComponent: definir, h: hh } = await import('vue');
+  return {
+    __esModule: true,
+    default: definir({
+      name: 'AgenteEscreverPage',
+      setup: () => () => hh('div', { 'data-escrever': '' }),
     }),
   };
 });
@@ -231,6 +251,53 @@ describe('AgentesCriarEntrada', () => {
 
       expect(wrapper.find('[data-nova]').exists()).toBe(true);
       expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
+    // #3214 — escrever as instruções: página própria, sem a escolha nem a criação conversando.
+    it('opens the page to write the instructions with ?escrever=1', async () => {
+      comConta(ligada);
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+      expect(wrapper.find('[data-nova]').exists()).toBe(false);
+      expect(carregouNova).not.toHaveBeenCalled();
+    });
+
+    it('mounts the page to write the instructions after the choice on "Criar agente"', async () => {
+      comConta(ligada);
+      rota.atual.query = {};
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      rota.atual.query = { escrever: '1' };
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
+    // #3192/#3214: a página de escrever não tem a caixa de envio no canto, então a bolinha do Guia fica.
+    it('leaves the Guide bubble corner free with ?escrever=1, and takes it on the creation', async () => {
+      comConta(ligada);
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(canto.pedido.value).toBe(false);
+
+      rota.atual.query = { modelo: 'custom' };
+      await flushPromises();
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+      expect(canto.pedido.value).toBe(true);
+    });
+
+    it('keeps the old Builder with the flag off even with ?escrever=1', async () => {
+      comConta({ ...conta });
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-antiga]').exists()).toBe(true);
+      expect(wrapper.find('[data-escrever]').exists()).toBe(false);
     });
 
     it('does not ask for the focus when the creation opens straight from the URL', async () => {

@@ -46,6 +46,8 @@ import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
 // #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" no herói T01, vai com ?atuacao=interno: o
 // agente ajuda a equipe dentro das conversas e nunca fala com cliente.
+// #3214 — "Escrever as instruções com as minhas palavras", logo abaixo de "Do meu jeito", vai com ?escrever=1: o agente
+// nasce com o texto da pessoa, como escrito (AgenteEscreverPage).
 // #3208 — conta de seguros com os agentes prontos por ramo liberados (#2881) vê a fileira "Prontos para o seu ramo"
 // também aqui, no herói T01, antes dos três modelos: quem ainda não tem agente não passa pela página "Criar agente".
 // #1543 — com agentes, "Criar agente" (herói e barra do celular) e "Ver modelos prontos" abrem a
@@ -232,6 +234,7 @@ const tentarDeNovo = () => {
 };
 
 const COPILOTO = 'copiloto';
+const ESCREVER = 'escrever';
 
 const abrirCriacao = async (chave, query) => {
   if (comecandoModelo.value) return;
@@ -250,6 +253,8 @@ const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
 const usarRamo = chave => abrirCriacao(chave, { ramo: chave });
 const usarCopiloto = () =>
   abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
+// #3214 — criar com as instruções que a pessoa já tem, sem o Construtor.
+const escreverInstrucoes = () => abrirCriacao(ESCREVER, { escrever: '1' });
 
 const abrirPaginaCriar = () =>
   router.push({ name: 'autonomia_agents_builder' });
@@ -467,15 +472,33 @@ onBeforeUnmount(() => {
           v-if="podeGerenciar"
           class="flex flex-col gap-3 pt-5 border-t border-white/15"
         >
-          <p class="m-0">
+          <p class="flex flex-col m-0">
             <button
               data-do-meu-jeito
               type="button"
+              aria-describedby="do-meu-jeito-heroi-texto"
               class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
               @click="usarModelo(MODELO_DO_MEU_JEITO)"
             >
               {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
             </button>
+            <span id="do-meu-jeito-heroi-texto" class="text-sm text-white/80">
+              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO') }}
+            </span>
+          </p>
+          <p class="flex flex-col m-0">
+            <button
+              data-escrever-instrucoes
+              type="button"
+              aria-describedby="escrever-heroi-texto"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="escreverInstrucoes"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES') }}
+            </button>
+            <span id="escrever-heroi-texto" class="text-sm text-white/80">
+              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO') }}
+            </span>
           </p>
           <p class="flex flex-col m-0">
             <button

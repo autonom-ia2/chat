@@ -392,6 +392,21 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(respondida(respostas.sole)).to eq(segunda.id)
     end
 
+    it '#3211: com a espera pela fala (P1), o turno refeito pelo evento espera a janela gravada na marca, não os 6 s' do
+      ia_responde!
+      agente_da_porta.update!(config: agente_da_porta.config.to_h.merge('conversa_espera_a_fala' => true))
+      allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:fim_previsto).and_return(25.seconds.from_now)
+      fim_da_janela = 25.seconds.from_now
+      mensagem = turno_do_cliente
+      expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to be_within(1000).of(25_000)
+      travel 2.seconds
+      trocar_dono!(espelho_area)
+
+      retomada = settles_na_fila.find { |job| ActiveJob::Arguments.deserialize(job[:args])[3].present? }
+      expect(ActiveJob::Arguments.deserialize(retomada[:args])[1]).to eq(mensagem.id)
+      expect(Time.zone.at(retomada[:at])).to be_within(1.second).of(fim_da_janela)
+    end
+
     it 'M2 chega durante a IA (clássico): a resposta de M é descartada e só sai a de M2' do
       segunda = cliente_escreve_durante_a_ia!
       turno_do_cliente

@@ -202,6 +202,24 @@ describe WhatsappHybrid::RecoveryAiWake do
       expect(marca).to eq(message.id)
     end
 
+    # #3211 (revisão final F9): a mesma forma do gatilho do ReplyJob, com a espera da rajada (`espera_ms`).
+    it 'grava a espera na marca e agenda o settle depois dela; sem as opções, o debounce de sempre', :aggregate_failures do
+      espera = Autonomia::Agents::Config.debounce_seconds_for(agent)
+
+      expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle')
+                                                     .at(recovered_at + 30.seconds + espera)
+      expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq((espera.to_f * 1000).round)
+    end
+
+    it 'com a espera pela fala (P1), a espera é o fim previsto da fala anterior', :aggregate_failures do
+      agent.update!(config: agent.config.to_h.merge('conversa_espera_a_fala' => true))
+      allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:fim_previsto).and_return(recovered_at + 30.seconds + 25.seconds)
+
+      expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle')
+                                                     .at(recovered_at + 55.seconds)
+      expect(conversation.reload.additional_attributes.dig('autonomia_debounce', 'espera_ms')).to eq(25_000)
+    end
+
     it 'corrida: a marca já aponta para uma mensagem mais nova; não regride e a IA não é acordada de novo' do
       marcar!(message.id + 1000)
 

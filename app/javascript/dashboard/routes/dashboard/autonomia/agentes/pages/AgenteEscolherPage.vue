@@ -27,6 +27,7 @@ import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 // #2881 — "Prontos para o seu ramo": em conta de seguros com os agentes prontos liberados (quem diz é o servidor,
 // useRamosDeSeguro), a fileira vem primeiro, dentro do herói, e cada cartão leva `?ramo=<chave>`. Os três modelos
 // gerais continuam embaixo, iguais. Sem ramo liberado, a página é a de sempre.
+// #3214 — "Escrever as instruções com as minhas palavras", logo abaixo de "Do meu jeito" (`?escrever=1`).
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
@@ -37,6 +38,7 @@ const NS = 'AGENTS.JORNADA.ESCOLHER';
 const COPILOTO = 'copiloto';
 const EQUIPE = 'equipe';
 const AJUDANTE = 'ajudante';
+const ESCREVER = 'escrever';
 const RAMOS = 'AGENTS.JORNADA.RAMOS';
 const comecando = ref(null);
 const { ramos } = useRamosDeSeguro();
@@ -55,6 +57,7 @@ const usarCopiloto = () =>
 const usarEquipe = () => escolher(EQUIPE, { papel: PAPEL_AREA_NA_QUERY });
 const usarAjudante = () =>
   escolher(AJUDANTE, { papel: PAPEL_AJUDANTE_NA_QUERY });
+const usarEscrever = () => escolher(ESCREVER, { escrever: '1' });
 
 const voltar = () => router.push({ name: 'autonomia_agents_index' });
 </script>
@@ -107,16 +110,42 @@ const voltar = () => router.push({ name: 'autonomia_agents_index' });
             @usar="usarModelo"
           />
         </ul>
-        <p v-if="podeGerenciar" class="pt-5 m-0 border-t border-white/15">
-          <button
-            data-do-meu-jeito
-            type="button"
-            class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-            @click="usarModelo(MODELO_DO_MEU_JEITO)"
-          >
-            {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-          </button>
-        </p>
+        <div
+          v-if="podeGerenciar"
+          class="flex flex-col gap-3 pt-5 border-t border-white/15"
+        >
+          <p class="flex flex-col m-0">
+            <button
+              data-do-meu-jeito
+              type="button"
+              aria-describedby="do-meu-jeito-escolher-texto"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarModelo(MODELO_DO_MEU_JEITO)"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
+            </button>
+            <span
+              id="do-meu-jeito-escolher-texto"
+              class="text-sm text-white/80"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO') }}
+            </span>
+          </p>
+          <p class="flex flex-col m-0">
+            <button
+              data-escrever-instrucoes
+              type="button"
+              aria-describedby="escrever-escolher-texto"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarEscrever"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES') }}
+            </button>
+            <span id="escrever-escolher-texto" class="text-sm text-white/80">
+              {{ t('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO') }}
+            </span>
+          </p>
+        </div>
       </AgentesHeroi>
 
       <section

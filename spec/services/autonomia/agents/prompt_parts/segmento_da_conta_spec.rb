@@ -10,6 +10,13 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
   let(:segmento) { 'seguros/corretora' }
   let(:marca) { { 'segmento' => segmento, 'versao' => 'aaaabbbbcccc', 'texto' => nil } }
 
+  # O item Agora (#3211) leva o minuto: os pedidos comparados entre si saem do mesmo instante.
+  before { freeze_time }
+
+  def agora?(item)
+    item[:role] == 'developer' && item[:content].first[:text].start_with?('Agora:')
+  end
+
   def create_agent(**attrs)
     Autonomia::Agents::Agent.create!(
       { account: account, name: 'Bot', agent_type: 'custom', status: :active, enabled: true,
@@ -90,7 +97,9 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
       turno1 = Autonomia::Agents::PromptBuilder.new(agent: agent, query: 'Oi', history: [])
       turno2 = Autonomia::Agents::PromptBuilder.new(agent: agent, query: 'E o prazo?', history: history)
       expect(turno2.instructions).to eq(turno1.instructions)
-      expect(turno2.input.first).to eq(turno1.input.first)
+      # O início do pedido do turno 2 é o que o turno 1 mandou, sem o item "Agora" (#3211), que muda por turno e fica logo
+      # antes da pergunta (no turno 1, sem histórico, ele seria o primeiro item).
+      expect(turno2.input.first).to eq(turno1.input.reject { |item| agora?(item) }.first)
     end
 
     it 'leaves the Guia (system agent) out' do

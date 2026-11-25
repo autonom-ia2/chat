@@ -105,6 +105,9 @@ module Autonomia
         # Quem abriu a marca (ReplyJob#settle) só a solta quando não segue.
         def turno_segue? = @turno_segue == true
 
+        # #3211: a entrega em pedaços foi agendada neste turno. A cadeia fica com a fala (FalaEmCurso) e a solta no fim.
+        def cadeia_agendada? = @cadeia_agendada == true
+
         # #2154: o turno desta mensagem já tem resposta do robô (a consulta de idempotência, already_replied?). O
         # ReplyJob#settle pergunta quando a posse do turno já foi tomada.
         def respondida? = already_replied?
@@ -247,10 +250,21 @@ module Autonomia
         #   2) ENTREGA HUMANIZADA (aditiva, kill-switch): quebra em pedaços com "digitando" + pausa.
         #   3) OFF (ENV/por-agente) -> caminho CLÁSSICO de 1 mensagem (ZERO mudança de comportamento).
         def deliver(result)
-          return deliver_voice(result) if voice_reply_applies?
+          return deliver_voice(result) if voice_reply_applies? && !resposta_com_link?(result)
           return deliver_humanized(result) if ::Autonomia::Agents::Config.humanize_delivery_enabled?(@agent)
 
           classic_deliver(result)
+        end
+
+        # Link lido em voz não serve ao cliente (não dá para tocar nem copiar do áudio). Vale para TODA resposta em voz,
+        # com ou sem as opções de paridade: a resposta com link sai em texto, o caminho de fuga de sempre. A interação de
+        # link (`result.interacao`) não conta: ela já sai numa mensagem própria depois do áudio. Só método de string.
+        # Fora da Lia (`insurance_quote`): regra da casa, o comportamento dela não muda (o mesmo corte do item Agora).
+        def resposta_com_link?(result)
+          return false if @agent.agent_type == 'insurance_quote'
+
+          texto = result.reply.to_s.downcase
+          texto.include?('http://') || texto.include?('https://')
         end
 
         # Caminho CLÁSSICO: 1 mensagem única (comportamento original, intocado). Usado quando a
@@ -449,7 +463,7 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
-          chunks = com_os_cartoes_no_ultimo(chunks)
+          chunks = ::Autonomia::Agents::Operate::RitmoDoCanal.para(com_os_cartoes_no_ultimo(chunks), agent: @agent, conversation: @conversation)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
@@ -592,13 +606,10 @@ module Autonomia
         # #1606: uma mensagem mais nova do cliente abriu outro turno durante a IA (a marca do debounce aponta para ela).
         # A resposta deste turno ficou velha: é descartada, e o settle do turno novo responde, uma vez. Mesmo critério do
         # ChunkedDeliveryJob#current_turn? (sem marca, segue). Chamar só com estado fresco (depois de still_eligible?, que
-        # relê a conversa, dentro do lock). Só com a Fase 2; fora dela posta como sempre.
+        # relê a conversa, dentro do lock). Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora delas
+        # posta como sempre. O critério é o ReplyJob.turno_superado?, o mesmo da entrega da consulta em segundo plano.
         def turno_superado?
-          return false if @reply_to_message_id.blank? || !::Autonomia::Agents::Fase2.ligada?(@conversation.account)
-
-          stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-          pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
-          pendente.present? && pendente != @reply_to_message_id.to_i
+          ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(@conversation, @reply_to_message_id, @agent)
         end
 
         def silencio_por_turno_superado
@@ -637,8 +648,19 @@ module Autonomia
           outcome.status == :replied ? enfileirar_cartoes(outcome) : descartar_cartoes(@ultimo_silencio || outcome.status)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
           @entrega = outcome # #2154: a fala que saiu, para o aviso (avisou_que_chama_alguem)
+          prever_o_fim_da_fala(result, outcome)
           handoff_if_signaled(result) unless @calou_pela_pessoa
           evento_da_pessoa
+        end
+
+        # #3211 (P1): grava quando a fala deve terminar, para a rajada seguinte esperar por ela. Só quando houve fala: a
+        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para
+        # antes do 1º pedaço apaga o fim dele (ChunkedDeliveryJob).
+        def prever_o_fim_da_fala(result, outcome)
+          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          return unless @cadeia_agendada || outcome.message.present?
+
+          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, result.reply)
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
@@ -765,13 +787,24 @@ module Autonomia
         def query
           message = last_incoming_message
           # #1807: e-mail recebido sem o histórico citado (flag `email_autoria`); o resto, o content de sempre.
-          base = message ? email_autoria.texto(message) : ''
+          base = texto_base_da_pergunta(message)
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
           # #1775: e, com a flag da prévia, a linha da prévia do link vai embaixo.
           pergunta = equipe.aplica? ? equipe.pergunta(texto, message) : texto
           message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
+        end
+
+        # #3211 (P1): com `conversa_espera_a_fala`, o texto é a rajada inteira do cliente desde a última fala do agente;
+        # sem a opção, a última mensagem, como sempre.
+        def texto_base_da_pergunta(message)
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+            rajada = current_turn_incoming.select { |m| conta_na_pergunta?(m) }
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(rajada) { |m| email_autoria.texto(m) }
+          end
+
+          message ? email_autoria.texto(message) : ''
         end
 
         # Própria do turno, não da moldura da equipe (HistoricoDaEquipe): o e-mail vale com ou sem a Fase 2.
@@ -782,6 +815,10 @@ module Autonomia
         def last_incoming_message
           recent_messages.reverse.find(&:incoming?)
         end
+
+        # #3211 (P1): a mensagem do cliente entra na pergunta da rajada? Aqui, toda; o guard do WAHA
+        # (Waha::RichNative::AgentTurnGuard) tira o que não é pergunta, a mesma regra da última mensagem dele.
+        def conta_na_pergunta?(_message) = true
 
         # Contexto da mensagem referenciada via `in_reply_to` (reply citado OU reação entregue como texto
         # pelo canal, ex.: WAHA). Escopado à conversa, truncado, fail-safe. Sem referência -> nil (a query
@@ -847,6 +884,11 @@ module Autonomia
         # recente; se não houve saída ainda, todas as incoming da janela. É daí que a mídia é extraída
         # (cobre o caso "cliente manda a imagem e o texto em mensagens separadas" dentro do debounce).
         def current_turn_incoming
+          # #3211 (P1): com a opção, a rajada conta a fala, não o pedaço (pedaços intercalados não a fecham).
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(recent_messages)
+          end
+
           msgs = recent_messages
           last_outgoing_index = msgs.rindex { |message| !message.incoming? }
           window = last_outgoing_index ? msgs[(last_outgoing_index + 1)..] : msgs

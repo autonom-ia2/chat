@@ -59,7 +59,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       history = Array.new(10) { |i| { role: 'user', content: format('%03d', i) + ('x' * item_size) } }
 
       # Act
-      messages = build(history: history).input[0..-2] # tudo menos a query final
+      messages = build(history: history).input[0..-3] # tudo menos o item Agora e a query final
 
       # Assert
       expect(messages.size).to eq(fitting)
@@ -72,7 +72,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       history = [{ role: 'user', content: 'oi' }, { role: 'assistant', content: 'olá!' }]
 
       # Act
-      messages = build(history: history).input[0..-2]
+      messages = build(history: history).input[0..-3] # sem o item Agora e a query
 
       # Assert
       expect(messages.map { |m| text_of(m) }).to eq(['oi', 'olá!'])

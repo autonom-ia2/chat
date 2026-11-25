@@ -81,12 +81,13 @@ Alterados: `app/jobs/autonomia/agents/operate/reply_job.rb`, `app/jobs/autonomia
 - [ ] **Passo 1: criar a worktree a partir da `main`**
 
 ```sh
-git -C /Users/rodrigosilva/dev/chat2you fetch origin --prune
-git -C /Users/rodrigosilva/dev/chat2you worktree add \
-    /Users/rodrigosilva/dev/worktrees/chat2you/3211-paridade-da-conversa -b feat/3211-paridade-da-conversa origin/main
+git -C <repo> fetch origin --prune
+git -C <repo> worktree add \
+    <worktree> -b feat/3211-paridade-da-conversa origin/main
 ```
 
-Esperado: worktree criada, `git -C <worktree> status` limpo. Todos os caminhos abaixo são relativos a ela.
+`<repo>` é o clone principal do chat2you e `<worktree>`, a pasta da worktree desta entrega (fora do clone, na pasta de
+worktrees da máquina). Esperado: worktree criada, `git -C <worktree> status` limpo. Todos os caminhos abaixo são relativos a ela.
 
 ---
 

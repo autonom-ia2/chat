@@ -255,6 +255,13 @@ module Autonomia
         BOOLEAN.cast(ENV.fetch('AI_AGENT_PROMPT_V2', true))
       end
 
+      # DATA E HORA DO TURNO (#3211, P6): todo turno do agente (menos a Lia) leva um item `developer` "Agora: …" no fuso
+      # da conta, logo antes da pergunta. KILL-SWITCH da instalação (ENV, ausente = ligada): OFF tira o item no próximo
+      # turno, sem deploy. Não há opção por agente.
+      def self.data_do_turno_enabled?
+        BOOLEAN.cast(ENV.fetch('AI_AGENT_DATA_DO_TURNO', true))
+      end
+
       # MÍDIA NO OPERATE (Onda 2 / Track B): liga o encanamento que faz a imagem/figurinha da última
       # incoming chegar ao modelo como input_image, e o áudio ser transcrito (Crm::Ai::TranscriptionClient,
       # sem logar conteúdo) e injetado na query. KILL-SWITCH global (ENV, default ON) + override por agente

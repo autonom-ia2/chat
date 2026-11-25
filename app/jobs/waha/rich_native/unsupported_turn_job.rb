@@ -4,7 +4,12 @@
 # que a IA ficou CALADA, então só é gravado quando o turno inteiro em volta da mensagem é calado, pela mesma regra do
 # settle (Waha::RichNative::TurnKinds.silent_reason): numa rajada [texto, bolha], a IA respondeu ao texto e não houve
 # silêncio. Por isso o job espera o debounce do agente (as mensagens que chegam nele entram no mesmo turno) antes de
-# conferir. Uma vez por mensagem; conversa sem agente elegível (com pessoa responsável, agente desligado): nada.
+# conferir. #3211: a bolha não é turno, então a marca do debounce costuma ser a do turno ANTERIOR: ela só vale quando é
+# desta mensagem ou de uma mais nova (`pending_message_id` >= o id da bolha), e aí a janela é a do settle gravada nela
+# (Autonomia::Agents::Operate::EsperaDaFala.janela_do_settle). Senão, a espera que uma rajada teria agora
+# (EsperaDaFala.da_rajada). Nos dois casos, com o teto da fila quando o agente a tem. Com as opções desligadas, o
+# debounce de sempre.
+# Uma vez por mensagem; conversa sem agente elegível (com pessoa responsável, agente desligado): nada.
 class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
   queue_as :medium
   EVENT_TYPE = :skipped_mensagem_sem_suporte
@@ -14,7 +19,7 @@ class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
     message = Message.find_by(id: message_id, conversation_id: conversation_id)
     agent = message && agent_for(message.conversation)
     return if agent.nil?
-    return wait_for_the_turn(agent, conversation_id, message_id) unless phase == 'settle'
+    return wait_for_the_turn(agent, message.conversation, message_id) unless phase == 'settle'
 
     turn = turn_of(message.conversation, message)
     record!(agent, message.conversation, message, turn) if Waha::RichNative::TurnKinds.turn_silence(turn).present?
@@ -28,8 +33,21 @@ class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
     ::Autonomia::Agents::Operate.eligible_agent_inbox(conversation)&.agent
   end
 
-  def wait_for_the_turn(agent, conversation_id, message_id)
-    self.class.set(wait: ::Autonomia::Agents::Config.debounce_seconds_for(agent)).perform_later(conversation_id, message_id, 'settle')
+  def wait_for_the_turn(agent, conversation, message_id)
+    self.class.set(wait: janela_do_turno(agent, conversation, message_id)).perform_later(conversation.id, message_id, 'settle')
+  end
+
+  def janela_do_turno(agent, conversation, message_id)
+    espera = ::Autonomia::Agents::Operate::EsperaDaFala
+    marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+    return espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true) if marca_do_turno?(marca, message_id)
+
+    janela = espera.da_rajada(agent: agent, conversation_id: conversation.id)
+    ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent) ? janela + espera::TETO_DA_FILA : janela
+  end
+
+  def marca_do_turno?(marca, message_id)
+    marca.is_a?(Hash) && marca['pending_message_id'].to_i >= message_id.to_i
   end
 
   # As mensagens do cliente entre a última resposta (nossa, de pessoa ou robô) antes da bolha e a primeira depois dela.
