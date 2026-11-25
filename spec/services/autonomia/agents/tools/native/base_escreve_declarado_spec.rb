@@ -8,7 +8,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   let(:escrevem) do
     [nativas::InsuranceQuote, nativas::InsuranceQuoteProposal, nativas::AgendarReuniao, nativas::EnviarLocalizacao,
      nativas::EnviarContato, nativas::GuiaAcao, nativas::GuiaExecucao, nativas::GuiaLembrar, nativas::GuiaEsquecer,
-     nativas::GuiaTarefa]
+     nativas::GuiaTarefa, nativas::CotarSeguroViagem, nativas::GerarPropostaSeguroViagem]
   end
 
   it 'toda nativa do catálogo declara escreve? na própria ferramenta' do

@@ -14,7 +14,6 @@ RSpec.describe Autonomia::Agents::Contratados do
   end
 
   it 'os slugs do catálogo existem no Registry' do
-    pending 'as ferramentas entram no Registry na Tarefa 19'
     slugs = described_class::MODELOS.values.flat_map { |m| m[:ferramentas_nativas] }
     expect(slugs - Autonomia::Agents::Tools::Registry.slugs).to eq([])
   end
