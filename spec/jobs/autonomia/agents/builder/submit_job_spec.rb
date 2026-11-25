@@ -66,6 +66,20 @@ RSpec.describe Autonomia::Agents::Builder::SubmitJob do
       expect(thread.state['error']).to eq(described_class::SEM_CREDITO)
     end
 
+    it 'records the stable code with the real OpenAI answer (code credit_balance_exhausted, type insufficient_quota)' do
+      real = Crm::Ai::ResponsesClient::Error.new(
+        'You have no credits remaining.', status: 429, code: 'credit_balance_exhausted', error_type: 'insufficient_quota'
+      )
+      allow(builder).to receive(:run!).and_raise(real)
+      allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+      create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                                 settings: { 'api_key' => 'chave-de-teste' })
+
+      run_job(thread.begin_build!)
+
+      expect(thread.reload.state['error']).to eq(described_class::SEM_CREDITO)
+    end
+
     it 'keeps the original message when the platform key is the one out of credit' do
       create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-plataforma')
 
