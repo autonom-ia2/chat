@@ -39,6 +39,23 @@ RSpec.describe Autonomia::Seguradoras::Universal::Destinos do
     expect(described_class.validas?(%w[BR], cliente)).to eq([true, []])
   end
 
+  it 'nomes devolve o nome do país como a Universal escreve, na ordem pedida' do
+    stub_destinos
+    expect(described_class.nomes(%w[pt BR], cliente)).to eq(%w[Portugal Brasil])
+  end
+
+  it 'nomes fica com a sigla quando a Universal não conhece o país' do
+    stub_destinos
+    expect(described_class.nomes(%w[PT XX], cliente)).to eq(%w[Portugal XX])
+  end
+
+  it 'nomes com a API fora fica com as siglas e a falha não fica no cache' do
+    stub_request(:get, "#{base}/v1/destinos").to_timeout
+    expect(described_class.nomes(%w[pt ES], cliente)).to eq(%w[PT ES])
+    stub_destinos
+    expect(described_class.nomes(%w[ES], cliente)).to eq(['Espanha'])
+  end
+
   it 'lista vazia conta como falha e não fica no cache' do
     stub_request(:get, "#{base}/v1/destinos").to_return(status: 200, body: '[]')
     expect(described_class.siglas(cliente)).to be_nil
