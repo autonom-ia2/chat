@@ -640,6 +640,28 @@
           "TEXTO": "Answers only another agent, never the customer."
         }
       },
+      "ESCREVER": {
+        "TITULO": "Write your agent's instructions",
+        "TEXTO": "The agent will follow your text just as you wrote it. It only starts answering when you say so. Before that, you teach it what it needs to know and choose its tools and where it answers.",
+        "NOME": "Agent name",
+        "NOME_DICA": "What it will be called. E.g.: Duda.",
+        "NOME_VAZIO": "Write a name for the agent.",
+        "INSTRUCOES": "What the agent should do",
+        "DICA": "You can paste a text you already have. Say what it does and what it never does.",
+        "CRIAR": "Create agent",
+        "CRIANDO": "Creating…",
+        "ERRO": "Could not create the agent.",
+        "ERRO_GARANTIA": "What you wrote is still here.",
+        "SEM_TEXTO": "No text ready? Tell it in your own words",
+        "EXEMPLO": "E.g.: You serve the customers of my store. Answer in short sentences. If you do not know, hand over to someone on the team.",
+        "CRIADO": "{nome} was created. It does not answer anyone yet.",
+        "SAIR": {
+          "TITULO": "Leave without creating the agent?",
+          "TEXTO": "What you wrote will be lost.",
+          "FICAR": "Continue here",
+          "SAIR": "Leave"
+        }
+      },
       "MODELOS": {
         "ROTULO": "Ready-made templates",
         "USAR": "Use this one",
@@ -647,8 +669,11 @@
         "EXEMPLO": "Example",
         "EXEMPLO_SR": "Example conversation, not a real agent",
         "DO_MEU_JEITO": "My own way: tell it in my own words",
+        "DO_MEU_JEITO_TEXTO": "You answer a few short questions and the agent is ready.",
         "COPILOTO": "Team copilot",
         "COPILOTO_TEXTO": "Helps your team inside conversations. Never talks to customers.",
+        "ESCREVER_INSTRUCOES": "Write the instructions in my own words",
+        "ESCREVER_INSTRUCOES_TEXTO": "Already have a text? Paste it here. The agent follows it just as you wrote it.",
         "ESCOLHA": "Pick a ready-made template. You chat for a bit, test the answers and decide when to start answering.",
         "SUPPORT": {
           "TITULO": "Answer customer questions",

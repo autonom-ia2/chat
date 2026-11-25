@@ -69,6 +69,36 @@ describe('AgenteEscolherPage', () => {
     expect(wrapper.emitted('escolher')).toEqual([[{ modelo: 'custom' }]]);
   });
 
+  // #3214 — logo abaixo de "Do meu jeito", no mesmo bloco navy.
+  it('offers "write the instructions in my own words" right under "Do meu jeito", with ?escrever=1', async () => {
+    const wrapper = montar();
+    const heroi = wrapper.get('[data-heroi]');
+    const links = heroi.findAll(
+      '[data-do-meu-jeito], [data-escrever-instrucoes]'
+    );
+    expect(links.map(link => link.attributes())).toEqual([
+      expect.objectContaining({ 'data-do-meu-jeito': '' }),
+      expect.objectContaining({ 'data-escrever-instrucoes': '' }),
+    ]);
+    const escrever = heroi.get('[data-escrever-instrucoes]');
+    expect(escrever.text()).toBe('AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES');
+    // Cada link tem a sua linha de explicação, como o Copiloto da lista.
+    [
+      ['[data-do-meu-jeito]', 'AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO'],
+      [
+        '[data-escrever-instrucoes]',
+        'AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO',
+      ],
+    ].forEach(([seletor, explicacao]) => {
+      const id = heroi.get(seletor).attributes('aria-describedby');
+      expect(heroi.get(`#${id}`).text()).toBe(explicacao);
+    });
+    await escrever.trigger('click');
+    await escrever.trigger('click');
+    await wrapper.get('[data-do-meu-jeito]').trigger('click');
+    expect(wrapper.emitted('escolher')).toEqual([[{ escrever: '1' }]]);
+  });
+
   it('offers only the team copilot under "Precisa de outro tipo?", with its explanation, as internal', async () => {
     const wrapper = montar();
     const secao = wrapper.get('[data-outro-tipo]');
@@ -110,6 +140,7 @@ describe('AgenteEscolherPage', () => {
     expect(wrapper.text()).toContain('AGENTS.JORNADA.HEROI.SO_VER');
     expect(wrapper.find('[data-usar]').exists()).toBe(false);
     expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(false);
+    expect(wrapper.find('[data-escrever-instrucoes]').exists()).toBe(false);
     expect(wrapper.find('[data-outro-tipo]').exists()).toBe(false);
     await flushPromises();
     expect(wrapper.emitted('escolher')).toBeUndefined();
@@ -118,11 +149,14 @@ describe('AgenteEscolherPage', () => {
   it('keeps every action at least 44 px tall and never renders a native select', () => {
     const wrapper = montar();
     expect(wrapper.find('select').exists()).toBe(false);
-    ['[data-voltar-lista]', '[data-do-meu-jeito]', '[data-copiloto]'].forEach(
-      seletor => {
-        expect(wrapper.get(seletor).classes()).toContain('min-h-11');
-      }
-    );
+    [
+      '[data-voltar-lista]',
+      '[data-do-meu-jeito]',
+      '[data-escrever-instrucoes]',
+      '[data-copiloto]',
+    ].forEach(seletor => {
+      expect(wrapper.get(seletor).classes()).toContain('min-h-11');
+    });
   });
 });
 

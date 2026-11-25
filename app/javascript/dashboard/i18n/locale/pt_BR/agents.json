@@ -640,6 +640,28 @@
           "TEXTO": "Responde só para outro agente, nunca para o cliente."
         }
       },
+      "ESCREVER": {
+        "TITULO": "Escreva as instruções do seu agente",
+        "TEXTO": "O agente vai seguir o seu texto do jeito que você escreveu. Ele só começa a atender quando você mandar. Antes disso, você ensina o que ele precisa saber, escolhe as ferramentas e onde ele atende.",
+        "NOME": "Nome do agente",
+        "NOME_DICA": "Como ele vai se chamar. Ex.: Duda.",
+        "NOME_VAZIO": "Escreva um nome para o agente.",
+        "INSTRUCOES": "O que o agente deve fazer",
+        "DICA": "Pode colar um texto que você já tem. Diga o que ele faz e o que ele nunca faz.",
+        "CRIAR": "Criar agente",
+        "CRIANDO": "Criando…",
+        "ERRO": "Não deu para criar o agente.",
+        "ERRO_GARANTIA": "O que você escreveu continua aqui.",
+        "SEM_TEXTO": "Não tem um texto pronto? Conte com suas palavras",
+        "EXEMPLO": "Ex.: Você atende os clientes da minha loja. Responda com frases curtas. Se não souber, passe para alguém da equipe.",
+        "CRIADO": "{nome} foi criado. Ele ainda não atende ninguém.",
+        "SAIR": {
+          "TITULO": "Sair sem criar o agente?",
+          "TEXTO": "O que você escreveu vai se perder.",
+          "FICAR": "Continuar aqui",
+          "SAIR": "Sair"
+        }
+      },
       "MODELOS": {
         "ROTULO": "Modelos prontos",
         "USAR": "Usar este",
@@ -647,8 +669,11 @@
         "EXEMPLO": "Exemplo",
         "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
         "DO_MEU_JEITO": "Do meu jeito: contar com minhas palavras",
+        "DO_MEU_JEITO_TEXTO": "Você responde umas perguntas curtas e o agente fica pronto.",
         "COPILOTO": "Copiloto da equipe",
         "COPILOTO_TEXTO": "Ajuda as pessoas da equipe dentro das conversas. Nunca fala com cliente.",
+        "ESCREVER_INSTRUCOES": "Escrever as instruções com as minhas palavras",
+        "ESCREVER_INSTRUCOES_TEXTO": "Já tem um texto pronto? Cole aqui. O agente segue do jeito que você escreveu.",
         "ESCOLHA": "Escolha um modelo pronto. Você conversa um pouco, testa as respostas e decide quando começar a atender.",
         "SUPPORT": {
           "TITULO": "Tirar dúvidas dos clientes",

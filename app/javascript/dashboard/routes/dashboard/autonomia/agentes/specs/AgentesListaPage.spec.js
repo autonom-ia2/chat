@@ -617,6 +617,7 @@ describe('AgentesListaPage', () => {
       expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
       expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
+      expect(wrapper.find('[data-escrever-instrucoes]').exists()).toBe(true);
       expect(wrapper.find('[data-copiloto]').exists()).toBe(true);
       expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
       wrapper.unmount();
@@ -739,6 +740,46 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    // #3214 — logo abaixo de "Do meu jeito" e antes do Copiloto.
+    it('opens "write the instructions in my own words" with ?escrever=1, right under "Do meu jeito"', async () => {
+      const wrapper = await montar();
+      const ordem = wrapper
+        .findAll(
+          '[data-do-meu-jeito], [data-escrever-instrucoes], [data-copiloto]'
+        )
+        .map(link =>
+          Object.keys(link.attributes()).find(a => a.startsWith('data-'))
+        );
+      expect(ordem).toEqual([
+        'data-do-meu-jeito',
+        'data-escrever-instrucoes',
+        'data-copiloto',
+      ]);
+      const escrever = wrapper.get('[data-escrever-instrucoes]');
+      expect(escrever.text()).toBe(
+        'AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES'
+      );
+      expect(escrever.classes()).toContain('min-h-11');
+      // Cada link tem a sua linha de explicação, como o Copiloto.
+      [
+        ['[data-do-meu-jeito]', 'AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO'],
+        [
+          '[data-escrever-instrucoes]',
+          'AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO',
+        ],
+      ].forEach(([seletor, explicacao]) => {
+        const id = wrapper.get(seletor).attributes('aria-describedby');
+        expect(wrapper.get(`#${id}`).text()).toBe(explicacao);
+      });
+      await escrever.trigger('click');
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { escrever: '1' },
+      });
+      wrapper.unmount();
+    });
+
     it('goes to the builder with the chosen template', async () => {
       const wrapper = await montar();
       await wrapper.findAll('[data-usar]')[1].trigger('click');
@@ -795,6 +836,7 @@ describe('AgentesListaPage', () => {
       expect(wrapper.text()).toContain('AGENTS.JORNADA.HEROI.SO_VER');
       expect(wrapper.find('[data-usar]').exists()).toBe(false);
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(false);
+      expect(wrapper.find('[data-escrever-instrucoes]').exists()).toBe(false);
       expect(wrapper.find('[data-copiloto]').exists()).toBe(false);
       expect(textoDosBotoes(wrapper)).toEqual([]);
       wrapper.unmount();

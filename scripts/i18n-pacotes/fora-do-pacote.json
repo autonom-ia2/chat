@@ -6,6 +6,7 @@
     "CUSTOM_ROLE.EDITOR.LOST_ACCESS.TITLE": "Pessoas que perdem acesso ao salvar a função (#2185); não é resultado de venda.",
     "CUSTOM_ROLE.EDITOR.LOST_ACCESS.DESCRIPTION": "Áreas que as pessoas da função perdem ao salvar (#2185); não é resultado de venda.",
     "AGENTS.JORNADA.EXCLUIR.TEXTO": "Perder o que foi digitado ao excluir o rascunho do agente; não é resultado de venda.",
+    "AGENTS.JORNADA.ESCREVER.SAIR.TEXTO": "Sair da criação com instruções escritas perde o texto (#3214); não é resultado de venda.",
     "AGENTS.JORNADA.PAGINA.FERRAMENTAS.PASSOS.SAIR.TEXTO": "Perder o que foi digitado ao sair da ferramenta; não é resultado de venda.",
     "NOVA_CONVERSA.ERRO.PADRAO": "Avisa que nada do que foi escrito se perdeu; não é resultado de venda.",
     "CRM_CARD.SAIR.TEXTO": "Sair do card sem salvar perde a edição; não é resultado de venda.",

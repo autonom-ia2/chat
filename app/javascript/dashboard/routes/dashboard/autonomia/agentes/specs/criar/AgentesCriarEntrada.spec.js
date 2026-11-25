@@ -57,6 +57,17 @@ vi.mock('../../pages/AgenteCriarPage.vue', async () => {
     }),
   };
 });
+// #3214: `?escrever=1` abre a página de escrever as instruções.
+vi.mock('../../pages/AgenteEscreverPage.vue', async () => {
+  const { defineComponent: definir, h: hh } = await import('vue');
+  return {
+    __esModule: true,
+    default: definir({
+      name: 'AgenteEscreverPage',
+      setup: () => () => hh('div', { 'data-escrever': '' }),
+    }),
+  };
+});
 const montouAntiga = vi.hoisted(() => vi.fn());
 const desmontouAntiga = vi.hoisted(() => vi.fn());
 vi.mock('../../../pages/AgentBuilderPage.vue', async () => {
@@ -231,6 +242,38 @@ describe('AgentesCriarEntrada', () => {
 
       expect(wrapper.find('[data-nova]').exists()).toBe(true);
       expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
+    // #3214 — escrever as instruções: página própria, sem a escolha nem a criação conversando.
+    it('opens the page to write the instructions with ?escrever=1', async () => {
+      comConta(ligada);
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+      expect(wrapper.find('[data-nova]').exists()).toBe(false);
+      expect(carregouNova).not.toHaveBeenCalled();
+    });
+
+    it('mounts the page to write the instructions after the choice on "Criar agente"', async () => {
+      comConta(ligada);
+      rota.atual.query = {};
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      rota.atual.query = { escrever: '1' };
+      await flushPromises();
+      expect(wrapper.find('[data-escrever]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
+    it('keeps the old Builder with the flag off even with ?escrever=1', async () => {
+      comConta({ ...conta });
+      rota.atual.query = { escrever: '1' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-antiga]').exists()).toBe(true);
+      expect(wrapper.find('[data-escrever]').exists()).toBe(false);
     });
 
     it('does not ask for the focus when the creation opens straight from the URL', async () => {

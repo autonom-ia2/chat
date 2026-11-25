@@ -1,0 +1,331 @@
+<script setup>
+import { computed, onMounted, ref, useId } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router';
+import { useStore } from 'dashboard/composables/store';
+import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
+import AgenteBotao from '../components/AgenteBotao.vue';
+import AgenteErro from '../components/AgenteErro.vue';
+import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
+import { MODELO_DO_MEU_JEITO } from '../constants/modelos';
+import { MAX_INSTRUCAO, idiomaDoNavegador } from '../utils/pagina';
+
+// #3214 — "Escrever as instruções com as minhas palavras": criar o agente direto com o texto que a pessoa já tem,
+// em página inteira (rota autonomia_agents_builder com `?escrever=1`, no padrão do Conectar). O texto vale como
+// escrito: o agente nasce no modo manual, parado, sem passar pelo Construtor e sem IA paga. Nasce `paused`, não
+// `draft`: rascunho aparece na lista como "Falta terminar" e o "Continuar" abre o Construtor, que não serve ao
+// agente escrito à mão. Parado, a lista mostra "Parado" e a página dele abre com "Editar instruções"; de lá a
+// pessoa ensina, dá ferramentas, escolhe onde atende e liga.
+// O campo das instruções é o da gaveta "Instruções de {nome}" (GavetaInstrucoes): mesmo limite e contador; no
+// celular a caixa tem 16rem de altura (o rows="16" passaria disso) e a partir do md tem a altura da gaveta.
+// O nome tem o limite do campo "Nome" da gaveta Foto e nome (GavetaFotoNome), para caber nela depois.
+// A rota já exige autonomia_manage; quem só vê não chega aqui, mas a página também não oferece o formulário.
+// Sair com algo escrito e sem ter criado pergunta antes (o texto se perderia). "Conte com suas palavras" vai para a
+// criação conversando na mesma rota (`?modelo=custom`), então a pergunta vale também para a troca de consulta.
+// O pb-24 no celular tira o "Criar agente" de baixo da bolinha do Guia (canto de baixo à direita).
+const MAX_NOME = 40;
+const NS = 'AGENTS.JORNADA.ESCREVER';
+const INSTRUCOES = 'AGENTS.JORNADA.PAGINA.INSTRUCOES';
+const ANEL_NORMAL = 'ring-n-slate-7';
+const ANEL_ERRO = 'ring-n-ruby-9';
+
+const { t, locale } = useI18n();
+const router = useRouter();
+const store = useStore();
+const podeGerenciar = useCanManage('autonomia_manage');
+const base = `escrever-${useId()}`;
+
+const nome = ref('');
+const texto = ref('');
+const nomeVazio = ref(false);
+const textoVazio = ref(false);
+const criando = ref(false);
+const criado = ref(false);
+const falhou = ref(false);
+const titulo = ref(null);
+const campoNome = ref(null);
+const campoTexto = ref(null);
+const confirmarSaida = ref(null);
+let saidaPendente = null;
+let saidaLiberada = false;
+
+onMounted(() => titulo.value?.focus());
+
+const idioma = computed(() => idiomaDoNavegador(locale.value));
+const contador = computed(() =>
+  t(`${INSTRUCOES}.CONTADOR`, {
+    n: texto.value.length.toLocaleString(idioma.value),
+    max: MAX_INSTRUCAO.toLocaleString(idioma.value),
+  })
+);
+const descricaoDoNome = computed(() =>
+  [`${base}-nome-dica`, nomeVazio.value ? `${base}-erro-nome` : '']
+    .filter(Boolean)
+    .join(' ')
+);
+const descricaoDoTexto = computed(() =>
+  [`${base}-dica`, textoVazio.value ? `${base}-erro` : '', `${base}-contador`]
+    .filter(Boolean)
+    .join(' ')
+);
+
+const aoDigitarNome = () => {
+  if (nomeVazio.value && nome.value.trim()) nomeVazio.value = false;
+};
+const aoDigitarTexto = () => {
+  if (textoVazio.value && texto.value.trim()) textoVazio.value = false;
+};
+
+// Os dois vazios mostram as duas mensagens; o foco vai para o primeiro.
+const conferir = () => {
+  nomeVazio.value = !nome.value.trim();
+  textoVazio.value = !texto.value.trim();
+  if (nomeVazio.value) campoNome.value?.focus();
+  else if (textoVazio.value) campoTexto.value?.focus();
+  return !nomeVazio.value && !textoVazio.value;
+};
+
+// Um clique só: o botão fica "Criando…" até a página do agente abrir. Só a falha ao criar o solta; a navegação fica
+// fora do try, para uma falha dela nunca oferecer "Tentar de novo" e criar o agente duas vezes.
+const criar = async () => {
+  if (criando.value || !conferir()) return;
+  falhou.value = false;
+  criando.value = true;
+  let agente;
+  try {
+    agente = await store.dispatch('autonomiaAgents/create', {
+      name: nome.value.trim(),
+      agent_type: 'custom',
+      mode: 'manual',
+      instruction: texto.value,
+      status: 'paused',
+      enabled: false,
+    });
+  } catch {
+    falhou.value = true;
+    criando.value = false;
+    return;
+  }
+  criado.value = true;
+  const nomeCriado = nome.value.trim();
+  router.replace({
+    name: 'autonomia_agent_panel',
+    params: { agentId: agente.id },
+  });
+  useAlert(t(`${NS}.CRIADO`, { nome: nomeCriado }));
+};
+
+// A pergunta só vale enquanto há algo escrito que se perderia: nada criado e nada sendo criado.
+const perderiaOTexto = () =>
+  !criado.value &&
+  !criando.value &&
+  Boolean(nome.value.trim() || texto.value.trim());
+
+const guardarSaida = destino => {
+  if (saidaLiberada || !perderiaOTexto()) return true;
+  saidaPendente = destino;
+  confirmarSaida.value?.abrir();
+  return false;
+};
+onBeforeRouteLeave(guardarSaida);
+onBeforeRouteUpdate(guardarSaida);
+
+// A licença de sair sem perguntar vale só para esta saída: se a navegação não acontecer, a próxima pergunta de novo.
+const sairMesmo = async () => {
+  const destino = saidaPendente;
+  saidaPendente = null;
+  confirmarSaida.value?.fechar();
+  if (!destino) return;
+  saidaLiberada = true;
+  try {
+    await router.push(destino);
+  } finally {
+    saidaLiberada = false;
+  }
+};
+
+const aoFecharConfirmacao = () => {
+  saidaPendente = null;
+};
+
+const voltar = () => router.push({ name: 'autonomia_agents_index' });
+const contarComMinhasPalavras = () =>
+  router.push({
+    name: 'autonomia_agents_builder',
+    query: { modelo: MODELO_DO_MEU_JEITO },
+  });
+</script>
+
+<template>
+  <div class="w-full h-full overflow-y-auto bg-n-background">
+    <div
+      data-escrever-agente
+      class="flex flex-col w-full max-w-3xl gap-6 px-4 pt-6 pb-24 mx-auto md:px-6 md:pb-6"
+    >
+      <button
+        type="button"
+        data-voltar-lista
+        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        @click="voltar"
+      >
+        <span
+          class="i-lucide-arrow-left size-4 rtl:rotate-180"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
+      </button>
+
+      <form
+        :aria-labelledby="`${base}-titulo`"
+        novalidate
+        class="flex flex-col shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
+        @submit.prevent="criar"
+      >
+        <div class="flex flex-col gap-5 p-5 md:p-8">
+          <div class="flex flex-col gap-2">
+            <h1
+              :id="`${base}-titulo`"
+              ref="titulo"
+              tabindex="-1"
+              class="m-0 text-2xl font-bold leading-tight tracking-tight outline-none text-n-slate-12"
+            >
+              {{ t(`${NS}.TITULO`) }}
+            </h1>
+            <p class="m-0 text-base text-n-slate-11">
+              {{
+                podeGerenciar
+                  ? t(`${NS}.TEXTO`)
+                  : t('AGENTS.JORNADA.HEROI.SO_VER')
+              }}
+            </p>
+          </div>
+
+          <template v-if="podeGerenciar">
+            <div class="flex flex-col gap-1">
+              <label
+                :for="`${base}-nome`"
+                class="text-sm font-medium text-n-slate-12"
+              >
+                {{ t(`${NS}.NOME`) }}
+              </label>
+              <p :id="`${base}-nome-dica`" class="m-0 text-sm text-n-slate-11">
+                {{ t(`${NS}.NOME_DICA`) }}
+              </p>
+              <input
+                :id="`${base}-nome`"
+                ref="campoNome"
+                v-model="nome"
+                data-nome
+                :maxlength="MAX_NOME"
+                autocomplete="off"
+                :readonly="criando"
+                :aria-invalid="nomeVazio ? 'true' : undefined"
+                :aria-describedby="descricaoDoNome"
+                class="px-3 mt-1 text-base rounded-xl min-h-11 bg-n-solid-1 ring-1 ring-inset border-0 !mb-0 text-n-slate-12"
+                :class="nomeVazio ? ANEL_ERRO : ANEL_NORMAL"
+                @input="aoDigitarNome"
+              />
+              <p
+                v-if="nomeVazio"
+                :id="`${base}-erro-nome`"
+                role="alert"
+                data-nome-vazio
+                class="m-0 text-sm text-n-ruby-11"
+              >
+                {{ t(`${NS}.NOME_VAZIO`) }}
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label
+                :for="`${base}-texto`"
+                class="text-sm font-medium text-n-slate-12"
+              >
+                {{ t(`${NS}.INSTRUCOES`) }}
+              </label>
+              <p :id="`${base}-dica`" class="m-0 text-sm text-n-slate-11">
+                {{ t(`${NS}.DICA`) }}
+              </p>
+              <button
+                type="button"
+                data-contar-com-minhas-palavras
+                class="px-0 text-sm font-semibold underline text-start min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+                @click="contarComMinhasPalavras"
+              >
+                {{ t(`${NS}.SEM_TEXTO`) }}
+              </button>
+              <textarea
+                :id="`${base}-texto`"
+                ref="campoTexto"
+                v-model="texto"
+                data-instrucao
+                rows="16"
+                :maxlength="MAX_INSTRUCAO"
+                :placeholder="t(`${NS}.EXEMPLO`)"
+                :readonly="criando"
+                :aria-invalid="textoVazio ? 'true' : undefined"
+                :aria-describedby="descricaoDoTexto"
+                class="w-full h-64 min-h-[16rem] md:h-auto md:min-h-[22rem] px-3 py-2 text-base leading-relaxed rounded-xl bg-n-solid-1 ring-1 ring-inset border-0 !mb-0 text-n-slate-12 resize-y"
+                :class="textoVazio ? ANEL_ERRO : ANEL_NORMAL"
+                @input="aoDigitarTexto"
+              />
+              <p
+                v-if="textoVazio"
+                :id="`${base}-erro`"
+                role="alert"
+                data-vazio
+                class="m-0 text-sm text-n-ruby-11"
+              >
+                {{ t(`${INSTRUCOES}.VAZIO`) }}
+              </p>
+              <span
+                :id="`${base}-contador`"
+                class="self-end text-xs tabular-nums text-n-slate-11"
+              >
+                {{ contador }}
+              </span>
+            </div>
+
+            <AgenteErro
+              v-if="falhou"
+              data-erro
+              :titulo="t(`${NS}.ERRO`)"
+              :garantia="t(`${NS}.ERRO_GARANTIA`)"
+              :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+              :carregando="criando"
+              @acao="criar"
+            />
+          </template>
+        </div>
+
+        <div
+          v-if="podeGerenciar && !falhou"
+          class="flex flex-col gap-2 px-5 py-4 border-t sm:flex-row sm:justify-end md:px-8 border-n-weak"
+        >
+          <AgenteBotao
+            data-criar
+            type="submit"
+            tamanho="lg"
+            :carregando="criando"
+            :rotulo-carregando="t(`${NS}.CRIANDO`)"
+          >
+            {{ t(`${NS}.CRIAR`) }}
+          </AgenteBotao>
+        </div>
+      </form>
+    </div>
+
+    <AgenteConfirmacao
+      ref="confirmarSaida"
+      :titulo="t(`${NS}.SAIR.TITULO`)"
+      :texto="t(`${NS}.SAIR.TEXTO`)"
+      :cancelar="t(`${NS}.SAIR.FICAR`)"
+      :confirmar="t(`${NS}.SAIR.SAIR`)"
+      :perigo="false"
+      ficar-em-destaque
+      @confirmar="sairMesmo"
+      @fechada="aoFecharConfirmacao"
+    />
+  </div>
+</template>
