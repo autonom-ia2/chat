@@ -15,8 +15,8 @@ RSpec.describe Autonomia::Agents::Operate::TurnoEmCurso do
     expect(described_class.teto_do_turno).to be > Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS
   end
 
-  # #3211: com as opções da paridade desligadas (ou sem agente), o teto é exatamente o de antes; só o agente com elas
-  # ligadas ganha a janela da espera pela fala e da fila.
+  # #3211: com as opções da paridade desligadas (sem agente, na Lia ou gravadas `false`), o teto é exatamente o de antes;
+  # o agente com elas ligadas (o padrão) ganha a janela da espera pela fala e da fila.
   it 'sem as opções da paridade, o teto do turno é o de sempre', :aggregate_failures do
     runner = Autonomia::Agents::Specialists::Runner
     lia = Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA * (runner::SEGUNDOS_DE_FERRAMENTA + runner::SEGUNDOS_POR_CHAMADA)
@@ -27,7 +27,16 @@ RSpec.describe Autonomia::Agents::Operate::TurnoEmCurso do
                 (ia + cadeia).seconds
 
     expect(described_class.teto_do_turno).to eq(de_sempre)
-    expect(described_class.teto_do_turno(Autonomia::Agents::Agent.new(config: {}))).to eq(de_sempre)
+    expect(described_class.teto_do_turno(Autonomia::Agents::Agent.new(config: paridade_desligada))).to eq(de_sempre)
+    expect(described_class.teto_do_turno(Autonomia::Agents::Agent.new(agent_type: 'insurance_quote', config: {}))).to eq(de_sempre)
+  end
+
+  it 'agente sem as chaves (padrão ligado): o teto cobre a espera pela fala e a fila' do
+    espera = Autonomia::Agents::Operate::EsperaDaFala
+
+    expect(described_class.teto_do_turno(Autonomia::Agents::Agent.new(config: {})))
+      .to eq(described_class.teto_do_turno + (espera::ESPERA_MAXIMA - Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS) +
+             espera::TETO_DA_FILA)
   end
 
   it 'com a espera pela fala e a fila, o teto do turno cobre as duas' do

@@ -24,8 +24,19 @@ RSpec.describe Autonomia::Agents::Operate::RitmoDoCanal do
     expect(saida.first['marca']).to eq('k' => 1)
   end
 
-  it 'sem a opção, os pedaços voltam iguais' do
-    expect(described_class.para(pedacos, agent: Autonomia::Agents::Agent.new(config: {}), conversation: nil)).to equal(pedacos)
+  it 'opção desligada, os pedaços voltam iguais' do
+    agente = Autonomia::Agents::Agent.new(config: { 'conversa_ritmo_do_canal' => false })
+    expect(described_class.para(pedacos, agent: agente, conversation: nil)).to equal(pedacos)
+  end
+
+  it 'sem a chave (padrão ligado), reescreve os pedaços' do
+    saida = described_class.para(pedacos, agent: Autonomia::Agents::Agent.new(config: {}), conversation: nil)
+    expect(saida.pluck('delay_ms')).to eq([5000, 6000, 11_000, 12_000])
+  end
+
+  it 'a Lia sem a chave: os pedaços voltam iguais, como antes' do
+    lia = Autonomia::Agents::Agent.new(agent_type: 'insurance_quote', config: {})
+    expect(described_class.para(pedacos, agent: lia, conversation: nil)).to equal(pedacos)
   end
 
   it 'com a opção, reescreve os pedaços' do

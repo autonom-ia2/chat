@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# #3211: quanto esperar pela fala anterior (P1) e quando entrar na fila atrás do turno em curso (P2).
+# #3211: quanto esperar pela fala anterior (P1) e quando entrar na fila atrás do turno em curso (P2). As duas opções nascem
+# ligadas (menos na Lia); o exemplo que prova a opção desligada grava `false` no agente.
 RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
   subject(:espera) { described_class }
 
@@ -23,7 +24,19 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
 
   describe '.da_rajada' do
     it 'opção desligada: o debounce de sempre' do
+      desligar_paridade!(agent, 'conversa_espera_a_fala')
       expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(6.seconds)
+    end
+
+    it 'sem a chave (padrão ligado): espera a fala anterior acabar' do
+      allow(fala).to receive(:fim_previsto).with(1).and_return(25.seconds.from_now)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(25.seconds)
+    end
+
+    it 'a Lia sem a chave: o debounce de sempre, como antes' do
+      lia = Autonomia::Agents::Agent.new(account: conta, agent_type: 'insurance_quote', config: {})
+      allow(fala).to receive(:fim_previsto).and_return(25.seconds.from_now)
+      expect(espera.da_rajada(agent: lia, conversation_id: 1)).to eq(6.seconds)
     end
 
     it 'ligada e sem fala anterior: 1 s' do
@@ -62,6 +75,7 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
     end
 
     it 'com_a_fila soma o teto da fila só quando o agente tem a fila ligada', :aggregate_failures do
+      desligar_paridade!(agent, 'conversa_em_fila')
       expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true)).to eq(1.second)
 
       liga!('conversa_em_fila')
@@ -75,10 +89,16 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
 
     it 'sem agente ou com as opções desligadas: a maior janela de debounce de sempre', :aggregate_failures do
       expect(espera.janela_maxima(nil)).to eq(debounce)
+      desligar_paridade!(agent)
       expect(espera.janela_maxima(agent)).to eq(debounce)
     end
 
+    it 'sem as chaves (padrão ligado): cobre a espera máxima e soma o teto da fila' do
+      expect(espera.janela_maxima(agent)).to eq(described_class::ESPERA_MAXIMA + described_class::TETO_DA_FILA)
+    end
+
     it 'com a espera pela fala, cobre a espera máxima; com a fila, soma o teto da fila', :aggregate_failures do
+      desligar_paridade!(agent, 'conversa_espera_a_fala')
       liga!('conversa_em_fila')
       expect(espera.janela_maxima(agent)).to eq(debounce + described_class::TETO_DA_FILA)
 
@@ -105,7 +125,13 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
       expect(espera.na_fila?(agent: agent, conversation: conversation, message_id: 9)).to be(false)
     end
 
+    it 'sem a chave (padrão ligado): outro turno falando, fila' do
+      fala.ocupar(conversation.id, 8)
+      expect(espera.na_fila?(agent: agent, conversation: conversation, message_id: 9)).to be(true)
+    end
+
     it 'opção desligada: nunca fila' do
+      desligar_paridade!(agent, 'conversa_em_fila')
       fala.ocupar(conversation.id, 8)
       expect(espera.na_fila?(agent: agent, conversation: conversation, message_id: 9)).to be(false)
     end

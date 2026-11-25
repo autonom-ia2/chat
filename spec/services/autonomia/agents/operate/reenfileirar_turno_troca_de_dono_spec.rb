@@ -144,7 +144,9 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     expect(silencios(linhas, 'dono_mudou').size).to eq(1)
   end
 
+  # Sem a fila na área (destino): com ela (o padrão, #3211) a janela do turno em andamento ganha o teto da fila, 150 s.
   it 'evento de troca muito depois do turno (fora da janela) não refaz turno velho' do
+    desligar_paridade!(area, 'conversa_em_fila')
     ia_responde!
     mensagem = turno_do_cliente
     clear_enqueued_jobs
@@ -374,7 +376,9 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       segunda
     end
 
+    # A porta grava a marca sem a espera pela fala (P1, ligada por padrão): a janela é o debounce de 6 s.
     it 'troca de dono pelo evento dentro da janela: o turno refeito espera o fim da janela, e a mensagem nova vence' do
+      desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
       ia_responde!
       turno_do_cliente
       fim_da_janela = Time.current + Autonomia::Agents::Config.debounce_seconds_for(area)
@@ -431,8 +435,10 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(silencios(linhas, 'turno_superado').size).to eq(1)
     end
 
-    it 'fora da Fase 2, M2 durante a IA segue como antes: as duas respostas saem' do
+    # Com a fila (P2, ligada por padrão) a resposta superada sai também fora da Fase 2: aqui, a fila desligada.
+    it 'fora da Fase 2 e com a fila desligada, M2 durante a IA segue como antes: as duas respostas saem' do
       Autonomia::Agents::Fase2.desligar!(account)
+      desligar_paridade!(agente_da_porta)
       segunda = cliente_escreve_durante_a_ia!
       primeira = turno_do_cliente
 

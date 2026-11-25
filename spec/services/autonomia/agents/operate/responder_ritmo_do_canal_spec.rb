@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Paridade da conversa (#3211), P5: com `conversa_ritmo_do_canal`, o delay de cada pedaço agendado ganha a pausa
-# pós-envio. A caixa do cenário não é WhatsApp oficial: a espera dos pedaços fica cheia.
+# pós-envio. A caixa do cenário não é WhatsApp oficial: a espera dos pedaços fica cheia. A opção nasce ligada (menos na
+# Lia); gravada `false`, os pedaços saem como antes.
 RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
   include_context 'with crm responsible agent'
 
@@ -35,7 +36,15 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(pedacos_agendados.pluck('delay_ms')).to eq([5000, 6000])
   end
 
-  it 'sem a opção, como hoje' do
+  it 'sem a chave (padrão ligado), o 2º pedaço espera a pausa a mais' do
+    gatilho(cliente_escreve('oi'))
+    rodar_turno!
+
+    expect(pedacos_agendados.pluck('delay_ms')).to eq([5000, 6000])
+  end
+
+  it 'opção desligada, como antes' do
+    desligar_paridade!(agente_da_porta, 'conversa_ritmo_do_canal')
     gatilho(cliente_escreve('oi'))
     rodar_turno!
 

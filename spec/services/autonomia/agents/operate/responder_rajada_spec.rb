@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Paridade da conversa (#3211), P1 no Responder: com `conversa_espera_a_fala`, a pergunta é a rajada inteira do cliente e,
-# depois de falar, o fim previsto da fala fica gravado. Sem a opção, tudo como sempre. A IA é dublada; o Redis é o de teste.
+# depois de falar, o fim previsto da fala fica gravado. A opção nasce ligada (menos na Lia); gravada `false`, tudo como
+# antes. A IA é dublada; o Redis é o de teste.
 RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
   include_context 'with crm responsible agent'
 
@@ -79,7 +80,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(perguntas.sole).to eq("quero cotar\npra Portugal\nsaio dia 02/02")
   end
 
-  it 'sem a opção, só a última' do
+  it 'sem a chave (padrão ligado), a pergunta é a rajada inteira' do
+    escreve('quero cotar')
+    ultima = escreve('pra Portugal')
+
+    settle_direto(ultima)
+
+    expect(perguntas.sole).to eq("quero cotar\npra Portugal")
+  end
+
+  it 'opção desligada, só a última' do
+    desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
     escreve('quero cotar')
     ultima = escreve('pra Portugal')
 
@@ -123,7 +134,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(fala.fim_previsto(conversation.id)).to be_nil
   end
 
-  it 'sem a opção, não grava' do
+  it 'opção desligada, não grava' do
+    desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
     settle_direto(escreve('oi'))
 
     expect(fala.fim_previsto(conversation.id)).to be_nil

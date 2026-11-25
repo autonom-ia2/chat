@@ -220,7 +220,9 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
 
       before { freeze_time }
 
+      # Sem a fila: com ela (o padrão, #3211), a janela ganha o teto da fila, e o exemplo mede só a espera pela fala.
       it 'waits for the burst window of now, with conversa_espera_a_fala' do
+        desligar_paridade!(agente_da_porta, 'conversa_em_fila')
         agente_da_porta.update!(config: agente_da_porta.config.to_h.merge('conversa_espera_a_fala' => true))
         allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:fim_previsto).and_return(25.seconds.from_now)
         sem = bolha
@@ -231,7 +233,8 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
         expect(Waha::RichNative::UnsupportedTurnJob).to have_been_enqueued.with(conversation.id, sem.id, 'settle').at(25.seconds.from_now)
       end
 
-      it 'waits for the usual debounce without the options' do
+      it 'waits for the usual debounce with the options turned off' do
+        desligar_paridade!(agente_da_porta)
         sem = bolha
         marca_velha!(sem)
 

@@ -203,7 +203,9 @@ describe WhatsappHybrid::RecoveryAiWake do
     end
 
     # #3211 (revisão final F9): a mesma forma do gatilho do ReplyJob, com a espera da rajada (`espera_ms`).
-    it 'grava a espera na marca e agenda o settle depois dela; sem as opções, o debounce de sempre', :aggregate_failures do
+    it 'grava a espera na marca e agenda o settle depois dela; com a espera pela fala desligada, o debounce de sempre',
+       :aggregate_failures do
+      desligar_paridade!(agent, 'conversa_espera_a_fala')
       espera = Autonomia::Agents::Config.debounce_seconds_for(agent)
 
       expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle')

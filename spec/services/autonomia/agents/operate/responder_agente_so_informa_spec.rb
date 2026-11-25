@@ -166,8 +166,10 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(turno.em_curso?(conversation.id)).to be(false)
     end
 
+    # Com a entrega inteira (#3211, ligada por padrão) a mensagem nova não para a cadeia: aqui, ela desligada.
     it 'o cliente escreveu no meio da fala (turno mudou depois do 1º pedaço): a Atribuição avalia; a marca é do turno novo',
        :aggregate_failures do
+      desligar_paridade!(agent, 'conversa_entrega_inteira')
       turno_aberto!
       ia_responde
 
