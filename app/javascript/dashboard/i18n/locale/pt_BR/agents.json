@@ -4043,6 +4043,8 @@
         "PRONTO": "Você não escreve nada: o jeito de atender já vem pronto e melhora sozinho.",
         "EXEMPLO_TITULO": "Exemplo de conversa",
         "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
+        "EXEMPLO_NOME": "Bia",
+        "EXEMPLO_CORRETORA": "Corretora Exemplo",
         "CONVERSA": {
           "CLIENTE_1": "Oi! Quero seguro para Portugal, de 10 a 24 de janeiro. Somos 2.",
           "AGENTE_1": "Oi! Aqui é {nome}, da {corretora}. Quantos anos cada um tem?",

@@ -13,6 +13,8 @@ export const GAVETA = {
   INSTRUCOES: 'instrucoes',
   AGENDA: 'agenda',
   FERRAMENTAS: 'ferramentas',
+  // #3211 — os dados da corretora e o acesso à seguradora do agente contratado.
+  CONTRATADO: 'contratado',
 };
 
 // O `:tab` da página antiga (links do Guia, da Central e de favoritos) abre a gaveta equivalente.

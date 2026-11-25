@@ -4043,6 +4043,8 @@
         "PRONTO": "You don't write anything: the way it answers comes ready and improves by itself.",
         "EXEMPLO_TITULO": "Example conversation",
         "EXEMPLO_SR": "Example conversation, not a real agent",
+        "EXEMPLO_NOME": "Bia",
+        "EXEMPLO_CORRETORA": "Example Brokerage",
         "CONVERSA": {
           "CLIENTE_1": "Hi! I want insurance for Portugal, from January 10 to 24. There are 2 of us.",
           "AGENTE_1": "Hi! This is {nome}, from {corretora}. How old is each of you?",
