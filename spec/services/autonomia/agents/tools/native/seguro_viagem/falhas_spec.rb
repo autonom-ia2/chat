@@ -6,11 +6,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
   let(:conversa) { create(:conversation, account: account, inbox: inbox) }
   let(:contratado) { Autonomia::Agents::Agent.create!(account: account, name: 'Contratado', agent_type: 'custom') }
   let!(:acesso) do
+    # O `let!` roda antes do `before`: a senha é coluna cifrada, e a CI não tem as chaves do cofre (R8).
+    enable_test_encryption!
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: contratado, login: 'corretor.teste',
                                                   senha: 's3nha-teste', estado: 'ok')
   end
-
-  before { enable_test_encryption! }
 
   def tratar(codigo, mensagem = nil)
     erro = Autonomia::Seguradoras::Universal::Cliente::Erro.new(codigo, mensagem_da_seguradora: mensagem)

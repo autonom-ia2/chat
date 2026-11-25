@@ -72,7 +72,7 @@ RSpec.describe 'Autonomia agente contratado: travas da API', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.base_do_contratado'))
 
-    fonte = agente.sources.create!(account: account, source_type: 'text', content: 'material', kind: 'knowledge')
+    fonte = agente.sources.create!(account: account, source_type: 'txt', reference: 'material.txt', kind: :knowledge)
     delete "#{sources_url}/#{fonte.id}", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
     expect(Autonomia::Agents::Source.exists?(fonte.id)).to be(true)

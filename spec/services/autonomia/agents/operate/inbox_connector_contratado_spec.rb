@@ -27,7 +27,7 @@ RSpec.describe Autonomia::Agents::Operate::InboxConnector do
 
       expect(result.status).to eq(:error)
       expect(result.error).to eq(:acesso_da_seguradora_pendente)
-      expect(Autonomia::Agents::AgentInbox.where(agent_id: contratado.id)).to be_empty
+      expect(Autonomia::Agents::AgentInbox.where(autonomia_agent_id: contratado.id)).to be_empty
       expect(contratado.reload.status).to eq('draft')
     end
 
@@ -38,7 +38,7 @@ RSpec.describe Autonomia::Agents::Operate::InboxConnector do
       result = described_class.new(agent: contratado, inbox: inbox, ativar: true).perform(connect: true)
 
       expect(result.error).to eq(:acesso_da_seguradora_pendente)
-      expect(Autonomia::Agents::AgentInbox.where(agent_id: contratado.id)).to be_empty
+      expect(Autonomia::Agents::AgentInbox.where(autonomia_agent_id: contratado.id)).to be_empty
     end
   end
 
@@ -52,7 +52,7 @@ RSpec.describe Autonomia::Agents::Operate::InboxConnector do
       result = described_class.new(agent: contratado, inbox: inbox, ativar: true).perform(connect: true)
 
       expect(result).to be_success
-      expect(Autonomia::Agents::AgentInbox.where(agent_id: contratado.id, inbox_id: inbox.id)).to exist
+      expect(Autonomia::Agents::AgentInbox.where(autonomia_agent_id: contratado.id, inbox_id: inbox.id)).to exist
       expect(contratado.reload).to have_attributes(status: 'active', enabled: true)
     end
   end
