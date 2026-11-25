@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe Autonomia::Agents::PromptParts::Agora do
   def conta_no_fuso(fuso)
-    create(:account, custom_attributes: { 'timezone' => fuso })
+    create(:account, reporting_timezone: fuso)
   end
 
   it 'no fuso da conta' do
