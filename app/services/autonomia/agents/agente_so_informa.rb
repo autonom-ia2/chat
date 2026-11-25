@@ -9,7 +9,9 @@
 # - CRM (Crm::Ai::HandoffExecutor): a avaliação com o gatilho da fala do agente não esbarra no bloqueio
 #   `owned_by_our_agent` (#1673) e entrega pelo Crm::Entrega, com as regras de sempre.
 #
-# Fora: o evento da cotação (ResponderAoEvento), a porta de engajamento, a recuperação do Híbrido e as ações do dono.
+# Vale também no turno do evento da cotação (ResponderAoEvento, #3221, regra do Rodrigo de 25/11): a Lia, e qualquer
+# agente que passe por ele, avisa e deixa a Atribuição decidir, como no turno do cliente.
+# Fora: a porta de engajamento, a recuperação do Híbrido e as ações do dono.
 # Desligada: tudo como antes.
 module Autonomia::Agents::AgenteSoInforma
   FLAG = 'agente_so_informa'.freeze

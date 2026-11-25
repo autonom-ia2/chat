@@ -171,7 +171,7 @@ module Autonomia
           passar_a_conversa(result)
         end
 
-        # O caminho de sempre do sinal (sem a flag `agente_so_informa`, e no evento da cotação): bot_handoff! sob lock.
+        # O caminho de sempre do sinal (sem a flag `agente_so_informa`): bot_handoff! sob lock.
         def passar_a_conversa(result)
           released = false
           @conversation.with_lock do
@@ -205,7 +205,7 @@ module Autonomia
           aviso.fala_terminou!(@conversation)
         end
 
-        # Lido pelo ResponderAoEvento, que fica fora do #2154.
+        # Vale para todo turno do agente, o do evento da cotação inclusive (ResponderAoEvento, #3221).
         def agente_so_informa?
           ::Autonomia::Agents::AgenteSoInforma.ligada?(@conversation.account)
         end
