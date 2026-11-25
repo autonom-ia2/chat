@@ -45,6 +45,8 @@ vi.mock('vue-router', () => ({
 }));
 
 const CRIAR = 'autonomia_agents_builder';
+// Um agente que o ajudante pode ajudar: fala com o cliente e não é rascunho.
+const CLIENTE = { id: 1, status: 'active', actuation: 'external' };
 const NS = 'AGENTS.JORNADA.CRIAR_EM_PASSOS';
 
 const prepararStore = ({
@@ -111,7 +113,7 @@ describe('CriarEmPassos (#3219)', () => {
     });
 
     it('shows the list name tag under the copilot, team agent and helper titles', async () => {
-      prepararStore({ fase2: true, agentes: [{ id: 1 }] });
+      prepararStore({ fase2: true, agentes: [CLIENTE] });
       const wrapper = await montar();
       expect(
         wrapper.findAll('[data-nome-na-lista]').map(n => n.text())
@@ -124,7 +126,7 @@ describe('CriarEmPassos (#3219)', () => {
     });
 
     it('shows the five roles with Phase 2, the per inbox agent and agents on the account', async () => {
-      prepararStore({ fase2: true, porCaixa: true, agentes: [{ id: 1 }] });
+      prepararStore({ fase2: true, porCaixa: true, agentes: [CLIENTE] });
       const wrapper = await montar();
       expect(papeisNaTela(wrapper)).toEqual([
         'atender',
@@ -145,13 +147,13 @@ describe('CriarEmPassos (#3219)', () => {
     });
 
     it('reads the agents once and shows a placeholder until they arrive, so the cards do not jump', async () => {
-      prepararStore({ fase2: true, agentes: [{ id: 1 }] });
+      prepararStore({ fase2: true, agentes: [CLIENTE] });
       let responder;
       store.dispatch.mockImplementation(
         () =>
           new Promise(resolve => {
             responder = () => {
-              store.state['autonomiaAgents/getRecords'] = [{ id: 1 }];
+              store.state['autonomiaAgents/getRecords'] = [CLIENTE];
               resolve();
             };
           })
@@ -170,16 +172,35 @@ describe('CriarEmPassos (#3219)', () => {
       wrapper.unmount();
     });
 
-    it('shows the roles without the helper when the agents cannot be read', async () => {
-      prepararStore({ fase2: true });
-      store.dispatch.mockRejectedValue(new Error('500'));
+    it('hides the helper when no agent can be helped (only the copilot, a draft or another helper)', async () => {
+      prepararStore({
+        fase2: true,
+        agentes: [
+          { id: 1, status: 'active', actuation: 'internal' },
+          { id: 2, status: 'draft', actuation: 'external' },
+          { id: 3, status: 'active', actuation: 'internal', ajudante: true },
+        ],
+      });
       const wrapper = await montar();
       expect(papeisNaTela(wrapper)).toEqual(['atender', 'copiloto', 'equipe']);
       wrapper.unmount();
     });
 
+    it('keeps the helper with Phase 2 when the agents cannot be read, and lets the creation decide', async () => {
+      prepararStore({ fase2: true });
+      store.dispatch.mockRejectedValue(new Error('500'));
+      const wrapper = await montar();
+      expect(papeisNaTela(wrapper)).toEqual([
+        'atender',
+        'copiloto',
+        'equipe',
+        'ajudante',
+      ]);
+      wrapper.unmount();
+    });
+
     it('on the empty list (inicio) keeps the strong question, reads nothing and never offers the helper', async () => {
-      prepararStore({ fase2: true, agentes: [{ id: 1 }] });
+      prepararStore({ fase2: true, agentes: [CLIENTE] });
       const wrapper = await montar({ inicio: true });
       expect(store.dispatch).not.toHaveBeenCalled();
       expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.HEROI.TITULO');
@@ -210,7 +231,7 @@ describe('CriarEmPassos (#3219)', () => {
     ])(
       'opens %s straight, without a step 2, and tells who uses it',
       async (papel, query) => {
-        prepararStore({ fase2: true, porCaixa: true, agentes: [{ id: 1 }] });
+        prepararStore({ fase2: true, porCaixa: true, agentes: [CLIENTE] });
         const wrapper = await montar();
         await wrapper.get(`[data-papel="${papel}"]`).trigger('click');
         await flushPromises();
@@ -240,6 +261,31 @@ describe('CriarEmPassos (#3219)', () => {
       const wrapper = await montar();
       expect(wrapper.text()).toContain('AGENTS.JORNADA.HEROI.SO_VER');
       expect(wrapper.findAll('button')).toHaveLength(0);
+      wrapper.unmount();
+    });
+
+    it('shows the failure and tries again when step 2 does not open', async () => {
+      router.push.mockResolvedValueOnce(FALHA);
+      const wrapper = await montar();
+      await wrapper.get('[data-papel="copiloto"]').trigger('click');
+      await flushPromises();
+
+      const erro = wrapper.get('[data-erro-ao-comecar]');
+      expect(
+        wrapper.get('[data-criar-em-passos]').attributes('data-passo')
+      ).toBe('1');
+      expect(wrapper.emitted('escolher')).toBeUndefined();
+
+      await erro.get('button').trigger('click');
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: CRIAR,
+        query: { papel: 'copiloto' },
+      });
+      expect(
+        wrapper.get('[data-criar-em-passos]').attributes('data-passo')
+      ).toBe('2');
+      expect(wrapper.find('[data-erro-ao-comecar]').exists()).toBe(false);
       wrapper.unmount();
     });
   });

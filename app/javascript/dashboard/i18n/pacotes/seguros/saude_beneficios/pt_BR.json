@@ -722,6 +722,16 @@
             "CLIENTE": "Oi! Queria conversar sobre o plano de saúde da minha empresa."
           }
         }
+      },
+      "ESCREVER": {
+        "EXEMPLO": "Ex.: Você atende os clientes da minha corretora de planos de saúde. Responda com frases curtas. Se não souber, passe para alguém da equipe."
+      },
+      "CRIAR_EM_PASSOS": {
+        "ESCREVER": {
+          "COPILOTO": {
+            "EXEMPLO": "Ex.: Você ajuda a equipe da minha corretora de planos. Quando pedirem, resuma a conversa e diga o que falta para a cotação. Nunca prometa preço sem cotar."
+          }
+        }
       }
     },
     "OUTRO_SISTEMA": {

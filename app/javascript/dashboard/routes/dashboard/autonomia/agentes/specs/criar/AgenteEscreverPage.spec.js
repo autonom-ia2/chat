@@ -600,6 +600,11 @@ describe('AgenteEscreverPage', () => {
       await clicar('[data-voltar-lista]');
       expect(navegou).not.toHaveBeenCalled();
       expect(dialogo().open).toBe(true);
+
+      dialogo().open = false;
+      await clicar('[data-trocar-papel]');
+      expect(navegou).not.toHaveBeenCalled();
+      expect(dialogo().open).toBe(true);
       wrapper.unmount();
     });
   });

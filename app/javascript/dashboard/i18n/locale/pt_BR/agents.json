@@ -986,8 +986,6 @@
       "ERRO": {
         "LISTA": "Não deu para mostrar seus agentes agora.",
         "LISTA_GARANTIA": "Nenhum agente foi mudado.",
-        "COMECAR_MODELO": "Não deu para começar agora.",
-        "COMECAR_MODELO_GARANTIA": "Nada foi criado.",
         "COMECAR_ATENDER": "Não deu para começar a atender.",
         "COMECAR_ATENDER_GARANTIA": "Nada mudou: {nome} ainda não está atendendo.",
         "CANAL": "Este canal não pôde ser usado.",

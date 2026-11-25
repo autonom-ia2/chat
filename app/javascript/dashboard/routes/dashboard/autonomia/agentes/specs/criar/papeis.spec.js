@@ -14,11 +14,14 @@ const chaves = flags => papeisDisponiveis(flags).map(papel => papel.chave);
 describe('papeis (#3219)', () => {
   describe('papeisDisponiveis', () => {
     it('shows only the customer agent and the Team copilot without Phase 2 nor the per inbox agent', () => {
-      expect(chaves({ agentes: 3 })).toEqual([PAPEL.ATENDER, PAPEL.COPILOTO]);
+      expect(chaves({ temQuemAjudar: true })).toEqual([
+        PAPEL.ATENDER,
+        PAPEL.COPILOTO,
+      ]);
     });
 
-    it('adds the team agent and the helper with Phase 2 and agents on the account', () => {
-      expect(chaves({ fase2: true, agentes: 1 })).toEqual([
+    it('adds the team agent and the helper with Phase 2 and an agent the helper can help', () => {
+      expect(chaves({ fase2: true, temQuemAjudar: true })).toEqual([
         PAPEL.ATENDER,
         PAPEL.COPILOTO,
         PAPEL.EQUIPE,
@@ -26,8 +29,8 @@ describe('papeis (#3219)', () => {
       ]);
     });
 
-    it('hides the helper when the account has no agent, even with Phase 2', () => {
-      expect(chaves({ fase2: true, agentes: 0 })).toEqual([
+    it('hides the helper when no agent can be helped, even with Phase 2', () => {
+      expect(chaves({ fase2: true, temQuemAjudar: false })).toEqual([
         PAPEL.ATENDER,
         PAPEL.COPILOTO,
         PAPEL.EQUIPE,
@@ -43,9 +46,9 @@ describe('papeis (#3219)', () => {
     });
 
     it('keeps the customer agent first, the highlighted card', () => {
-      expect(chaves({ fase2: true, porCaixa: true, agentes: 2 })[0]).toBe(
-        PAPEL.ATENDER
-      );
+      expect(
+        chaves({ fase2: true, porCaixa: true, temQuemAjudar: true })[0]
+      ).toBe(PAPEL.ATENDER);
     });
   });
 

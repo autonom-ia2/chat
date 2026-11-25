@@ -986,8 +986,6 @@
       "ERRO": {
         "LISTA": "Your agents could not be shown right now.",
         "LISTA_GARANTIA": "No agent was changed.",
-        "COMECAR_MODELO": "Could not start right now.",
-        "COMECAR_MODELO_GARANTIA": "Nothing was created.",
         "COMECAR_ATENDER": "Could not start answering.",
         "COMECAR_ATENDER_GARANTIA": "Nothing changed: {nome} is still not answering.",
         "CANAL": "This channel could not be used.",

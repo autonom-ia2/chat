@@ -13,6 +13,7 @@ import { useFase2 } from '../composables/useFase2';
 import { useAgenteIaPorCaixa } from '../composables/useAgenteIaPorCaixa';
 import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 import { MODELOS } from '../constants/modelos';
+import { principaisPossiveis } from '../utils/ajudante';
 import {
   JEITO,
   PAPEL,
@@ -34,8 +35,10 @@ import {
 // Papel sem passo 2 (agente da equipe, ajudante, conectar) e a escolha final abrem a criação na mesma rota; antes,
 // avisam quem usa (`escolher`, com a query). Se a abertura falhar, o aviso aparece com "Tentar de novo" e nada fica
 // travado em "Começando…".
-// O ajudante só aparece com pelo menos um agente na conta: fora da tela inicial (que já sabe que não há agente), a
-// página lê a lista ao abrir e, até ela chegar, o passo 1 mostra um esqueleto, para os cartões não pularem.
+// O ajudante só aparece quando a conta tem um agente que ele pode ajudar (a regra do passo "quem ele ajuda": fala com
+// o cliente e não é rascunho). Fora da tela inicial (que já sabe que não há agente), a página lê a lista ao abrir e,
+// até ela chegar, o passo 1 mostra um esqueleto, para os cartões não pularem. Se a lista não vier, o cartão fica como
+// era antes desta tela (só com a Fase 2) e a criação decide.
 // Conta sem canal: o aviso fica no passo 2 de atender clientes, o único papel que precisa de canal.
 const props = defineProps({
   inicio: { type: Boolean, default: false },
@@ -60,13 +63,16 @@ const comecando = ref(null);
 const falhou = ref(null);
 const heroi = ref(null);
 const agentesLidos = ref(props.inicio || !!agentes.value?.length);
+const listaFalhou = ref(false);
 let ultimaEscolha = null;
 
 const papeis = computed(() =>
   papeisDisponiveis({
     fase2: fase2.value,
     porCaixa: porCaixa.value,
-    agentes: props.inicio ? 0 : agentes.value?.length || 0,
+    temQuemAjudar:
+      !props.inicio &&
+      (listaFalhou.value || principaisPossiveis(agentes.value).length > 0),
   })
 );
 const papel = computed(() => (props.inicio ? null : papelDoPasso(route.query)));
@@ -108,7 +114,7 @@ onMounted(async () => {
   try {
     await store.dispatch('autonomiaAgents/get');
   } catch {
-    // Sem a lista, o ajudante só não aparece (a conta pode não ter agente para ele ajudar).
+    listaFalhou.value = true;
   } finally {
     agentesLidos.value = true;
   }
@@ -130,9 +136,24 @@ const abrir = async (chave, query) => {
   }
 };
 
+// Papel com passo 2 só troca a consulta (sem avisar `escolher`); a falha mostra o mesmo aviso da escolha final.
+const irParaPasso2 = async chave => {
+  ultimaEscolha = { chave, query: queryDoPapel(chave), passo2: true };
+  falhou.value = null;
+  try {
+    const resultado = await router.push({
+      name: ROTA,
+      query: queryDoPapel(chave),
+    });
+    if (isNavigationFailure(resultado)) falhou.value = chave;
+  } catch {
+    falhou.value = chave;
+  }
+};
+
 const escolherPapel = chave => {
   if (temPasso2(chave)) {
-    router.push({ name: ROTA, query: queryDoPapel(chave) });
+    irParaPasso2(chave);
     return;
   }
   abrir(chave, queryDoPapel(chave));
@@ -152,7 +173,9 @@ const usarOpcao = chave =>
       : queryDeConversar(papel.value)
   );
 const tentarDeNovo = () => {
-  if (ultimaEscolha) abrir(ultimaEscolha.chave, ultimaEscolha.query);
+  if (!ultimaEscolha) return;
+  if (ultimaEscolha.passo2) irParaPasso2(ultimaEscolha.chave);
+  else abrir(ultimaEscolha.chave, ultimaEscolha.query);
 };
 </script>
 

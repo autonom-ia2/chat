@@ -6,12 +6,10 @@ import RamoCartao from './RamoCartao.vue';
 // agente"); os modelos gerais vêm embaixo, na seção "Não achou o seu seguro?" (ComoComecar). Quais cartões aparecem é
 // decisão do servidor (useRamosDeSeguro); quem usa só mostra a fileira quando há pelo menos um.
 // `comecando`: a chave do cartão (ramo ou modelo) que a pessoa acabou de escolher, ou null.
-// `falhou`: a chave do cartão cuja criação não abriu, ou null; o cartão mostra o aviso com "Tentar de novo".
 defineProps({
   ramos: { type: Array, required: true },
   podeUsar: { type: Boolean, default: false },
   comecando: { type: String, default: null },
-  falhou: { type: String, default: null },
 });
 
 const emit = defineEmits(['usar']);
@@ -45,7 +43,6 @@ const NS = 'AGENTS.JORNADA.RAMOS';
         :pode-usar="podeUsar"
         :comecando="comecando === ramo.chave"
         :bloqueado="!!comecando && comecando !== ramo.chave"
-        :falhou="falhou === ramo.chave"
         @usar="chave => emit('usar', chave)"
       />
     </ul>

@@ -62,19 +62,19 @@ export const PAPEIS = [
 
 const DISPONIVEL = {
   [PAPEL.EQUIPE]: ({ fase2 }) => fase2,
-  [PAPEL.AJUDANTE]: ({ fase2, agentes }) => fase2 && agentes > 0,
+  [PAPEL.AJUDANTE]: ({ fase2, temQuemAjudar }) => fase2 && temQuemAjudar,
   [PAPEL.CONECTAR]: ({ porCaixa }) => porCaixa,
 };
 
-// `agentes`: quantos agentes a conta tem (na tela inicial sem agentes, zero).
+// `temQuemAjudar`: a conta tem algum agente que o ajudante pode ajudar (a mesma regra do passo "quem ele ajuda").
 export const papeisDisponiveis = ({
   fase2 = false,
   porCaixa = false,
-  agentes = 0,
+  temQuemAjudar = false,
 } = {}) =>
   PAPEIS.filter(papel => {
     const regra = DISPONIVEL[papel.chave];
-    return !regra || regra({ fase2, porCaixa, agentes });
+    return !regra || regra({ fase2, porCaixa, temQuemAjudar });
   });
 
 export const papelPelaChave = chave =>

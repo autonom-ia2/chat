@@ -271,15 +271,6 @@ describe('ModeloCartao', () => {
     expect(wrapper.emitted('usar')).toEqual([['support']]);
   });
 
-  it('shows the start failure under the template, with a retry', async () => {
-    const wrapper = montar({ falhou: true });
-    expect(wrapper.get('[role="alert"]').text()).toContain(
-      'AGENTS.JORNADA.ERRO.COMECAR_MODELO'
-    );
-    await wrapper.get('[role="alert"] button').trigger('click');
-    expect(wrapper.emitted('usar')).toEqual([['support']]);
-  });
-
   it('locks the other templates while one is starting', async () => {
     const wrapper = montar({ bloqueado: true });
     expect(wrapper.get('[data-usar]').attributes('disabled')).toBeDefined();

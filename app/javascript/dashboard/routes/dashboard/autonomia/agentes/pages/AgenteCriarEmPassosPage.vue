@@ -5,10 +5,9 @@ import { useRoute, useRouter } from 'vue-router';
 import CriarEmPassos from '../components/CriarEmPassos.vue';
 import { papelDoPasso } from '../constants/papeis';
 
-// #3219 — a página "Criar agente" em dois passos (o que ele vai fazer, depois como começar). Mesmo casco da
-// AgenteEscolherPage, que ela vai substituir na AgentesCriarEntrada depois do OK do mockup. No passo 1 o botão do topo é
-// "Voltar para Agentes"; no passo 2 (`?papel=` na URL) é "Voltar" e leva ao passo 1. Repassa a escolha final, como a
-// AgenteEscolherPage.
+// #3219 — a página "Criar agente" em dois passos (o que ele vai fazer, depois como começar), aberta pela
+// AgentesCriarEntrada quando a URL não pede outro começo. No passo 1 o botão do topo é "Voltar para Agentes"; no passo 2
+// (`?papel=` na URL) é "Voltar" e leva ao passo 1. Repassa a escolha final à entrada.
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
