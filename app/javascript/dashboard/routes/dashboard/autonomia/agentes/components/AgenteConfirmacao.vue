@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import AgenteBotao from './AgenteBotao.vue';
@@ -7,7 +7,7 @@ import AgenteBotao from './AgenteBotao.vue';
 // #1181 — diálogo de confirmação do módulo. Usa o Dialog do produto (<dialog> nativo: prende o
 // foco, fecha no Esc e devolve o foco a quem abriu), com os botões AA no slot do rodapé no lugar
 // dos botões da marca. Cancelar vem primeiro; o principal pode ser de perigo (excluir, parar).
-defineProps({
+const props = defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
   confirmar: { type: String, required: true },
@@ -15,6 +15,9 @@ defineProps({
   cancelar: { type: String, default: '' },
   perigo: { type: Boolean, default: true },
   carregando: { type: Boolean, default: false },
+  // #3214 — quando ficar é o caminho certo (sair perderia o que foi escrito): o botão de ficar vira o principal e vai
+  // para o fim, e o de confirmar fica com contorno.
+  ficarEmDestaque: { type: Boolean, default: false },
 });
 
 // 'fechada' avisa que o diálogo fechou por qualquer caminho (Cancelar, Esc ou depois de confirmar);
@@ -23,6 +26,11 @@ const emit = defineEmits(['confirmar', 'fechada']);
 
 const { t } = useI18n();
 const dialogo = ref(null);
+
+const varianteDeConfirmar = computed(() => {
+  if (props.ficarEmDestaque) return 'contorno';
+  return props.perigo ? 'perigo' : 'primario';
+});
 
 const abrir = () => dialogo.value?.open();
 const fechar = () => dialogo.value?.close();
@@ -42,14 +50,17 @@ defineExpose({ abrir, fechar });
     <template #footer>
       <div data-botoes class="flex flex-wrap justify-end gap-2">
         <AgenteBotao
-          variante="contorno"
+          data-ficar
+          :variante="ficarEmDestaque ? 'primario' : 'contorno'"
+          :class="ficarEmDestaque ? 'order-last' : ''"
           :desabilitado="carregando"
           @click="fechar"
         >
           {{ cancelar || t('AGENTS.JORNADA.COMUM.CANCELAR') }}
         </AgenteBotao>
         <AgenteBotao
-          :variante="perigo ? 'perigo' : 'primario'"
+          data-confirmar
+          :variante="varianteDeConfirmar"
           :carregando="carregando"
           @click="emit('confirmar')"
         >
