@@ -28,6 +28,10 @@ const AgenteEscolherPage = defineAsyncComponent(
 const AgenteConectarPage = defineAsyncComponent(
   () => import('../pages/AgenteConectarPage.vue')
 );
+// #3214 — `?escrever=1`: criar o agente com as instruções que a pessoa já tem, em página inteira.
+const AgenteEscreverPage = defineAsyncComponent(
+  () => import('../pages/AgenteEscreverPage.vue')
+);
 
 const jornadaAtiva = useJornadaAtiva();
 const porCaixa = useAgenteIaPorCaixaNaEntrada();
@@ -42,17 +46,21 @@ const semEscolha = query =>
   !query.atuacao &&
   !query.papel &&
   !query.ramo &&
+  !query.escrever &&
   !(porCaixa && query.conectar);
 const conectando = computed(
   () => jornadaAtiva && porCaixa && route.query.conectar === 'outro'
 );
+const escrevendo = computed(() => jornadaAtiva && !!route.query.escrever);
 const escolhendo = computed(() => jornadaAtiva && semEscolha(route.query));
 const veioDaEscolha = ref(false);
 
 // #3192 — a criação (nova ou o Construtor antigo) tem a caixa de envio do
 // ajudante no canto da bolinha do Guia: no celular ela some. Na escolha do
-// modelo e no conectar não há caixa, e a bolinha fica.
-useOcuparCantoDaBolinha(computed(() => !conectando.value && !escolhendo.value));
+// modelo, no conectar e no escrever (#3214) não há caixa, e a bolinha fica.
+useOcuparCantoDaBolinha(
+  computed(() => !conectando.value && !escolhendo.value && !escrevendo.value)
+);
 
 const escolher = async query => {
   veioDaEscolha.value = true;
@@ -62,6 +70,7 @@ const escolher = async query => {
 
 <template>
   <AgenteConectarPage v-if="conectando" />
+  <AgenteEscreverPage v-else-if="escrevendo" />
   <AgenteEscolherPage v-else-if="escolhendo" @escolher="escolher" />
   <AgenteCriarPage v-else-if="jornadaAtiva" :focar-titulo="veioDaEscolha" />
   <AgentBuilderPage v-else />
