@@ -122,6 +122,9 @@ module Autonomia
       # Levantado por qualquer caminho que tente escrever a instrução de um agente cuja instrução é
       # mantida pela Autonom.ia. A API devolve 422 com `autonomia.agents.instrucao_mantida`.
       class InstrucaoMantida < StandardError; end
+      # #3211 — a mesma recusa no agente contratado do catálogo, que a API responde com o texto dele (o da
+      # `InstrucaoMantida` nomeia o Agente de Cotação). Quem resgata `InstrucaoMantida` pega as duas.
+      InstrucaoDoContratado = Class.new(InstrucaoMantida)
 
       # #1514 (decisão do Rodrigo, 17/10/2026) — o Construtor ("Mudar conversando") não aplica em agente MANUAL: a
       # instrução dele é a que o dono escreveu, e a gerada pelo Construtor ficaria visível no GET e no histórico.
@@ -231,7 +234,7 @@ module Autonomia
       # `refresh_instruction!`, `restore_instruction!`). Um lugar só: quem ganhar um escritor novo
       # chama isto, e a mutação que a remove de um deles reprova a spec daquele caminho.
       def recusar_se_instrucao_mantida!
-        raise InstrucaoMantida if instrucao_mantida?
+        raise erro_da_instrucao_mantida if instrucao_mantida?
       end
 
       # A guarda do Construtor contra agente manual (#1514): na porta (build_threads), no fechamento e de novo
@@ -378,7 +381,7 @@ module Autonomia
       def instrucao_mantida_fica_guiada
         return unless instrucao_mantida? && manual?
 
-        errors.add(:mode, I18n.t('autonomia.agents.instrucao_mantida'))
+        errors.add(:mode, I18n.t(contratado? ? 'autonomia.contratados.instrucao_mantida' : 'autonomia.agents.instrucao_mantida'))
       end
 
       # Defesa na gravação; a ferramenta confere de novo ao rodar (a página pode ser apagada depois).

@@ -167,7 +167,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     agente = params[:agent]
     return unless agente.respond_to?(:key?)
 
-    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
+    raise @agent.erro_da_instrucao_mantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if !@agent.instrucao_mantida? && pede_o_tipo_mantido?(agente)
   end
 

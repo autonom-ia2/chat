@@ -33,6 +33,12 @@ json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id',
                                     'audience', 'response_window', 'audience_unknown_contact',
                                     'faq_suggestions', 'booking_page_id', 'booking_agent_ids', 'canal_pedido',
                                     'ferramentas_sugeridas', 'ferramentas_tambem', 'atendimento')
+# #3211 — o agente contratado do catálogo: o modelo, os dados da corretora e o estado do login na seguradora. Do acesso,
+# só o `payload_publico` (a dica do login, nunca o login nem a senha). nil para quem não é contratado.
+json.contratado(if agent.contratado?
+                  agent.config['contratado'].slice('modelo', 'nome_agente', 'nome_corretora', 'sobre_corretora')
+                       .merge('acesso' => agent.acesso_da_seguradora&.payload_publico)
+                end)
 # #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
 # escolha da página quando é false.
 json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)

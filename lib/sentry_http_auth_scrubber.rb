@@ -13,12 +13,14 @@ module SentryHttpAuthScrubber
   # da busca dela, que o log do Rails já filtra.
   # `cpf`, `cnpj`, `documento` e `busca` (#2895): o documento da pessoa e da empresa no salvar da ficha de Relacionamentos e
   # o texto buscado na lista, que o log do Rails já filtra.
+  # `login` e `senha` (#3211): o login do corretor na seguradora do agente contratado, que o log do Rails já filtra.
   SECRET_KEYS = %w[
     access_token refresh_token id_token client_secret app_secret appsecret_proof
     password token secret authorization proxy_authorization cookie set_cookie x_api_key
     fb_dtsg lsd x_fb_lsd signed_request session_json
     images content frase valor termo
     cpf cnpj documento busca
+    login senha
   ].freeze
   OAUTH_KEYS = %w[code state].freeze
   QUERY_KEYS = %w[query query_string http.query].freeze

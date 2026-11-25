@@ -35,6 +35,12 @@ module Autonomia::Agents::Contratado
     contratado? ? ::Autonomia::Agents::Contratados.marca(self) : nil
   end
 
+  # O erro da recusa da instrução mantida (`Agent#recusar_se_instrucao_mantida!` e as portas da API): o do contratado,
+  # para a resposta nomeá-lo; o da Lia (que nomeia o Agente de Cotação) para os demais.
+  def erro_da_instrucao_mantida
+    contratado? ? ::Autonomia::Agents::Agent::InstrucaoDoContratado : ::Autonomia::Agents::Agent::InstrucaoMantida
+  end
+
   private
 
   def marca_do_catalogo?(valor)

@@ -2229,6 +2229,16 @@ pt_BR:
     # #3211 — o agente pronto contratado do catálogo.
     contratados:
       acesso_pendente: "Este agente só atende depois que o login da seguradora for conferido. Cadastre o login da seguradora na página do agente e espere a conferência."
+      # #3211: as recusas da API do agente pronto contratado (nomeiam este agente, não o Agente de Cotação).
+      instrucao_mantida: "Este agente já vem pronto: a instrução dele é mantida pela Autonom.ia e não se edita por aqui. Só o nome do agente e os dados da corretora podem ser trocados."
+      dados_incompletos: "Este agente não conseguiu montar a instrução: falta '%{campo}' nos dados da corretora. Preencha os dados da corretora do agente."
+      acesso_incompleto: "Preencha o login e a senha da seguradora."
+      recusa:
+        indisponivel: "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia."
+        nome_agente: "Escreva o nome do agente, com até %{maximo} caracteres."
+        nome_corretora: "Escreva o nome da corretora, com até %{maximo} caracteres."
+        sobre_corretora: "A apresentação da corretora pode ter até %{maximo} caracteres."
+        marcador: "Este texto tem um código reservado (uma palavra que começa com $). Tire esse trecho e tente de novo."
       universal:
         notas:
           acesso_recusado: "A seguradora recusou o login da corretora, então o agente não consegue cotar nem emitir. Confira o login da seguradora na página do agente e assuma esta conversa."

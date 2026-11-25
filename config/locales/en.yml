@@ -1135,6 +1135,16 @@ en:
     # #3211 — the ready-made agent hired from the catalog.
     contratados:
       acesso_pendente: 'This agent can only answer after its insurer login is checked. Save the insurer login on the agent page and wait for the check.'
+      # #3211: the API refusals of the ready-made hired agent (they name this agent, not the Quote Agent).
+      instrucao_mantida: "This agent comes ready-made: its instruction is maintained by Autonom.ia and cannot be edited here. Only the agent's name and the brokerage details can be changed."
+      dados_incompletos: "This agent could not build its instruction: '%{campo}' is missing from the brokerage details. Fill in the agent's brokerage details."
+      acesso_incompleto: 'Fill in the insurer login and password.'
+      recusa:
+        indisponivel: 'This ready-made agent is not available for this account right now. Contact Autonom.ia support.'
+        nome_agente: "Write the agent's name, up to %{maximo} characters."
+        nome_corretora: "Write the brokerage's name, up to %{maximo} characters."
+        sobre_corretora: 'The brokerage introduction can have up to %{maximo} characters.'
+        marcador: 'This text has a reserved code (a word starting with $). Remove it and try again.'
       universal:
         notas:
           acesso_recusado: 'The insurer refused the brokerage login, so the agent cannot quote or issue. Check the insurer login on the agent page and take over this conversation.'
