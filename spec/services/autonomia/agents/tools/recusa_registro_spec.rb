@@ -874,8 +874,46 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           Autonomia::Agents::Tools::Native::SeguroViagem::Falhas.sem_link(acao: 'cotar_seguro_viagem', agent: agent,
                                                                           conversation: conversation)
         }
+      },
+      # #3211: as recusas da cotação do Seguro Viagem, antes e depois da chamada à Universal.
+      'cotar_seguro_viagem.rb#call#1' => {
+        espera: { motivo: 'cotacao_sem_conversa', slug: 'cotar_seguro_viagem', conversa: '-' },
+        dispara: -> { cotar_viagem(viagem, entrega: nil) }
+      },
+      'cotar_seguro_viagem.rb#call#2' => {
+        espera: { motivo: 'pedido_invalido', slug: 'cotar_seguro_viagem', faltando: 'data_saida' },
+        dispara: -> { cotar_viagem(viagem.merge(data_saida: '2020-01-01')) }
+      },
+      'cotar_seguro_viagem.rb#call#3' => {
+        espera: { motivo: 'destino_invalido', slug: 'cotar_seguro_viagem', faltando: 'destinos' },
+        dispara: -> { cotar_viagem(viagem.merge(destinos: ['XX'])) }
+      },
+      'cotar_seguro_viagem.rb#sem_planos#1' => {
+        espera: { motivo: 'idade_fora_do_limite', slug: 'cotar_seguro_viagem', faltando: 'idades' },
+        dispara: -> { cotar_viagem(viagem.merge(idades: [70])) }
+      },
+      'cotar_seguro_viagem.rb#sem_planos#2' => {
+        espera: { motivo: 'sem_plano', slug: 'cotar_seguro_viagem' },
+        dispara: -> { cotar_viagem(viagem, cotacao: { 'idCotacao' => 'c-0', 'produtos' => [] }) }
       }
     }
+  end
+
+  # #3211: a cotação do Seguro Viagem pelo `Bound`, com o acesso conferido e a Universal respondendo pela fixture.
+  def cotar_viagem(argumentos, entrega: delivery, cotacao: nil)
+    Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
+                                                  senha: 's3nha-teste', estado: 'ok')
+    url = Autonomia::Seguradoras::Universal::Cliente.base_url
+    stub_request(:get, "#{url}/v1/destinos").to_return(status: 200, body: file_fixture('../universal/destinos.json').read)
+    corpo = cotacao ? cotacao.to_json : file_fixture('../universal/cotacao.json').read
+    stub_request(:post, "#{url}/v1/Cotacao").to_return(status: 200, body: corpo)
+    bound_para(Autonomia::Agents::Tools::Native::CotarSeguroViagem)
+      .execute({ 'name' => 'cotar_seguro_viagem', 'arguments' => argumentos.to_json }, delivery: entrega)
+  end
+
+  def viagem
+    saida = Time.zone.today + 30
+    { destinos: ['PT'], data_saida: saida.iso8601, data_retorno: (saida + 4).iso8601, idades: [45], motivo: nil }
   end
 
   VarreduraDeRecusas.saidas.each do |saida|
