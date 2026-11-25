@@ -38,13 +38,21 @@ const router = vi.hoisted(() => ({
   push: vi.fn(),
   resolve: vi.fn(rota => ({ href: `/app/${rota.name}` })),
 }));
-vi.mock('vue-router', () => ({ useRouter: () => router }));
+vi.mock('vue-router', () => ({
+  useRouter: () => router,
+  useRoute: () => ({ query: {} }),
+  isNavigationFailure: () => false,
+}));
 const api = vi.hoisted(() => ({
   semana: vi.fn(() => Promise.resolve({ data: { payload: [] } })),
   canaisOcupados: vi.fn(() => Promise.resolve({ data: { payload: [] } })),
   modelosDeRamo: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
 }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
+// #3211: os agentes prontos para contratar vêm do servidor (passo 2 de atender clientes). Aqui, nenhum.
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: { lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })) },
+}));
 const doPost = vi.hoisted(() => ({
   list: vi.fn(() => Promise.resolve({ data: { payload: [] } })),
   get: vi.fn(),

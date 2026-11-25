@@ -2,7 +2,6 @@
 import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CelularConversa from './CelularConversa.vue';
-import AgenteErro from './AgenteErro.vue';
 
 // #1181 (protótipo T01 e gaveta "Criar agente") — um modelo pronto com a conversa de exemplo num
 // celular. O cartão inteiro escolhe o modelo: o "Usar este" se estica sobre o cartão (after:absolute),
@@ -12,7 +11,6 @@ const props = defineProps({
   podeUsar: { type: Boolean, default: false },
   comecando: { type: Boolean, default: false },
   bloqueado: { type: Boolean, default: false },
-  falhou: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['usar']);
@@ -79,13 +77,5 @@ const usar = () => {
           : t('AGENTS.JORNADA.MODELOS.USAR')
       }}
     </button>
-    <AgenteErro
-      v-if="falhou"
-      class="relative z-10"
-      :titulo="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO')"
-      :garantia="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA')"
-      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
-      @acao="usar"
-    />
   </li>
 </template>

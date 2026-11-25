@@ -4,7 +4,8 @@ require 'rails_helper'
 # - `conversa_entrega_inteira` (só vale com `conversa_em_fila`): depois do 1º pedaço postado, mensagem nova do cliente
 #   não corta o resto. O 1º pedaço ainda confere o turno; a pessoa que assume ainda para a cadeia;
 # - a cadeia é dona da marca da fala: renova a cada pedaço agendado e solta em toda saída (parada ou último pedaço).
-# Sem as opções, a cadeia para no 2º pedaço quando chega mensagem nova, como hoje.
+# As opções nascem ligadas (menos na Lia): sem as chaves, a entrega é inteira. Com elas gravadas `false`, a cadeia para no
+# 2º pedaço quando chega mensagem nova, como antes do #3211.
 RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
   include_context 'with crm responsible agent'
 
@@ -53,12 +54,25 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
     expect(respostas.pluck(:content)).to eq(['Segunda parte da resposta.'])
   end
 
-  it 'sem a opção: para no 2º pedaço, como hoje' do
+  it 'sem as chaves (padrão ligado): o 2º pedaço sai mesmo com mensagem nova' do
+    pedaco!(1)
+    expect(respostas.pluck(:content)).to eq(['Segunda parte da resposta.'])
+  end
+
+  it 'a Lia sem as chaves: para no 2º pedaço, como antes' do
+    agente_da_porta.update_columns(agent_type: 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations
+    pedaco!(1)
+    expect(respostas).to be_empty
+  end
+
+  it 'opção desligada: para no 2º pedaço, como antes' do
+    desligar_paridade!(agente_da_porta, 'conversa_entrega_inteira')
     pedaco!(1)
     expect(respostas).to be_empty
   end
 
   it 'entrega inteira sem a fila: para (a dependência)' do
+    desligar_paridade!(agente_da_porta, 'conversa_em_fila')
     liga!('conversa_entrega_inteira')
     pedaco!(1)
     expect(respostas).to be_empty
@@ -78,6 +92,7 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
   end
 
   it 'cadeia que para solta a fala, mesmo com a opção desligada' do
+    desligar_paridade!(agente_da_porta)
     fala.ocupar(conversation.id, m1.id)
     pedaco!(1) # para por turno_mudou (sem opção)
     expect(marca_da_fala).to be_nil
@@ -141,7 +156,8 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
       expect(fim_gravado).to start_with("#{m1.id}:")
     end
 
-    it 'sem a opção: o fim não é tocado' do
+    it 'opção desligada: o fim não é tocado' do
+      desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
       fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
       pedaco!(0)
       expect(fim_gravado).to start_with("#{m1.id}:")

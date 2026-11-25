@@ -1121,6 +1121,16 @@
         "QUANDO": {
           "EXEMPLO": "E.g.: when the question is about the policy terms or the documents"
         }
+      },
+      "ESCREVER": {
+        "EXEMPLO": "E.g.: You serve the customers of my brokerage. Answer in short sentences. If you don't know, hand over to someone on the team."
+      },
+      "CRIAR_EM_PASSOS": {
+        "ESCREVER": {
+          "COPILOTO": {
+            "EXEMPLO": "E.g.: You help my brokerage team. When asked, summarize the conversation and say what is still missing to quote. Never promise a price without quoting."
+          }
+        }
       }
     },
     "OUTRO_SISTEMA": {

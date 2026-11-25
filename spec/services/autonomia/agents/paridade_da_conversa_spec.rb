@@ -1,28 +1,110 @@
 require 'rails_helper'
 
-# #3211: as chaves da paridade da conversa, todas desligadas por padrão.
+# #3211 (decisão do Rodrigo, 25/11): as chaves da paridade da conversa nascem ligadas em todo agente, menos na Lia
+# (`insurance_quote`). Valor gravado manda; só a chave ausente ou nula segue o padrão do tipo.
 RSpec.describe Autonomia::Agents::ParidadeDaConversa do
-  def agente(config) = Autonomia::Agents::Agent.new(config: config)
+  let(:opcoes) { %i[espera_a_fala? em_fila? entrega_inteira? ritmo_do_canal?] }
 
-  it 'sem as chaves, tudo desligado' do
-    vazio = agente({})
-    expect(%i[espera_a_fala? em_fila? entrega_inteira? ritmo_do_canal?].map { |p| described_class.public_send(p, vazio) })
-      .to all(be(false))
+  def agente(config, agent_type: 'custom') = Autonomia::Agents::Agent.new(config: config, agent_type: agent_type)
+
+  def lia(config = {}) = agente(config, agent_type: 'insurance_quote')
+
+  # A caixa é argumento obrigatório; sem caixa (nil) vale o agente.
+  def opcao_de(nome, agent, inbox = nil) = described_class.public_send(nome, agent, inbox)
+
+  def todas(agent) = opcoes.map { |opcao| opcao_de(opcao, agent) }
+
+  # #3218: e-mail fica fora, com a chave gravada ou não. Pega: a regra ficar no chamador e uma chamada nova esquecê-la.
+  it 'caixa de e-mail: as quatro desligadas, mesmo com true gravado', :aggregate_failures do
+    email = Inbox.new
+    allow(email).to receive(:email?).and_return(true)
+    ligado = agente(described_class::CHAVES.index_with(true))
+
+    expect(opcoes.map { |opcao| opcao_de(opcao, agente({}), email) }).to all(be(false))
+    expect(opcoes.map { |opcao| opcao_de(opcao, ligado, email) }).to all(be(false))
+    expect(opcoes.map { |opcao| opcao_de(opcao, ligado, Inbox.new) }).to all(be(true))
   end
 
-  it { expect(described_class.espera_a_fala?(agente('conversa_espera_a_fala' => true))).to be(true) }
-  it { expect(described_class.em_fila?(agente('conversa_em_fila' => 'false'))).to be(false) }
-  it { expect(described_class.ritmo_do_canal?(agente('conversa_ritmo_do_canal' => 'true'))).to be(true) }
-
-  it 'entrega inteira só com a fila' do
-    expect(described_class.entrega_inteira?(agente('conversa_entrega_inteira' => true))).to be(false)
-    expect(described_class.entrega_inteira?(agente('conversa_entrega_inteira' => true, 'conversa_em_fila' => true))).to be(true)
+  it 'sem as chaves, tudo ligado' do
+    expect(todas(agente({}))).to all(be(true))
   end
 
-  it 'agente nil, sem config ou com config que não é Hash' do
-    expect(described_class.em_fila?(nil)).to be(false)
-    expect(described_class.em_fila?(Struct.new(:agent_bot).new(nil))).to be(false)
-    expect(described_class.em_fila?(Struct.new(:config).new('conversa_em_fila'))).to be(false)
+  it 'chave nula segue o padrão: ligada' do
+    expect(opcao_de(:em_fila?, agente({ 'conversa_em_fila' => nil }))).to be(true)
+  end
+
+  it 'valor gravado desliga: false, "false" e "0"', :aggregate_failures do
+    expect(opcao_de(:espera_a_fala?, agente({ 'conversa_espera_a_fala' => false }))).to be(false)
+    expect(opcao_de(:em_fila?, agente({ 'conversa_em_fila' => 'false' }))).to be(false)
+    expect(opcao_de(:ritmo_do_canal?, agente({ 'conversa_ritmo_do_canal' => '0' }))).to be(false)
+  end
+
+  it 'valor gravado liga: true e "true"', :aggregate_failures do
+    expect(opcao_de(:espera_a_fala?, agente({ 'conversa_espera_a_fala' => true }))).to be(true)
+    expect(opcao_de(:ritmo_do_canal?, agente({ 'conversa_ritmo_do_canal' => 'true' }))).to be(true)
+  end
+
+  it 'a Lia sem as chaves: tudo desligado, como antes' do
+    expect(todas(lia)).to all(be(false))
+  end
+
+  it 'a Lia com true gravado: ligada', :aggregate_failures do
+    expect(opcao_de(:em_fila?, lia({ 'conversa_em_fila' => true }))).to be(true)
+    expect(opcao_de(:espera_a_fala?, lia({ 'conversa_em_fila' => true }))).to be(false)
+  end
+
+  describe 'entrega inteira só com a fila efetiva' do
+    it 'as duas ausentes: ligada' do
+      expect(opcao_de(:entrega_inteira?, agente({}))).to be(true)
+    end
+
+    it 'com a fila desligada: desligada, mesmo com a entrega gravada true' do
+      expect(opcao_de(:entrega_inteira?, agente({ 'conversa_entrega_inteira' => true, 'conversa_em_fila' => false }))).to be(false)
+    end
+
+    it 'com a entrega desligada: desligada' do
+      expect(opcao_de(:entrega_inteira?, agente({ 'conversa_entrega_inteira' => false }))).to be(false)
+    end
+
+    it 'na Lia, só a entrega gravada não basta: a fila dela segue desligada', :aggregate_failures do
+      expect(opcao_de(:entrega_inteira?, lia({ 'conversa_entrega_inteira' => true }))).to be(false)
+      expect(opcao_de(:entrega_inteira?, lia({ 'conversa_entrega_inteira' => true, 'conversa_em_fila' => true }))).to be(true)
+    end
+  end
+
+  it 'agente de verdade com config nil ou que não é Hash: o padrão do tipo', :aggregate_failures do
+    sem_config = agente({}).tap { |agent| agent.config = nil }
+    texto = agente({}).tap { |agent| agent.config = 'conversa_em_fila' }
+
+    expect(todas(sem_config)).to all(be(true))
+    expect(opcao_de(:em_fila?, texto)).to be(true)
+    expect(opcao_de(:em_fila?, lia.tap { |agent| agent.config = nil })).to be(false)
+  end
+
+  it 'o que não é agente fica desligado: nil, vínculo sem agente, Struct com config', :aggregate_failures do
+    expect(opcao_de(:em_fila?, nil)).to be(false)
+    expect(opcao_de(:em_fila?, Struct.new(:agent_bot).new(nil))).to be(false)
+    expect(opcao_de(:em_fila?, Struct.new(:config).new({}))).to be(false)
+    expect(opcao_de(:em_fila?, Struct.new(:config, :agent_type).new({}, 'custom'))).to be(false)
+  end
+
+  # Revisão do #3218 (item 3). Pega: a chave da instalação não desligar o padrão, ou passar por cima do valor gravado.
+  describe 'chave da instalação AI_AGENT_CONVERSA_PADRAO_LIGADO' do
+    it 'false: a chave ausente vale desligada (como no #3213); valor gravado continua mandando', :aggregate_failures do
+      with_modified_env AI_AGENT_CONVERSA_PADRAO_LIGADO: 'false' do
+        expect(todas(agente({}))).to all(be(false))
+        expect(opcao_de(:em_fila?, agente({ 'conversa_em_fila' => true }))).to be(true)
+        expect(opcao_de(:espera_a_fala?, agente({ 'conversa_espera_a_fala' => false }))).to be(false)
+        expect(todas(lia)).to all(be(false))
+      end
+    end
+
+    it 'true (ou ausente): a chave ausente vale ligada; a Lia segue desligada', :aggregate_failures do
+      with_modified_env AI_AGENT_CONVERSA_PADRAO_LIGADO: 'true' do
+        expect(todas(agente({}))).to all(be(true))
+        expect(todas(lia)).to all(be(false))
+      end
+    end
   end
 
   it 'CHAVES lista as quatro' do

@@ -1,5 +1,5 @@
 # QUANTO ESPERAR E QUANDO ENTRAR NA FILA (#3211). Duas decisões do turno do agente, ambas por opção do agente
-# (ParidadeDaConversa), ambas desligadas por padrão:
+# (ParidadeDaConversa), ambas ligadas por padrão em todo agente, menos na Lia:
 #
 # - `da_rajada` (P1, `conversa_espera_a_fala`): a espera do debounce. Desligada, é a janela de sempre
 #   (Config.debounce_seconds_for). Ligada, é o fim previsto da fala anterior menos agora, preso entre ESPERA_MINIMA e
@@ -17,8 +17,8 @@ module Autonomia::Agents::Operate::EsperaDaFala
 
   module_function
 
-  def da_rajada(agent:, conversation_id:, agora: Time.current)
-    return ::Autonomia::Agents::Config.debounce_seconds_for(agent) unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent)
+  def da_rajada(agent:, conversation_id:, inbox:, agora: Time.current)
+    return ::Autonomia::Agents::Config.debounce_seconds_for(agent) unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, inbox)
 
     fim = ::Autonomia::Agents::Operate::FalaEmCurso.fim_previsto(conversation_id)
     return ESPERA_MINIMA if fim.blank?
@@ -27,7 +27,7 @@ module Autonomia::Agents::Operate::EsperaDaFala
   end
 
   def na_fila?(agent:, conversation:, message_id:, agora: Time.current)
-    return false unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent)
+    return false unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox)
     return false unless ::Autonomia::Agents::Operate::FalaEmCurso.ocupada_por_outro?(conversation.id, message_id)
 
     prazo = prazo_da_fila(agent, conversation)
@@ -40,21 +40,21 @@ module Autonomia::Agents::Operate::EsperaDaFala
   # curso até lá. Quem mede a janela usa esta regra: a fila (prazo_da_fila), o turno refeito (ReenfileirarTurno), o turno
   # em andamento (AgentInbox#turno_em_andamento?) e o silêncio do WAHA (Waha::RichNative::UnsupportedTurnJob). Com as
   # opções desligadas e a marca gravada pelo gatilho, é a janela de sempre (6 s na marca = 6 s do debounce).
-  def janela_do_settle(agent:, marca:, com_a_fila: false)
+  def janela_do_settle(agent:, marca:, inbox:, com_a_fila: false)
     espera_ms = marca.is_a?(Hash) ? marca['espera_ms'] : nil
     janela = espera_ms.nil? ? ::Autonomia::Agents::Config.debounce_seconds_for(agent) : (espera_ms.to_i / 1000.0).seconds
-    com_a_fila && ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent) ? janela + TETO_DA_FILA : janela
+    com_a_fila && ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, inbox) ? janela + TETO_DA_FILA : janela
   end
 
   # A MAIOR janela de espera que um turno do `agent` pode ter, para o teto do turno (TurnoEmCurso.teto_do_turno). Sem
   # agente ou com as opções desligadas, é a maior janela de debounce de sempre (Config::OPERATE_DEBOUNCE_MAX_SECONDS),
   # o mesmo valor de antes do #3211. Com `conversa_espera_a_fala`, cobre ESPERA_MAXIMA; com `conversa_em_fila`, soma
-  # TETO_DA_FILA (o settle pode esperar o turno em curso até lá).
+  # TETO_DA_FILA (o settle pode esperar o turno em curso até lá). Sem caixa (nil): o pior caso de qualquer caixa.
   def janela_maxima(agent)
     paridade = ::Autonomia::Agents::ParidadeDaConversa
     debounce = ::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS
-    janela = paridade.espera_a_fala?(agent) ? [debounce, ESPERA_MAXIMA].max : debounce
-    paridade.em_fila?(agent) ? janela + TETO_DA_FILA : janela
+    janela = paridade.espera_a_fala?(agent, nil) ? [debounce, ESPERA_MAXIMA].max : debounce
+    paridade.em_fila?(agent, nil) ? janela + TETO_DA_FILA : janela
   end
 
   # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila. nil sem
@@ -63,7 +63,7 @@ module Autonomia::Agents::Operate::EsperaDaFala
     marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
     return unless marca.is_a?(Hash) && marca['at'].present?
 
-    Time.zone.at(marca['at'].to_f) + janela_do_settle(agent: agent, marca: marca, com_a_fila: true)
+    Time.zone.at(marca['at'].to_f) + janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true)
   end
   private_class_method :prazo_da_fila
 end

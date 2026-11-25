@@ -42,7 +42,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(original_history.last).to eq(role: 'user', content: '3')
     end
 
+    # #3211: with conversa_espera_a_fala (on by default) the query is the whole burst; this example checks the last message.
     it 'excludes all current incoming messages from the search history for a negative reply' do
+      desligar_paridade!(agent, 'conversa_espera_a_fala')
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Como configuro o plano Equipe?')
       create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'Voce sabe importar seus usuarios?')
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Ainda nao configurei')

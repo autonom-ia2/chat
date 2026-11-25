@@ -35,11 +35,11 @@ module Autonomia::Agents::Operate::TurnoEmCurso
   end
 
   # O teto real de um turno, das configurações: a maior janela de espera do `agent` (EsperaDaFala.janela_maxima: o
-  # debounce e, só com as opções da paridade da conversa ligadas, a espera pela fala anterior e a fila; sem agente ou
-  # com elas desligadas, a maior janela de debounce de sempre), a maior espera do assunto, a maior chamada de IA (a Lia:
-  # RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma conta do
-  # QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente com pronta: o prazo das
-  # rodadas dele, #2918) e a cadeia de pedaços.
+  # debounce e, com as opções da paridade da conversa ligadas (o padrão, menos na Lia), a espera pela fala anterior e a
+  # fila; sem agente ou com elas desligadas, a maior janela de debounce de sempre), a maior espera do assunto, a maior
+  # chamada de IA (a Lia: RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma
+  # chamada, a mesma conta do QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente
+  # com pronta: o prazo das rodadas dele, #2918) e a cadeia de pedaços.
   def teto_do_turno(agent = nil)
     runner = ::Autonomia::Agents::Specialists::Runner
     lia = ::Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA * (runner::SEGUNDOS_DE_FERRAMENTA + runner::SEGUNDOS_POR_CHAMADA)

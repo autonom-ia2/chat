@@ -1,24 +1,39 @@
+import { reactive } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import ProntosParaContratar from '../../components/ProntosParaContratar.vue';
-import AgenteEscolherPage from '../../pages/AgenteEscolherPage.vue';
+import CriarEmPassos from '../../components/CriarEmPassos.vue';
 
-// #3211 (Tarefa 26) — "Vendem sozinhos": os agentes prontos que a corretora contrata, na página "Criar agente", dentro
-// do herói e antes dos ramos (mockup aprovado, estado 01). Quais aparecem é decisão do servidor (useContratados).
+// #3211 (Tarefa 26) — "Vendem sozinhos": os agentes prontos que a corretora contrata, no passo 2 de "Criar agente"
+// (atender clientes, #3219), dentro do herói e antes dos ramos (mockup aprovado, estado 01). Quais aparecem é decisão
+// do servidor (useContratados).
 const estado = vi.hoisted(() => ({ podeGerenciar: true }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return { useCanManage: () => computed(() => estado.podeGerenciar) };
 });
+const store = vi.hoisted(() => ({ dispatch: vi.fn(), state: null }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
-  const getters = {
-    'accounts/getAccount': () => () => ({ autonomia_agents_fase2: false }),
-    getCurrentAccountId: () => 1,
+  return {
+    useStore: () => store,
+    useMapGetter: nome => computed(() => store.state[nome]),
   };
-  return { useMapGetter: nome => computed(() => getters[nome]()) };
 });
+vi.mock('../../composables/usePermissoesDaJornada', async () => {
+  const { computed } = await import('vue');
+  return {
+    usePermissoesDaJornada: () => ({
+      podeConectarCanal: computed(() => true),
+    }),
+  };
+});
+const rota = vi.hoisted(() => ({ atual: null }));
 const router = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('vue-router', () => ({ useRouter: () => router }));
+vi.mock('vue-router', () => ({
+  useRoute: () => rota.atual,
+  useRouter: () => router,
+  isNavigationFailure: () => false,
+}));
 const jornada = vi.hoisted(() => ({
   modelosDeRamo: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
 }));
@@ -32,15 +47,29 @@ vi.mock('dashboard/api/autonomia/contratados', () => ({
 
 const UNIVERSAL = 'seguro_viagem_universal';
 
-const montarPagina = async () => {
-  const wrapper = mount(AgenteEscolherPage);
+// O passo 2 de atender clientes, numa conta com canal.
+const montarPagina = async (papel = 'atender') => {
+  rota.atual = reactive({ query: { papel } });
+  store.state = reactive({
+    getCurrentAccountId: 1,
+    'accounts/getAccount': () => ({ autonomia_agents_fase2: false }),
+    'autonomiaAgents/getRecords': [],
+    'inboxes/getInboxes': [{ id: 10 }],
+  });
+  store.dispatch.mockResolvedValue(undefined);
+  const wrapper = mount(CriarEmPassos, { attachTo: document.body });
   await flushPromises();
   return wrapper;
 };
 
 describe('ProntosParaContratar (#3211)', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     estado.podeGerenciar = true;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   it('shows the section title and the Universal card, and opens it by its key', async () => {
@@ -127,6 +156,16 @@ describe('ProntosParaContratar (#3211)', () => {
 
       expect(wrapper.find('[data-contratados]').exists()).toBe(true);
       expect(wrapper.find('[data-ver-contratado]').exists()).toBe(false);
+    });
+
+    it('stays out of step 2 of the Team copilot, which does not talk to customers', async () => {
+      contratados.lista.mockResolvedValueOnce({
+        data: { modelos: [UNIVERSAL] },
+      });
+      const wrapper = await montarPagina('copiloto');
+
+      expect(wrapper.find('[data-como-comecar]').exists()).toBe(true);
+      expect(wrapper.find('[data-contratados]').exists()).toBe(false);
     });
   });
 });

@@ -46,7 +46,12 @@ const router = vi.hoisted(() => ({
   push: vi.fn(),
   resolve: vi.fn(rota => ({ href: `/app/${rota.name}` })),
 }));
-vi.mock('vue-router', () => ({ useRouter: () => router }));
+const rotaAtual = vi.hoisted(() => ({ query: {} }));
+vi.mock('vue-router', () => ({
+  useRouter: () => router,
+  useRoute: () => rotaAtual,
+  isNavigationFailure: () => false,
+}));
 
 const api = vi.hoisted(() => ({
   semana: vi.fn(),
@@ -54,6 +59,10 @@ const api = vi.hoisted(() => ({
   modelosDeRamo: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
+// #3211: os agentes prontos para contratar vêm do servidor (passo 2 de atender clientes). Aqui, nenhum.
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: { lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })) },
+}));
 // #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
 const doPost = vi.hoisted(() => ({
   list: vi.fn(),
@@ -607,237 +616,61 @@ describe('AgentesListaPage', () => {
     });
   });
 
+  // #3219 — T01: o passo 1 de "Criar agente" (CriarEmPassos no modo `inicio`). O passo 2 mora na página "Criar
+  // agente"; os jeitos de começar, os ramos e o aviso de canal ficam testados em criar/CriarEmPassos.spec.js.
   describe('T01 · lista vazia', () => {
     beforeEach(() => prepararStore({ agentes: [] }));
 
-    it('shows the big hero with three templates and "Do meu jeito"', async () => {
+    it('shows step 1 in the big hero, with the strong question, its own subtitle and the example chat', async () => {
       const wrapper = await montar();
       expect(wrapper.findAll('[data-heroi]')).toHaveLength(1);
+      expect(wrapper.get('[data-heroi]').attributes('data-passo')).toBe('1');
       expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.HEROI.TITULO');
-      expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
-      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
-      expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
-      expect(wrapper.find('[data-escrever-instrucoes]').exists()).toBe(true);
-      expect(wrapper.find('[data-copiloto]').exists()).toBe(true);
+      expect(wrapper.text()).toContain(
+        'AGENTS.JORNADA.CRIAR_EM_PASSOS.PAPEL.TEXTO_INICIO'
+      );
+      expect(wrapper.find('[data-papel="atender"]').exists()).toBe(true);
+      expect(wrapper.find('[data-papel="copiloto"]').exists()).toBe(true);
+      expect(wrapper.text()).toContain(
+        'AGENTS.JORNADA.MODELOS.SUPPORT.CLIENTE'
+      );
+      // Sem os modelos, os links de antes nem o aviso de canal (ficam no passo 2 de atender clientes).
+      expect(wrapper.find('[data-usar]').exists()).toBe(false);
       expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
       wrapper.unmount();
     });
 
-    it('has no ready-made insurance row when the server releases none', async () => {
-      const wrapper = await montar();
-      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
-      wrapper.unmount();
-    });
-
-    it('shows the ready-made insurance row first, with the three templates below (#3208)', async () => {
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto', 'seguro_garantia'] },
+    it('never shows the helper on the empty list, even with Phase 2 (there is no agent to help)', async () => {
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: true,
       });
+      store.state.getCurrentAccountId = 1;
       const wrapper = await montar();
-      const fileira = wrapper.get('[data-heroi] [data-ramos]');
-      expect(fileira.get('h2').text()).toBe('AGENTS.JORNADA.RAMOS.TITULO');
-      expect(fileira.findAll('[data-ramo]')).toHaveLength(2);
-      expect(wrapper.get('[data-heroi]').text()).toContain(
-        'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
-      );
-      expect(wrapper.text()).not.toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
-      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+      expect(wrapper.find('[data-papel="equipe"]').exists()).toBe(true);
+      expect(wrapper.find('[data-papel="ajudante"]').exists()).toBe(false);
       wrapper.unmount();
     });
 
-    it('goes to the builder with the chosen insurance line (#3208)', async () => {
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto'] },
-      });
-      const wrapper = await montar();
-      await wrapper.get('[data-usar-ramo]').trigger('click');
-      await flushPromises();
-      expect(router.push).toHaveBeenLastCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { ramo: 'seguro_auto' },
-      });
-      wrapper.unmount();
-    });
+    it.each([
+      ['atender', '[data-escolher-papel]'],
+      ['copiloto', '[data-papel="copiloto"]'],
+    ])(
+      'opens step 2 of %s on the "Criar agente" page',
+      async (papel, seletor) => {
+        const wrapper = await montar();
+        await wrapper.get(seletor).trigger('click');
+        expect(router.push).toHaveBeenCalledWith({
+          name: 'autonomia_agents_builder',
+          query: { papel },
+        });
+        wrapper.unmount();
+      }
+    );
 
-    it('hides the "use" button of the insurance row from who can only view', async () => {
-      estado.podeGerenciar = false;
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto'] },
-      });
-      const wrapper = await montar();
-      expect(wrapper.find('[data-ramos]').exists()).toBe(true);
-      expect(wrapper.find('[data-usar-ramo]').exists()).toBe(false);
-      wrapper.unmount();
-    });
-
-    it('shows the failure under the insurance card when it cannot start (#3208)', async () => {
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto'] },
-      });
-      router.push.mockRejectedValueOnce(new Error('falhou'));
-      const wrapper = await montar();
-      await wrapper.get('[data-usar-ramo]').trigger('click');
-      await flushPromises();
-      expect(wrapper.get('[data-ramo] [role="alert"]').text()).toContain(
-        'AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA'
-      );
-      wrapper.unmount();
-    });
-
-    it('locks the other cards, of both rows, while one insurance line is starting (#3208)', async () => {
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto', 'seguro_garantia'] },
-      });
-      router.push.mockReturnValueOnce(new Promise(() => {}));
-      const wrapper = await montar();
-      const ramos = wrapper.findAll('[data-usar-ramo]');
-      await ramos[0].trigger('click');
-      await nextTick();
-      expect(ramos[0].attributes('aria-busy')).toBe('true');
-      expect(ramos[1].attributes('disabled')).toBeDefined();
-      wrapper.findAll('[data-usar]').forEach(botao => {
-        expect(botao.attributes('disabled')).toBeDefined();
-      });
-      wrapper.unmount();
-    });
-
-    it('locks the insurance cards while a general template is starting (#3208)', async () => {
-      api.modelosDeRamo.mockResolvedValue({
-        data: { modelos: ['seguro_auto'] },
-      });
-      router.push.mockReturnValueOnce(new Promise(() => {}));
-      const wrapper = await montar();
-      await wrapper.findAll('[data-usar]')[0].trigger('click');
-      await nextTick();
-      expect(
-        wrapper.get('[data-usar-ramo]').attributes('disabled')
-      ).toBeDefined();
-      wrapper.unmount();
-    });
-
-    it('stays as always when the insurance reading fails', async () => {
-      const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      api.modelosDeRamo.mockRejectedValue({ response: { status: 500 } });
-      const wrapper = await montar();
-      expect(wrapper.find('[data-ramos]').exists()).toBe(false);
-      expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
-      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
-      aviso.mockRestore();
-      wrapper.unmount();
-    });
-
-    it('opens the team copilot from the big hero (#1494)', async () => {
-      const wrapper = await montar();
-      const copiloto = wrapper.get('[data-copiloto]');
-      expect(copiloto.text()).toBe('AGENTS.JORNADA.MODELOS.COPILOTO');
-      expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO');
-      await copiloto.trigger('click');
-      await flushPromises();
-      expect(router.push).toHaveBeenLastCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { atuacao: 'interno' },
-      });
-      wrapper.unmount();
-    });
-
-    // #3214 — logo abaixo de "Do meu jeito" e antes do Copiloto.
-    it('opens "write the instructions in my own words" with ?escrever=1, right under "Do meu jeito"', async () => {
-      const wrapper = await montar();
-      const ordem = wrapper
-        .findAll(
-          '[data-do-meu-jeito], [data-escrever-instrucoes], [data-copiloto]'
-        )
-        .map(link =>
-          Object.keys(link.attributes()).find(a => a.startsWith('data-'))
-        );
-      expect(ordem).toEqual([
-        'data-do-meu-jeito',
-        'data-escrever-instrucoes',
-        'data-copiloto',
-      ]);
-      const escrever = wrapper.get('[data-escrever-instrucoes]');
-      expect(escrever.text()).toBe(
-        'AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES'
-      );
-      expect(escrever.classes()).toContain('min-h-11');
-      // Cada link tem a sua linha de explicação, como o Copiloto.
-      [
-        ['[data-do-meu-jeito]', 'AGENTS.JORNADA.MODELOS.DO_MEU_JEITO_TEXTO'],
-        [
-          '[data-escrever-instrucoes]',
-          'AGENTS.JORNADA.MODELOS.ESCREVER_INSTRUCOES_TEXTO',
-        ],
-      ].forEach(([seletor, explicacao]) => {
-        const id = wrapper.get(seletor).attributes('aria-describedby');
-        expect(wrapper.get(`#${id}`).text()).toBe(explicacao);
-      });
-      await escrever.trigger('click');
-      await flushPromises();
-      expect(router.push).toHaveBeenLastCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { escrever: '1' },
-      });
-      wrapper.unmount();
-    });
-
-    it('goes to the builder with the chosen template', async () => {
-      const wrapper = await montar();
-      await wrapper.findAll('[data-usar]')[1].trigger('click');
-      await flushPromises();
-      expect(router.push).toHaveBeenCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { modelo: 'sdr' },
-      });
-
-      await wrapper.get('[data-do-meu-jeito]').trigger('click');
-      expect(router.push).toHaveBeenLastCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { modelo: 'custom' },
-      });
-      wrapper.unmount();
-    });
-
-    it('shows the failure under the template when it cannot start (t01-falha)', async () => {
-      router.push.mockRejectedValueOnce(new Error('falhou'));
-      const wrapper = await montar();
-      await wrapper.findAll('[data-usar]')[0].trigger('click');
-      await flushPromises();
-      expect(wrapper.get('[role="alert"]').text()).toContain(
-        'AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA'
-      );
-      wrapper.unmount();
-    });
-
-    it('warns about the missing channel without blocking (t01-semcanal)', async () => {
-      store.state['inboxes/getInboxes'] = [];
-      const wrapper = await montar();
-      const aviso = wrapper.get('[data-sem-canal]');
-      expect(aviso.text()).toContain('AGENTS.JORNADA.HEROI.SEM_CANAL');
-      expect(aviso.get('a').attributes('href')).toBe('/app/settings_inbox_new');
-      expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
-      wrapper.unmount();
-    });
-
-    it('asks for an administrator when the seat cannot connect a channel', async () => {
-      store.state['inboxes/getInboxes'] = [];
-      estado.podeConectarCanal = false;
-      const wrapper = await montar();
-      const aviso = wrapper.get('[data-sem-canal]');
-      expect(aviso.find('a').exists()).toBe(false);
-      expect(aviso.text()).toContain(
-        'AGENTS.JORNADA.HEROI.SEM_CANAL_SEM_PERMISSAO'
-      );
-      wrapper.unmount();
-    });
-
-    it('explains the screen to a view only seat, without templates to use', async () => {
+    it('explains the screen to a view only seat, without any action', async () => {
       estado.podeGerenciar = false;
       const wrapper = await montar();
       expect(wrapper.text()).toContain('AGENTS.JORNADA.HEROI.SO_VER');
-      expect(wrapper.find('[data-usar]').exists()).toBe(false);
-      expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(false);
-      expect(wrapper.find('[data-escrever-instrucoes]').exists()).toBe(false);
-      expect(wrapper.find('[data-copiloto]').exists()).toBe(false);
       expect(textoDosBotoes(wrapper)).toEqual([]);
       wrapper.unmount();
     });

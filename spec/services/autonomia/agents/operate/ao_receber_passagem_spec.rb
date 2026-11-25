@@ -162,6 +162,18 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
       expect(enviado).to include('Vou te passar para nossa especialista.')
     end
 
+    # Revisão do #3218 (item 2). Pega: com a espera pela fala (P1, ligada por padrão, #3211), a rajada do cliente fecha na
+    # fala da Ana e a pergunta do turno da passagem ia vazia; antes era a última mensagem do cliente.
+    it 'a Ana escreveu por último: a pergunta do turno da passagem é a última mensagem do cliente' do
+      cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
+      ana_escreve('Vou te passar para nossa especialista.')
+      ana_passa!
+
+      rodar_turno!
+
+      expect(pedidos.last[:query]).to include('Quero cotar o seguro do meu Onix 2022.')
+    end
+
     it 'o cliente escreve antes de o turno rodar: o turno da passagem desiste e o turno da mensagem responde, com o contexto' do
       cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
       ana_passa!

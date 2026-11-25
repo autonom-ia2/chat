@@ -115,7 +115,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 
 ### escolher_o_tipo_ao_criar_agente
-- passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer um plano ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em O que o seu agente vai fazer?, escolha um cartão: Atender meus clientes (o da maioria), Ajudar minha equipe nas conversas (Copiloto da equipe) ou, quando a conta tem, Atender só quando a equipe passar (Agente da equipe), Ajudar meus outros agentes (Ajuda outros agentes) e Já tenho um agente em outro sistema; 3. Em Como você quer começar?, no Atender meus clientes, escolha o seguro que você vende (os ramos prontos, quando a conta tem) e clique em Usar este, ou escolha um modelo (Tirar dúvidas dos clientes, Atender quem quer um plano ou Receber quem chega; com os ramos na tela, eles ficam em Não achou o seu seguro? Comece de outro jeito), ou, embaixo, Conversar com a IA ou Escrever eu mesmo; no Copiloto, escolha Conversar com a IA (o mais fácil) ou Escrever eu mesmo; 4. Siga a criação (Conte, Confira, Comece); o canal do agente que atende clientes é escolhido no fim.
 
 
 ### ver_os_primeiros_passos

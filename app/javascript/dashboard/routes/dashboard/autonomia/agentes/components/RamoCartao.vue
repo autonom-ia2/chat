@@ -2,17 +2,17 @@
 import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { TOM_DO_RAMO } from '../constants/modelosDeRamo';
-import AgenteErro from './AgenteErro.vue';
 
 // #2881 — um ramo de seguro na fileira "Prontos para o seu ramo". Mais baixo que o ModeloCartao (sem o celular): a
 // conversa de exemplo aparece ao lado, na criação. O cartão inteiro escolhe o ramo: o "Usar este" se estica sobre ele
-// (after:absolute), como no ModeloCartao, e continua um botão só.
+// (after:absolute), como no ModeloCartao, e continua um botão só. #3219: no celular, para encurtar a tela, o botão cobre o
+// cartão e só a seta aparece (o leitor de tela continua lendo "Usar este modelo: <ramo>", do aria-label); começando, a
+// seta vira o círculo girando, para o clique ter resposta também ali. A falha mora no topo do ComoComecar.
 const props = defineProps({
   ramo: { type: Object, required: true },
   podeUsar: { type: Boolean, default: false },
   comecando: { type: Boolean, default: false },
   bloqueado: { type: Boolean, default: false },
-  falhou: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['usar']);
@@ -37,7 +37,7 @@ const usar = () => {
       bloqueado ? 'opacity-70' : '',
     ]"
   >
-    <div class="flex items-start gap-3">
+    <div class="flex items-start gap-3 pe-8 md:pe-0">
       <span
         aria-hidden="true"
         class="grid rounded-xl place-items-center size-12 shrink-0"
@@ -64,26 +64,27 @@ const usar = () => {
       :disabled="bloqueado"
       :aria-busy="comecando ? 'true' : undefined"
       :aria-label="t('AGENTS.JORNADA.MODELOS.USAR_ARIA', { titulo })"
-      class="inline-flex items-center justify-between w-full gap-2 px-4 mt-auto text-base font-semibold transition min-h-12 rounded-xl bg-n-blue-2 text-n-blue-11 after:absolute after:inset-0 after:rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed"
+      class="absolute inset-0 inline-flex items-center justify-end gap-2 px-5 text-base font-semibold transition min-h-12 rounded-2xl text-n-blue-11 md:static md:justify-between md:w-full md:px-4 md:mt-auto md:rounded-xl md:bg-n-blue-2 md:after:absolute md:after:inset-0 md:after:rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed"
       @click="usar"
     >
-      {{
-        comecando
-          ? t('AGENTS.JORNADA.COMUM.COMECANDO')
-          : t('AGENTS.JORNADA.MODELOS.USAR')
-      }}
+      <span class="hidden md:inline">
+        {{
+          comecando
+            ? t('AGENTS.JORNADA.COMUM.COMECANDO')
+            : t('AGENTS.JORNADA.MODELOS.USAR')
+        }}
+      </span>
+      <span
+        v-if="comecando"
+        data-girando
+        class="i-lucide-loader-circle size-5 shrink-0 motion-safe:animate-spin md:hidden"
+        aria-hidden="true"
+      />
       <span
         class="i-lucide-arrow-right size-5 shrink-0 rtl:rotate-180"
+        :class="comecando ? 'hidden md:inline-block' : ''"
         aria-hidden="true"
       />
     </button>
-    <AgenteErro
-      v-if="falhou"
-      class="relative z-10"
-      :titulo="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO')"
-      :garantia="t('AGENTS.JORNADA.ERRO.COMECAR_MODELO_GARANTIA')"
-      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
-      @acao="usar"
-    />
   </li>
 </template>
