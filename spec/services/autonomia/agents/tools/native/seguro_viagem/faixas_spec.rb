@@ -12,6 +12,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Faixas do
     expect(described_class.faixa(plano, 90)).to be_nil
   end
 
+  it 'idade nil é nil' do
+    expect(described_class.faixa(plano, nil)).to be_nil
+  end
+
   it 'sem faixas é nil' do
     expect(described_class.faixa({ 'idade_minima' => 0, 'idade_maxima' => 85 }, 30)).to be_nil
   end

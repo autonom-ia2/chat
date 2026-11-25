@@ -26,12 +26,11 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   def postar
     return false if postado?
 
-    blob = gravar_blob
     postou = false
     # O lock é numa cópia lida agora: a conversa do turno pode ter atributos alterados em memória, e o Rails recusa
     # travar registro com mudança não gravada.
     @conversation = @conversation.class.find(@conversation.id)
-    @conversation.with_lock { postou = criar(blob).present? unless postado? }
+    @conversation.with_lock { postou = criar_se_nova }
     postou
   rescue StandardError => e
     Rails.logger.warn("[autonomia][seguro_viagem] comparativo_falhou conv=#{@conversation&.id} cotacao=#{@cotacao&.id} " \
@@ -60,6 +59,13 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   end
 
   private
+
+  # O blob só nasce depois da conferência sob o lock: dois turnos juntos não deixam arquivo órfão.
+  def criar_se_nova
+    return false if postado?
+
+    criar(gravar_blob).present?
+  end
 
   def gravar_blob
     nome = @agent.marca_do_contratado.to_h['nome_corretora']

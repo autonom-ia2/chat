@@ -11,10 +11,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   COR = Autonomia::Desempenho::Exportacao::Pdf::COR
   FONTES = Relatorios::Pdf::FONTES
   MARGEM = 32
-  LARGURA_DO_ROTULO = 150
+  LARGURA_DO_ROTULO = 210
   SEM_VALOR = '—'.freeze
   TEXTOS = {
-    titulo: 'Comparativo de seguro viagem', destinos: 'Destino', datas: 'Período', viajantes: 'Viajantes',
+    titulo: 'Comparativo de seguro viagem', destino: 'Destino', destinos: 'Destinos', datas: 'Período', viajantes: 'Viajantes',
     plano: 'Plano', total: 'Preço total', por_pessoa: 'Preço por pessoa', parcelas: 'Parcelamento',
     cotado_em: 'Cotação de'
   }.freeze
@@ -45,6 +45,12 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @pedido ||= @cotacao.pedido.to_h
   end
 
+  # O nome por extenso (`destinos_nomes`); cotação antiga, sem ele, mostra as siglas.
+  def destinos
+    nomes = pedido['destinos_nomes'].to_a.compact_blank
+    nomes.presence || pedido['destinos'].to_a
+  end
+
   def registrar_fontes
     @doc.font_families.update(
       'Inter' => { normal: FONTES.join('Inter-Regular.ttf').to_s, medium: FONTES.join('Inter-Medium.ttf').to_s,
@@ -64,9 +70,9 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   end
 
   def linhas_do_pedido
-    [[TEXTOS[:destinos], pedido['destinos'].to_a.join(', ')],
+    [[destinos.size == 1 ? TEXTOS[:destino] : TEXTOS[:destinos], destinos.join(', ')],
      [TEXTOS[:datas], "#{data(pedido['data_saida'])} a #{data(pedido['data_retorno'])}"],
-     [TEXTOS[:viajantes], @cotacao.idades.map { |idade| "#{idade} #{idade == 1 ? 'ano' : 'anos'}" }.join(', ')]]
+     [TEXTOS[:viajantes], @cotacao.idades.map { |idade| "#{idade} #{anos(idade)}" }.join(', ')]]
   end
 
   def tabela
@@ -98,7 +104,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
 
   def por_pessoa(plano)
     precos = SeguroViagem::Faixas.precos_por_pessoa(plano, @cotacao.idades)
-    precos.each_with_index.map { |preco, indice| "Viajante #{indice + 1}: #{dinheiro(preco)}" }.join("\n")
+    precos.each_with_index.map { |preco, indice| "#{@cotacao.idades[indice]} #{anos(@cotacao.idades[indice])}: #{dinheiro(preco)}" }.join("\n")
   end
 
   def linha_parcelas
@@ -122,7 +128,17 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   def rodape
     @doc.move_down 10
     @doc.fill_color COR[:apoio]
-    @doc.text "#{TEXTOS[:cotado_em]} #{@cotacao.created_at.strftime('%d/%m/%Y')}", size: 8
+    @doc.text "#{TEXTOS[:cotado_em]} #{dia_da_cotacao}", size: 8
+  end
+
+  def anos(idade)
+    idade == 1 ? 'ano' : 'anos'
+  end
+
+  # O dia da cotação no fuso da conta (o do servidor é UTC e viraria o dia perto da meia-noite).
+  def dia_da_cotacao
+    fuso = Crm::Timezone::Resolver.new(account: @cotacao.account).zone_or_default
+    @cotacao.created_at.in_time_zone(fuso).strftime('%d/%m/%Y')
   end
 
   def dinheiro(valor)

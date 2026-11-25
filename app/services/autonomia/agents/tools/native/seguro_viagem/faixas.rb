@@ -6,7 +6,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Faixas
   # -> a faixa de `plano['faixas']` com `de <= idade <= ate`, ou nil (sem faixa, ou idade fora de
   # `idade_minima..idade_maxima`).
   def faixa(plano, idade)
-    return nil unless dentro_do_limite?(plano, idade)
+    return nil if idade.nil? || !dentro_do_limite?(plano, idade)
 
     plano['faixas'].to_a.find { |faixa| idade.between?(faixa['de'].to_i, faixa['ate'].to_i) }
   end

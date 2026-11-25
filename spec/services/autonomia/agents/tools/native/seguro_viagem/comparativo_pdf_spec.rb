@@ -26,7 +26,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
                                                pedido: pedido, planos: planos)
   end
   let(:bytes) { described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo').render }
-  let(:texto) { PDF::Reader.new(StringIO.new(bytes)).pages.map(&:text).join("\n") }
+  # Espaço normalizado: o PDF quebra rótulo longo em linhas, e o leitor devolve a quebra.
+  let(:texto) { PDF::Reader.new(StringIO.new(bytes)).pages.map(&:text).join("\n").split.join(' ') }
 
   it 'devolve um PDF' do
     expect(bytes).to start_with('%PDF-')
@@ -35,6 +36,25 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
   it 'traz a corretora, os planos, os preços e as coberturas' do
     expect(texto).to include('Corretora Exemplo', 'Especial UA 100K BRL', 'Especial UA 30K BRL', 'R$ 360,00', 'R$ 120,00',
                              'Despesas Médicas e Hospitalares (por evento)', 'Extravio de Bagagem')
+  end
+
+  it 'o país vai por extenso' do
+    pedido['destinos_nomes'] = ['Portugal']
+    expect(texto).to include('Destino: Portugal')
+    expect(texto).not_to include('Destino: BR')
+  end
+
+  it 'cotação antiga, sem o nome do país, mostra a sigla' do
+    expect(texto).to include('Destino: BR')
+  end
+
+  it 'mais de um país: rótulo no plural' do
+    pedido['destinos_nomes'] = %w[Portugal Espanha]
+    expect(texto).to include('Destinos: Portugal, Espanha')
+  end
+
+  it 'o preço por pessoa vem rotulado pela idade, na ordem das idades' do
+    expect(texto).to include('47 anos: R$ 120,00 19 anos: R$ 120,00 12 anos: R$ 120,00')
   end
 
   it 'cobertura que o plano não tem sai com traço' do
