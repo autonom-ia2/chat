@@ -158,7 +158,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
     settle_direto(ultima)
 
-    expect(historicos.sole).to eq(['oi', 'pedaço 0', 'pedaço 1'])
+    # A caixa já nasce com mensagens automáticas (template) antes da conversa; elas ficam no histórico da busca.
+    # O que importa: a cauda é o que veio antes da rajada, e nenhuma mensagem da rajada está nele.
+    historico = historicos.sole
+    expect(historico.last(3)).to eq(['oi', 'pedaço 0', 'pedaço 1'])
+    expect(historico).not_to include('e pra 2 pessoas?', 'pedaço 2', 'saindo dia 02')
   end
 
   it 'grava o fim previsto da fala ao responder, com o turno', :aggregate_failures do

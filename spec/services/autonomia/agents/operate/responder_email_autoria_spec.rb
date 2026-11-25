@@ -40,6 +40,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(responder.send(:contexto_do_turno)).to eq(Crm::Email::Autoria::LEGENDA)
   end
 
+  # Pega: a P1 (padrão ligado, #3211) juntar os e-mails da rajada na caixa de e-mail e o terceiro em cópia entrar cru na pergunta.
+  it 'na caixa de e-mail, mesmo com a P1 ligada, a pergunta é só o último e-mail', :aggregate_failures do
+    expect(Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent)).to be(true)
+    cenario!
+
+    expect(responder.send(:query)).to eq('Ok, pode seguir.')
+    expect(responder.send(:current_turn_incoming).size).to eq(2)
+    expect(responder.send(:historico_da_busca, responder.send(:history))).to be_empty
+  end
+
   # Pega: a Fase 2 (moldura da equipe) perder o aviso ou neutralizá-lo como se fosse texto do cliente.
   it 'com a Fase 2, o aviso vem depois da segunda camada e a legenda junto da regra do turno', :aggregate_failures do
     Autonomia::Agents::Fase2.ligar!(account)

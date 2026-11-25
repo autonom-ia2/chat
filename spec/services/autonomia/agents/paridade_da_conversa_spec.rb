@@ -16,18 +16,18 @@ RSpec.describe Autonomia::Agents::ParidadeDaConversa do
   end
 
   it 'chave nula segue o padrão: ligada' do
-    expect(described_class.em_fila?(agente('conversa_em_fila' => nil))).to be(true)
+    expect(described_class.em_fila?(agente({ 'conversa_em_fila' => nil }))).to be(true)
   end
 
   it 'valor gravado desliga: false, "false" e "0"', :aggregate_failures do
-    expect(described_class.espera_a_fala?(agente('conversa_espera_a_fala' => false))).to be(false)
-    expect(described_class.em_fila?(agente('conversa_em_fila' => 'false'))).to be(false)
-    expect(described_class.ritmo_do_canal?(agente('conversa_ritmo_do_canal' => '0'))).to be(false)
+    expect(described_class.espera_a_fala?(agente({ 'conversa_espera_a_fala' => false }))).to be(false)
+    expect(described_class.em_fila?(agente({ 'conversa_em_fila' => 'false' }))).to be(false)
+    expect(described_class.ritmo_do_canal?(agente({ 'conversa_ritmo_do_canal' => '0' }))).to be(false)
   end
 
   it 'valor gravado liga: true e "true"', :aggregate_failures do
-    expect(described_class.espera_a_fala?(agente('conversa_espera_a_fala' => true))).to be(true)
-    expect(described_class.ritmo_do_canal?(agente('conversa_ritmo_do_canal' => 'true'))).to be(true)
+    expect(described_class.espera_a_fala?(agente({ 'conversa_espera_a_fala' => true }))).to be(true)
+    expect(described_class.ritmo_do_canal?(agente({ 'conversa_ritmo_do_canal' => 'true' }))).to be(true)
   end
 
   it 'a Lia sem as chaves: tudo desligado, como antes' do
@@ -35,8 +35,8 @@ RSpec.describe Autonomia::Agents::ParidadeDaConversa do
   end
 
   it 'a Lia com true gravado: ligada', :aggregate_failures do
-    expect(described_class.em_fila?(lia('conversa_em_fila' => true))).to be(true)
-    expect(described_class.espera_a_fala?(lia('conversa_em_fila' => true))).to be(false)
+    expect(described_class.em_fila?(lia({ 'conversa_em_fila' => true }))).to be(true)
+    expect(described_class.espera_a_fala?(lia({ 'conversa_em_fila' => true }))).to be(false)
   end
 
   describe 'entrega inteira só com a fila efetiva' do
@@ -45,16 +45,16 @@ RSpec.describe Autonomia::Agents::ParidadeDaConversa do
     end
 
     it 'com a fila desligada: desligada, mesmo com a entrega gravada true' do
-      expect(described_class.entrega_inteira?(agente('conversa_entrega_inteira' => true, 'conversa_em_fila' => false))).to be(false)
+      expect(described_class.entrega_inteira?(agente({ 'conversa_entrega_inteira' => true, 'conversa_em_fila' => false }))).to be(false)
     end
 
     it 'com a entrega desligada: desligada' do
-      expect(described_class.entrega_inteira?(agente('conversa_entrega_inteira' => false))).to be(false)
+      expect(described_class.entrega_inteira?(agente({ 'conversa_entrega_inteira' => false }))).to be(false)
     end
 
     it 'na Lia, só a entrega gravada não basta: a fila dela segue desligada', :aggregate_failures do
-      expect(described_class.entrega_inteira?(lia('conversa_entrega_inteira' => true))).to be(false)
-      expect(described_class.entrega_inteira?(lia('conversa_entrega_inteira' => true, 'conversa_em_fila' => true))).to be(true)
+      expect(described_class.entrega_inteira?(lia({ 'conversa_entrega_inteira' => true }))).to be(false)
+      expect(described_class.entrega_inteira?(lia({ 'conversa_entrega_inteira' => true, 'conversa_em_fila' => true }))).to be(true)
     end
   end
 
@@ -79,8 +79,8 @@ RSpec.describe Autonomia::Agents::ParidadeDaConversa do
     it 'false: a chave ausente vale desligada (como no #3213); valor gravado continua mandando', :aggregate_failures do
       with_modified_env AI_AGENT_CONVERSA_PADRAO_LIGADO: 'false' do
         expect(todas(agente({}))).to all(be(false))
-        expect(described_class.em_fila?(agente('conversa_em_fila' => true))).to be(true)
-        expect(described_class.espera_a_fala?(agente('conversa_espera_a_fala' => false))).to be(false)
+        expect(described_class.em_fila?(agente({ 'conversa_em_fila' => true }))).to be(true)
+        expect(described_class.espera_a_fala?(agente({ 'conversa_espera_a_fala' => false }))).to be(false)
         expect(todas(lia)).to all(be(false))
       end
     end
