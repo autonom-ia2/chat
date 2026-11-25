@@ -1467,6 +1467,14 @@ Nenhuma tarefa de tela (25 a 29) começa antes deste gate fechar.
 - [ ] Mostrar ao Rodrigo; registrar a aprovação (data e texto) no PR. Sem `<select>` nativo; escolhas com `ChoiceSelect`.
 - [ ] Commit (só a história): `chore(seguro-viagem): história do mockup do agente contratado`.
 
+**Mockup (25/11):** história `stories/Contratado.story.vue` (commits f74f5f5eee, bd7caaef30), 16 estados em 1440/390;
+diretor de arte 8,5/10 na 2ª rodada. Notas que entram na Tarefa 28: (1) aviso do acesso recusado depois com botão
+"Cadastrar a senha nova" e texto "A Universal recusou o acesso da Bia. A senha pode ter mudado. Enquanto isso, quem
+quiser cotar passa para a sua equipe."; (2) gaveta "Dados da corretora" com só "Salvar" `xl bloco`; (3) "Passo 2 de 3"
+igual nos estados conferido e só cota; (4) olho da senha alterna `aria-label` e usa `aria-pressed`; (5) `GavetaOndeQuando`
+aceita o texto do passo e pré-marca o único canal livre; (6) o contratado nasce rascunho ("Falta terminar") no servidor;
+(7) "testar antes de ligar" fica fora (decidir se o teste gera proposta real).
+
 ### Tarefa 25 — Cliente da API e composable (front)
 
 **Arquivos.** Criar `app/javascript/dashboard/api/autonomia/contratados.js` e `.../agentes/composables/useContratados.js`.
