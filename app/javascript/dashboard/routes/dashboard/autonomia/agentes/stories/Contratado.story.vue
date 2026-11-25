@@ -45,62 +45,36 @@ const CORRETORA = 'Corretora Exemplo';
 const SOBRE =
   'Corretora em Campinas desde 2010. Atendemos famílias e empresas, com seguro viagem para o mundo todo.';
 const CANAL = 'WhatsApp Vendas';
+const DO_NOME = { nome: NOME };
 
-const FAZ = [
-  'Tira as dúvidas do viajante com as regras oficiais da Universal',
-  'Cota na hora, com o destino, as datas e a idade de cada um',
-  'Ajuda a escolher o plano e explica o que cada um cobre',
-  'Monta a proposta e manda o link de pagamento',
-];
+const FAZ = ['DUVIDAS', 'COTA', 'ESCOLHE', 'PROPOSTA'].map(chave =>
+  t(`AGENTS.CONTRATADOS.MODELO.FAZ.${chave}`)
+);
 
 const PRECISA = [
+  { texto: t('AGENTS.CONTRATADOS.MODELO.PRECISA.DADOS') },
   {
-    texto: 'Um nome para o agente e uma frase sobre a sua corretora',
+    texto: t('AGENTS.CONTRATADOS.MODELO.PRECISA.LOGIN'),
+    detalhe: t('AGENTS.CONTRATADOS.MODELO.PRECISA.LOGIN_DETALHE'),
   },
-  {
-    texto: 'O login e a senha do portal da Universal',
-    detalhe: 'É o mesmo que você usa no site da Universal.',
-  },
-  { texto: 'Um canal para atender, como o WhatsApp' },
+  { texto: t('AGENTS.CONTRATADOS.MODELO.PRECISA.CANAL') },
 ];
 
+const DA_CONVERSA = { nome: NOME, corretora: CORRETORA };
 const CONVERSA = [
-  {
-    de: 'cliente',
-    texto: 'Oi! Quero seguro para Portugal, de 10 a 24 de janeiro. Somos 2.',
-    hora: '19:20',
-  },
-  {
-    de: 'agente',
-    texto: 'Oi! Eu sou a Bia, da Corretora Exemplo. Quantos anos cada um tem?',
-    hora: '19:20',
-  },
-  { de: 'cliente', texto: '45 e 43', hora: '19:21' },
-  {
-    de: 'agente',
-    texto:
-      'Para vocês dois, o plano mais escolhido para a Europa sai R$ 189,90 por pessoa. Quer esse?',
-    hora: '19:21',
-  },
-  { de: 'cliente', texto: 'Quero', hora: '19:22' },
-  {
-    de: 'agente',
-    texto:
-      'Para a proposta, me manda o nome completo, CPF e data de nascimento de cada um.',
-    hora: '19:22',
-  },
-  {
-    de: 'cliente',
-    texto:
-      'Ana Lima, 000.000.000-00, 02/03/1980\nJoão Lima, 000.000.000-00, 15/07/1982',
-    hora: '19:24',
-  },
-  {
-    de: 'agente',
-    texto: 'Pronto! Este é o link para pagar: pagamento.exemplo.com.br/a1b2',
-    hora: '19:25',
-  },
-];
+  ['cliente', 'CLIENTE_1', '19:20'],
+  ['agente', 'AGENTE_1', '19:20'],
+  ['cliente', 'CLIENTE_2', '19:21'],
+  ['agente', 'AGENTE_2', '19:21'],
+  ['cliente', 'CLIENTE_3', '19:22'],
+  ['agente', 'AGENTE_3', '19:22'],
+  ['cliente', 'CLIENTE_4', '19:24'],
+  ['agente', 'AGENTE_4', '19:25'],
+].map(([de, chave, hora]) => ({
+  de,
+  texto: t(`AGENTS.CONTRATADOS.MODELO.CONVERSA.${chave}`, DA_CONVERSA),
+  hora,
+}));
 
 // Uma caixa livre só: ela já vem marcada.
 const CANAIS = [
@@ -272,11 +246,10 @@ const naoPerderOQueDigitou = () => false;
                   id="vendem-sozinhos-titulo"
                   class="m-0 text-xl font-semibold text-white"
                 >
-                  Vendem sozinhos
+                  {{ t('AGENTS.CONTRATADOS.AREA.TITULO') }}
                 </h2>
                 <p class="m-0 text-base leading-relaxed text-white/80">
-                  Cotam, fazem a proposta e mandam o link de pagamento. Você só
-                  informa os dados da sua corretora.
+                  {{ t('AGENTS.CONTRATADOS.AREA.TEXTO') }}
                 </p>
               </div>
               <ul class="p-0 m-0 list-none">
@@ -295,11 +268,10 @@ const naoPerderOQueDigitou = () => false;
                       <h3
                         class="m-0 text-lg font-semibold leading-snug text-n-slate-12"
                       >
-                        Seguro Viagem Universal
+                        {{ t('AGENTS.CONTRATADOS.CARTAO.TITULO') }}
                       </h3>
                       <p class="m-0 text-sm leading-relaxed text-n-slate-11">
-                        Vende o seguro viagem da Universal do começo ao fim:
-                        cota, faz a proposta e manda o link de pagamento.
+                        {{ t('AGENTS.CONTRATADOS.CARTAO.TEXTO') }}
                       </p>
                       <p
                         class="flex items-center gap-1.5 m-0 text-sm text-n-slate-12"
@@ -308,16 +280,20 @@ const naoPerderOQueDigitou = () => false;
                           class="i-lucide-key-round size-4 shrink-0 text-n-slate-11"
                           aria-hidden="true"
                         />
-                        Precisa do login do portal da Universal.
+                        {{ t('AGENTS.CONTRATADOS.CARTAO.PRECISA') }}
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
-                    aria-label="Ver como funciona: Seguro Viagem Universal"
+                    :aria-label="
+                      t('AGENTS.CONTRATADOS.CARTAO.VER_ARIA', {
+                        nome: t('AGENTS.CONTRATADOS.CARTAO.TITULO'),
+                      })
+                    "
                     class="inline-flex items-center justify-between w-full gap-3 px-4 text-base font-semibold transition md:w-auto shrink-0 min-h-12 rounded-xl bg-n-blue-2 text-n-blue-11 after:absolute after:inset-0 after:rounded-2xl"
                   >
-                    Ver como funciona
+                    {{ t('AGENTS.CONTRATADOS.CARTAO.VER') }}
                     <span
                       class="i-lucide-arrow-right size-5 shrink-0 rtl:rotate-180"
                       aria-hidden="true"
@@ -407,11 +383,11 @@ const naoPerderOQueDigitou = () => false;
               class="i-lucide-arrow-left size-4 rtl:rotate-180"
               aria-hidden="true"
             />
-            Voltar para Criar agente
+            {{ t('AGENTS.CONTRATADOS.MODELO.VOLTAR') }}
           </button>
           <AgentesHeroi
-            titulo="Seguro Viagem Universal"
-            texto="Um agente que vende seguro viagem da Universal para quem vai viajar, do primeiro oi ao link de pagamento."
+            :titulo="t('AGENTS.CONTRATADOS.MODELO.TITULO')"
+            :texto="t('AGENTS.CONTRATADOS.MODELO.TEXTO')"
           >
             <template #acoes>
               <AgenteBotao
@@ -420,7 +396,7 @@ const naoPerderOQueDigitou = () => false;
                 tamanho="xl"
                 class="w-full md:w-auto"
               >
-                Contratar
+                {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}
               </AgenteBotao>
             </template>
           </AgentesHeroi>
@@ -432,7 +408,7 @@ const naoPerderOQueDigitou = () => false;
                 class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak md:p-6"
               >
                 <h2 class="m-0 text-lg font-semibold text-n-slate-12">
-                  O que ele faz
+                  {{ t('AGENTS.CONTRATADOS.MODELO.FAZ_TITULO') }}
                 </h2>
                 <ul class="flex flex-col gap-3 p-0 m-0 list-none">
                   <li
@@ -452,7 +428,7 @@ const naoPerderOQueDigitou = () => false;
                 class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak md:p-6"
               >
                 <h2 class="m-0 text-lg font-semibold text-n-slate-12">
-                  O que você vai precisar
+                  {{ t('AGENTS.CONTRATADOS.MODELO.PRECISA_TITULO') }}
                 </h2>
                 <ol class="flex flex-col gap-3 p-0 m-0 list-none">
                   <li
@@ -481,42 +457,41 @@ const naoPerderOQueDigitou = () => false;
                     class="i-lucide-sparkles mt-0.5 size-4 shrink-0 text-n-slate-11"
                     aria-hidden="true"
                   />
-                  Você não escreve nada: o jeito de atender já vem pronto e
-                  melhora sozinho.
+                  {{ t('AGENTS.CONTRATADOS.MODELO.PRONTO') }}
                 </p>
               </section>
             </div>
             <section class="flex flex-col gap-3">
               <h2 class="m-0 text-lg font-semibold text-n-slate-12">
-                Exemplo de conversa
+                {{ t('AGENTS.CONTRATADOS.MODELO.EXEMPLO_TITULO') }}
               </h2>
               <CelularConversa
                 :mensagens="CONVERSA"
                 :nome="NOME"
                 :estado="CORRETORA"
-                rotulo-sr="Exemplo de conversa, não é um agente de verdade"
+                :rotulo-sr="t('AGENTS.CONTRATADOS.MODELO.EXEMPLO_SR')"
               />
             </section>
           </div>
           <AgenteBotao tamanho="xl" bloco class="md:hidden">
-            Contratar
+            {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}
           </AgenteBotao>
 
           <AgenteGaveta
             v-if="variante.dados"
-            titulo="Contratar o agente"
+            :titulo="t('AGENTS.CONTRATADOS.CONTRATAR.TITULO')"
             :pode-fechar="naoPerderOQueDigitou"
           >
             <div class="flex flex-col gap-5">
               <p class="m-0 text-base font-semibold text-n-blue-11">
-                Passo 1 de 3: sobre a sua corretora.
+                {{ t('AGENTS.CONTRATADOS.CONTRATAR.PASSO') }}
               </p>
               <div class="flex flex-col gap-1">
                 <label
                   for="contratar-nome"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Nome do agente
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.NOME.ROTULO') }}
                 </label>
                 <input
                   id="contratar-nome"
@@ -526,7 +501,7 @@ const naoPerderOQueDigitou = () => false;
                   :class="[CAMPO, anel(false)]"
                 />
                 <p class="m-0 text-sm text-n-slate-11">
-                  É o nome que o viajante vê na conversa.
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.NOME.AJUDA') }}
                 </p>
               </div>
               <div class="flex flex-col gap-1">
@@ -534,7 +509,7 @@ const naoPerderOQueDigitou = () => false;
                   for="contratar-corretora"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Nome da corretora
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.CORRETORA.ROTULO') }}
                 </label>
                 <input
                   id="contratar-corretora"
@@ -559,7 +534,7 @@ const naoPerderOQueDigitou = () => false;
                     class="i-lucide-circle-alert size-4 shrink-0"
                     aria-hidden="true"
                   />
-                  Escreva o nome da corretora.
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.CORRETORA.ERRO') }}
                 </p>
               </div>
               <div class="flex flex-col gap-1">
@@ -567,24 +542,24 @@ const naoPerderOQueDigitou = () => false;
                   for="contratar-sobre"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Sobre a corretora (pode deixar para depois)
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.SOBRE.ROTULO') }}
                 </label>
                 <textarea
                   id="contratar-sobre"
                   rows="4"
                   maxlength="1000"
-                  placeholder="Ex.: Corretora em Campinas desde 2010. Atendemos famílias e empresas."
+                  :placeholder="t('AGENTS.CONTRATADOS.CONTRATAR.SOBRE.EXEMPLO')"
                   class="py-2 min-h-32 resize-y"
                   :class="[CAMPO, anel(false)]"
                 />
                 <p class="m-0 text-sm text-n-slate-11">
-                  O agente usa para se apresentar.
+                  {{ t('AGENTS.CONTRATADOS.CONTRATAR.SOBRE.AJUDA') }}
                 </p>
               </div>
             </div>
             <template #rodape>
               <AgenteBotao data-contratar-enviar tamanho="xl" bloco>
-                Contratar
+                {{ t('AGENTS.CONTRATADOS.CONTRATAR.ENVIAR') }}
               </AgenteBotao>
             </template>
           </AgenteGaveta>
@@ -619,13 +594,20 @@ const naoPerderOQueDigitou = () => false;
               class="i-lucide-circle-check mt-0.5 size-5 shrink-0 text-n-teal-11"
               aria-hidden="true"
             />
-            Bia está atendendo no {{ CANAL }}.
+            {{
+              t('AGENTS.CONTRATADOS.PAGINA.ATENDENDO', {
+                nome: NOME,
+                canal: CANAL,
+              })
+            }}
           </p>
           <AgenteErro
             v-if="variante.pagina === 'recusado'"
-            titulo="A Universal recusou o acesso da Bia."
-            garantia="Enquanto isso, quem quiser cotar passa para a sua equipe."
-            acao="Alterar"
+            :titulo="
+              t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.TITULO', DO_NOME)
+            "
+            :garantia="t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.GARANTIA')"
+            :acao="t('AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.ACAO')"
             icone-acao="i-lucide-key-round"
           />
 
@@ -639,27 +621,31 @@ const naoPerderOQueDigitou = () => false;
               id="corretora-e-acesso-titulo"
               class="m-0 text-lg font-semibold text-n-slate-12"
             >
-              Corretora e acesso
+              {{ t('AGENTS.CONTRATADOS.PAGINA.CORRETORA_E_ACESSO') }}
             </h2>
             <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
               <li class="flex items-center justify-between gap-3 py-3">
                 <span class="flex flex-col min-w-0 gap-0.5">
-                  <span class="text-sm text-n-slate-11">Corretora</span>
+                  <span class="text-sm text-n-slate-11">
+                    {{ t('AGENTS.CONTRATADOS.PAGINA.CORRETORA') }}
+                  </span>
                   <span class="text-base font-medium truncate text-n-slate-12">
                     {{ CORRETORA }}
                   </span>
                 </span>
                 <AgenteBotao
                   variante="contorno"
-                  aria-label="Alterar a corretora"
+                  :aria-label="
+                    t('AGENTS.CONTRATADOS.PAGINA.ALTERAR_CORRETORA_ARIA')
+                  "
                 >
-                  Alterar
+                  {{ t('AGENTS.CONTRATADOS.PAGINA.ALTERAR') }}
                 </AgenteBotao>
               </li>
               <li class="flex items-center justify-between gap-3 py-3">
                 <span class="flex flex-col min-w-0 gap-0.5">
                   <span class="text-sm text-n-slate-11">
-                    Portal da Universal
+                    {{ t('AGENTS.CONTRATADOS.PAGINA.PORTAL') }}
                   </span>
                   <span
                     v-if="variante.pagina === 'recusado'"
@@ -669,7 +655,7 @@ const naoPerderOQueDigitou = () => false;
                       class="i-lucide-circle-alert size-4 shrink-0"
                       aria-hidden="true"
                     />
-                    Recusado
+                    {{ t('AGENTS.CONTRATADOS.PAGINA.RECUSADO') }}
                   </span>
                   <span
                     v-else
@@ -679,14 +665,16 @@ const naoPerderOQueDigitou = () => false;
                       class="i-lucide-circle-check size-4 shrink-0 text-n-teal-11"
                       aria-hidden="true"
                     />
-                    Conferido
+                    {{ t('AGENTS.CONTRATADOS.PAGINA.CONFERIDO') }}
                   </span>
                 </span>
                 <AgenteBotao
                   variante="contorno"
-                  aria-label="Alterar o acesso ao portal da Universal"
+                  :aria-label="
+                    t('AGENTS.CONTRATADOS.PAGINA.ALTERAR_ACESSO_ARIA')
+                  "
                 >
-                  Alterar
+                  {{ t('AGENTS.CONTRATADOS.PAGINA.ALTERAR') }}
                 </AgenteBotao>
               </li>
             </ul>
@@ -696,7 +684,7 @@ const naoPerderOQueDigitou = () => false;
             class="flex flex-col gap-3 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
           >
             <h2 class="m-0 text-lg font-semibold text-n-slate-12">
-              O que Bia faz
+              {{ t('AGENTS.CONTRATADOS.PAGINA.FAZ_TITULO', DO_NOME) }}
             </h2>
             <ul class="flex flex-col gap-3 p-0 m-0 list-none">
               <li
@@ -720,7 +708,7 @@ const naoPerderOQueDigitou = () => false;
                     v-if="soCotaNoItem(variante, indice)"
                     class="text-sm text-n-slate-11"
                   >
-                    Precisa de um login que faz proposta.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.ITEM') }}
                   </span>
                 </span>
               </li>
@@ -734,7 +722,7 @@ const naoPerderOQueDigitou = () => false;
           >
             <div class="flex flex-col gap-5">
               <p class="m-0 text-base font-semibold text-n-blue-11">
-                Passo 3 de 3: onde a Bia atende.
+                {{ t('AGENTS.CONTRATADOS.ONDE.PASSO', DO_NOME) }}
               </p>
               <OndeQuandoEscolha
                 :onde="11"
@@ -760,7 +748,7 @@ const naoPerderOQueDigitou = () => false;
           <!-- Alterar a corretora: só os dois campos dela; o nome da Bia fica na gaveta de foto e nome. -->
           <AgenteGaveta
             v-else-if="variante.gaveta === 'corretora'"
-            titulo="Corretora"
+            :titulo="t('AGENTS.CONTRATADOS.CORRETORA.TITULO')"
           >
             <div class="flex flex-col gap-5">
               <div class="flex flex-col gap-1">
@@ -768,7 +756,7 @@ const naoPerderOQueDigitou = () => false;
                   for="corretora-nome"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Nome da corretora
+                  {{ t('AGENTS.CONTRATADOS.CORRETORA.NOME') }}
                 </label>
                 <input
                   id="corretora-nome"
@@ -783,7 +771,7 @@ const naoPerderOQueDigitou = () => false;
                   for="corretora-sobre"
                   class="text-sm font-medium text-n-slate-12"
                 >
-                  Sobre a corretora
+                  {{ t('AGENTS.CONTRATADOS.CORRETORA.SOBRE') }}
                 </label>
                 <textarea
                   id="corretora-sobre"
@@ -794,16 +782,18 @@ const naoPerderOQueDigitou = () => false;
                   :class="[CAMPO, anel(false)]"
                 />
                 <p class="m-0 text-sm text-n-slate-11">
-                  A Bia usa para se apresentar.
+                  {{ t('AGENTS.CONTRATADOS.CORRETORA.SOBRE_AJUDA', DO_NOME) }}
                 </p>
               </div>
             </div>
             <template #rodape>
               <div class="flex flex-wrap justify-end gap-2">
                 <AgenteBotao variante="contorno" tamanho="lg">
-                  Cancelar
+                  {{ t('AGENTS.CONTRATADOS.CORRETORA.CANCELAR') }}
                 </AgenteBotao>
-                <AgenteBotao tamanho="lg">Salvar</AgenteBotao>
+                <AgenteBotao tamanho="lg">
+                  {{ t('AGENTS.CONTRATADOS.CORRETORA.SALVAR') }}
+                </AgenteBotao>
               </div>
             </template>
           </AgenteGaveta>
@@ -811,7 +801,7 @@ const naoPerderOQueDigitou = () => false;
           <!-- Passo 2: o acesso ao portal da Universal. -->
           <AgenteGaveta
             v-else-if="variante.acesso"
-            titulo="Acesso ao portal da Universal"
+            :titulo="t('AGENTS.CONTRATADOS.ACESSO.TITULO')"
           >
             <div class="flex flex-col gap-5">
               <p
@@ -823,8 +813,7 @@ const naoPerderOQueDigitou = () => false;
                   class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
                   aria-hidden="true"
                 />
-                Pronto, a Bia foi criada. Ela começa parada. Falta o acesso à
-                Universal e o canal.
+                {{ t('AGENTS.CONTRATADOS.ACESSO.CRIADA', DO_NOME) }}
               </p>
 
               <!-- Conferido: só o resultado e o login mascarado; a senha nunca volta para a tela. -->
@@ -840,10 +829,12 @@ const naoPerderOQueDigitou = () => false;
                   />
                   <div class="flex flex-col gap-1">
                     <p class="m-0 text-base font-semibold text-n-slate-12">
-                      Acesso conferido
+                      {{ t('AGENTS.CONTRATADOS.ACESSO.CONFERIDO.TITULO') }}
                     </p>
                     <p class="m-0 text-sm text-n-slate-12">
-                      Bia já pode cotar e mandar o link de pagamento.
+                      {{
+                        t('AGENTS.CONTRATADOS.ACESSO.CONFERIDO.TEXTO', DO_NOME)
+                      }}
                     </p>
                   </div>
                 </div>
@@ -858,13 +849,10 @@ const naoPerderOQueDigitou = () => false;
                   />
                   <div class="flex flex-col gap-1">
                     <p class="m-0 text-base font-semibold text-n-slate-12">
-                      Esse login só faz cotação
+                      {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TITULO') }}
                     </p>
                     <p class="m-0 text-sm text-n-slate-12">
-                      Bia cota e tira dúvidas. Quando o cliente quiser fechar,
-                      ela passa a conversa para a sua equipe. Para a Bia fazer a
-                      proposta sozinha, peça à Universal para liberar a emissão
-                      nesse login.
+                      {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO', DO_NOME) }}
                     </p>
                   </div>
                 </div>
@@ -872,49 +860,52 @@ const naoPerderOQueDigitou = () => false;
                   class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-n-solid-2 ring-1 ring-inset ring-n-weak"
                 >
                   <div class="flex flex-col min-w-0 gap-0.5">
-                    <span class="text-sm text-n-slate-11">Login do portal</span>
+                    <span class="text-sm text-n-slate-11">
+                      {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.ROTULO') }}
+                    </span>
                     <span
                       class="text-base font-medium truncate text-n-slate-12"
                     >
                       corr•••••••plo
                     </span>
                     <span class="text-sm text-n-slate-11">
-                      Senha guardada com segurança
+                      {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.GUARDADA') }}
                     </span>
                   </div>
                   <AgenteBotao
                     variante="contorno"
-                    aria-label="Alterar o login e a senha"
+                    :aria-label="t('AGENTS.CONTRATADOS.ACESSO.ALTERAR_ARIA')"
                   >
-                    Alterar
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.ALTERAR') }}
                   </AgenteBotao>
                 </div>
               </template>
 
               <template v-if="comCampos(variante.acesso)">
                 <p class="m-0 text-base font-semibold text-n-blue-11">
-                  Passo 2 de 3: acesso à Universal.
+                  {{ t('AGENTS.CONTRATADOS.ACESSO.PASSO') }}
                 </p>
                 <AgenteErro
                   v-if="variante.acesso === 'recusado'"
-                  titulo="A Universal não aceitou esse login e senha."
-                  garantia="Confira os dois e digite de novo. Nada foi guardado."
+                  :titulo="t('AGENTS.CONTRATADOS.ACESSO.RECUSADO.TITULO')"
+                  :garantia="t('AGENTS.CONTRATADOS.ACESSO.RECUSADO.GARANTIA')"
                 />
                 <AgenteErro
                   v-else-if="variante.acesso === 'indisponivel'"
-                  titulo="A Universal não respondeu agora."
-                  garantia="Nada foi guardado. Tente de novo em alguns minutos."
+                  :titulo="t('AGENTS.CONTRATADOS.ACESSO.INDISPONIVEL.TITULO')"
+                  :garantia="
+                    t('AGENTS.CONTRATADOS.ACESSO.INDISPONIVEL.GARANTIA')
+                  "
                 />
                 <p v-else class="m-0 text-base text-n-slate-12">
-                  Bia entra no portal da Universal com o login da sua corretora
-                  para cotar e fazer a proposta.
+                  {{ t('AGENTS.CONTRATADOS.ACESSO.EXPLICA', DO_NOME) }}
                 </p>
                 <div class="flex flex-col gap-1">
                   <label
                     for="acesso-login"
                     class="text-sm font-medium text-n-slate-12"
                   >
-                    Login do portal
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.ROTULO') }}
                   </label>
                   <input
                     id="acesso-login"
@@ -942,11 +933,10 @@ const naoPerderOQueDigitou = () => false;
                       class="i-lucide-circle-alert size-4 shrink-0"
                       aria-hidden="true"
                     />
-                    Escreva o login do portal.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.ERRO') }}
                   </p>
                   <p class="m-0 text-sm text-n-slate-11">
-                    É o mesmo login do site da Universal. Não tem? Peça ao seu
-                    contato comercial na Universal.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.LOGIN.AJUDA') }}
                   </p>
                 </div>
                 <div class="flex flex-col gap-1">
@@ -954,7 +944,7 @@ const naoPerderOQueDigitou = () => false;
                     for="acesso-senha"
                     class="text-sm font-medium text-n-slate-12"
                   >
-                    Senha do portal
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.ROTULO') }}
                   </label>
                   <div class="relative">
                     <input
@@ -980,7 +970,7 @@ const naoPerderOQueDigitou = () => false;
                     />
                     <button
                       type="button"
-                      aria-label="Mostrar senha"
+                      :aria-label="t('AGENTS.CONTRATADOS.ACESSO.SENHA.MOSTRAR')"
                       :disabled="variante.acesso === 'conferindo'"
                       class="absolute inset-y-0 grid p-0 end-0 w-11 place-items-center rounded-e-xl text-n-slate-11 hover:text-n-slate-12 disabled:opacity-60"
                     >
@@ -996,17 +986,16 @@ const naoPerderOQueDigitou = () => false;
                       class="i-lucide-circle-alert size-4 shrink-0"
                       aria-hidden="true"
                     />
-                    Escreva a senha do portal.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.ERRO') }}
                   </p>
                   <p
                     v-else-if="variante.acesso === 'recusado'"
                     class="m-0 text-sm text-n-slate-11"
                   >
-                    Esqueceu a senha? Troque no site da Universal.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.ESQUECEU') }}
                   </p>
                   <p v-else class="m-0 text-sm text-n-slate-11">
-                    Depois de conferida, a senha fica guardada e não aparece
-                    mais.
+                    {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.AJUDA') }}
                   </p>
                 </div>
               </template>
@@ -1019,10 +1008,10 @@ const naoPerderOQueDigitou = () => false;
                   bloco
                   icone-direita="i-lucide-arrow-right"
                 >
-                  Escolher o canal
+                  {{ t('AGENTS.CONTRATADOS.ACESSO.ESCOLHER_CANAL') }}
                 </AgenteBotao>
                 <p class="m-0 text-sm text-center text-n-slate-11">
-                  Último passo: onde Bia atende os viajantes.
+                  {{ t('AGENTS.CONTRATADOS.ACESSO.ULTIMO_PASSO', DO_NOME) }}
                 </p>
               </template>
               <AgenteBotao
@@ -1031,9 +1020,9 @@ const naoPerderOQueDigitou = () => false;
                 tamanho="xl"
                 bloco
                 :carregando="variante.acesso === 'conferindo'"
-                rotulo-carregando="Conferindo com a Universal…"
+                :rotulo-carregando="t('AGENTS.CONTRATADOS.ACESSO.CONFERINDO')"
               >
-                Conferir acesso
+                {{ t('AGENTS.CONTRATADOS.ACESSO.CONFERIR') }}
               </AgenteBotao>
             </template>
           </AgenteGaveta>
