@@ -13,6 +13,9 @@ class Autonomia::Agents::SoftDelete
       deleted_at = Time.current
       archive_inbox_links!(deleted_at)
       archive_agent!(deleted_at)
+      # #3211 — the insurer login and password of a hired agent are not kept for recovery: deleting the agent is
+      # deleting the credentials (the `dependent: :destroy` of the association only runs on a hard destroy).
+      @agent.acesso_da_seguradora&.destroy!
       metadata = audit_metadata(deleted_at)
       Audited.audit_class.create!(
         auditable: @agent, associated: @agent.account, user: @actor,

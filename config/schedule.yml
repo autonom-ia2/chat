@@ -296,6 +296,13 @@ autonomia_reap_stale_tool_runs_job:
   class: 'Autonomia::Agents::Tools::ReapStaleRunsJob'
   queue: scheduled_jobs
 
+# executed every hour at :17; hired agents (#3211) whose official knowledge base is from another version (a deploy
+# changed a file under base/, or the seeding failed) are queued for seeding. Seeding calls the paid embedding API.
+autonomia_contratados_base_em_dia_job:
+  cron: '17 * * * *'
+  class: 'Autonomia::Agents::Contratados::BaseEmDiaJob'
+  queue: scheduled_jobs
+
 email_campaign_recipient_import_maintenance_job:
   cron: '*/5 * * * *'
   class: 'EmailCampaigns::RecipientImportMaintenanceJob'
