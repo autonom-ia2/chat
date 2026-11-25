@@ -7,6 +7,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
       'coberturas' => [{ 'id_beneficio' => 2898, 'valor' => despesas_medicas }] }
   end
 
+  # Os 4 planos da cotação de exemplo: pontos 12 (30K), 34 (60K), 36 (100K) e 59 (250K, fora por ser a maior).
+  let(:quatro) do
+    [plano('210.0', 'R$ 30.000'), plano('285.0', 'R$ 60.000'), plano('360.0', 'R$ 100.000'), plano('540.0', 'R$ 250.000')]
+  end
+
   it 'nenhum plano: nenhum rótulo' do
     expect(described_class.de([])).to eq([])
   end
@@ -15,28 +20,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
     expect(described_class.de([plano('360.0', 'R$ 100.000')])).to eq([:disponivel])
   end
 
-  it 'dois planos: a recomendada é a de mais despesas médicas por real; o outro, o mais barato, é a econômica' do
-    planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000')]
-    expect(described_class.de(planos)).to eq(%i[recomendada economica])
+  it 'pontuação da GTA adaptada: os pontos de cada plano' do
+    expect(described_class.pontuacoes(quatro)).to eq([12, 34, 36, 59])
   end
 
-  it 'dois planos: o mais barato é o recomendado e o outro leva "maior cobertura"' do
-    planos = [plano('200.0', 'R$ 100.000'), plano('900.0', 'R$ 300.000')]
-    expect(described_class.de(planos)).to eq(%i[recomendada maior_cobertura])
+  it 'três ou mais: a recomendada é a de mais pontos entre as que não são a econômica nem a maior cobertura' do
+    expect(described_class.de(quatro)).to eq([:economica, nil, :recomendada, :maior_cobertura])
   end
 
-  it 'dois planos: o recomendado é mais barato e cobre mais; o outro fica sem rótulo' do
-    planos = [plano('300.0', 'R$ 50.000'), plano('200.0', 'R$ 100.000')]
-    expect(described_class.de(planos)).to eq([nil, :recomendada])
+  it 'o desconto de preço muda a escolha que só olharia despesas médicas por real' do
+    # Por real, o de R$ 200 (500 de cobertura por real) ganharia do de R$ 115 (435 por real); pelos pontos, o de R$ 115
+    # (42) ganha do de R$ 200 (37), que custa o dobro da econômica.
+    planos = [plano('100.0', 'R$ 20.000'), plano('115.0', 'R$ 50.000'), plano('200.0', 'R$ 100.000'),
+              plano('400.0', 'R$ 1.000.000')]
+    expect(described_class.pontuacoes(planos)).to eq([12, 42, 37, 59])
+    expect(described_class.de(planos)).to eq([:economica, :recomendada, nil, :maior_cobertura])
   end
 
-  it 'três ou mais: econômica, maior cobertura e, entre os do meio, a de mais despesas médicas por real' do
-    planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000'), plano('285.0', 'R$ 60.000'),
-              plano('540.0', 'R$ 250.000')]
-    expect(described_class.de(planos)).to eq([:recomendada, :economica, nil, :maior_cobertura])
+  it 'dois planos, um em cada ponta: a de mais pontos vira a recomendada e a outra fica com o rótulo dela' do
+    expect(described_class.de([plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000')])).to eq(%i[recomendada economica])
+    expect(described_class.pontuacoes([plano('200.0', 'R$ 100.000'), plano('900.0', 'R$ 300.000')])).to eq([48, 15])
+    expect(described_class.de([plano('200.0', 'R$ 100.000'), plano('900.0', 'R$ 300.000')]))
+      .to eq(%i[recomendada maior_cobertura])
   end
 
-  it 'o mais barato que também cobre mais fica só com "mais econômica", e ninguém leva "maior cobertura"' do
+  it 'a mais barata que também cobre mais fica só com "mais econômica"; a recomendada sai das outras' do
+    expect(described_class.de([plano('300.0', 'R$ 50.000'), plano('200.0', 'R$ 100.000')])).to eq(%i[recomendada economica])
     planos = [plano('100.0', 'R$ 300.000'), plano('200.0', 'R$ 100.000'), plano('300.0', 'R$ 50.000')]
     expect(described_class.de(planos)).to eq([:economica, :recomendada, nil])
   end
@@ -46,9 +55,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
     expect(described_class.de(planos)).to eq(%i[recomendada maior_cobertura economica])
   end
 
-  it 'empate no preço: a ordem da Universal decide a econômica' do
+  it 'empate no preço da econômica: mais despesas médicas vence' do
     planos = [plano('200.0', 'R$ 30.000'), plano('200.0', 'R$ 40.000'), plano('500.0', 'R$ 100.000')]
-    expect(described_class.de(planos)).to eq([:economica, :recomendada, :maior_cobertura])
+    expect(described_class.de(planos)).to eq(%i[recomendada economica maior_cobertura])
+  end
+
+  it 'empate nos pontos: mais despesas médicas vence; persistindo, o menor preço' do
+    mais_cobertura = [plano('100.0', 'R$ 20.000'), plano('150.0', 'R$ 40.000'), plano('150.0', 'R$ 45.000'),
+                      plano('400.0', 'R$ 1.000.000')]
+    expect(described_class.pontuacoes(mais_cobertura)).to eq([12, 30, 30, 59])
+    expect(described_class.recomendada(mais_cobertura)).to eq(2)
+    mais_barato = [plano('100.0', 'R$ 20.000'), plano('150.0', 'R$ 40.000'), plano('160.0', 'R$ 40.000'),
+                   plano('400.0', 'R$ 1.000.000')]
+    expect(described_class.pontuacoes(mais_barato)).to eq([12, 30, 30, 59])
+    expect(described_class.recomendada(mais_barato)).to eq(1)
+  end
+
+  it 'plano sem preço não é a econômica e o termo de preço dele não conta' do
+    planos = [plano('100.0', 'R$ 20.000'), plano(nil, 'R$ 60.000'), plano('200.0', 'R$ 50.000')]
+    expect(described_class.pontuacoes(planos)).to eq([28, 38, 65])
+    expect(described_class.de(planos)).to eq(%i[economica maior_cobertura recomendada])
   end
 
   it 'cada plano tem no máximo um rótulo' do
@@ -66,12 +92,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
     expect(described_class.despesas_medicas_texto({ 'principais' => { 'despesas_medicas' => 'R$ 60.000' } })).to eq('R$ 60.000')
   end
 
-  describe '.recomendada (a regra trocável)' do
+  describe '.recomendada' do
     it 'devolve o índice que `de` marca como recomendada' do
-      planos = [plano('360.0', 'R$ 100.000'), plano('210.0', 'R$ 30.000'), plano('285.0', 'R$ 60.000'),
-                plano('540.0', 'R$ 250.000')]
-      expect(described_class.recomendada(planos)).to eq(0)
-      expect(described_class.de(planos).index(:recomendada)).to eq(0)
+      expect(described_class.recomendada(quatro)).to eq(2)
+      expect(described_class.de(quatro).index(:recomendada)).to eq(2)
     end
 
     it 'um plano: ele; nenhum: nil' do
@@ -104,8 +128,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::R
     end
 
     it 'a recomendada é a mais barata: diz isso, sem comparação inventada' do
-      expect(porque([plano('300.0', 'R$ 50.000'), plano('200.0', 'R$ 100.000')]))
-        .to eq('É a opção mais barata desta cotação, com R$ 100.000 para médico e hospital.')
       expect(porque([plano('200.0', 'R$ 100.000'), plano('900.0', 'R$ 300.000')]))
         .to eq('É a opção mais barata desta cotação, com R$ 100.000 para médico e hospital. ' \
                'A de maior cobertura custa R$ 700,00 a mais.')

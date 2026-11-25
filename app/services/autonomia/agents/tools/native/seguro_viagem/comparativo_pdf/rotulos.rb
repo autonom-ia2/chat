@@ -1,11 +1,13 @@
 # OS RÓTULOS dos planos no comparativo (#3211): uma regra fixa, sem opinião do modelo, para o cliente ver o porquê.
 #
-# - MAIS RECOMENDADA: a regra de `recomendada`, isolada para poder ser trocada sem mexer no resto.
-# - MAIS ECONÔMICA: o menor `preco_total`, se não for a recomendada.
-# - MAIOR COBERTURA: o maior valor de despesas médicas e hospitalares (a cobertura de `Planos::IDS_DMH`), se não for a
-#   recomendada nem a econômica.
+# - MAIS ECONÔMICA: o menor `preco_total`; empate, mais despesas médicas; persistindo, a ordem dos planos.
+# - MAIOR COBERTURA: o maior valor de despesas médicas e hospitalares (a cobertura de `Planos::IDS_DMH`); empate, o
+#   menor preço; persistindo, a ordem dos planos. Se for a mesma da econômica, fica só "mais econômica".
+# - MAIS RECOMENDADA: `recomendada`, pela pontuação (`Pontuacao`): a de mais pontos entre as que não são a econômica
+#   nem a de maior cobertura. Sem nenhuma assim (2 planos, um em cada ponta), a de mais pontos vira a recomendada e
+#   perde o rótulo de ponta; a outra fica com o dela.
 # - Com 1 plano: "opção disponível".
-# Cada plano tem no máximo um rótulo. Empate: o menor preço vence; persistindo, a ordem dos planos.
+# Cada plano tem no máximo um rótulo.
 module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Rotulos
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   NOMES = {
@@ -21,26 +23,35 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Rotulos
     return [] if planos.empty?
     return [:disponivel] if planos.size == 1
 
-    indices = (0...planos.size).to_a
     recomendada = recomendada(planos)
-    economica = mais_barato(planos, indices)
-    economica = nil if economica == recomendada
-    maior = maior_cobertura(planos, indices)
+    economica = economica(planos)
+    maior = maior_cobertura(planos)
     maior = nil if [recomendada, economica].include?(maior)
+    economica = nil if economica == recomendada
     Array.new(planos.size) do |indice|
       { recomendada => :recomendada, economica => :economica, maior => :maior_cobertura }[indice]
     end
   end
 
-  # A REGRA DA RECOMENDADA (a única coisa a trocar quando a regra mudar): -> o índice do plano recomendado.
-  # Hoje: com 2 planos, o de mais despesas médicas por real pago (despesas médicas ÷ preço total); com 3 ou mais, o
-  # mesmo critério entre os planos que não são o mais barato nem o de maior cobertura.
+  # A REGRA DA RECOMENDADA: -> o índice do plano recomendado (nil sem planos). Os planos em ordem de pontuação (mais
+  # pontos, depois mais despesas médicas, depois menor preço); o 1º que não é a econômica nem a de maior cobertura, ou,
+  # sem nenhum assim, o 1º de todos.
   def recomendada(planos)
-    indices = (0...planos.size).to_a
-    return indices.first if planos.size < 2
+    return nil if planos.empty?
+    return 0 if planos.size == 1
 
-    extremos = planos.size == 2 ? [] : [mais_barato(planos, indices), maior_cobertura(planos, indices)]
-    melhor_por_real(planos, indices - extremos)
+    ordem = por_pontuacao(planos)
+    extremos = [economica(planos), maior_cobertura(planos)]
+    ordem.find { |indice| extremos.exclude?(indice) } || ordem.first
+  end
+
+  # -> a pontuação de cada plano, na ordem dos planos (`Pontuacao.de`).
+  def pontuacoes(planos)
+    return [] if planos.empty?
+
+    economica = economica(planos)
+    maior = maior_cobertura(planos)
+    SeguroViagem::ComparativoPdf::Pontuacao.de(planos, economica: economica, maior: maior == economica ? nil : maior)
   end
 
   # O valor de despesas médicas como número (`'R$ 100.000'` -> 100000); sem a cobertura, 0.
@@ -71,7 +82,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Rotulos
     plano = planos[indice]
     return disponivel(plano) unless preco(plano).finite?
 
-    [frente_a_mais_barata(plano, planos[mais_barato(planos, (0...planos.size).to_a)]),
+    [frente_a_mais_barata(plano, planos[economica(planos)]),
      frente_a_maior(plano, planos[rotulos.index(:maior_cobertura) || indice])].compact.join(' ')
   end
 
@@ -104,21 +115,19 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Rotulos
     "A de maior cobertura custa #{brl(preco(maior) - preco(plano))} a mais."
   end
 
-  def mais_barato(planos, indices)
-    indices.min_by { |indice| [preco(planos[indice]), indice] }
+  def economica(planos)
+    planos.each_index.min_by { |indice| [preco(planos[indice]), -despesas_medicas(planos[indice]), indice] }
   end
 
-  def maior_cobertura(planos, indices)
-    indices.min_by { |indice| [-despesas_medicas(planos[indice]), preco(planos[indice]), indice] }
+  def maior_cobertura(planos)
+    planos.each_index.min_by { |indice| [-despesas_medicas(planos[indice]), preco(planos[indice]), indice] }
   end
 
-  def melhor_por_real(planos, indices)
-    indices.min_by { |indice| [-por_real(planos[indice]), preco(planos[indice]), indice] }
-  end
-
-  def por_real(plano)
-    total = preco(plano)
-    total.positive? && total.finite? ? despesas_medicas(plano) / total : 0
+  def por_pontuacao(planos)
+    pontos = pontuacoes(planos)
+    planos.each_index.sort_by do |indice|
+      [-pontos[indice], -despesas_medicas(planos[indice]), preco(planos[indice]), indice]
+    end
   end
 
   # Sem preço o plano nunca é o mais barato.
@@ -130,6 +139,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Rotulos
     valor.finite? ? SeguroViagem::Dinheiro.brl(valor) : 'valor não informado'
   end
 
-  private_class_method :disponivel, :frente_a_mais_barata, :frente_a_maior, :mais_barato, :maior_cobertura,
-                       :melhor_por_real, :por_real, :preco, :brl
+  private_class_method :disponivel, :frente_a_mais_barata, :frente_a_maior, :economica, :maior_cobertura, :por_pontuacao,
+                       :preco, :brl
 end
