@@ -452,7 +452,7 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
-          chunks = com_os_cartoes_no_ultimo(chunks)
+          chunks = ::Autonomia::Agents::Operate::RitmoDoCanal.para(com_os_cartoes_no_ultimo(chunks), agent: @agent, conversation: @conversation)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
