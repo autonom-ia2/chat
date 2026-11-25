@@ -14,7 +14,9 @@
 #   4. A idempotência é a MARCA do evento na mensagem (`Tools::Evento::CHAVE`), não o id da mensagem de origem:
 #      um retry do job, ou um evento duplicado, encontra a mensagem e não posta de novo.
 #   5. A porta de engajamento não se aplica: o evento é continuação de um pedido que a pessoa já fez.
-#   6. O sinal de passar segue passando a conversa (`bot_handoff!`), com a flag `agente_so_informa` (#2154) ou sem ela.
+#   6. O sinal de passar segue a flag `agente_so_informa` (#2154) como no turno do cliente (#3221, regra do Rodrigo de
+#      25/11): ligada, o agente só avisa, o turno registra o aviso com a mensagem do evento e a IA de Atribuição avalia
+#      depois da fala (sem ninguém para receber, a conversa fica com o agente); desligada, `bot_handoff!` como antes.
 #
 # O SILÊNCIO AQUI É FALHA, não decisão: IA indisponível, resposta vazia ou o sinal de silêncio voltam como
 # `silenced` com o motivo, e quem decide a nova tentativa e a escalada é o `EventoJob`.
@@ -37,6 +39,7 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
     return outcome unless outcome.status == :replied
 
     enfileirar_cartoes(outcome) # #1479 F3: os cartões marcados no turno, depois que a mensagem sair
+    @entrega = outcome # #3221: a fala do evento, para o aviso (Responder#avisou_que_chama_alguem)
     handoff_if_signaled(result)
     outcome
   rescue StandardError => e
@@ -45,12 +48,6 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
   end
 
   private
-
-  # #2154: o evento da cotação fica fora da regra "o agente só informa". Com a flag ligada ou não, o sinal da instrução
-  # no evento segue passando a conversa (`bot_handoff!`), como antes.
-  def agente_so_informa?
-    false
-  end
 
   def silencio(motivo)
     registrar_silencio(motivo)
