@@ -3486,6 +3486,28 @@
      ],
      "revisar": false,
      "nota": "Épico #2858 F2. requer = portão da tela em GUIDE_ROUTE_FEATURES; a tela também pede agente_ferramentas_prontas."
+    },
+    {
+     "id": "11.15",
+     "titulo": "Contratar o agente pronto que vende seguro viagem",
+     "para_que_serve": "Contratar o agente que vende o seguro viagem da Universal sozinho: os dados da corretora, o login do portal e o canal.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_contratado_modelo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_builder",
+      "destaque": null
+     },
+     "requer": "agente_seguro_viagem_universal",
+     "prints": [],
+     "fontes": [
+      "porques: Contratar o agente pronto de Seguro Viagem Universal"
+     ],
+     "revisar": false,
+     "nota": "#3211. requer = portão da tela em GUIDE_ROUTE_FEATURES. A rota do modelo leva :modelo, então o Me leve até lá abre Criar agente."
     }
    ]
   },
