@@ -988,6 +988,7 @@ en:
         seguro_de_fora: 'A policy from another broker is only read, saved or deleted on screen: open the person (or the conversation panel) › Insurance › Save a policy from another broker.'
         seguro_palavras: 'The policy in plain words is only written and sent to the client on screen: Relationships › Insurance › open the policy › Your policy in plain words.'
         seguro_proposta: 'The renewal proposal is only sent to the client on screen, with the Send button of the policy renewal.'
+        acesso_da_seguradora: "The insurer login of a ready-made agent is only saved on screen, so the password never goes through this chat: Agents › open the agent › insurer login."
       admin_only: 'Only an account admin can do this.'
       not_permitted: 'Your profile does not have permission for this. An account admin can do it or give you access.'
       card_funnel_required: 'You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Channels per pipeline.'

@@ -5,8 +5,11 @@
 # o corpo da compra traz CPF e o cabeçalho traz a senha do corretor.
 class Autonomia::Seguradoras::Universal::Cliente
   BASE_URL = 'https://api-br.universal-assistance.com'.freeze
-  ABERTURA = 5
-  LEITURA = { setup: 15, destinos: 15, cotar: 40, comprar: 40 }.freeze
+  # O Setup roda dentro da requisição da tela (conferir o acesso, abaixo do Rack::Timeout de 15 s): abertura + leitura
+  # dele somam 12 s, e o GET não se repete sozinho (`max_retries = 0`; o Net::HTTP repetiria uma vez o GET que estourou
+  # a leitura, dobrando a espera). As outras chamadas rodam no turno do agente, em job.
+  ABERTURA = 4
+  LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40 }.freeze
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
@@ -76,6 +79,7 @@ class Autonomia::Seguradoras::Universal::Cliente
     http.use_ssl = uri.scheme == 'https'
     http.open_timeout = ABERTURA
     http.read_timeout = LEITURA.fetch(nome)
+    http.max_retries = 0
     http.request(requisicao)
   end
 

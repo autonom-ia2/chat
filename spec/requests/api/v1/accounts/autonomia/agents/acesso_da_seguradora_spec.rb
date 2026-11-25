@@ -68,6 +68,16 @@ RSpec.describe 'Autonomia agente contratado: acesso à seguradora', type: :reque
       expect(response.body).not_to include('s3nha-teste')
     end
 
+    it 'seguradora sem resposta (timeout): 200 com o estado nomeado, nunca 5xx' do
+      stub_request(:get, setup_url).to_timeout
+
+      post acesso_url, params: credenciais, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('estado' => 'nao_conferido', 'motivo' => 'indisponivel', 'login_dica' => 'co•••te')
+      expect(response.body).not_to include('s3nha-teste')
+    end
+
     it 'login ou senha em branco: 422 sem chamar a seguradora nem gravar' do
       post acesso_url, params: { login: 'corretor.teste', senha: ' ' }, headers: admin.create_new_auth_token, as: :json
 

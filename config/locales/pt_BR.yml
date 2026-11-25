@@ -1782,6 +1782,7 @@ pt_BR:
         seguro_de_fora: 'O seguro de outra corretora só se lê, guarda ou apaga na tela: abra a pessoa (ou o painel da conversa) › Seguros › Guardar seguro de outra corretora.'
         seguro_palavras: 'O seguro em palavras simples só se escreve e se manda ao cliente na tela: Relacionamentos › Seguros › abra o seguro › Seu seguro em palavras simples.'
         seguro_proposta: 'A proposta de renovação só se manda ao cliente na tela, no botão Enviar da renovação do seguro.'
+        acesso_da_seguradora: 'O login da seguradora de um agente pronto só se cadastra na tela, para a senha não passar por esta conversa: Agentes › abra o agente › login da seguradora.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       not_permitted: 'O seu perfil não tem permissão para isso. Quem administra a conta pode fazer ou liberar para você.'
       card_funnel_required: 'Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Canais de cada funil.'

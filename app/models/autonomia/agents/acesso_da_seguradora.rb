@@ -35,6 +35,9 @@ class Autonomia::Agents::AcessoDaSeguradora < ApplicationRecord
   SEGURADORAS = %w[universal].freeze
   PONTOS_DA_DICA = '•••'.freeze
   LOGIN_CURTO = 4
+  # O Guia nunca grava o login: a senha digitada na conversa ficaria no histórico e nos registros dela. Só na tela
+  # (`Guide::Acoes::SO_NA_TELA`); ler o estado (`payload_publico`) segue aberto.
+  SO_NA_TELA_DO_GUIA = { 'POST autonomia/agents/:agent_id/acesso_da_seguradora' => 'acesso_da_seguradora' }.freeze
 
   belongs_to :account
   belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id,

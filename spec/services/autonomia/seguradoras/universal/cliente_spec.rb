@@ -71,6 +71,23 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
     expect { cliente.cotar({}) }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
   end
 
+  # #3211: o Setup roda dentro da requisição da tela (Rack::Timeout de 15 s): abertura + leitura até 12 s, sem repetir.
+  it 'Setup cabe no prazo da tela: abertura + leitura até 12 s e sem repetição do GET' do
+    capturado = nil
+    allow(Net::HTTP).to(receive(:new).and_wrap_original { |original, *args| capturado = original.call(*args) })
+    stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 200, body: file_fixture('../universal/setup.json').read)
+
+    cliente.setup
+
+    expect(capturado.open_timeout + capturado.read_timeout).to be <= 12
+    expect(capturado.max_retries).to eq(0)
+  end
+
+  it 'timeout no Setup vira indisponivel' do
+    stub_request(:get, "#{base}/v1/Emissor/Setup").to_timeout
+    expect { cliente.setup }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+  end
+
   it 'cotar manda o pedido como JSON e devolve o corpo' do
     stub = stub_request(:post, "#{base}/v1/Cotacao")
            .with(body: { 'a' => 1 }.to_json, headers: { 'Content-Type' => 'application/json' })

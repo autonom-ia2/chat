@@ -7,7 +7,9 @@
 #                                                                     `payload_publico` (200 também com o login recusado:
 #                                                                     o resultado é o estado gravado).
 # A resposta nunca traz a senha nem o login inteiro, só a dica (R5); os dois saem filtrados do log do Rails e do Sentry
-# (`filter_parameter_logging.rb`, `SentryHttpAuthScrubber`). Agente de outra conta, de sistema ou que não é contratado:
+# (`filter_parameter_logging.rb`, `SentryHttpAuthScrubber`), e o Guia não grava o login (só na tela,
+# `AcessoDaSeguradora::SO_NA_TELA_DO_GUIA`). A conferência cabe no prazo da requisição (`Universal::Cliente::LEITURA`):
+# seguradora sem resposta vira `nao_conferido`/`indisponivel`, nunca 5xx. Agente de outra conta, de sistema ou que não é contratado:
 # 404. Ler pede `autonomia_view`. Gravar é credencial de integração, que não se delega por função (CLAUDE.md, funções
 # personalizadas): só o administrador, como as conexões e os tokens.
 class Api::V1::Accounts::Autonomia::Agents::AcessoDaSeguradoraController < Api::V1::Accounts::Autonomia::BaseController

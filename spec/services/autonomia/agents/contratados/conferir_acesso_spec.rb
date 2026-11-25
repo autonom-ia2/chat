@@ -10,6 +10,28 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirAcesso do
     stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 200, body: file_fixture('../universal/setup.json').read)
   end
 
+  # #3211 (rodada 1): dois pedidos no primeiro cadastro. O outro grava a linha entre a nossa leitura e o nosso INSERT.
+  it 'outro pedido gravou o primeiro acesso no meio: relê a linha e grava por cima, sem erro e sem chamar de novo' do
+    primeiro = true
+    allow(Autonomia::Agents::AcessoDaSeguradora).to receive(:find_or_initialize_by).and_wrap_original do |original, *args, **opcoes|
+      registro = original.call(*args, **opcoes)
+      next registro unless primeiro
+
+      primeiro = false
+      allow(registro).to receive(:save!) do
+        Autonomia::Agents::AcessoDaSeguradora.create!(agent: contratado, account: account, login: 'outro.login', senha: 'outra')
+        raise ActiveRecord::RecordNotUnique, 'duplicate key value violates unique constraint'
+      end
+      registro
+    end
+
+    acesso = described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
+
+    expect(Autonomia::Agents::AcessoDaSeguradora.where(autonomia_agent_id: contratado.id).count).to eq(1)
+    expect(acesso.reload).to have_attributes(login: 'corretor.teste', estado: 'ok')
+    expect(a_request(:get, "#{base}/v1/Emissor/Setup")).to have_been_made.once
+  end
+
   it 'Setup ok grava ok e as capacidades nas nossas chaves, só booleanos' do
     acesso = described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
     expect(acesso.estado).to eq('ok')

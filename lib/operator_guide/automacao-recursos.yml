@@ -589,7 +589,6 @@ fora:
       - whatsapp/manual_setup
       - instagram/testers
       - autonomia/insurance/connection
-      - autonomia/agents/acesso_da_seguradora
       - autonomia/invite_connections
       - channels/twilio_channels
       - inboxes

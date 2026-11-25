@@ -18,17 +18,31 @@ class Autonomia::Agents::Contratados::ConferirAcesso
     @senha = senha
   end
 
+  # A seguradora é chamada uma vez só. Dois pedidos ao mesmo tempo no primeiro cadastro do agente: o segundo INSERT bate
+  # no índice único (ou, se o outro já gravou antes da validação, na de unicidade do model); relê a linha que o outro
+  # gravou e grava por cima (o último a conferir vale), sem 500.
   def call
+    conferido = resultado
+    gravar!(conferido)
+  rescue ActiveRecord::RecordNotUnique
+    gravar!(conferido)
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless e.record.errors.of_kind?(:autonomia_agent_id, :taken)
+
+    gravar!(conferido)
+  end
+
+  private
+
+  def gravar!(conferido)
     acesso = Autonomia::Agents::AcessoDaSeguradora.find_or_initialize_by(autonomia_agent_id: @agent.id)
     acesso.account_id = @agent.account_id
     acesso.login = @login
     acesso.senha = @senha
-    acesso.assign_attributes(resultado)
+    acesso.assign_attributes(conferido)
     acesso.save!
     acesso
   end
-
-  private
 
   def resultado
     setup = Autonomia::Seguradoras::Universal::Cliente.new(login: @login, senha: @senha).setup
