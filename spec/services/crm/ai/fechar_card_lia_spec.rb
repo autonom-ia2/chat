@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# IA entende a conversa F3 (revisão adversarial, item 1): enquanto o agente de cotação (o protegido, `instrucao_mantida?`)
+# IA entende a conversa F3 (revisão adversarial, item 1): enquanto o agente de cotação (o protegido, `protegido_no_crm?`)
 # atende a conversa, a IA do CRM não fecha o card, não sugere fechar nem sugere "era teste" por cima dele. A guarda é a
 # mesma da F1 (Crm::Ai::FatosDaConversa.agente_protegido?). O comportamento do agente de cotação não muda.
 RSpec.describe Crm::Ai::FecharCard do

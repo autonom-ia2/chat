@@ -77,7 +77,7 @@ RSpec.describe Crm::Conversations::CardEmFoco do
   end
 
   it 'fora: o agente protegido' do
-    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:instrucao_mantida?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
 
     perform(fala)
 
