@@ -30,6 +30,11 @@ const jornada = vi.hoisted(() => ({
   modelosDeRamo: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
 }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: jornada }));
+// #3211: os agentes prontos para contratar também vêm do servidor. Sem resposta combinada, nenhum.
+const contratados = vi.hoisted(() => ({
+  lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
+}));
+vi.mock('dashboard/api/autonomia/contratados', () => ({ default: contratados }));
 
 const montar = () => mount(AgenteEscolherPage);
 
