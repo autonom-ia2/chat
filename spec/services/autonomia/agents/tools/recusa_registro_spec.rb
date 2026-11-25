@@ -59,6 +59,12 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
 onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:detalhe])} descricao="#{frase}"\z/
   end
 
+  def falha_da_universal(codigo)
+    erro = Autonomia::Seguradoras::Universal::Cliente::Erro.new(codigo)
+    Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
+      .tratar(erro, acao: 'cotar_seguro_viagem', agent: agent, conversation: conversation)
+  end
+
   def ready_connection
     record = Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo')
     record.update!(status: 'ready')
@@ -847,6 +853,26 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           create_internal_meeting(world: agenda_pronta, starts_at: Time.iso8601('2026-10-20T10:00:00-03:00'))
           agendar_com_telefone
           expect(Crm::Meeting.count).to eq(1)
+        }
+      },
+      # #3211: as falhas da Universal nas ferramentas do Seguro Viagem.
+      'falhas.rb#recusado#1' => {
+        espera: { motivo: 'acesso_recusado', slug: 'cotar_seguro_viagem' },
+        dispara: -> { falha_da_universal('acesso_recusado') }
+      },
+      'falhas.rb#indisponivel#1' => {
+        espera: { motivo: 'indisponivel', slug: 'cotar_seguro_viagem' },
+        dispara: -> { falha_da_universal('indisponivel') }
+      },
+      'falhas.rb#invalido#1' => {
+        espera: { motivo: 'pedido_invalido', slug: 'cotar_seguro_viagem' },
+        dispara: -> { falha_da_universal('pedido_invalido') }
+      },
+      'falhas.rb#sem_link#1' => {
+        espera: { motivo: 'sem_link', slug: 'cotar_seguro_viagem' },
+        dispara: lambda {
+          Autonomia::Agents::Tools::Native::SeguroViagem::Falhas.sem_link(acao: 'cotar_seguro_viagem', agent: agent,
+                                                                          conversation: conversation)
         }
       }
     }
