@@ -938,6 +938,7 @@ const tirarPergunta = id => {
           :itens-mais="itensMais"
           :alternando="alternando"
           :ajudante="ajudante"
+          :contratado="contratado"
           @voltar-lista="irParaLista"
           @alternar="alternar"
           @acao-principal="acaoDoHeroi"

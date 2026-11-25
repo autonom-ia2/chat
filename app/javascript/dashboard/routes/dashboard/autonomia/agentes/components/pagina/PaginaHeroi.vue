@@ -24,6 +24,8 @@ defineProps({
   itensMais: { type: Array, default: () => [] },
   alternando: { type: Boolean, default: false },
   ajudante: { type: Boolean, default: false },
+  // #3211 — o agente contratado: o rascunho dele mostra "Falta terminar" também para quem gerencia.
+  contratado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['voltarLista', 'alternar', 'acaoPrincipal', 'mais']);
@@ -99,10 +101,13 @@ const aoVoltar = evento => {
               >
                 {{ nome }}
               </h1>
-              <!-- #3211: o agente que ainda falta terminar (o contratado nasce assim) mostra a pílula também para
-                quem gerencia, que ainda não tem o interruptor. -->
+              <!-- #3211: o contratado que ainda falta terminar (ele nasce assim) mostra a pílula também para quem
+                gerencia, que ainda não tem o interruptor. O rascunho dos outros agentes segue como sempre. -->
               <AgenteStatus
-                v-if="!podeGerenciar || estado === ESTADO.FALTA_TERMINAR"
+                v-if="
+                  !podeGerenciar ||
+                  (contratado && estado === ESTADO.FALTA_TERMINAR)
+                "
                 :estado="estado"
               />
             </div>
