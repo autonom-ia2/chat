@@ -1,5 +1,5 @@
 # QUANTO ESPERAR E QUANDO ENTRAR NA FILA (#3211). Duas decisões do turno do agente, ambas por opção do agente
-# (ParidadeDaConversa), ambas desligadas por padrão:
+# (ParidadeDaConversa), ambas ligadas por padrão em todo agente, menos na Lia:
 #
 # - `da_rajada` (P1, `conversa_espera_a_fala`): a espera do debounce. Desligada, é a janela de sempre
 #   (Config.debounce_seconds_for). Ligada, é o fim previsto da fala anterior menos agora, preso entre ESPERA_MINIMA e

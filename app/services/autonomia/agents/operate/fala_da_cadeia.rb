@@ -1,5 +1,6 @@
 # A FALA NA CADEIA DE PEDAÇOS (#3211). O que a paridade da conversa muda no ChunkedDeliveryJob, num lugar só (o job já
-# está no teto de tamanho). Tudo por opção do agente (ParidadeDaConversa); desligadas, nada aqui age.
+# está no teto de tamanho). Tudo por opção do agente (ParidadeDaConversa, ligadas por padrão menos na Lia); com elas
+# desligadas, nada aqui age.
 #
 # - `comecada?` (P3, `conversa_entrega_inteira` + fila): do 2º pedaço em diante a fala já começou e mensagem nova não a
 #   corta; o job deixa de conferir o turno. O 1º pedaço sempre confere.

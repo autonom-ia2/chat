@@ -1,15 +1,18 @@
 # As chaves da PARIDADE DA CONVERSA (#3211): quatro opções por agente, em `agent.config` (jsonb, chaves string), que dão
-# ao agente nativo o ritmo de conversa do fluxo externo. TODAS nascem desligadas: sem a chave, o comportamento é o de
-# hoje, byte a byte. Quem liga é o `Contratar` (PR seguinte); aqui só se lê.
+# ao agente nativo o ritmo de conversa do fluxo externo. Decisão do Rodrigo (25/11): valem para TODO agente nativo. Sem a
+# chave, a opção está LIGADA; a Lia (`insurance_quote`) é a exceção, e nela a chave ausente é DESLIGADA (regra da casa:
+# o comportamento da Lia não muda). Nada é gravado no banco: o padrão mora aqui.
 #
 # - `conversa_espera_a_fala` (P1): a espera da rajada é o fim previsto da fala anterior, não a janela fixa do debounce.
 # - `conversa_em_fila` (P2): o turno novo espera o turno em curso (IA ou pedaços) em vez de falar por cima.
 # - `conversa_entrega_inteira` (P3): mensagem nova não corta os pedaços que faltam. Só vale com a fila (P2): sem ela, o
-#   turno novo falaria por cima do que ainda está saindo. Por isso `entrega_inteira?` exige as duas chaves.
+#   turno novo falaria por cima do que ainda está saindo. Por isso `entrega_inteira?` exige as duas efetivas.
 # - `conversa_ritmo_do_canal` (P5): pausas e "digitando" por canal.
 #
-# Valor lido com ActiveModel::Type::Boolean: 'false' e '0' são desligado. Agente nil, sem `config` ou com `config` que
-# não é Hash: desligado.
+# Valor explícito manda, em qualquer agente (inclusive na Lia), lido com ActiveModel::Type::Boolean: `false`, 'false' e
+# '0' desligam; `true` e 'true' ligam; valor que não converte (ex.: '') desliga. Só a chave ausente ou nula segue o padrão
+# do tipo. Agente de verdade com `config` nil ou que não é Hash também segue o padrão do tipo. O que não é
+# Autonomia::Agents::Agent (nil, vínculo sem agente, dublê de teste) fica DESLIGADO: não há agente para ligar.
 module Autonomia::Agents::ParidadeDaConversa
   BOOLEAN = ActiveModel::Type::Boolean.new
   ESPERA_A_FALA = 'conversa_espera_a_fala'.freeze
@@ -17,6 +20,8 @@ module Autonomia::Agents::ParidadeDaConversa
   ENTREGA_INTEIRA = 'conversa_entrega_inteira'.freeze
   RITMO_DO_CANAL = 'conversa_ritmo_do_canal'.freeze
   CHAVES = [ESPERA_A_FALA, EM_FILA, ENTREGA_INTEIRA, RITMO_DO_CANAL].freeze
+  # A Lia: sem a chave, desligada.
+  TIPO_DESLIGADO_POR_PADRAO = 'insurance_quote'.freeze
 
   module_function
 
@@ -29,12 +34,15 @@ module Autonomia::Agents::ParidadeDaConversa
   def ritmo_do_canal?(agent) = ligada?(agent, RITMO_DO_CANAL)
 
   def ligada?(agent, chave)
-    return false unless agent.respond_to?(:config)
+    return false unless agent.is_a?(::Autonomia::Agents::Agent)
 
-    config = agent.config
-    return false unless config.is_a?(Hash)
+    valor = agent.config.is_a?(Hash) ? agent.config[chave] : nil
+    return padrao(agent) if valor.nil?
 
-    BOOLEAN.cast(config[chave]) || false
+    BOOLEAN.cast(valor) || false
   end
   private_class_method :ligada?
+
+  def padrao(agent) = agent.agent_type != TIPO_DESLIGADO_POR_PADRAO
+  private_class_method :padrao
 end

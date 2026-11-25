@@ -9,7 +9,8 @@ module Autonomia
       #   - Web widget / API (chat ao vivo): NATIVO. Dispara CONVERSATION_TYPING_ON/OFF pelo dispatcher
       #     (mesmo caminho do TypingStatusManager); o widget do contato mostra a bolha "digitando".
       #   - WhatsApp API (WAHA): o evento do painel e, com `conversa_ritmo_do_canal` (ParidadeDaConversa), o
-      #     digitando no WAHA (startTyping/stopTyping), pelo mesmo Deliverer. Sem a opção, só o evento do painel.
+      #     digitando no WAHA (startTyping/stopTyping), pelo mesmo Deliverer. A opção é ligada por padrão, menos na
+      #     Lia; desligada, só o evento do painel.
       #   - WhatsApp Cloud oficial: chama a API da Meta (status:read + typing_indicator) referenciando o
       #     wamid da última mensagem do cliente — idêntico ao nó "WA API Oficial" do fluxo n8n. WhatsApp
       #     não tem "typing off": o indicador some sozinho (~25s) ou quando a mensagem chega → off vira no-op.
@@ -41,7 +42,7 @@ module Autonomia
             web_widget_typing(typing_on)
           when Channel::Api
             web_widget_typing(typing_on)
-            # `try`: o vínculo pode não ter o agente. Sem a opção ligada, nada além do evento do painel.
+            # `try`: o vínculo pode não ter o agente. Sem agente ou com a opção desligada, nada além do evento do painel.
             channel_typing(typing_on) if ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(@agent_inbox.try(:agent))
           when Channel::Whatsapp, Channel::Instagram
             channel_typing(typing_on)

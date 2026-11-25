@@ -797,7 +797,7 @@ module Autonomia
         end
 
         # #3211 (P1): com `conversa_espera_a_fala`, o texto é a rajada inteira do cliente desde a última fala do agente;
-        # sem a opção, a última mensagem, como sempre.
+        # com ela desligada (a Lia, ou `false` gravado no agente), a última mensagem, como sempre.
         def texto_base_da_pergunta(message)
           if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
             rajada = current_turn_incoming.select { |m| conta_na_pergunta?(m) }
