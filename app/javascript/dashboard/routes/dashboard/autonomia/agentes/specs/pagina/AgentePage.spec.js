@@ -1859,7 +1859,6 @@ describe('AgentePage', () => {
       estado: 'ok',
       motivo: null,
       conferido_em: '2026-11-25T12:00:00Z',
-      so_cotacao: false,
     };
     const contratada = (acesso = null, extra = {}) =>
       bia({

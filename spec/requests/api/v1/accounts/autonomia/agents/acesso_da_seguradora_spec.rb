@@ -47,7 +47,7 @@ RSpec.describe 'Autonomia agente contratado: acesso à seguradora', type: :reque
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include('s3nha-teste', 'corretor.teste')
       expect(response.parsed_body).to include('estado' => 'ok', 'login_dica' => 'co•••te')
-      expect(response.parsed_body.keys).to match_array(%w[seguradora login_dica estado motivo conferido_em so_cotacao])
+      expect(response.parsed_body.keys).to match_array(%w[seguradora login_dica estado motivo conferido_em])
       expect(agente.reload.acesso_da_seguradora).to have_attributes(login: 'corretor.teste', senha: 's3nha-teste', estado: 'ok')
     end
 
@@ -163,7 +163,7 @@ RSpec.describe 'Autonomia agente contratado: acesso à seguradora', type: :reque
       get acesso_url, headers: com_funcao(%w[autonomia_view]).create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to include('estado' => 'ok', 'login_dica' => 'co•••te', 'so_cotacao' => false)
+      expect(response.parsed_body).to include('estado' => 'ok', 'login_dica' => 'co•••te')
       expect(response.body).not_to include('s3nha-teste', 'corretor.teste')
     end
 

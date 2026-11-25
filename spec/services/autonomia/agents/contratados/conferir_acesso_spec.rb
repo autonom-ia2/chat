@@ -36,14 +36,14 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirAcesso do
     acesso = described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
     expect(acesso.estado).to eq('ok')
     expect(acesso.conferido_em).to be_present
-    expect(acesso.capacidades).to eq('so_cotacao' => false, 'emite_faturado' => false, 'emite_boleto' => false,
-                                     'tarifa_acordo' => true)
+    expect(acesso.capacidades).to eq('tarifa_acordo' => true)
   end
 
-  it 'login que só cota' do
+  it 'não lê o soCotacao: todo login faz proposta' do
     setup = JSON.parse(file_fixture('../universal/setup.json').read).merge('soCotacao' => true)
     stub_request(:get, "#{base}/v1/Emissor/Setup").to_return(status: 200, body: setup.to_json)
-    expect(described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call.so_cotacao?).to be(true)
+    acesso = described_class.new(agent: contratado, login: 'corretor.teste', senha: 's3nha-teste').call
+    expect(acesso.capacidades.keys).to eq(['tarifa_acordo'])
   end
 
   it 'campo que não é booleano vira false' do
@@ -109,7 +109,7 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirAcesso do
       expect(tentativa).to have_attributes(estado: estado, motivo: motivo, login: nil, senha: nil)
       expect(tentativa).not_to be_persisted
       expect(gravado.reload.attributes.except('updated_at')).to eq(antes)
-      expect(gravado).to have_attributes(login: 'corretor.teste', senha: 's3nha-teste', estado: 'ok', so_cotacao?: false,
+      expect(gravado).to have_attributes(login: 'corretor.teste', senha: 's3nha-teste', estado: 'ok',
                                          tarifa_acordo?: true)
     end
   end

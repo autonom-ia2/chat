@@ -24,9 +24,9 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
                                settings: { 'api_key' => 'chave-da-conta-teste' })
   end
 
-  def acesso_ok!(capacidades: {})
+  def acesso_ok!
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: contratado, login: 'corretor.teste',
-                                                  senha: 's3nha-teste', estado: 'ok', capacidades: capacidades)
+                                                  senha: 's3nha-teste', estado: 'ok')
   end
 
   it 'agente comum com os slugs gravados não recebe nenhuma' do
@@ -61,11 +61,6 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
     Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
     expect(described_class.for_agent(contratado.reload).map(&:slug)).to eq([])
-  end
-
-  it 'login que só cota: sem proposta' do
-    acesso_ok!(capacidades: { 'so_cotacao' => true })
-    expect(described_class.for_agent(contratado).map(&:slug)).to eq(slugs.first(2))
   end
 
   it 'não aparecem no catálogo que a API aceita para agente comum' do

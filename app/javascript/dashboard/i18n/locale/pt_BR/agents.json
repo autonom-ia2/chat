@@ -4142,11 +4142,6 @@
           "TITULO": "Acesso conferido",
           "TEXTO": "{nome} já pode cotar e mandar o link de pagamento."
         },
-        "SO_COTA": {
-          "TITULO": "Esse login só faz cotação",
-          "TEXTO": "{nome} cota e tira dúvidas. Quando o cliente quiser fechar, {nome} passa a conversa para a sua equipe. Para a proposta sair sem ajuda, peça à Universal para liberar a proposta nesse login.",
-          "ITEM": "Precisa de um login que faz proposta."
-        },
         "LOGIN": {
           "ROTULO": "Login do portal",
           "AJUDA": "É o mesmo login do site da Universal. Não tem? Peça ao seu contato comercial na Universal.",

@@ -28,7 +28,6 @@ const OK = {
   estado: 'ok',
   motivo: null,
   conferido_em: '2026-11-25T12:00:00Z',
-  so_cotacao: false,
 };
 const agente = (acesso = OK, extra = {}) => ({
   id: 9,
@@ -207,15 +206,6 @@ describe('ContratadoNaPagina (#3211)', () => {
       'AGENTS.CONTRATADOS.PAGINA.AVISO_RECUSADO.ACAO'
     );
     expect(wrapper.emitted('alterarAcesso')).toHaveLength(1);
-  });
-
-  it('marks the proposal item when the login only quotes', () => {
-    const wrapper = montarBloco({
-      agente: agente({ ...OK, so_cotacao: true }),
-    });
-    expect(wrapper.get('[data-faz]').text()).toContain(
-      'AGENTS.CONTRATADOS.ACESSO.SO_COTA.ITEM'
-    );
   });
 
   it('says it is answering on the channel right after the last step', () => {

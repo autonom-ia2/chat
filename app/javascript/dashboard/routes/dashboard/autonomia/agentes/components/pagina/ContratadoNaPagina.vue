@@ -9,7 +9,7 @@ import AgenteErro from '../AgenteErro.vue';
 // - o aviso de que começou a atender, logo depois do último passo (`atendendoNo`: o nome da caixa, ou vazio);
 // - o aviso da Universal que recusou o acesso depois (a senha mudou), com "Cadastrar a senha nova";
 // - "Corretora e acesso": o nome da corretora e o estado do acesso ao portal, cada um com "Alterar";
-// - "O que {nome} faz", com o aviso no item da proposta quando o login só cota.
+// - "O que {nome} faz".
 // Quem só vê lê tudo, sem os botões. O acesso ao portal é só do administrador (Tarefa 21): quem gerencia sem ser
 // administrador não ganha "Cadastrar a senha nova" nem "Alterar" do acesso (abririam uma gaveta sem saída), e lê
 // no lugar que só o administrador cadastra o login e a senha.
@@ -31,19 +31,12 @@ const dados = computed(() => props.agente.contratado || {});
 const acesso = computed(() => dados.value.acesso || null);
 const recusado = computed(() => acesso.value?.estado === 'recusado');
 const conferido = computed(() => acesso.value?.estado === 'ok');
-const soCota = computed(
-  () => conferido.value && acesso.value?.so_cotacao === true
-);
 
 const itensFaz = computed(() => [
   { chave: 'duvidas', texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.DUVIDAS') },
   { chave: 'cota', texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.COTA') },
   { chave: 'escolhe', texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.ESCOLHE') },
-  {
-    chave: 'proposta',
-    texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.PROPOSTA'),
-    soCota: soCota.value,
-  },
+  { chave: 'proposta', texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.PROPOSTA') },
 ]);
 </script>
 
@@ -174,20 +167,10 @@ const itensFaz = computed(() => [
         class="flex items-start gap-3 text-base text-n-slate-12"
       >
         <span
-          class="mt-0.5 size-5 shrink-0"
-          :class="
-            item.soCota
-              ? 'i-lucide-triangle-alert text-n-amber-11'
-              : 'i-lucide-circle-check text-n-teal-11'
-          "
+          class="i-lucide-circle-check mt-0.5 size-5 shrink-0 text-n-teal-11"
           aria-hidden="true"
         />
-        <span class="flex flex-col gap-0.5">
-          {{ item.texto }}
-          <span v-if="item.soCota" class="text-sm text-n-slate-11">
-            {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.ITEM') }}
-          </span>
-        </span>
+        <span>{{ item.texto }}</span>
       </li>
     </ul>
   </section>

@@ -187,12 +187,6 @@ const VARIANTES = [
     acesso: 'recusado',
   },
   {
-    id: '11',
-    titulo: '11 · Passo 2: login só cota',
-    tela: 'agente',
-    acesso: 'so_cota',
-  },
-  {
     id: '12',
     titulo: '12 · Passo 3: escolher o canal',
     tela: 'agente',
@@ -225,13 +219,11 @@ const VARIANTES = [
 const CAMPO =
   'w-full px-3 text-base rounded-xl min-h-11 !bg-n-solid-1 ring-1 ring-inset border-0 !mb-0 text-n-slate-12 disabled:opacity-60';
 const anel = erro => (erro ? 'ring-2 ring-n-ruby-9' : 'ring-n-slate-7');
-const comAcessoConferido = acesso => ['ok', 'so_cota'].includes(acesso);
+const comAcessoConferido = acesso => acesso === 'ok';
 const comCampos = acesso =>
   ['vazio', 'faltando', 'conferindo', 'indisponivel', 'recusado'].includes(
     acesso
   );
-const soCotaNoItem = (variante, indice) =>
-  variante.acesso === 'so_cota' && indice === FAZ.length - 1;
 // Com texto digitado, Esc e o clique fora não fecham a gaveta (o X continua fechando).
 const naoPerderOQueDigitou = () => false;
 </script>
@@ -601,29 +593,15 @@ const naoPerderOQueDigitou = () => false;
             </h2>
             <ul class="flex flex-col gap-3 p-0 m-0 list-none">
               <li
-                v-for="(item, indice) in FAZ"
+                v-for="item in FAZ"
                 :key="item"
                 class="flex items-start gap-3 text-base text-n-slate-12"
               >
                 <span
-                  v-if="soCotaNoItem(variante, indice)"
-                  class="i-lucide-triangle-alert mt-0.5 size-5 shrink-0 text-n-amber-11"
-                  aria-hidden="true"
-                />
-                <span
-                  v-else
                   class="i-lucide-circle-check mt-0.5 size-5 shrink-0 text-n-teal-11"
                   aria-hidden="true"
                 />
-                <span class="flex flex-col gap-0.5">
-                  {{ item }}
-                  <span
-                    v-if="soCotaNoItem(variante, indice)"
-                    class="text-sm text-n-slate-11"
-                  >
-                    {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.ITEM') }}
-                  </span>
-                </span>
+                <span>{{ item }}</span>
               </li>
             </ul>
           </section>
@@ -732,7 +710,6 @@ const naoPerderOQueDigitou = () => false;
               <!-- Conferido: só o resultado e o login mascarado; a senha nunca volta para a tela. -->
               <template v-if="comAcessoConferido(variante.acesso)">
                 <div
-                  v-if="variante.acesso === 'ok'"
                   role="status"
                   class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
                 >
@@ -747,26 +724,6 @@ const naoPerderOQueDigitou = () => false;
                     <p class="m-0 text-sm text-n-slate-12">
                       {{
                         t('AGENTS.CONTRATADOS.ACESSO.CONFERIDO.TEXTO', DO_NOME)
-                      }}
-                    </p>
-                  </div>
-                </div>
-                <div
-                  v-else
-                  role="status"
-                  class="flex items-start gap-3 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
-                >
-                  <span
-                    class="i-lucide-triangle-alert size-6 shrink-0 text-n-amber-11"
-                    aria-hidden="true"
-                  />
-                  <div class="flex flex-col gap-1">
-                    <p class="m-0 text-base font-semibold text-n-slate-12">
-                      {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TITULO') }}
-                    </p>
-                    <p class="m-0 text-sm text-n-slate-12">
-                      {{
-                        t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO', DO_NOME)
                       }}
                     </p>
                   </div>

@@ -15,8 +15,8 @@ import { CLASSE_DO_CAMPO, anelDoCampo } from '../../utils/campo';
 // os campos; "Escolher o canal" depois de conferido, enquanto o agente ainda está sendo montado (`emConfiguracao`).
 // - Gravar o acesso é só do administrador (Tarefa 21: credencial não se delega por função). Quem gerencia sem ser
 //   administrador lê o estado, sem os campos.
-// - O servidor nunca devolve o login nem a senha, só `login_dica`, `estado`, `motivo` e `so_cotacao`. A Universal fora
-//   do prazo volta 200 com `nao_conferido`/`indisponivel`, nunca erro.
+// - O servidor nunca devolve o login nem a senha, só `login_dica`, `estado`, `motivo` e `conferido_em`. A Universal
+//   fora do prazo volta 200 com `nao_conferido`/`indisponivel`, nunca erro.
 // - A senha só existe no campo enquanto a pessoa digita: sai do estado logo depois do POST (deu certo ou não), não vai
 //   para log nem para o aviso de erro.
 const props = defineProps({
@@ -48,9 +48,6 @@ const campoLogin = ref(null);
 const campoSenha = ref(null);
 
 const conferido = computed(() => acesso.value?.estado === 'ok');
-const soCota = computed(
-  () => conferido.value && acesso.value?.so_cotacao === true
-);
 const mostraConferido = computed(() => conferido.value && !editando.value);
 const recemCriado = computed(() => props.emConfiguracao && !acesso.value);
 
@@ -210,26 +207,6 @@ const anel = anelDoCampo;
       <!-- Conferido: o resultado e a dica do login; a senha nunca volta para a tela. -->
       <template v-if="mostraConferido">
         <div
-          v-if="soCota"
-          data-acesso-so-cota
-          role="status"
-          class="flex items-start gap-3 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
-        >
-          <span
-            class="i-lucide-triangle-alert size-6 shrink-0 text-n-amber-11"
-            aria-hidden="true"
-          />
-          <div class="flex flex-col gap-1">
-            <p class="m-0 text-base font-semibold text-n-slate-12">
-              {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TITULO') }}
-            </p>
-            <p class="m-0 text-sm text-n-slate-12">
-              {{ t('AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO', { nome }) }}
-            </p>
-          </div>
-        </div>
-        <div
-          v-else
           data-acesso-conferido
           role="status"
           class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"

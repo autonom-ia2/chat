@@ -4142,11 +4142,6 @@
           "TITULO": "Access checked",
           "TEXTO": "{nome} can now quote and send the payment link."
         },
-        "SO_COTA": {
-          "TITULO": "This login only quotes",
-          "TEXTO": "{nome} quotes and answers questions. When the customer wants to close, {nome} hands the conversation to your team. For the proposal to go out without help, ask Universal to enable proposals on this login.",
-          "ITEM": "Needs a login that writes proposals."
-        },
         "LOGIN": {
           "ROTULO": "Portal login",
           "AJUDA": "It is the same login as the Universal website. Don't have one? Ask your Universal sales contact.",

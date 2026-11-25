@@ -21,7 +21,7 @@ RSpec.describe Autonomia::Agents::AcessoDaSeguradora do
   it 'payload público nunca tem login nem senha' do
     acesso = described_class.create!(account: account, agent: agente, login: 'corretor.teste', senha: 's3nha-teste')
     payload = acesso.payload_publico
-    expect(payload.keys).to contain_exactly(:seguradora, :login_dica, :estado, :motivo, :conferido_em, :so_cotacao)
+    expect(payload.keys).to contain_exactly(:seguradora, :login_dica, :estado, :motivo, :conferido_em)
     expect(payload.to_json).not_to include('s3nha-teste', 'corretor.teste')
   end
 
@@ -42,8 +42,8 @@ RSpec.describe Autonomia::Agents::AcessoDaSeguradora do
     expect(described_class.new(account: account, agent: agente, motivo: 'pedido_invalido')).to be_valid
   end
 
-  it 'capacidades pelas nossas chaves' do
-    acesso = described_class.new(capacidades: { 'so_cotacao' => true, 'tarifa_acordo' => true })
-    expect([acesso.so_cotacao?, acesso.tarifa_acordo?]).to eq([true, true])
+  it 'tarifa de acordo pela nossa chave' do
+    expect(described_class.new(capacidades: { 'tarifa_acordo' => true }).tarifa_acordo?).to be(true)
+    expect(described_class.new(capacidades: {}).tarifa_acordo?).to be(false)
   end
 end

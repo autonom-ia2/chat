@@ -8,10 +8,10 @@
 class Autonomia::Agents::Contratados::ConferirAcesso
   Codigos = Autonomia::Seguradoras::Universal::Codigos
 
-  # Nome do campo no Setup da Universal => a nossa chave em `capacidades`. Os nomes da esquerda são os do levantamento
-  # de fatos (o resumo da coleção Postman não traz o Setup); a Tarefa 0b os confere na resposta real.
-  CAPACIDADES = { 'soCotacao' => 'so_cotacao', 'emiteFaturado' => 'emite_faturado',
-                  'emiteBoleto' => 'emite_boleto', 'tarifaAcordo' => 'tarifa_acordo' }.freeze
+  # Nome do campo no Setup da Universal => a nossa chave em `capacidades`. Só o que o código usa: a tarifa de acordo
+  # (`SeguroViagem::Pedido`). O `soCotacao` não é lido: todo login de corretora faz proposta (decisão do produto,
+  # 25/11). O nome da esquerda é o do levantamento de fatos; a Tarefa 0b o confere na resposta real.
+  CAPACIDADES = { 'tarifaAcordo' => 'tarifa_acordo' }.freeze
 
   # Erro do cliente => estado do acesso. `pedido_invalido` no Setup não é recusa de acesso: o login não foi julgado.
   ESTADO_POR_CODIGO = { Codigos::ACESSO_RECUSADO => 'recusado' }.freeze

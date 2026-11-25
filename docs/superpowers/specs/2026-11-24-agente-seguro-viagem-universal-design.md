@@ -69,7 +69,7 @@ O produto é a **instrução + as ferramentas + a qualidade da conversa**. Por i
 - Model novo e pequeno, `Autonomia::Agents::AcessoDaSeguradora`: `account_id`, `seguradora` (`'universal'`), `login` e `senha` com `encrypts`, `estado` (`nao_conferido`, `ok`, `recusado`), `conferido_em`, `motivo` (código, nunca mensagem crua da Universal). Único por `(account_id, seguradora)`.
 - **Não** reutiliza `Autonomia::Insurance::Connection`: ela é do conector do Agger, e vários pontos (`available_for?`, `CepLookup`, `Builder.produtos_da_conta`) leem "qualquer conexão usável" da conta sem filtrar provedor. Uma linha da Universal ali seria lida como conexão da Lia.
 - A tela manda a senha uma vez (POST) e nunca a recebe de volta; mostra só o login mascarado e o estado.
-- Ao salvar, a plataforma confere o acesso com `GET /v1/Emissor/Setup` (não cota nem compra). A resposta também diz o que o emissor pode fazer — `soCotacao`, `emiteFaturado`, `emiteBoleto`, `tarifaAcordo` — e isso fica guardado no acesso. Resultado: `ok` ou `recusado`; com `soCotacao: true` a tela avisa que esse login só cota e a ferramenta de proposta não fica disponível.
+- Ao salvar, a plataforma confere o acesso com `GET /v1/Emissor/Setup` (não cota nem compra). Da resposta só o `tarifaAcordo` fica guardado no acesso (a tarifa da cotação). Resultado: `ok` ou `recusado`. O `soCotacao` do Setup **não é usado**: todo login de corretora faz proposta (decisão de 25/11), então não há aviso de "login que só cota" nem ferramenta que some por ele; `emiteFaturado` e `emiteBoleto` também não são lidos (o pagamento é por link).
 - O agente só pode ser ligado numa caixa com acesso `ok` (mesma ideia do "tem onde trabalhar").
 
 ### 6.3 Cliente da API da Universal

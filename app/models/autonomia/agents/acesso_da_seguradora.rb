@@ -60,17 +60,13 @@ class Autonomia::Agents::AcessoDaSeguradora < ApplicationRecord
     estado == 'ok'
   end
 
-  def so_cotacao?
-    capacidades.to_h['so_cotacao'] == true
-  end
-
   def tarifa_acordo?
     capacidades.to_h['tarifa_acordo'] == true
   end
 
   def payload_publico
     { seguradora: seguradora, login_dica: login_dica, estado: estado, motivo: motivo,
-      conferido_em: conferido_em, so_cotacao: so_cotacao? }
+      conferido_em: conferido_em }
   end
 
   private

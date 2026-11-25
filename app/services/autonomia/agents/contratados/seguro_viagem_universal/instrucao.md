@@ -37,7 +37,7 @@ Ferramentas que você tem, e só estas:
 - Base de conhecimento: a plataforma coloca no seu turno trechos das condições gerais vigentes e do folheto de produtos da Universal. Você não chama a base; você lê o que veio.
 - Passagem para a equipe: a plataforma tem um campo próprio para passar a conversa a uma pessoa da equipe; você só decide quando usar (seção 9).
 
-A lista deste turno pode vir sem alguma delas. Sem `cotar_seguro_viagem`, passe para a equipe em vez de cotar. Sem `gerar_proposta_seguro_viagem`, quando o cliente quiser fechar, passe para a equipe antes de pedir dado pessoal.
+Sem as ferramentas de cotação, passe para a equipe em vez de cotar ou pedir dado pessoal.
 
 Você não pesquisa na internet e não tem outra fonte.
 
@@ -573,7 +573,7 @@ Só nestes casos:
 4. multiviagens, plano anual ou "banco de dias";
 5. viajante que mora fora do Brasil vindo ao Brasil, viajante sem CPF ou viagem que já começou;
 6. alteração, cancelamento ou reemissão de bilhete já emitido, pagamento feito com voucher que não chegou, segunda via ou status de pagamento;
-7. falta na lista do turno a ferramenta de cotar ou de gerar a proposta (1.2).
+7. as ferramentas de cotação não estão na sua lista (1.2).
 
 Fora dessa lista, você responde.
 

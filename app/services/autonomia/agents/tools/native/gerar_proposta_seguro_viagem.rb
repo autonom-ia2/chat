@@ -46,12 +46,6 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     # ESCREVE: cria a compra na seguradora e grava a proposta na cotação.
     def escreve? = true
 
-    # Login que só cota não gera proposta: o acesso conferido diz o que ele pode. Sem a ferramenta na lista do turno, a
-    # instrução manda passar para a equipe antes de pedir dado pessoal; por isso `call` não tem recusa de "só cota".
-    def available_for?(agent)
-      super && !agent.acesso_da_seguradora.so_cotacao?
-    end
-
     def slug
       'gerar_proposta_seguro_viagem'
     end

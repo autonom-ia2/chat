@@ -30,7 +30,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
   end
 
   it 'acesso recusado limpa as capacidades, como a conferência recusada' do
-    acesso.update!(capacidades: { 'so_cotacao' => false, 'tarifa_acordo' => true })
+    acesso.update!(capacidades: { 'tarifa_acordo' => true })
     tratar('acesso_recusado')
     expect(acesso.reload.capacidades).to eq({})
   end

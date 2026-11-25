@@ -7,7 +7,7 @@ import ApiClient from '../ApiClient';
 //   lista          -> { modelos: ['seguro_viagem_universal'] }
 //   contratar      -> 201 o agente (com `contratado`) | 422 { error, code, campo }
 //   salvarDados    -> 200 o agente | 404 | 422 { error, code, campo }  (`campo` nulo = erro do formulário todo)
-//   acesso         -> { seguradora, login_dica, estado, motivo, conferido_em, so_cotacao } ou { estado: 'nao_conferido' }
+//   acesso         -> { seguradora, login_dica, estado, motivo, conferido_em } ou { estado: 'nao_conferido' }
 //   conferirAcesso -> 200 o mesmo (também com o login recusado) | 422 { error, code: 'acesso_incompleto' | 'indisponivel', campo }
 // O servidor nunca devolve login nem senha, só `login_dica`. Este módulo também não guarda nada: a senha passa pelo
 // corpo do POST e não fica em propriedade nenhuma.

@@ -24,7 +24,6 @@ const OK = {
   estado: 'ok',
   motivo: null,
   conferido_em: '2026-11-25T12:00:00Z',
-  so_cotacao: false,
 };
 
 const agente = acesso => ({
@@ -178,29 +177,6 @@ describe('AcessoDaSeguradoraForm (#3211)', () => {
     no('[data-ir-para-o-canal]').click();
     await nextTick();
     expect(wrapper.emitted('escolherCanal')).toHaveLength(1);
-    wrapper.unmount();
-  });
-
-  it('says the login only quotes, with the same step 2 and the way to the channel', async () => {
-    api.conferirAcesso.mockResolvedValue({
-      data: { ...OK, so_cotacao: true },
-    });
-    const wrapper = montar();
-    await preencher();
-    await conferir();
-
-    const aviso = no('[data-acesso-so-cota]');
-    expect(aviso.textContent).toContain(
-      'AGENTS.CONTRATADOS.ACESSO.SO_COTA.TITULO'
-    );
-    expect(aviso.textContent).toContain(
-      'AGENTS.CONTRATADOS.ACESSO.SO_COTA.TEXTO'
-    );
-    expect(no('[data-acesso-conferido]')).toBeNull();
-    expect(no('[data-passo]').textContent).toContain(
-      'AGENTS.CONTRATADOS.ACESSO.PASSO'
-    );
-    expect(no('[data-ir-para-o-canal]')).not.toBeNull();
     wrapper.unmount();
   });
 
