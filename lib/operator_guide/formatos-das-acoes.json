@@ -12207,9 +12207,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/contratados#create",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:15",
+      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:20",
       "app/controllers/concerns/autonomia/dados_do_contratado.rb:24",
-      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:17"
+      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:22"
     ],
     "sem_corpo": false
   },
