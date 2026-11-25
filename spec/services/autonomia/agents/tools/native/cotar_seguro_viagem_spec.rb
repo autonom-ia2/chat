@@ -61,6 +61,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     expect(Autonomia::Agents::CotacaoDeViagem.last.planos.to_json).not_to include('comissao', 'markup', 'rank')
   end
 
+  it 'lista de destinos fora: consulta uma vez, cota e guarda a sigla no lugar do nome' do
+    destinos = stub_request(:get, "#{base}/v1/destinos").to_timeout
+    ferramenta(params).call
+    expect(destinos).to have_been_requested.once
+    expect(Autonomia::Agents::CotacaoDeViagem.last.pedido['destinos_nomes']).to eq(['PT'])
+  end
+
+  it 'catálogo sem id conhecido de despesas médicas e idade recusada: um aviso só no log' do
+    resposta = JSON.parse(file_fixture('../universal/cotacao.json').read)
+    resposta['beneficios'] = resposta['beneficios'].map { |b| b.merge('idBeneficio' => b['idBeneficio'] + 90_000) }
+    stub_request(:post, "#{base}/v1/Cotacao").to_return(status: 200, body: resposta.to_json)
+    allow(Rails.logger).to receive(:warn)
+    ferramenta(params.merge('idades' => [100])).call
+    expect(Rails.logger).to have_received(:warn).with(a_string_including('catálogo sem id conhecido')).once
+  end
+
   it 'sem conversa não cota' do
     expect(described_class.new(agent: contratado, params: params, delivery: nil).call).to include('cotacao_sem_conversa')
     expect(a_request(:post, "#{base}/v1/Cotacao")).not_to have_been_made

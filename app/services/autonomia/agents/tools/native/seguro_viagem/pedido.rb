@@ -41,6 +41,12 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
     falta ? [nil, falta] : [montar, nil]
   end
 
+  # As idades como o pedido as leu. Só valem depois de `conferir` sem falta (aí são inteiros de 0 a `IDADE_MAX`).
+  # Base 10: "010" é dez, e "0x1A" não é idade.
+  def idades
+    @idades ||= lista('idades').map { |idade| idade.is_a?(Integer) ? idade : Integer(idade.to_s, 10, exception: false) }
+  end
+
   private
 
   def montar
@@ -109,11 +115,6 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
     texto.is_a?(String) ? Date.iso8601(texto.strip) : nil
   rescue Date::Error
     nil
-  end
-
-  # Base 10: "010" é dez, e "0x1A" não é idade.
-  def idades
-    @idades ||= lista('idades').map { |idade| idade.is_a?(Integer) ? idade : Integer(idade.to_s, 10, exception: false) }
   end
 
   def motivo

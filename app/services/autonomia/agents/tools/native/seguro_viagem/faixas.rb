@@ -16,11 +16,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Faixas
     idades.map { |idade| faixa(plano, idade)&.fetch('valor', nil) }
   end
 
+  # A idade dentro de `idade_minima..idade_maxima` (sem limite, aceita). É a regra que `Planos` usa para tirar o plano
+  # que não aceita algum viajante.
   def dentro_do_limite?(plano, idade)
     minima = plano['idade_minima']
     maxima = plano['idade_maxima']
     (minima.nil? || idade >= minima.to_i) && (maxima.nil? || idade <= maxima.to_i)
   end
-
-  private_class_method :dentro_do_limite?
 end

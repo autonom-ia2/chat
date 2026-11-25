@@ -15,25 +15,35 @@ module Autonomia::Seguradoras::Universal::Destinos
 
   # -> [todas_validas, siglas_que_a_universal_nao_atende]
   def validas?(siglas_pedidas, cliente)
-    atendidas = siglas(cliente)
-    return [true, []] if atendidas.nil?
-
-    invalidas = Array(siglas_pedidas).map { |sigla| sigla.to_s.upcase }.reject { |sigla| atendidas.include?(sigla) }
-    [invalidas.empty?, invalidas]
+    validas_em?(siglas_pedidas, paises(cliente))
   end
 
   # -> o nome de cada sigla, na ordem pedida. Sigla que a Universal não nomeia (ou a Universal fora) fica a sigla.
   def nomes(siglas_pedidas, cliente)
-    mapa = paises(cliente).to_h
-    Array(siglas_pedidas).map do |sigla|
-      sigla = sigla.to_s.upcase
-      mapa[sigla].presence || sigla
-    end
+    nomes_em(siglas_pedidas, paises(cliente))
   end
 
-  # -> { 'PT' => 'Portugal', ... }, ou nil quando a Universal não respondeu.
+  # -> { 'PT' => 'Portugal', ... }, ou nil quando a Universal não respondeu. Quem confere e nomeia no mesmo pedido lê
+  # uma vez e passa o mapa a `validas_em?` e `nomes_em`: com a Universal fora nada fica no cache, e ler duas vezes
+  # seriam duas chamadas.
   def paises(cliente)
     Rails.cache.fetch(CHAVE, expires_in: VALIDADE, skip_nil: true) { buscar(cliente) }
+  end
+
+  # `validas?` sobre um mapa já lido. Mapa nil (Universal fora) não barra.
+  def validas_em?(siglas_pedidas, mapa)
+    return [true, []] if mapa.nil?
+
+    invalidas = Array(siglas_pedidas).map { |sigla| sigla.to_s.upcase }.reject { |sigla| mapa.key?(sigla) }
+    [invalidas.empty?, invalidas]
+  end
+
+  # `nomes` sobre um mapa já lido.
+  def nomes_em(siglas_pedidas, mapa)
+    Array(siglas_pedidas).map do |sigla|
+      sigla = sigla.to_s.upcase
+      mapa.to_h[sigla].presence || sigla
+    end
   end
 
   def buscar(cliente)
@@ -50,5 +60,5 @@ module Autonomia::Seguradoras::Universal::Destinos
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro
     nil
   end
-  private_class_method :paises, :buscar
+  private_class_method :buscar
 end

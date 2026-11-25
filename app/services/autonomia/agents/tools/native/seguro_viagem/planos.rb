@@ -20,11 +20,22 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
 
   # -> Array<Hash> com chaves em texto, `codigo` "P1", "P2"... na ordem da Universal depois do filtro.
   def de(resposta, idades:)
+    para_idades(candidatos(resposta), idades)
+  end
+
+  # Os planos com despesas médicas, ainda sem o filtro de idade e sem código. Quem precisa saber se o vazio é da idade
+  # (a cotação) monta uma vez e filtra com `para_idades`.
+  def candidatos(resposta)
     catalogo = catalogo_de(resposta)
     produtos = com_despesas_medicas(Array(resposta['produtos']).grep(Hash), catalogo)
-    planos = produtos.map { |produto| plano(produto, catalogo, resposta['valorDoCambio']) }
-    planos.select { |plano| aceita?(plano, idades) }
-          .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
+    produtos.map { |produto| plano(produto, catalogo, resposta['valorDoCambio']) }
+  end
+
+  # Os candidatos que aceitam a idade de todos os viajantes (`Faixas.dentro_do_limite?`), com o código "P1", "P2"...
+  # na ordem depois do filtro.
+  def para_idades(candidatos, idades)
+    candidatos.select { |plano| idades.all? { |idade| SeguroViagem::Faixas.dentro_do_limite?(plano, idade) } }
+              .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
   end
 
   # O que o modelo lê: o código, o nome, o preço em reais, as parcelas e as três coberturas principais.
@@ -61,9 +72,14 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
       'preco_total' => decimal(tarifa['valor']), 'valor_moeda' => decimal(tarifa['valorMoeda']),
       'moeda' => produto['simboloMoeda'], 'cambio' => cambio_da_resposta.nil? ? tarifa['cambio'] : cambio_da_resposta,
       'max_parcelas' => produto['maxParcelas'], 'idade_minima' => produto['idadeMinima'],
-      'idade_maxima' => produto['idadeMaxima'], 'regra_cancelamento' => produto['regraCancelamento'],
+      'idade_maxima' => produto['idadeMaxima'], 'regra_cancelamento' => regra_cancelamento(produto),
       'faixas' => faixas(tarifa), 'coberturas' => coberturas(produto, catalogo), 'principais' => principais(produto)
     }
+  end
+
+  # Lista branca também aqui (R2): só as quatro chaves da regra, nunca o que mais a Universal puser.
+  def regra_cancelamento(produto)
+    Array(produto['regraCancelamento']).grep(Hash).map { |regra| regra.slice('de', 'ate', 'geraCredito', 'multa') }
   end
 
   def faixas(tarifa)
@@ -94,13 +110,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
     beneficio['valor'].to_s.strip.presence || "#{beneficio['tipoMoeda']} #{beneficio['valorEmDinheiro']}".strip.presence
   end
 
-  # A idade de todos os viajantes dentro de `idade_minima..idade_maxima` (a mesma regra de `Faixas`).
-  def aceita?(plano, idades)
-    minima = plano['idade_minima']
-    maxima = plano['idade_maxima']
-    idades.all? { |idade| (minima.nil? || idade >= minima.to_i) && (maxima.nil? || idade <= maxima.to_i) }
-  end
-
   def beneficios(produto)
     Array(produto['beneficios']).grep(Hash)
   end
@@ -114,6 +123,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
     valor.nil? ? nil : BigDecimal(valor.to_s).to_s('F')
   end
 
-  private_class_method :catalogo_de, :com_despesas_medicas, :plano, :faixas, :coberturas, :principais, :principal,
-                       :aceita?, :beneficios, :id_de, :decimal
+  private_class_method :catalogo_de, :com_despesas_medicas, :plano, :regra_cancelamento, :faixas, :coberturas,
+                       :principais, :principal, :beneficios, :id_de, :decimal
 end

@@ -56,6 +56,18 @@ RSpec.describe Autonomia::Seguradoras::Universal::Destinos do
     expect(described_class.nomes(%w[ES], cliente)).to eq(['Espanha'])
   end
 
+  it 'paises lido uma vez serve para conferir e para nomear, sem nova chamada' do
+    stub = stub_request(:get, "#{base}/v1/destinos").to_timeout
+    mapa = described_class.paises(cliente)
+    expect(described_class.validas_em?(%w[PT], mapa)).to eq([true, []])
+    expect(described_class.nomes_em(%w[pt], mapa)).to eq(['PT'])
+    expect(stub).to have_been_requested.once
+    stub_destinos
+    mapa = described_class.paises(cliente)
+    expect(described_class.validas_em?(%w[PT XX], mapa)).to eq([false, ['XX']])
+    expect(described_class.nomes_em(%w[pt], mapa)).to eq(['Portugal'])
+  end
+
   it 'lista vazia conta como falha e não fica no cache' do
     stub_request(:get, "#{base}/v1/destinos").to_return(status: 200, body: '[]')
     expect(described_class.siglas(cliente)).to be_nil

@@ -53,10 +53,10 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   def call
     return error('cotacao_sem_conversa') if conversa.nil?
 
-    pedido_da_universal, falta = SeguroViagem::Pedido.new(params, hoje: hoje, tarifa_acordo: acesso.tarifa_acordo?).conferir
+    pedido_da_universal, falta = conferencia.conferir
     return recusar('pedido_invalido', falta.texto, faltando: [falta.campo]) if falta
 
-    ok, invalidas = Universal::Destinos.validas?(pedido_da_universal['destinos'], cliente)
+    ok, invalidas = Universal::Destinos.validas_em?(pedido_da_universal['destinos'], paises)
     unless ok
       return recusar('destino_invalido', "Destino não reconhecido pela seguradora: #{invalidas.join(', ')}. Confirme o país " \
                                          'com o cliente.', faltando: ['destinos'])
@@ -69,8 +69,9 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
 
   def cotar(pedido_da_universal)
     resposta = cliente.cotar(pedido_da_universal)
-    planos = SeguroViagem::Planos.de(resposta, idades: idades)
-    return sem_planos(resposta) if planos.empty?
+    candidatos = SeguroViagem::Planos.candidatos(resposta)
+    planos = SeguroViagem::Planos.para_idades(candidatos, idades)
+    return sem_planos(candidatos) if planos.empty?
 
     cotacao = guardar(resposta, planos, pedido_da_universal)
     pdf_enviado = SeguroViagem::EntregaDoComparativo.postar(conversation: conversa, cotacao: cotacao, agent: agent)
@@ -80,9 +81,9 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
 
-  # Sem idade, a regra de idade não tira nenhum plano: se aí sobra plano, o vazio é da idade.
-  def sem_planos(resposta)
-    if SeguroViagem::Planos.de(resposta, idades: []).any?
+  # Os candidatos ainda não passaram pela regra de idade: se há algum, o vazio é da idade.
+  def sem_planos(candidatos)
+    if candidatos.any?
       return recusar('idade_fora_do_limite', "Nenhum plano aceita as idades #{idades.join(', ')}. Avise o cliente e passe " \
                                              'para a equipe.', faltando: ['idades'])
     end
@@ -95,7 +96,7 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     destinos = pedido_da_universal['destinos']
     Autonomia::Agents::CotacaoDeViagem.create!(
       account: account, conversation: conversa, agent: agent, id_cotacao: resposta['idCotacao'], planos: planos,
-      pedido: { 'destinos' => destinos, 'destinos_nomes' => Universal::Destinos.nomes(destinos, cliente),
+      pedido: { 'destinos' => destinos, 'destinos_nomes' => Universal::Destinos.nomes_em(destinos, paises),
                 'data_saida' => pedido_da_universal['dataSaida'], 'data_retorno' => pedido_da_universal['dataRetorno'],
                 'idades' => idades, 'motivo' => params['motivo'].presence, 'universal' => pedido_da_universal }
     )
@@ -105,8 +106,21 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     delivery.try(:conversation)
   end
 
+  # O `Pedido` lê os parâmetros uma vez; as idades vêm dele, já inteiras.
+  def conferencia
+    @conferencia ||= SeguroViagem::Pedido.new(params, hoje: hoje, tarifa_acordo: acesso.tarifa_acordo?)
+  end
+
   def idades
-    params['idades'].map(&:to_i)
+    conferencia.idades
+  end
+
+  # Os países da Universal, lidos uma vez por chamada: conferem os destinos e dão o nome de cada um. Com a Universal
+  # fora nada fica no cache, e ler de novo seria outra chamada.
+  def paises
+    return @paises if defined?(@paises)
+
+    @paises = Universal::Destinos.paises(cliente)
   end
 
   # O dia de hoje no fuso da conta: perto da meia-noite, o do servidor já seria amanhã.

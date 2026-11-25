@@ -67,6 +67,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Planos do
     end
   end
 
+  it 'regra de cancelamento só com as quatro chaves da regra (R2)' do
+    produtos = resposta['produtos'].map do |produto|
+      produto.merge('regraCancelamento' => produto['regraCancelamento'].map { |regra| regra.merge('comissao' => 9) })
+    end
+    p1, = described_class.de(resposta.merge('produtos' => produtos), idades: [45])
+    expect(p1['regra_cancelamento']).to eq([{ 'de' => '2026-11-24T00:00:00-03:00', 'ate' => '2026-11-24T00:00:00-03:00',
+                                              'geraCredito' => false, 'multa' => 0 }])
+  end
+
+  it 'candidatos sem filtro de idade; para_idades filtra e numera depois' do
+    candidatos = described_class.candidatos(sem_ids)
+    expect(candidatos.pluck('nome')).to eq(['Especial UA 100K BRL', 'Especial UA 30K BRL', 'Produto Teste Sem DMH'])
+    expect(candidatos.first).not_to have_key('codigo')
+    expect(described_class.para_idades(candidatos, [99]).pluck('codigo', 'nome')).to eq([['P1', 'Produto Teste Sem DMH']])
+  end
+
   it 'resumo em reais com duas casas' do
     expect(described_class.resumo(described_class.de(resposta, idades: [45])).pluck('preco_total'))
       .to eq(['R$ 360,00', 'R$ 210,00'])
