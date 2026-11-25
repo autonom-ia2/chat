@@ -45,6 +45,8 @@ const CORRETORA = 'Corretora Exemplo';
 const SOBRE =
   'Corretora em Campinas desde 2010. Atendemos famílias e empresas, com seguro viagem para o mundo todo.';
 const CANAL = 'WhatsApp Vendas';
+// A dica do login que o servidor devolve (`login_dica`): dado, não rótulo.
+const LOGIN_DICA = 'corr•••••••plo';
 const DO_NOME = { nome: NOME };
 
 const FAZ = [
@@ -779,7 +781,7 @@ const naoPerderOQueDigitou = () => false;
                     <span
                       class="text-base font-medium truncate text-n-slate-12"
                     >
-                      corr•••••••plo
+                      {{ LOGIN_DICA }}
                     </span>
                     <span class="text-sm text-n-slate-11">
                       {{ t('AGENTS.CONTRATADOS.ACESSO.SENHA.GUARDADA') }}
