@@ -36,7 +36,7 @@ describe Autonomia::Agents::Operate::ReplyJob do
     allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox)
     allow(Autonomia::Agents::Operate::Responder).to receive(:new) do |reply_to_message_id:, **|
       answered << reply_to_message_id
-      instance_double(Autonomia::Agents::Operate::Responder, perform: nil)
+      instance_double(Autonomia::Agents::Operate::Responder, perform: nil, cadeia_agendada?: false)
     end
     stub_engine
   end

@@ -122,6 +122,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
                                                enabled: true, instruction: 'Atenda o cliente.')
       account.enable_features!('agente_usa_o_trecho')
       account.disable_features!('agente_usa_o_trecho')
+      freeze_time # o item Agora leva o minuto: os dois inputs saem do mesmo instante
 
       expect(montar.instructions).to eq(montar(gemeo).instructions)
       expect(montar.input).to eq(montar(gemeo).input)

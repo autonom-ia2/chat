@@ -26,21 +26,24 @@ module WhatsappHybrid::RecoveryAiWake
 
   # O mesmo que o gatilho do ReplyJob (marca do debounce + settle depois da janela do agente), mas a marca não regride:
   # só é gravada se não apontar para uma mensagem mais nova. Se apontar, o turno da mensagem nova já cobre esta, e a IA
-  # não é acordada de novo por uma mensagem mais velha.
+  # não é acordada de novo por uma mensagem mais velha. #3211: a janela é a do gatilho (EsperaDaFala.da_rajada; com as
+  # opções desligadas, o debounce de sempre), gravada na marca como `espera_ms`.
   def acordar(message)
     return unless ::Autonomia::Agents::Config.enabled?(message.account)
 
     agent_inbox = ::Autonomia::Agents::Operate.eligible_agent_inbox(message.conversation)
-    return if agent_inbox.nil? || !marcar_turno?(message)
+    return if agent_inbox.nil?
 
-    ::Autonomia::Agents::Operate::ReplyJob.set(wait: ::Autonomia::Agents::Config.debounce_seconds_for(agent_inbox.agent))
-                                          .perform_later(message.conversation_id, message.id, 'settle')
+    espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: message.conversation_id)
+    return unless marcar_turno?(message, espera)
+
+    ::Autonomia::Agents::Operate::ReplyJob.set(wait: espera).perform_later(message.conversation_id, message.id, 'settle')
   end
 
   # Grava a marca no banco, numa instrução só, com a condição de não regredir: true quando gravou.
-  def marcar_turno?(message)
+  def marcar_turno?(message, espera)
     chave = ::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY
-    stamp = { 'pending_message_id' => message.id, 'at' => Time.current.to_f }
+    stamp = ::Autonomia::Agents::Operate::ReplyJob.marca_do_debounce(message.id, espera)
     Conversation.where(id: message.conversation_id)
                 .where("COALESCE((additional_attributes -> ? ->> 'pending_message_id')::bigint, 0) <= ?", chave, message.id)
                 .update_all(["additional_attributes = jsonb_set(COALESCE(additional_attributes, '{}'::jsonb), ARRAY[?], ?::jsonb, true)", # rubocop:disable Rails/SkipsModelValidations

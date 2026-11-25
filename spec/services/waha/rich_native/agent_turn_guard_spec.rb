@@ -192,6 +192,56 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte).to be_empty
     end
 
+    # #3211 (P1, revisão final F8): com a pergunta feita da rajada inteira, a bolha sai dela pela mesma regra da última
+    # mensagem do guard.
+    it '[A, U] with conversa_espera_a_fala: the burst query leaves the bubble out' do
+      fala = Autonomia::Agents::Operate::FalaEmCurso
+      Redis::Alfred.delete(fala.chave_do_fim(conversation.id))
+      agente_da_porta.update!(config: agente_da_porta.config.to_h.merge('conversa_espera_a_fala' => true))
+      ouvir(cliente_escreve('Qual o preço?'))
+      travel 1.second
+      ouvir(bolha)
+      travel 1.second
+      ouvir(cliente_escreve('E o prazo?'))
+
+      rodar_tudo!
+
+      expect(consultas.sole[:query]).to include("Qual o preço?\nE o prazo?").and(not_include('Mensagem não suportada'))
+    ensure
+      Redis::Alfred.delete(fala.chave_do_fim(conversation.id))
+    end
+
+    # #3211 (revisão final F7): a bolha não é turno, e a marca do debounce de um turno ANTERIOR não mede a espera dela.
+    describe 'the wait of the trace job with a stale debounce mark' do
+      def marca_velha!(sem)
+        marca = { 'pending_message_id' => sem.id - 1, 'at' => Time.current.to_f, 'espera_ms' => 1000 }
+        conversation.update!(additional_attributes: { 'autonomia_debounce' => marca })
+      end
+
+      before { freeze_time }
+
+      it 'waits for the burst window of now, with conversa_espera_a_fala' do
+        agente_da_porta.update!(config: agente_da_porta.config.to_h.merge('conversa_espera_a_fala' => true))
+        allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:fim_previsto).and_return(25.seconds.from_now)
+        sem = bolha
+        marca_velha!(sem)
+
+        Waha::RichNative::UnsupportedTurnJob.perform_now(conversation.id, sem.id)
+
+        expect(Waha::RichNative::UnsupportedTurnJob).to have_been_enqueued.with(conversation.id, sem.id, 'settle').at(25.seconds.from_now)
+      end
+
+      it 'waits for the usual debounce without the options' do
+        sem = bolha
+        marca_velha!(sem)
+
+        Waha::RichNative::UnsupportedTurnJob.perform_now(conversation.id, sem.id)
+
+        espera = Autonomia::Agents::Config.debounce_seconds_for(agente_da_porta)
+        expect(Waha::RichNative::UnsupportedTurnJob).to have_been_enqueued.with(conversation.id, sem.id, 'settle').at(espera.from_now)
+      end
+    end
+
     it '[U]: no turn, no answer, and the trace once per message' do
       sem = bolha
       ouvir(sem)

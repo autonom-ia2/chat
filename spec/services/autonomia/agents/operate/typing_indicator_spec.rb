@@ -73,6 +73,41 @@ describe Autonomia::Agents::Operate::TypingIndicator do
     end
   end
 
+  context 'when the WAHA agent has conversa_ritmo_do_canal' do
+    let(:channel) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511888880000' }) }
+    let(:waha_contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '5511999990000@c.us' }) }
+    let(:conversation) { create(:conversation, account: account, inbox: channel.inbox, contact: waha_contact) }
+    let(:agente) { instance_double(Autonomia::Agents::Agent, config: { 'conversa_ritmo_do_canal' => true }) }
+    let(:vinculo) { Struct.new(:agent_bot, :agent).new(agent_bot, agente) }
+    let(:waha) { instance_double(Waha::Client, start_typing: {}, stop_typing: {}) }
+
+    before do
+      allow(Waha::Client).to receive(:new).and_return(waha)
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    end
+
+    it 'liga e desliga o digitando no WAHA e mantém o evento do painel' do
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        described_class.new(conversation: conversation, agent_inbox: vinculo).on
+        described_class.new(conversation: conversation, agent_inbox: vinculo).off
+      end
+
+      expect(waha).to have_received(:start_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
+      expect(waha).to have_received(:stop_typing).with(session: '5511888880000', chat_id: '5511999990000@c.us')
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Conversation::CONVERSATION_TYPING_ON, any_args).once
+    end
+
+    it 'com AI_HUMANIZE_CHANNEL_TYPING=false, não chama o WAHA' do
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key', AI_HUMANIZE_CHANNEL_TYPING: 'false' do
+        described_class.new(conversation: conversation, agent_inbox: vinculo).on
+        described_class.new(conversation: conversation, agent_inbox: vinculo).off
+      end
+
+      expect(Waha::Client).not_to have_received(:new)
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Conversation::CONVERSATION_TYPING_ON, any_args).once
+    end
+  end
+
   context 'when the conversation is on WhatsApp Cloud' do
     let(:channel) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
     let(:conversation) { conversation_in(channel.inbox, '5511999990000') }

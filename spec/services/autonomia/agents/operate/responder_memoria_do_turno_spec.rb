@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(itens[antes].first).to eq('user')
     expect(antes).to be < itens.index { |_papel, texto| texto == 'Qual placa você anotou?' }
     expect(itens[estado].first).to eq('developer')
-    expect(itens[-2]).to match(['user', a_string_including('DESTE PEDIDO', 'RIO2E19')])
+    expect(itens[-3]).to match(['user', a_string_including('DESTE PEDIDO', 'RIO2E19')])
     expect(chamadas.sole).to include(finalidade: :responder, account: account, conversation: conversation, agent: agent)
     expect(evento_replied.metadata).to eq('memoria_fact_ids' => [77, 812])
   end

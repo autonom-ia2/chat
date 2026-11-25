@@ -34,21 +34,25 @@ module Autonomia::Agents::Operate::TurnoEmCurso
     ::Autonomia::Agents::AgenteSoInforma.ligada?(account) || ::Autonomia::Agents::Tools::ConsultaNoTurno.ligada?(account)
   end
 
-  # O teto real de um turno, das configurações: a maior janela de debounce, a maior espera do assunto, a maior chamada de
-  # IA (a Lia: RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma
-  # conta do QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente com pronta: o
-  # prazo das rodadas dele, #2918) e a cadeia de pedaços.
-  def teto_do_turno
+  # O teto real de um turno, das configurações: a maior janela de espera do `agent` (EsperaDaFala.janela_maxima: o
+  # debounce e, só com as opções da paridade da conversa ligadas, a espera pela fala anterior e a fila; sem agente ou
+  # com elas desligadas, a maior janela de debounce de sempre), a maior espera do assunto, a maior chamada de IA (a Lia:
+  # RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma conta do
+  # QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente com pronta: o prazo das
+  # rodadas dele, #2918) e a cadeia de pedaços.
+  def teto_do_turno(agent = nil)
     runner = ::Autonomia::Agents::Specialists::Runner
     lia = ::Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA * (runner::SEGUNDOS_DE_FERRAMENTA + runner::SEGUNDOS_POR_CHAMADA)
     ia = [lia, ::Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA, ::Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS,
           ::Crm::Ai::ResponsesClient::REQUEST_TIMEOUT].max
     cadeia = ::Autonomia::Agents::Config::HUMANIZE[:max_total_delay_ms] / 1000
-    ::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS + ::Autonomia::Agents::Operate::EsperaDoAssunto::TETO + (ia + cadeia).seconds
+    janela = ::Autonomia::Agents::Operate::EsperaDaFala.janela_maxima(agent)
+    janela + ::Autonomia::Agents::Operate::EsperaDoAssunto::TETO + (ia + cadeia).seconds
   end
 
-  def abrir(conversation_id, message_id)
-    ::Redis::Alfred.set(chave(conversation_id), message_id.to_s, ex: teto_do_turno.to_i)
+  # `agent` (opcional): o do turno, para o teto cobrir a janela dele (teto_do_turno).
+  def abrir(conversation_id, message_id, agent = nil)
+    ::Redis::Alfred.set(chave(conversation_id), message_id.to_s, ex: teto_do_turno(agent).to_i)
   rescue StandardError
     nil
   end

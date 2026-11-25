@@ -59,7 +59,15 @@ module Waha::RichNative::AgentTurnGuard
   def last_incoming_message
     return super unless c2y_waha_with_flag?
 
-    recent_messages.reverse.find { |message| message.incoming? && Waha::RichNative::TurnKinds.kind(message).nil? }
+    recent_messages.reverse.find { |message| message.incoming? && conta_na_pergunta?(message) }
+  end
+
+  # A mesma regra para a pergunta feita da rajada inteira (#3211, P1, `conversa_espera_a_fala`): sem a bolha, o aviso de
+  # visualização única e a apagada.
+  def conta_na_pergunta?(message)
+    return super unless c2y_waha_with_flag?
+
+    Waha::RichNative::TurnKinds.kind(message).nil?
   end
 
   # A janela do histórico (as últimas HISTORY_MAX_INTERACOES mensagens do cliente) conta só as interações reais: o voto

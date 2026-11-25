@@ -87,6 +87,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   it 'fora da prova, o input é o do PromptBuilder byte a byte, sem o aviso' do
+    freeze_time # o item Agora (#3211) leva o minuto: os dois inputs saem do mesmo instante
     openai_devolve(output_text: resposta_ok)
     esperado = nil
     allow(Autonomia::Agents::PromptBuilder).to receive(:new).and_wrap_original do |original, **kwargs|
