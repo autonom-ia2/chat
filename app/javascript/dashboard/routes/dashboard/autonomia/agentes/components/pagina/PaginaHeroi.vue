@@ -19,8 +19,10 @@ defineProps({
   onde: { type: String, default: '' },
   hrefLista: { type: String, required: true },
   podeGerenciar: { type: Boolean, default: false },
-  // 'mudar' | 'instrucoes' | null
+  // 'mudar' | 'instrucoes' | 'continuar' (#3211: o rascunho do contratado) | null
   acaoPrincipal: { type: String, default: null },
+  // #3211 — o passo do rascunho do contratado que "Continuar" abre (2: o acesso; 3: o canal).
+  passo: { type: Number, default: null },
   itensMais: { type: Array, default: () => [] },
   alternando: { type: Boolean, default: false },
   ajudante: { type: Boolean, default: false },
@@ -32,6 +34,17 @@ const emit = defineEmits(['voltarLista', 'alternar', 'acaoPrincipal', 'mais']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA';
+const ICONE_DA_ACAO = {
+  mudar: 'i-lucide-message-circle',
+  instrucoes: 'i-lucide-pencil',
+  continuar: 'i-lucide-arrow-right',
+};
+const textoDaAcao = (acao, passo) => {
+  if (acao === 'continuar') {
+    return t('AGENTS.CONTRATADOS.PAGINA.CONTINUAR', { passo });
+  }
+  return acao === 'mudar' ? t(`${NS}.MUDAR`) : t(`${NS}.EDITAR_INSTRUCOES`);
+};
 // O estado ligado escrito ao lado do interruptor, quando não é "Atendendo".
 const TEXTO_LIGADO = {
   [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
@@ -146,18 +159,10 @@ const aoVoltar = evento => {
             variante="branco"
             tamanho="lg"
             class="w-full md:w-auto max-md:min-h-14 max-md:text-lg"
-            :icone="
-              acaoPrincipal === 'mudar'
-                ? 'i-lucide-message-circle'
-                : 'i-lucide-pencil'
-            "
+            :icone="ICONE_DA_ACAO[acaoPrincipal]"
             @click="emit('acaoPrincipal')"
           >
-            {{
-              acaoPrincipal === 'mudar'
-                ? t(`${NS}.MUDAR`)
-                : t(`${NS}.EDITAR_INSTRUCOES`)
-            }}
+            {{ textoDaAcao(acaoPrincipal, passo) }}
           </AgenteBotao>
           <p
             v-if="acaoPrincipal === 'instrucoes'"

@@ -212,9 +212,15 @@ describe('AcessoDaSeguradoraForm (#3211)', () => {
     expect(no('[data-acesso-erro]').textContent).toContain(
       'AGENTS.CONTRATADOS.ACESSO.INDISPONIVEL.TITULO'
     );
+    expect(no('[data-acesso-erro]').textContent).toContain(
+      'AGENTS.CONTRATADOS.ACESSO.INDISPONIVEL.GARANTIA'
+    );
     expect(no('[data-acesso-senha]').getAttribute('aria-invalid')).toBe(
       'false'
     );
+    // O login fica e a senha sai: o foco vai para a senha, que é o que falta digitar de novo.
+    expect(no('[data-acesso-login]').value).toBe(' corretora.exemplo ');
+    expect(document.activeElement).toBe(no('[data-acesso-senha]'));
     wrapper.unmount();
   });
 

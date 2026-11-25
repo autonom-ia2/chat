@@ -120,16 +120,17 @@ const alterar = async () => {
   focar('login');
 };
 
-const depoisDoEnvio = async resposta => {
+// -> true quando a conferência não deu certo: o login fica no campo e a senha sai (recusado ou com a Universal fora),
+// e quem tenta de novo digita a senha.
+const depoisDoEnvio = resposta => {
   acesso.value = resposta;
   editando.value = false;
   emit('conferido', resposta);
   if (resposta?.estado === 'ok') {
     login.value = '';
-    return;
+    return false;
   }
-  await nextTick();
-  focar(resposta?.estado === 'recusado' ? 'senha' : 'login');
+  return true;
 };
 
 const conferir = async () => {
@@ -142,12 +143,13 @@ const conferir = async () => {
   }
   erroDoEnvio.value = null;
   conferindo.value = true;
+  let digitarDeNovo = false;
   try {
     const { data } = await ContratadosAPI.conferirAcesso(
       props.agente.id,
       pedido
     );
-    await depoisDoEnvio(data);
+    digitarDeNovo = depoisDoEnvio(data);
   } catch (erro) {
     erroDoEnvio.value = erroDoContratado(t, erro);
   } finally {
@@ -156,6 +158,11 @@ const conferir = async () => {
     senhaNova.value = false;
     mostrarSenha.value = false;
     conferindo.value = false;
+  }
+  // Só depois de `conferindo` voltar a false: com o campo desabilitado, o foco não entra.
+  if (digitarDeNovo) {
+    await nextTick();
+    focar('senha');
   }
 };
 

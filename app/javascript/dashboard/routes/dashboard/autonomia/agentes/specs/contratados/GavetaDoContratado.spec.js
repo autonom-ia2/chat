@@ -243,10 +243,21 @@ describe('ContratadoNaPagina (#3211)', () => {
     expect(wrapper.find('[data-alterar-corretora]').exists()).toBe(true);
   });
 
-  it('says the access is still missing before the first check', () => {
+  it('says the access is still missing before the first check, and the button adds it', () => {
     const wrapper = montarBloco({ agente: agente(null) });
     expect(wrapper.get('[data-corretora-e-acesso]').text()).toContain(
       'AGENTS.CONTRATADOS.PAGINA.NAO_CONFERIDO'
     );
+    const botao = wrapper.get('[data-alterar-acesso-pagina]');
+    expect(botao.text()).toContain('AGENTS.CONTRATADOS.PAGINA.CADASTRAR');
+    expect(botao.attributes('aria-label')).toBe(
+      'AGENTS.CONTRATADOS.PAGINA.CADASTRAR_ACESSO_ARIA'
+    );
+  });
+
+  it('says "Alterar" once a login was stored', () => {
+    const botao = montarBloco().get('[data-alterar-acesso-pagina]');
+    expect(botao.text()).toContain('AGENTS.CONTRATADOS.PAGINA.ALTERAR');
+    expect(botao.text()).not.toContain('CADASTRAR');
   });
 });

@@ -34,7 +34,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'])
+      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => false)
     end
 
     it 'vazio sem a flag do modelo' do
@@ -43,7 +43,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('modelos' => [])
+      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false)
     end
 
     it 'agente sem função não lê o catálogo' do
@@ -119,7 +119,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
 
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'])
+      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => true)
 
       post contratar_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json
 

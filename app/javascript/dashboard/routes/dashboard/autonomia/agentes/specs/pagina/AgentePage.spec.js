@@ -1923,6 +1923,26 @@ describe('AgentePage', () => {
       semAcesso.unmount();
     });
 
+    it('continues the draft from the hero, on the step where it stopped', async () => {
+      preparar({ agente: contratada(), canais: LIVRE });
+      const semAcesso = await montar();
+      const acao = no('[data-acao-principal]');
+      expect(acao.textContent).toContain('CONTRATADOS.PAGINA.CONTINUAR');
+      await clicar('[data-acao-principal]');
+      expect(no('[role="dialog"]').textContent).toContain(
+        'CONTRATADOS.ACESSO.TITULO'
+      );
+      semAcesso.unmount();
+
+      preparar({ agente: contratada(ACESSO_OK), canais: LIVRE });
+      const comAcesso = await montar();
+      await clicar('[data-acao-principal]');
+      expect(no('[data-texto-do-passo]').textContent).toContain(
+        'CONTRATADOS.ONDE.PASSO'
+      );
+      comAcesso.unmount();
+    });
+
     it('has no Mudar conversando, Tools, versions nor instructions, even for a SuperAdmin', async () => {
       preparar({
         agente: contratada(ACESSO_OK, {

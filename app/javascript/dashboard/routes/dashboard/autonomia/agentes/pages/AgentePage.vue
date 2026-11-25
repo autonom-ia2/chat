@@ -333,10 +333,18 @@ const textoOnde = computed(() => {
 
 const horarios = computed(() => horariosDasCaixas(caixas.value, t));
 
+// #3211 — o contratado em rascunho (quem fechou a gaveta no meio) continua do passo em que parou, pelo
+// `escolherCanal` (passo 2, o acesso; passo 3, o canal). Depois de ligado, ele não tem ação principal.
 const acaoPrincipal = computed(() => {
-  if (cotacao.value || contratado.value) return null;
+  if (contratado.value) {
+    return agente.value?.status === 'draft' ? 'continuar' : null;
+  }
+  if (cotacao.value) return null;
   return manual.value ? 'instrucoes' : 'mudar';
 });
+const passoDoRascunho = computed(() =>
+  agente.value?.contratado?.acesso?.estado === 'ok' ? 3 : 2
+);
 
 const itensMais = computed(() => {
   const versoes = {
@@ -778,7 +786,8 @@ const escolherMais = chave => {
 };
 
 const acaoDoHeroi = () => {
-  if (acaoPrincipal.value === 'instrucoes') escrever();
+  if (acaoPrincipal.value === 'continuar') escolherCanal();
+  else if (acaoPrincipal.value === 'instrucoes') escrever();
   else mudar('geral');
 };
 
@@ -947,6 +956,7 @@ const tirarPergunta = id => {
           :href-lista="hrefLista"
           :pode-gerenciar="podeGerenciar"
           :acao-principal="acaoPrincipal"
+          :passo="passoDoRascunho"
           :itens-mais="itensMais"
           :alternando="alternando"
           :ajudante="ajudante"

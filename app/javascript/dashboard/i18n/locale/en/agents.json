@@ -4071,6 +4071,12 @@
         "TEXTO": "An agent that sells Universal travel insurance to travelers, from the first hello to the payment link.",
         "VOLTAR": "Back to Create agent",
         "CONTRATAR": "Hire",
+        "SEM_CHAVE_DE_IA": {
+          "TITULO": "Your account's artificial intelligence is not turned on yet.",
+          "TEXTO": "It is what lets the agent talk to customers. Turn it on in Settings, under Integrations. If you need help, Autonom.ia support can help.",
+          "TEXTO_SEM_ADMIN": "It is what lets the agent talk to customers. Whoever manages the account turns it on in Settings, under Integrations. Let that person know.",
+          "ACAO": "Open Integrations"
+        },
         "FAZ_TITULO": "What it does",
         "FAZ": {
           "DUVIDAS": "Answers the traveler's questions with Universal's official rules",
@@ -4125,7 +4131,7 @@
       "ERRO": {
         "MARCADOR": "This text has a reserved code (a piece of text with $). Remove that part and try again.",
         "INDISPONIVEL": "This ready-made agent is not available for this account right now. Contact Autonom.ia support.",
-        "SEM_CHAVE_DE_IA": "Your account's AI key is missing. This agent talks using your account's own key. Connect the AI key in Settings → Integrations and try again.",
+        "SEM_CHAVE_DE_IA": "Your account's artificial intelligence is not turned on yet. Nothing was created. Whoever manages the account turns it on in Settings, under Integrations.",
         "NOME_AGENTE": "Write the agent's name, up to {maximo} characters.",
         "NOME_CORRETORA": "Write the brokerage's name, up to {maximo} characters.",
         "SOBRE_CORRETORA": "The brokerage's introduction can have up to {maximo} characters.",
@@ -4162,11 +4168,11 @@
         },
         "INDISPONIVEL": {
           "TITULO": "Universal did not answer right now.",
-          "GARANTIA": "Nothing was stored. Try again in a few minutes."
+          "GARANTIA": "Nothing was stored. Wait a few minutes, type the password again and press Check access."
         },
         "PEDIDO_INVALIDO": {
           "TITULO": "Universal did not accept the check right now.",
-          "GARANTIA": "Nothing was stored. Try again in a few minutes; if it keeps happening, contact Autonom.ia support."
+          "GARANTIA": "Nothing was stored. Wait a few minutes, type the password again and press Check access. If it keeps happening, contact Autonom.ia support."
         },
         "CONFERIR": "Check access",
         "CONFERINDO": "Checking with Universal…",
@@ -4185,6 +4191,9 @@
         "CONFERIDO": "Checked",
         "NAO_CONFERIDO": "Not registered yet",
         "ALTERAR": "Change",
+        "CADASTRAR": "Add",
+        "CADASTRAR_ACESSO_ARIA": "Add the access to the Universal portal",
+        "CONTINUAR": "Continue: step {passo} of 3",
         "ALTERAR_CORRETORA_ARIA": "Change the brokerage",
         "ALTERAR_ACESSO_ARIA": "Change the access to the Universal portal",
         "AVISO_RECUSADO": {

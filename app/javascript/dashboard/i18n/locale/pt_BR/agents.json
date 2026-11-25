@@ -4071,6 +4071,12 @@
         "TEXTO": "Um agente que vende seguro viagem da Universal para quem vai viajar, do primeiro oi ao link de pagamento.",
         "VOLTAR": "Voltar para Criar agente",
         "CONTRATAR": "Contratar",
+        "SEM_CHAVE_DE_IA": {
+          "TITULO": "Falta ligar a inteligência artificial da sua conta.",
+          "TEXTO": "É ela que faz o agente conversar com os clientes. Ligue em Configurações, na parte Integrações. Se precisar, o suporte da Autonom.ia ajuda.",
+          "TEXTO_SEM_ADMIN": "É ela que faz o agente conversar com os clientes. Quem administra a conta liga em Configurações, na parte Integrações. Avise essa pessoa.",
+          "ACAO": "Abrir Integrações"
+        },
         "FAZ_TITULO": "O que ele faz",
         "FAZ": {
           "DUVIDAS": "Tira as dúvidas do viajante com as regras oficiais da Universal",
@@ -4125,7 +4131,7 @@
       "ERRO": {
         "MARCADOR": "Este texto tem um código reservado (um trecho com $). Tire esse trecho e tente de novo.",
         "INDISPONIVEL": "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia.",
-        "SEM_CHAVE_DE_IA": "Falta a chave de IA da sua conta. Este agente conversa usando a chave da sua conta. Conecte a chave de IA em Configurações → Integrações e tente de novo.",
+        "SEM_CHAVE_DE_IA": "Falta ligar a inteligência artificial da sua conta. Nada foi criado. Quem administra a conta liga em Configurações, na parte Integrações.",
         "NOME_AGENTE": "Escreva o nome do agente, com até {maximo} caracteres.",
         "NOME_CORRETORA": "Escreva o nome da corretora, com até {maximo} caracteres.",
         "SOBRE_CORRETORA": "A apresentação da corretora pode ter até {maximo} caracteres.",
@@ -4162,11 +4168,11 @@
         },
         "INDISPONIVEL": {
           "TITULO": "A Universal não respondeu agora.",
-          "GARANTIA": "Nada foi guardado. Tente de novo em alguns minutos."
+          "GARANTIA": "Nada foi guardado. Espere alguns minutos, digite a senha de novo e aperte Conferir acesso."
         },
         "PEDIDO_INVALIDO": {
           "TITULO": "A Universal não aceitou a conferência agora.",
-          "GARANTIA": "Nada foi guardado. Tente de novo em alguns minutos; se continuar, fale com o suporte da Autonom.ia."
+          "GARANTIA": "Nada foi guardado. Espere alguns minutos, digite a senha de novo e aperte Conferir acesso. Se continuar, fale com o suporte da Autonom.ia."
         },
         "CONFERIR": "Conferir acesso",
         "CONFERINDO": "Conferindo com a Universal…",
@@ -4185,6 +4191,9 @@
         "CONFERIDO": "Conferido",
         "NAO_CONFERIDO": "Falta cadastrar",
         "ALTERAR": "Alterar",
+        "CADASTRAR": "Cadastrar",
+        "CADASTRAR_ACESSO_ARIA": "Cadastrar o acesso ao portal da Universal",
+        "CONTINUAR": "Continuar: passo {passo} de 3",
         "ALTERAR_CORRETORA_ARIA": "Alterar a corretora",
         "ALTERAR_ACESSO_ARIA": "Alterar o acesso ao portal da Universal",
         "AVISO_RECUSADO": {

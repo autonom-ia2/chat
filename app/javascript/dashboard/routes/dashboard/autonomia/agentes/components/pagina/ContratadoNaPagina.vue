@@ -31,6 +31,8 @@ const dados = computed(() => props.agente.contratado || {});
 const acesso = computed(() => dados.value.acesso || null);
 const recusado = computed(() => acesso.value?.estado === 'recusado');
 const conferido = computed(() => acesso.value?.estado === 'ok');
+// Só o login que a Universal aceitou fica guardado (com a dica): sem ele, não há o que alterar, e o botão cadastra.
+const cadastrado = computed(() => Boolean(acesso.value?.login_dica));
 
 const itensFaz = computed(() => [
   { chave: 'duvidas', texto: t('AGENTS.CONTRATADOS.MODELO.FAZ.DUVIDAS') },
@@ -141,10 +143,18 @@ const itensFaz = computed(() => [
           v-if="mudaAcesso"
           data-alterar-acesso-pagina
           variante="contorno"
-          :aria-label="t('AGENTS.CONTRATADOS.PAGINA.ALTERAR_ACESSO_ARIA')"
+          :aria-label="
+            cadastrado
+              ? t('AGENTS.CONTRATADOS.PAGINA.ALTERAR_ACESSO_ARIA')
+              : t('AGENTS.CONTRATADOS.PAGINA.CADASTRAR_ACESSO_ARIA')
+          "
           @click="emit('alterarAcesso')"
         >
-          {{ t('AGENTS.CONTRATADOS.PAGINA.ALTERAR') }}
+          {{
+            cadastrado
+              ? t('AGENTS.CONTRATADOS.PAGINA.ALTERAR')
+              : t('AGENTS.CONTRATADOS.PAGINA.CADASTRAR')
+          }}
         </AgenteBotao>
       </li>
     </ul>

@@ -10,7 +10,12 @@ vi.mock('dashboard/composables/store', async () => {
 });
 const router = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('vue-router', () => ({ useRouter: () => router }));
-const api = vi.hoisted(() => ({ contratar: vi.fn() }));
+const papel = vi.hoisted(() => ({ admin: true }));
+vi.mock('dashboard/composables/useAdmin', async () => {
+  const { computed } = await import('vue');
+  return { useAdmin: () => ({ isAdmin: computed(() => papel.admin) }) };
+});
+const api = vi.hoisted(() => ({ contratar: vi.fn(), lista: vi.fn() }));
 vi.mock('dashboard/api/autonomia/contratados', () => ({ default: api }));
 
 const UNIVERSAL = 'seguro_viagem_universal';
@@ -57,7 +62,12 @@ const preencher = async () => {
 
 describe('ContratadoModeloPage (#3211)', () => {
   beforeEach(() => {
+    papel.admin = true;
+    router.push.mockClear();
     api.contratar.mockResolvedValue({ data: { id: 42 } });
+    api.lista.mockResolvedValue({
+      data: { modelos: [UNIVERSAL], falta_chave_de_ia: false },
+    });
   });
 
   afterEach(() => {
@@ -208,6 +218,62 @@ describe('ContratadoModeloPage (#3211)', () => {
       'AGENTS.CONTRATADOS.ERRO.SEM_CHAVE_DE_IA'
     );
     wrapper.unmount();
+  });
+
+  describe('account without its own AI key', () => {
+    beforeEach(() => {
+      api.lista.mockResolvedValue({
+        data: { modelos: [UNIVERSAL], falta_chave_de_ia: true },
+      });
+    });
+
+    it('warns before "Contratar", which stays off, and takes the admin to Integrations', async () => {
+      const wrapper = await montar();
+
+      const aviso = no('[data-falta-chave-de-ia]');
+      expect(aviso.textContent).toContain(
+        'AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TITULO'
+      );
+      expect(aviso.textContent).toContain(
+        'AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TEXTO'
+      );
+      expect(no('[data-contratar]').disabled).toBe(true);
+      expect(no('[data-contratar-celular]').disabled).toBe(true);
+      await abrirFormulario(wrapper);
+      expect(no('[data-contratar-enviar]')).toBeNull();
+
+      aviso.querySelector('button').click();
+      await flushPromises();
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'settings_applications',
+      });
+      wrapper.unmount();
+    });
+
+    it('tells whoever is not an admin to warn the admin, with no button', async () => {
+      papel.admin = false;
+      const wrapper = await montar();
+
+      const aviso = no('[data-falta-chave-de-ia]');
+      expect(aviso.textContent).toContain(
+        'AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TEXTO_SEM_ADMIN'
+      );
+      expect(aviso.querySelector('button')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  it('shows no warning and lets hire when the account has its key (or the list fails)', async () => {
+    const wrapper = await montar();
+    expect(no('[data-falta-chave-de-ia]')).toBeNull();
+    expect(no('[data-contratar]').disabled).toBe(false);
+    wrapper.unmount();
+
+    api.lista.mockRejectedValue(new Error('Network Error'));
+    const semLista = await montar();
+    expect(no('[data-falta-chave-de-ia]')).toBeNull();
+    expect(no('[data-contratar]').disabled).toBe(false);
+    semLista.unmount();
   });
 
   it('says "try again" at the top when the request does not reach the server', async () => {

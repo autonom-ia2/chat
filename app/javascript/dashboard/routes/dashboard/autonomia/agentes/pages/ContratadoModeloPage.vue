@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import ContratadosAPI from 'dashboard/api/autonomia/contratados';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
@@ -19,18 +20,35 @@ import { GAVETA } from '../utils/pagina';
 // tela segue para a página dele com a gaveta do contratado aberta (`?gaveta=contratado`, passo 2: o acesso). A
 // recusa (422) volta para o formulário, com o campo que o servidor apontou. Depois de criado, o botão continua
 // ocupado até a navegação: um segundo clique criaria outro agente.
+// A conta sem a chave de IA própria (`falta_chave_de_ia` da lista) vê o aviso antes de "Contratar", que fica
+// desabilitado: o servidor recusaria (`sem_chave_de_ia`). Quem administra ganha o botão para Integrações.
 const props = defineProps({
   modelo: { type: String, required: true },
 });
 
 const { t } = useI18n();
 const router = useRouter();
+const { isAdmin } = useAdmin();
 
 const conhecido = computed(() => MODELOS_CONTRATADOS.includes(props.modelo));
 const aberto = ref(false);
 const enviando = ref(false);
 const erro = ref(null);
 const formulario = ref(null);
+const faltaChaveDeIa = ref(false);
+
+// A leitura que falhou não trava: o servidor confere de novo ao contratar.
+onMounted(async () => {
+  try {
+    const { data } = await ContratadosAPI.lista();
+    faltaChaveDeIa.value = data?.falta_chave_de_ia === true;
+  } catch {
+    faltaChaveDeIa.value = false;
+  }
+});
+
+// A conta vem da rota atual (o roteador repete o `accountId` na rota pelo nome).
+const abrirIntegracoes = () => router.push({ name: 'settings_applications' });
 
 const itensFaz = computed(() => [
   t('AGENTS.CONTRATADOS.MODELO.FAZ.DUVIDAS'),
@@ -107,6 +125,7 @@ const conversa = computed(() => {
 const voltar = () => router.push({ name: 'autonomia_agents_builder' });
 
 const abrir = () => {
+  if (faltaChaveDeIa.value) return;
   erro.value = null;
   aberto.value = true;
 };
@@ -166,6 +185,22 @@ const contratar = async campos => {
       />
 
       <template v-else>
+        <AgenteErro
+          v-if="faltaChaveDeIa"
+          data-falta-chave-de-ia
+          tom="ambar"
+          :titulo="t('AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TITULO')"
+          :garantia="
+            isAdmin
+              ? t('AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TEXTO')
+              : t('AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.TEXTO_SEM_ADMIN')
+          "
+          :acao="
+            isAdmin ? t('AGENTS.CONTRATADOS.MODELO.SEM_CHAVE_DE_IA.ACAO') : ''
+          "
+          icone-acao="i-lucide-arrow-right"
+          @acao="abrirIntegracoes"
+        />
         <AgentesHeroi
           :titulo="t('AGENTS.CONTRATADOS.MODELO.TITULO')"
           :texto="t('AGENTS.CONTRATADOS.MODELO.TEXTO')"
@@ -176,6 +211,7 @@ const contratar = async campos => {
               variante="branco"
               tamanho="xl"
               class="w-full md:w-auto"
+              :desabilitado="faltaChaveDeIa"
               @click="abrir"
             >
               {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}
@@ -259,6 +295,7 @@ const contratar = async campos => {
           tamanho="xl"
           bloco
           class="md:hidden"
+          :desabilitado="faltaChaveDeIa"
           @click="abrir"
         >
           {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}
