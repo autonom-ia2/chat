@@ -431,13 +431,14 @@ describe('GavetaOndeQuandoFase2', () => {
   });
 
   // #3211 (nota 5 do mockup) — o passo 3 do agente contratado: o texto do passo no topo e, com uma caixa livre só,
-  // ela já vem marcada para quem começa a atender sem canal nenhum.
+  // ela já vem marcada para o contratado que começa a atender sem canal nenhum (só para ele).
   describe('step text and the single free inbox', () => {
     const NOVO = {
       ...AGENTE,
       status: 'draft',
       enabled: false,
       channels_count: 0,
+      contratado: { modelo: 'seguro_viagem_universal' },
     };
     const UMA_LIVRE = [
       { inbox_id: 2, name: 'Instagram', occupied_by: null },
@@ -495,6 +496,19 @@ describe('GavetaOndeQuandoFase2', () => {
       });
       await wrapper.setProps({ canais: UMA_LIVRE, estadoCanais: 'pronto' });
       expect(radio('Instagram').getAttribute('aria-checked')).toBe('true');
+      wrapper.unmount();
+    });
+
+    it('marks nothing for an agent that is not hired, even with one free inbox', () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: { ...NOVO, contratado: null },
+        canais: UMA_LIVRE,
+      });
+      expect(radio('Instagram').getAttribute('aria-checked')).not.toBe('true');
+      expect(no('[data-confirmar]').disabled).toBe(true);
       wrapper.unmount();
     });
 
