@@ -1230,6 +1230,7 @@ en:
           fora_do_alcance: 'You are not a member of this channel. Ask an administrator to change the agent there.'
           agent_internal_not_connectable: 'This is an internal agent (team copilot) and cannot be connected to a customer inbox.'
           agent_not_active: 'Enable and activate the agent before connecting an inbox.'
+          acesso_da_seguradora_pendente: "Check the insurer access first: this agent only starts answering once it is verified."
           inbox_has_webhook_bot: "An external agent already answers on this inbox. Stop the external agent first."
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'

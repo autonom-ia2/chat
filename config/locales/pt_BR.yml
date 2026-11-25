@@ -1978,6 +1978,7 @@ pt_BR:
           fora_do_alcance: "Você não faz parte deste canal. Peça a um administrador para mudar o agente nele."
           agent_internal_not_connectable: "Este é um agente interno (copiloto da equipe) e não pode ser conectado a uma caixa de entrada de clientes."
           agent_not_active: "Ative o agente antes de conectar uma caixa de entrada."
+          acesso_da_seguradora_pendente: "Confira primeiro o acesso à seguradora: este agente só começa a atender depois de conferido."
           inbox_has_webhook_bot: "Um agente externo já atende nesta caixa de entrada. Pare o agente externo primeiro."
           inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
           not_connected: "Esta caixa de entrada não está conectada ao agente."
