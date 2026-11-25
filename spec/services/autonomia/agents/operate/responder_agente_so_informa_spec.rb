@@ -3,8 +3,8 @@ require 'rails_helper'
 # #2154 (regra do Rodrigo, 24/10): nenhum agente nosso passa a conversa. Com a flag `agente_so_informa`, o sinal
 # `should_handoff` da instrução vira só o registro do turno: o agente responde o que a instrução manda ("vou chamar alguém
 # da equipe") e continua atendendo. Depois que a fala sai (no último pedaço, na entrega em pedaços), a IA de Atribuição
-# do CRM é chamada a avaliar (ContratoDoFunil.avaliar_depois_da_fala). O evento da cotação (ResponderAoEvento) segue
-# passando a conversa, como antes.
+# do CRM é chamada a avaliar (ContratoDoFunil.avaliar_depois_da_fala). Desde o #3221 (regra do Rodrigo, 25/11), o turno
+# do evento da cotação (ResponderAoEvento) segue a mesma regra.
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -219,21 +219,55 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
-  # O evento da cotação da Lia fica fora do #2154: com a flag, o sinal continua passando a conversa.
+  # #3221 (regra do Rodrigo, 25/11): a Lia, e qualquer agente no turno do evento da cotação, segue o #2154. Com a flag,
+  # avisa, registra o aviso com a mensagem do evento e a Atribuição avalia; sem a flag, passa como antes.
   describe Autonomia::Agents::Operate::ResponderAoEvento do
     let(:evento) do
       instance_double(Autonomia::Agents::Tools::Evento, tipo: 'falhou', run: nil, nota_do_sistema: 'A consulta falhou.',
-                                                        publicado?: false, marca: 'evento-2154')
+                                                        publicado?: false, marca: 'evento-3221')
     end
 
     around { |example| with_modified_env(AI_HUMANIZE_DELIVERY: 'false') { example.run } }
 
-    it 'com a flag ligada, o sinal no evento ainda passa a conversa, como antes', :aggregate_failures do
+    def turno_do_evento = described_class.new(conversation: conversation, agent_inbox: agent_inbox, evento: evento)
+
+    it 'com a flag ligada, o sinal no evento só avisa: segue com o agente e a Atribuição avalia depois da fala', :aggregate_failures do
       ia_responde
 
-      result = described_class.new(conversation: conversation, agent_inbox: agent_inbox, evento: evento).perform
+      result = turno_do_evento.perform
 
       expect(result.status).to eq(:replied)
+      expect(result.message.content_attributes).to include(Autonomia::Agents::Tools::Evento::CHAVE => 'evento-3221')
+      segue_com_o_agente!
+      expect(Autonomia::Agents::NotaDoEncaminhamento).not_to have_received(:postar)
+      expect(contrato).to have_received(:avaliar_depois_da_fala).with(conversation).once
+      aviso = Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.sole
+      expect(aviso).to have_attributes(conversation_id: conversation.id, message_id: result.message.id, handoff_reason: 'human_requested')
+    end
+
+    it 'com a flag ligada e sem o sinal, não registra nem chama a Atribuição' do
+      ia_responde('Sua cotação chegou.', should: false)
+
+      expect(turno_do_evento.perform.status).to eq(:replied)
+      expect(contrato).not_to have_received(:avaliar_depois_da_fala)
+      expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
+    end
+
+    it 'a mensagem do evento já estava lá (retry do job): nada de novo, nem aviso nem avaliação' do
+      allow(evento).to receive(:publicado?).and_return(true)
+      ia_responde
+
+      expect(turno_do_evento.perform.status).to eq(:replied)
+      expect(contrato).not_to have_received(:avaliar_depois_da_fala)
+      expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
+      segue_com_o_agente!
+    end
+
+    it 'sem a flag, o sinal no evento passa a conversa, como antes', :aggregate_failures do
+      account.disable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
+      ia_responde
+
+      expect(turno_do_evento.perform.status).to eq(:replied)
       expect(conversation.reload.additional_attributes.to_h).to have_key(Conversation::BOT_HANDOFF_WAITING_SINCE_KEY)
       expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(1)
       expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
