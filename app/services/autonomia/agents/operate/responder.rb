@@ -250,10 +250,18 @@ module Autonomia
         #   2) ENTREGA HUMANIZADA (aditiva, kill-switch): quebra em pedaços com "digitando" + pausa.
         #   3) OFF (ENV/por-agente) -> caminho CLÁSSICO de 1 mensagem (ZERO mudança de comportamento).
         def deliver(result)
-          return deliver_voice(result) if voice_reply_applies?
+          return deliver_voice(result) if voice_reply_applies? && !resposta_com_link?(result)
           return deliver_humanized(result) if ::Autonomia::Agents::Config.humanize_delivery_enabled?(@agent)
 
           classic_deliver(result)
+        end
+
+        # Link lido em voz não serve ao cliente (não dá para tocar nem copiar do áudio). Vale para TODA resposta em voz,
+        # com ou sem as opções de paridade: a resposta com link sai em texto, o caminho de fuga de sempre. A interação de
+        # link (`result.interacao`) não conta: ela já sai numa mensagem própria depois do áudio. Só método de string.
+        def resposta_com_link?(result)
+          texto = result.reply.to_s.downcase
+          texto.include?('http://') || texto.include?('https://')
         end
 
         # Caminho CLÁSSICO: 1 mensagem única (comportamento original, intocado). Usado quando a
