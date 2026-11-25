@@ -41,8 +41,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   ].freeze
 
   class << self
+    include SeguroViagem::PortaDoContratado
+
     # ESCREVE: cria a compra na seguradora e grava a proposta na cotação.
     def escreve? = true
+
+    # Login que só cota não gera proposta: o acesso conferido diz o que ele pode.
+    def available_for?(agent)
+      super && !agent.acesso_da_seguradora.so_cotacao?
+    end
 
     def slug
       'gerar_proposta_seguro_viagem'

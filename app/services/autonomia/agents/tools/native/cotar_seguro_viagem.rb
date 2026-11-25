@@ -14,6 +14,8 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   Universal = Autonomia::Seguradoras::Universal
 
   class << self
+    include SeguroViagem::PortaDoContratado
+
     # ESCREVE: abre cotação na seguradora, grava a cotação e manda o PDF ao cliente.
     def escreve? = true
 

@@ -8,6 +8,8 @@ class Autonomia::Agents::Tools::Native::DetalhesDaCotacao < Autonomia::Agents::T
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
 
   class << self
+    include SeguroViagem::PortaDoContratado
+
     # Só lê.
     def escreve? = false
 
