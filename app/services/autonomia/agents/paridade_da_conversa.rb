@@ -9,6 +9,12 @@
 #   turno novo falaria por cima do que ainda está saindo. Por isso `entrega_inteira?` exige as duas efetivas.
 # - `conversa_ritmo_do_canal` (P5): pausas e "digitando" por canal.
 #
+# E-MAIL FICA FORA (#3218): nenhuma das quatro vale na caixa de e-mail, com a chave gravada ou não. Cada e-mail é uma
+# carta completa, com o próprio histórico citado: não há rajada de bolhas para juntar, fala para esperar nem "digitando".
+# A regra mora aqui, num lugar só: todo predicado recebe a caixa (`inbox`) e devolve false quando ela é de e-mail. A caixa
+# é argumento obrigatório de propósito, para quem chama não esquecer; `nil` só onde não há conversa (o teto do turno, que
+# cobre o pior caso de qualquer caixa).
+#
 # Valor explícito manda, em qualquer agente (inclusive na Lia), lido com ActiveModel::Type::Boolean: `false`, 'false' e
 # '0' desligam; `true` e 'true' ligam; valor que não converte (ex.: '') desliga. Só a chave ausente ou nula segue o padrão
 # do tipo. Agente de verdade com `config` nil ou que não é Hash também segue o padrão do tipo. O que não é
@@ -29,16 +35,17 @@ module Autonomia::Agents::ParidadeDaConversa
 
   module_function
 
-  def espera_a_fala?(agent) = ligada?(agent, ESPERA_A_FALA)
+  def espera_a_fala?(agent, inbox) = ligada?(agent, inbox, ESPERA_A_FALA)
 
-  def em_fila?(agent) = ligada?(agent, EM_FILA)
+  def em_fila?(agent, inbox) = ligada?(agent, inbox, EM_FILA)
 
-  def entrega_inteira?(agent) = ligada?(agent, ENTREGA_INTEIRA) && em_fila?(agent)
+  def entrega_inteira?(agent, inbox) = ligada?(agent, inbox, ENTREGA_INTEIRA) && em_fila?(agent, inbox)
 
-  def ritmo_do_canal?(agent) = ligada?(agent, RITMO_DO_CANAL)
+  def ritmo_do_canal?(agent, inbox) = ligada?(agent, inbox, RITMO_DO_CANAL)
 
-  def ligada?(agent, chave)
+  def ligada?(agent, inbox, chave)
     return false unless agent.is_a?(::Autonomia::Agents::Agent)
+    return false if inbox&.email?
 
     valor = agent.config.is_a?(Hash) ? agent.config[chave] : nil
     return padrao(agent) if valor.nil?

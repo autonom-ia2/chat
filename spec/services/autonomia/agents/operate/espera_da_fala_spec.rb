@@ -25,62 +25,92 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
   describe '.da_rajada' do
     it 'opção desligada: o debounce de sempre' do
       desligar_paridade!(agent, 'conversa_espera_a_fala')
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(6.seconds)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(6.seconds)
     end
 
     it 'sem a chave (padrão ligado): espera a fala anterior acabar' do
       allow(fala).to receive(:fim_previsto).with(1).and_return(25.seconds.from_now)
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(25.seconds)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(25.seconds)
     end
 
     it 'a Lia sem a chave: o debounce de sempre, como antes' do
       lia = Autonomia::Agents::Agent.new(account: conta, agent_type: 'insurance_quote', config: {})
       allow(fala).to receive(:fim_previsto).and_return(25.seconds.from_now)
-      expect(espera.da_rajada(agent: lia, conversation_id: 1)).to eq(6.seconds)
+      expect(espera.da_rajada(agent: lia, conversation_id: 1, inbox: nil)).to eq(6.seconds)
     end
 
     it 'ligada e sem fala anterior: 1 s' do
       liga!('conversa_espera_a_fala')
       allow(fala).to receive(:fim_previsto).with(1).and_return(nil)
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(1.second)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(1.second)
     end
 
     it 'ligada: espera a fala anterior acabar' do
       liga!('conversa_espera_a_fala')
       allow(fala).to receive(:fim_previsto).with(1).and_return(25.seconds.from_now)
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(25.seconds)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(25.seconds)
     end
 
     it 'ligada: fim já passado vira o mínimo de 1 s' do
       liga!('conversa_espera_a_fala')
       allow(fala).to receive(:fim_previsto).with(1).and_return(10.seconds.ago)
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(1.second)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(1.second)
     end
 
     it 'ligada: teto de 180 s' do
       liga!('conversa_espera_a_fala')
       allow(fala).to receive(:fim_previsto).and_return(500.seconds.from_now)
-      expect(espera.da_rajada(agent: agent, conversation_id: 1)).to eq(180.seconds)
+      expect(espera.da_rajada(agent: agent, conversation_id: 1, inbox: nil)).to eq(180.seconds)
+    end
+  end
+
+  # #3218: e-mail fica fora da paridade. Pega: a conversa de e-mail esperar até 180 s pelo "fim da fala" ou entrar na fila.
+  describe 'caixa de e-mail' do
+    let(:caixa_de_email) { create(:channel_email, account: conta).inbox }
+    let(:conversa_de_email) do
+      create(:conversation, account: conta, inbox: caixa_de_email, additional_attributes: { 'autonomia_debounce' => marca })
+    end
+
+    after { fala.soltar(conversa_de_email.id, 8) }
+
+    it 'a espera é o debounce de sempre, mesmo com fim previsto gravado', :aggregate_failures do
+      fala.prever_fim!(conversa_de_email.id, 8, 'x' * 100)
+
+      espera_do_email = espera.da_rajada(agent: agent, conversation_id: conversa_de_email.id, inbox: caixa_de_email)
+
+      expect(espera_do_email).to eq(Autonomia::Agents::Config.debounce_seconds_for(agent))
+    end
+
+    it 'outro turno falando não põe o turno na fila' do
+      fala.ocupar(conversa_de_email.id, 8)
+
+      expect(espera.na_fila?(agent: agent, conversation: conversa_de_email, message_id: 9)).to be(false)
+    end
+
+    it 'a janela do settle com a fila é a de sempre, sem o teto da fila' do
+      janela = espera.janela_do_settle(agent: agent, marca: marca, inbox: caixa_de_email, com_a_fila: true)
+
+      expect(janela).to eq(1.second)
     end
   end
 
   describe '.janela_do_settle' do
     it 'a espera gravada na marca' do
-      expect(espera.janela_do_settle(agent: agent, marca: marca.merge('espera_ms' => 25_000))).to eq(25.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: marca.merge('espera_ms' => 25_000), inbox: nil)).to eq(25.seconds)
     end
 
     it 'marca sem espera_ms, ou sem marca: o debounce do agente', :aggregate_failures do
-      expect(espera.janela_do_settle(agent: agent, marca: marca.except('espera_ms'))).to eq(6.seconds)
-      expect(espera.janela_do_settle(agent: agent, marca: nil)).to eq(6.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: marca.except('espera_ms'), inbox: nil)).to eq(6.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: nil, inbox: nil)).to eq(6.seconds)
     end
 
     it 'com_a_fila soma o teto da fila só quando o agente tem a fila ligada', :aggregate_failures do
       desligar_paridade!(agent, 'conversa_em_fila')
-      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true)).to eq(1.second)
+      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true, inbox: nil)).to eq(1.second)
 
       liga!('conversa_em_fila')
-      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true)).to eq(151.seconds)
-      expect(espera.janela_do_settle(agent: agent, marca: marca)).to eq(1.second)
+      expect(espera.janela_do_settle(agent: agent, marca: marca, com_a_fila: true, inbox: nil)).to eq(151.seconds)
+      expect(espera.janela_do_settle(agent: agent, marca: marca, inbox: nil)).to eq(1.second)
     end
   end
 

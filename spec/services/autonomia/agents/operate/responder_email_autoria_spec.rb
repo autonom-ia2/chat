@@ -41,13 +41,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   # Pega: a P1 (padrão ligado, #3211) juntar os e-mails da rajada na caixa de e-mail e o terceiro em cópia entrar cru na pergunta.
-  it 'na caixa de e-mail, mesmo com a P1 ligada, a pergunta é só o último e-mail', :aggregate_failures do
-    expect(Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent)).to be(true)
+  it 'na caixa de e-mail (a P1 não vale nela), a pergunta é só o último e-mail', :aggregate_failures do
+    expect(Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, nil)).to be(true)
+    expect(Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, inbox)).to be(false)
     cenario!
 
     expect(responder.send(:query)).to eq('Ok, pode seguir.')
     expect(responder.send(:current_turn_incoming).size).to eq(2)
     expect(responder.send(:historico_da_busca, responder.send(:history))).to be_empty
+  end
+
+  # Pega: o fim previsto da fala gravado para e-mail (a rajada seguinte esperaria por nada).
+  it 'na caixa de e-mail, o Responder não grava o fim previsto da fala' do
+    cenario!
+    resposta = Autonomia::Agents::AnswerResult.new(reply: 'Claro.', confidence: 0.9, handoff: { should: false, reason: nil },
+                                                   used_knowledge: [], answered_from_knowledge: false, raw_reply: 'Claro.')
+    outcome = Struct.new(:message).new(build_stubbed(:message))
+    allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:prever_fim!)
+
+    responder.send(:prever_o_fim_da_fala, resposta, outcome)
+
+    expect(Autonomia::Agents::Operate::FalaEmCurso).not_to have_received(:prever_fim!)
   end
 
   # Pega: a Fase 2 (moldura da equipe) perder o aviso ou neutralizá-lo como se fosse texto do cliente.

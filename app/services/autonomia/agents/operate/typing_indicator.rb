@@ -45,7 +45,7 @@ module Autonomia
             # `try`: o vínculo pode não ter o agente. Sem agente ou com a opção desligada, nada além do evento do painel.
             # #3211: com o prazo curto do robô externo (DeliverJob::CHANNEL_TIMEOUT_SECONDS), não os 20 s do Waha::Client:
             # um WAHA lento não segura cada pedaço da cadeia.
-            if ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(@agent_inbox.try(:agent))
+            if ::Autonomia::Agents::ParidadeDaConversa.ritmo_do_canal?(@agent_inbox.try(:agent), @conversation.inbox)
               channel_typing(typing_on, timeout: ::Conversations::ChannelTyping::DeliverJob::CHANNEL_TIMEOUT_SECONDS)
             end
           when Channel::Whatsapp, Channel::Instagram

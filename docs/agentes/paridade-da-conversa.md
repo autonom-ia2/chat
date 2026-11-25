@@ -42,6 +42,10 @@ Para todos os agentes de uma vez, use a chave da instalação (abaixo), não um 
 
 Sem a chave, as quatro ficam desligadas. Valor gravado vale nela também (`true` liga); ninguém grava hoje, e não há trava.
 
+## E-mail fica de fora (#3218)
+
+Na caixa de e-mail as quatro opções não valem, nem com a chave gravada: cada e-mail é uma carta completa, com o próprio histórico citado, então não há rajada de bolhas para juntar, fala para esperar nem "digitando". A regra mora em `Autonomia::Agents::ParidadeDaConversa` (todo predicado recebe a caixa), e a pergunta e o turno do e-mail são os de antes do #3211.
+
 ## Deploy
 
 O padrão ligado depende do #3213 já em produção: é ele que solta a marca da fala (`autonomia:fala_em_curso`) em todo

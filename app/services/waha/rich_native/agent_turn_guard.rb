@@ -131,7 +131,9 @@ module Waha::RichNative::AgentTurnGuard
   def c2y_turn_incoming
     recent_messages
     messages = Array(@c2y_raw_messages)
-    return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(messages) if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+    if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
+      return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(messages)
+    end
 
     last_reply = messages.rindex { |message| !message.incoming? }
     window = last_reply ? messages[(last_reply + 1)..] : messages

@@ -37,7 +37,9 @@ module Autonomia
         # e da entrega da consulta em segundo plano (Tools::ConsultaNoTurno::TurnoSuperado). Ler com a conversa fresca.
         def self.turno_superado?(conversation, message_id, agent)
           return false if message_id.blank?
-          return false unless ::Autonomia::Agents::Fase2.ligada?(conversation.account) || ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent)
+
+          fila = ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox)
+          return false unless ::Autonomia::Agents::Fase2.ligada?(conversation.account) || fila
 
           stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
           pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
@@ -84,7 +86,8 @@ module Autonomia
         # Janela CONFIGURÁVEL por agente (config['debounce_seconds']), default OPERATE_DEBOUNCE_SECONDS. #3211 (P1, opção
         # `conversa_espera_a_fala`): a janela é o fim previsto da fala anterior (EsperaDaFala.da_rajada); desligada, a de sempre.
         def trigger(conversation, agent_inbox, message_id)
-          espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: conversation.id)
+          espera = ::Autonomia::Agents::Operate::EsperaDaFala.da_rajada(agent: agent_inbox.agent, conversation_id: conversation.id,
+                                                                        inbox: conversation.inbox)
           stamp_debounce(conversation, message_id, espera)
           abrir_turno(conversation, agent_inbox, message_id)
           self.class.set(wait: espera).perform_later(conversation.id, message_id, 'settle')
@@ -139,7 +142,7 @@ module Autonomia
 
         # #3211 (P2): enquanto este turno fala (a IA e a entrega), o turno novo da conversa espera na fila.
         def ocupar_a_fala(conversation, agent_inbox, message_id)
-          return unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent_inbox.agent)
+          return unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent_inbox.agent, conversation.inbox)
 
           ::Autonomia::Agents::Operate::FalaEmCurso.ocupar(conversation.id, message_id, agent_inbox.agent)
         end

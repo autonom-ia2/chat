@@ -13,20 +13,20 @@
 module Autonomia::Agents::Operate::FalaDaCadeia
   module_function
 
-  def comecada?(agent, index)
-    index.positive? && ::Autonomia::Agents::ParidadeDaConversa.entrega_inteira?(agent)
+  def comecada?(agent, inbox, index)
+    index.positive? && ::Autonomia::Agents::ParidadeDaConversa.entrega_inteira?(agent, inbox)
   end
 
-  def renovar(conversation_id, agent, message_id)
-    return unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent)
+  def renovar(conversation, agent, message_id)
+    return unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox)
 
-    ::Autonomia::Agents::Operate::FalaEmCurso.renovar(conversation_id, message_id)
+    ::Autonomia::Agents::Operate::FalaEmCurso.renovar(conversation.id, message_id)
   end
 
-  def parou(conversation_id, agent, message_id, index)
-    return unless index.zero? && ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent)
+  def parou(conversation, agent, message_id, index)
+    return unless index.zero? && ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, conversation.inbox)
     return if yield
 
-    ::Autonomia::Agents::Operate::FalaEmCurso.esquecer_o_fim(conversation_id, message_id)
+    ::Autonomia::Agents::Operate::FalaEmCurso.esquecer_o_fim(conversation.id, message_id)
   end
 end

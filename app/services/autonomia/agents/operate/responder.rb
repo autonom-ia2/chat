@@ -665,7 +665,7 @@ module Autonomia
         # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para
         # antes do 1º pedaço apaga o fim dele (ChunkedDeliveryJob).
         def prever_o_fim_da_fala(result, outcome)
-          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent)
+          return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
           return unless @cadeia_agendada || outcome.message.present?
 
           ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, result.reply)
@@ -806,23 +806,18 @@ module Autonomia
 
         # #3211 (P1): com `conversa_espera_a_fala`, o texto é a rajada inteira do cliente desde a última fala do agente;
         # com ela desligada (a Lia, ou `false` gravado no agente), a última mensagem, como sempre.
-        # Caixa de e-mail fica de fora (`rajada_do_cliente?`): cada e-mail é uma carta completa, com o próprio histórico
+        # Caixa de e-mail fica de fora (ParidadeDaConversa): cada e-mail é uma carta completa, com o próprio histórico
         # citado, e juntar vários mistura remetentes (um terceiro em cópia entraria cru, sem o aviso da autoria). Lá a
         # pergunta continua sendo só o último e-mail, como antes do #3211.
         # Rajada vazia (a última saída veio depois da última mensagem do cliente: o turno da passagem depois de uma pessoa
         # da equipe escrever, #1630) também cai na última mensagem do cliente, como antes do #3211.
         def texto_base_da_pergunta(message)
-          if rajada_do_cliente? && current_turn_incoming.any?
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox) && current_turn_incoming.any?
             rajada = current_turn_incoming.select { |m| conta_na_pergunta?(m) }
             return ::Autonomia::Agents::Operate::RajadaDoCliente.texto(rajada) { |m| email_autoria.texto(m) }
           end
 
           message ? email_autoria.texto(message) : ''
-        end
-
-        # #3211 (P1) vale fora do e-mail; na caixa de e-mail o turno é o de antes (ver `texto_base_da_pergunta`).
-        def rajada_do_cliente?
-          ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent) && !@conversation.inbox.email?
         end
 
         # Própria do turno, não da moldura da equipe (HistoricoDaEquipe): o e-mail vale com ou sem a Fase 2.
@@ -903,7 +898,9 @@ module Autonomia
         # (cobre o caso "cliente manda a imagem e o texto em mensagens separadas" dentro do debounce).
         def current_turn_incoming
           # #3211 (P1): com a opção, a rajada conta a fala, não o pedaço (pedaços intercalados não a fecham).
-          return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(recent_messages) if rajada_do_cliente?
+          if ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
+            return ::Autonomia::Agents::Operate::RajadaDoCliente.mensagens(recent_messages)
+          end
 
           msgs = recent_messages
           last_outgoing_index = msgs.rindex { |message| !message.incoming? }
