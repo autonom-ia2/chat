@@ -895,6 +895,19 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
       'cotar_seguro_viagem.rb#sem_planos#2' => {
         espera: { motivo: 'sem_plano', slug: 'cotar_seguro_viagem' },
         dispara: -> { cotar_viagem(viagem, cotacao: { 'idCotacao' => 'c-0', 'produtos' => [] }) }
+      },
+      # #3211: os detalhes da última cotação guardada.
+      'detalhes_da_cotacao.rb#call#1' => {
+        espera: { motivo: 'cotacao_sem_conversa', slug: 'detalhes_da_cotacao', conversa: '-' },
+        dispara: -> { detalhar_cotacao(['P1'], entrega: nil) }
+      },
+      'detalhes_da_cotacao.rb#call#2' => {
+        espera: { motivo: 'sem_cotacao', slug: 'detalhes_da_cotacao' },
+        dispara: -> { detalhar_cotacao(['P1']) }
+      },
+      'detalhes_da_cotacao.rb#call#3' => {
+        espera: { motivo: 'plano_inexistente', slug: 'detalhes_da_cotacao', faltando: 'codigos_dos_planos' },
+        dispara: -> { detalhar_cotacao(['P9'], com_cotacao: true) }
       }
     }
   end
@@ -909,6 +922,17 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     stub_request(:post, "#{url}/v1/Cotacao").to_return(status: 200, body: corpo)
     bound_para(Autonomia::Agents::Tools::Native::CotarSeguroViagem)
       .execute({ 'name' => 'cotar_seguro_viagem', 'arguments' => argumentos.to_json }, delivery: entrega)
+  end
+
+  # #3211: os detalhes pelo `Bound`; `com_cotacao` guarda antes uma cotação mínima na conversa.
+  def detalhar_cotacao(codigos, entrega: delivery, com_cotacao: false)
+    if com_cotacao
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversation, agent: agent,
+                                                 id_cotacao: 'c-1', pedido: { 'idades' => [45] },
+                                                 planos: [{ 'codigo' => 'P1', 'nome' => 'Plano', 'faixas' => [] }])
+    end
+    bound_para(Autonomia::Agents::Tools::Native::DetalhesDaCotacao)
+      .execute({ 'name' => 'detalhes_da_cotacao', 'arguments' => { codigos_dos_planos: codigos }.to_json }, delivery: entrega)
   end
 
   def viagem
