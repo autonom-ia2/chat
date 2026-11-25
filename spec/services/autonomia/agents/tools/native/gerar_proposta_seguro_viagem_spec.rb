@@ -99,6 +99,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.once
   end
 
+  it 'dado corrigido é outra proposta: o segundo POST devolve o link novo' do
+    segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read).merge('codigoCarrinho' => 987_655)
+    stub_request(:post, "#{base}/v1/Compras")
+      .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
+    ferramenta(params).call
+    corrigida = ferramenta(params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))).call
+    expect(JSON.parse(corrigida)['link_de_pagamento']).to eq('https://pagamento.universal-assistance.com/?IdCarrinho=987655')
+    expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
+  end
+
+  it 'repetição idêntica devolve o link guardado sem buscar o CEP (fonte de CEP fora)' do
+    primeira = ferramenta(params).call
+    expect(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).not_to receive(:buscar)
+    expect(ferramenta(params).call).to eq(primeira)
+    expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.once
+  end
+
+  it 'a chave guardada não é o hash simples dos CPFs nem leva o segredo cru' do
+    ferramenta(params).call
+    chave = cotacao.reload.proposta['chave']
+    expect(chave).not_to eq(Digest::SHA256.hexdigest([cotacao.id, 'P1', ['52998224725']].join('|')))
+    expect(chave).not_to eq(OpenSSL::HMAC.hexdigest('SHA256', Rails.application.secret_key_base,
+                                                    [cotacao.id, 'P1', ['52998224725']].join('|')))
+    expect(chave.length).to eq(64)
+  end
+
   it 'outro plano é outra proposta' do
     ferramenta(params).call
     ferramenta(params.merge('codigo_do_plano' => 'P2')).call
@@ -110,6 +136,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar)
       .with('plano_inexistente', hash_including(faltando: ['codigo_do_plano']))
     ferramenta(params.merge('codigo_do_plano' => 'P9')).call
+    expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+  end
+
+  it 'plano sem preço guardado: recusa como inexistente, sem chamar a Universal' do
+    sem_preco = cotacao.planos.map { |item| item['codigo'] == 'P1' ? item.merge('preco_total' => nil) : item }
+    cotacao.update!(planos: sem_preco)
+    expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar)
+      .with('plano_inexistente', hash_including(faltando: ['codigo_do_plano']))
+    ferramenta(params).call
     expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
   end
 
@@ -167,6 +202,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
   end
 
+  [ActiveRecord::LockWaitTimeout, ActiveRecord::QueryCanceled].each do |estouro|
+    it "espera do lock estourada (#{estouro.name.demodulize}): recusa nomeada, sem POST" do
+      allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_return(cotacao)
+      allow(cotacao).to receive(:lock!).and_raise(estouro)
+      expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('proposta_em_andamento', anything)
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_EM_ANDAMENTO)
+      expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+      expect(cotacao.reload.proposta).to be_nil
+    end
+  end
+
+  it 'tempo do banco estourado depois de travar (já na compra) não vira proposta_em_andamento' do
+    allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_return(cotacao)
+    allow(cotacao).to receive(:update!).and_raise(ActiveRecord::QueryCanceled)
+    expect(Autonomia::Agents::Tools::Recusa).not_to receive(:registrar).with('proposta_em_andamento', anything)
+    expect { ferramenta(params).call }.to raise_error(ActiveRecord::QueryCanceled)
+  end
+
   it 'CEP único sem logradouro e bairro: a compra sai com eles nulos (R17)' do
     allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar)
       .and_return('cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP')
@@ -198,11 +251,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(cotacao.reload.proposta.to_json).not_to include('52998224725', 'Fulano', '@')
   end
 
-  it 'o log não leva dado pessoal' do
+  it 'o log não leva dado pessoal (debug, info, warn e error; texto e bloco)' do
     linhas = []
-    allow(Rails.logger).to receive(:info) { |texto| linhas << texto.to_s }
-    allow(Rails.logger).to receive(:warn) { |texto| linhas << texto.to_s }
+    %i[debug info warn error].each do |nivel|
+      allow(Rails.logger).to receive(nivel).and_wrap_original do |_original, *args, &bloco|
+        linhas.concat(args.map(&:to_s))
+        linhas << bloco&.call.to_s
+        true
+      end
+    end
     ferramenta(params).call
-    expect(linhas.join("\n")).not_to include('52998224725', 'Fulano', 'fulano@exemplo.test', '987654321', 'Beltrana')
+    pessoais = ['52998224725', 'Fulano', 'fulano@exemplo.test', '987654321', 'Beltrana', '11912345678']
+    expect(linhas.join("\n")).not_to include(*pessoais)
   end
 end

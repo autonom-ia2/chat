@@ -945,9 +945,19 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'recotar', slug: 'gerar_proposta_seguro_viagem', faltando: 'idades' },
         dispara: -> { propor_viagem(proposta_de_viagem(data_nascimento: '1900-01-01')) }
       },
-      'gerar_proposta_seguro_viagem.rb#conferir_e_propor#4' => {
+      'gerar_proposta_seguro_viagem.rb#buscar_endereco_e_propor#1' => {
         espera: { motivo: 'cep_nao_encontrado', slug: 'gerar_proposta_seguro_viagem', faltando: 'titular.cep' },
         dispara: -> { propor_viagem(proposta_de_viagem) }
+      },
+      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST.
+      'gerar_proposta_seguro_viagem.rb#propor#1' => {
+        espera: { motivo: 'proposta_em_andamento', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_wrap_original do |original, *args|
+            original.call(*args).tap { |guardada| allow(guardada).to receive(:lock!).and_raise(ActiveRecord::LockWaitTimeout) }
+          end
+          propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
+        }
       }
     }
   end
@@ -976,13 +986,13 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
   end
 
   # #3211: a proposta pelo `Bound`, com o acesso conferido e, quando `cotacao` é um instante, a cotação de um viajante
-  # de 45 anos criada nele. O endereço pelo CEP não sai (`buscar` nil): só a última recusa chega até ele.
-  def propor_viagem(argumentos, entrega: delivery, so_cotacao: false, cotacao: Time.current)
+  # de 45 anos criada nele. Sem `endereco`, o endereço pelo CEP não sai (`buscar` nil).
+  def propor_viagem(argumentos, entrega: delivery, so_cotacao: false, cotacao: Time.current, endereco: nil)
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
                                                   senha: 's3nha-teste', estado: 'ok',
                                                   capacidades: { 'so_cotacao' => so_cotacao })
     guardar_cotacao_de_viagem(cotacao) if cotacao
-    allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar).and_return(nil)
+    allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar).and_return(endereco)
     bound_para(Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem)
       .execute({ 'name' => 'gerar_proposta_seguro_viagem', 'arguments' => argumentos.to_json }, delivery: entrega)
   end

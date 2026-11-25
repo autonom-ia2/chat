@@ -35,6 +35,12 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
     }
   end
 
+  # O preço guardado do plano (`'360.0'`) em BigDecimal; nil quando falta ou não é número. A ferramenta recusa o plano
+  # sem preço antes de montar a compra.
+  def preco(plano)
+    BigDecimal(plano['preco_total'].to_s, exception: false)
+  end
+
   # O link de pagamento do carrinho. Sem código: nil.
   def link(codigo_carrinho)
     codigo = codigo_carrinho.to_s.strip
@@ -49,7 +55,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
       'Destinos' => pedido['destinos'], 'TipoViagem' => TIPO_VIAGEM_UNICA,
       'TipoTarifa' => pedido.dig('universal', 'tipoTarifa'),
       'DataSaida' => pedido['data_saida'], 'DataRetorno' => pedido['data_retorno'],
-      'ValorCompra' => valor(plano['preco_total']), 'FormaPagamento' => FORMA_DE_PAGAMENTO_LINK,
+      'ValorCompra' => preco(plano).to_f, 'FormaPagamento' => FORMA_DE_PAGAMENTO_LINK,
       'NomeContatoBrasil' => contato['nome'], 'TelefoneContatoBrasil' => contato['telefone'],
       'CelularContatoBrasil' => contato['telefone']
     }
@@ -74,15 +80,10 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
   end
 
   def produtos(plano)
-    { 'CodigoProduto' => plano['id_produto'], 'ValorProduto' => valor(plano['preco_total']),
+    { 'CodigoProduto' => plano['id_produto'], 'ValorProduto' => preco(plano).to_f,
       'CodigoPeriodoMultiViagem' => SEM_MULTIVIAGEM, 'CodigoTarifaAcordo' => plano['id_produto_acordo'],
       'Cambio' => plano['cambio'] }
   end
 
-  # O preço guardado em texto decimal (`'360.0'`) vai como número.
-  def valor(texto)
-    BigDecimal(texto.to_s).to_f
-  end
-
-  private_class_method :basicos, :dados_do_titular, :pessoa, :produtos, :valor
+  private_class_method :basicos, :dados_do_titular, :pessoa, :produtos
 end

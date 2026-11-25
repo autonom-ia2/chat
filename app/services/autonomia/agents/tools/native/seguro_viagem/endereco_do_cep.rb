@@ -3,15 +3,17 @@
 # vez e lê o cache de novo.
 #
 # CEP de cidade com CEP único vem sem `logradouro` e sem `bairro` (R17): o hash devolvido só leva as chaves que existem,
-# e quem lê (a `Compra`) aceita a ausência. CEP que não é de 8 dígitos, não achado ou sem a pronta no agente: nil.
+# e quem lê (a `Compra`) aceita a ausência. Cidade e UF, não: a compra não vai sem elas, e o endereço sem cidade ou sem
+# UF conta como não achado. CEP que não é de 8 dígitos, não achado ou sem a pronta no agente: nil.
 module Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep
   Cep = Autonomia::FerramentasProntas::Fontes::Cep
   CHAVES = %w[logradouro bairro cidade uf cep].freeze
+  OBRIGATORIAS = %w[cidade uf].freeze
   DIGITOS_DO_CEP = 8
 
   module_function
 
-  # -> Hash com 'logradouro', 'bairro', 'cidade', 'uf', 'cep' (as que existem) ou nil.
+  # -> Hash com 'logradouro', 'bairro', 'cidade', 'uf', 'cep' (as que existem; cidade e UF sempre) ou nil.
   def buscar(agent:, cep:)
     params, falta = consulta.conferir({ 'cep' => so_digitos(cep) })
     return nil if falta
@@ -20,7 +22,8 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep
     guardado = cache.ler || executar_e_reler(agent, params, cache)
     return nil unless guardado.is_a?(Hash) && guardado['situacao'] == Autonomia::FerramentasProntas::Cache::ENCONTRADO
 
-    guardado['dados'].to_h.slice(*CHAVES).compact_blank.presence
+    endereco = guardado['dados'].to_h.slice(*CHAVES).compact_blank
+    endereco if OBRIGATORIAS.all? { |chave| endereco.key?(chave) }
   end
 
   def consulta

@@ -68,6 +68,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
     expect(titular.slice('Endereco', 'Bairro')).to eq('Endereco' => 'Avenida Exemplo', 'Bairro' => 'Centro')
   end
 
+  it 'preço do plano: BigDecimal do texto guardado; nil sem preço ou fora de número' do
+    expect(described_class.preco(plano)).to eq(BigDecimal('360.0'))
+    expect(described_class.preco(plano.merge('preco_total' => nil))).to be_nil
+    expect(described_class.preco(plano.merge('preco_total' => ''))).to be_nil
+    expect(described_class.preco(plano.merge('preco_total' => 'abc'))).to be_nil
+  end
+
   it 'link de pagamento pelo código do carrinho' do
     expect(described_class.link(987_654)).to eq('https://pagamento.universal-assistance.com/?IdCarrinho=987654')
     expect(described_class.link(nil)).to be_nil

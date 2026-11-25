@@ -126,7 +126,7 @@ Parâmetros:
 - `contato_de_emergencia`: `{ nome, telefone }`.
 
 Comportamento:
-- `escreve? = true`. Idempotente por `(cotação, plano, CPFs)`: repetir a chamada não gera segunda proposta.
+- `escreve? = true`. Idempotente pelo dado inteiro da proposta (cotação, plano, viajantes, contato e endereço do titular como vieram, contato de emergência; chave HMAC, sem dado pessoal guardado): repetir a chamada idêntica não gera segunda proposta, mesmo com a consulta de CEP fora; dado corrigido gera proposta nova.
 - Monta `DadosBasicos`, `DadosTitular`, `DadosIntegrantes`, `DadosProdutos`, `DadosPagamento` como o fluxo atual, corrigindo: datas reais da cotação, `TipoTarifa` igual ao da cotação, nascimento informado (não 1º de janeiro).
 - **Pagamento por link, nunca cartão no chat.** A coleção documenta faturado (`1`), cartão (`2`, exige número e código do cartão no pedido) e boleto (`3`). O fluxo de proposta mais novo usa `FormaPagamento: 8`, não documentado, e a resposta traz em `urlVoucher` um endereço de `pagamento.universal-assistance.com`; o fluxo o transforma em `https://pagamento.universal-assistance.com/?IdCarrinho=<codigoCarrinho>`. Usamos o `8` e montamos o link a partir do `codigoCarrinho` (com o parser de URL, sem regex). O primeiro teste real em produção confirma; se o `8` não servir, a decisão volta ao Rodrigo (boleto ou faturado).
 - Resposta de `/v1/Compras`: `{ codigoCarrinho, codigoCotacao, urlVoucher, valorBrutoBrl }`; erro `400` com `message` (ex.: "Valor enviado no cartão é incompatível com a tarifa do produto"). Guarda em `proposta` e devolve ao modelo o link de pagamento e o número do carrinho.
@@ -137,6 +137,8 @@ Comportamento:
 - `acesso_recusado`: marca o acesso como `recusado`, posta **nota privada** para a equipe (padrão `Insurance::NotaNaHora`) e o viajante ouve uma frase neutra de que alguém da equipe vai continuar; a conversa passa para a equipe pela Atribuição.
 - `pedido_invalido`: recusa com o campo, para o modelo corrigir com o viajante.
 - `indisponivel`: frase neutra ao viajante e nota privada; sem repetir em laço.
+- `proposta_em_andamento`: outra chamada está gerando a proposta da mesma cotação e a espera pelo lock passou do tempo do banco; nada vai à seguradora, e o modelo espera e confere de novo.
+- **Nota de operação — carrinho duplicado não pago.** Se a leitura da resposta de `POST /v1/Compras` estourar o tempo depois de a Universal já ter criado o carrinho, ou se a resposta vier sem `codigoCarrinho`, nada fica guardado na cotação; uma nova chamada pode criar um segundo carrinho na Universal. Esse carrinho a mais **não é cobrança dupla**: o pagamento só acontece pelo link, e o viajante recebe um link só. Ao conferir carrinhos na Universal, carrinho sem pagamento da mesma cotação é esse caso.
 
 ### 6.7 Base de conhecimento
 

@@ -49,6 +49,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep do
       .to eq('cep' => '01310-100', 'cidade' => 'São Paulo', 'uf' => 'SP')
   end
 
+  it 'sem cidade ou sem UF: nil, como CEP não achado (a compra nunca vai com Cidade/UF nulas)' do
+    guardar(completo.merge('cidade' => nil))
+    expect(described_class.buscar(agent: agent, cep: '01310100')).to be_nil
+    guardar(completo.merge('uf' => ''))
+    expect(described_class.buscar(agent: agent, cep: '01310100')).to be_nil
+  end
+
   it 'CEP com 7 dígitos: nil, sem consultar' do
     expect(Autonomia::FerramentasProntas::Execucao).not_to receive(:new)
     expect(described_class.buscar(agent: agent, cep: '0131010')).to be_nil
