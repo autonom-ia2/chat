@@ -71,7 +71,7 @@ RSpec.describe 'Autonomia agente contratado: dados da corretora', type: :request
     it 'agente sem função não troca os dados' do
       patch contratado_url, params: tres_campos, headers: agente_sem_funcao.create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
       expect(agente.reload.name).to eq('Bia')
     end
   end

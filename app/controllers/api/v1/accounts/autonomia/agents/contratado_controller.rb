@@ -13,11 +13,4 @@ class Api::V1::Accounts::Autonomia::Agents::ContratadoController < Api::V1::Acco
     ::Autonomia::Agents::Contratados::DadosDaCorretora.new(agent: @agent, **dados_da_corretora).call
     render 'api/v1/accounts/autonomia/agents/show'
   end
-
-  private
-
-  def buscar_contratado
-    @agent = agents_scope.find(params[:agent_id])
-    raise ActiveRecord::RecordNotFound unless @agent.contratado?
-  end
 end

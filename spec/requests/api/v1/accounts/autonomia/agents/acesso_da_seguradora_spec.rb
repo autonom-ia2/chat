@@ -121,14 +121,14 @@ RSpec.describe 'Autonomia agente contratado: acesso à seguradora', type: :reque
     it 'agente sem função não grava o login' do
       post acesso_url, params: credenciais, headers: agente_sem_funcao.create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
       expect(Autonomia::Agents::AcessoDaSeguradora.count).to eq(0)
     end
 
     it 'função que gerencia os agentes também não grava: credencial não se delega por função' do
       post acesso_url, params: credenciais, headers: com_funcao(%w[autonomia_manage]).create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
       expect(a_request(:get, setup_url)).not_to have_been_made
       expect(Autonomia::Agents::AcessoDaSeguradora.count).to eq(0)
     end

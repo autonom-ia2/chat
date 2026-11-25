@@ -1,6 +1,6 @@
-# #3211 — o que o "Contratar" e a troca dos dados da corretora têm em comum na API: os três campos da tela (só eles
-# passam pelo strong params) e a recusa, 422 com o código do motivo e o campo que a tela destaca (R14; nil no
-# `indisponivel`, que nenhum campo resolve).
+# #3211 — o que a API do agente contratado tem em comum: os três campos da tela do "Contratar" e da troca dos dados da
+# corretora (só eles passam pelo strong params), a recusa, 422 com o código do motivo e o campo que a tela destaca
+# (R14; nil no `indisponivel`, que nenhum campo resolve), e a busca do agente das rotas `agents/:agent_id/...`.
 module Autonomia::DadosDoContratado
   extend ActiveSupport::Concern
 
@@ -12,6 +12,12 @@ module Autonomia::DadosDoContratado
   end
 
   private
+
+  # Agente da conta (fora os de sistema e os apagados) e contratado; o resto é 404.
+  def buscar_contratado
+    @agent = agents_scope.find(params[:agent_id])
+    raise ActiveRecord::RecordNotFound unless @agent.contratado?
+  end
 
   # Sempre as três chaves (a ausente vai como nil, e a conferência do `Contratar` a recusa pelo tamanho).
   def dados_da_corretora

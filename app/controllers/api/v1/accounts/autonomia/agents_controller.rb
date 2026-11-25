@@ -32,7 +32,9 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   SCAFFOLD
 
   def index
-    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes, vinculos_de_ajudante: :agent).order(created_at: :desc)
+    # #3211: o acesso à seguradora entra junto (o `contratado` do jbuilder o lê em cada agente contratado).
+    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes, :acesso_da_seguradora, vinculos_de_ajudante: :agent)
+                          .order(created_at: :desc)
   end
 
   def show; end

@@ -45,7 +45,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
     it 'agente sem função não lê o catálogo' do
       get catalogo_url, headers: agente_sem_funcao.create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 
@@ -65,14 +65,14 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
     it 'agente de quem só vê não contrata' do
       post contratar_url, params: tres_campos, headers: agente_sem_funcao.create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
       expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 
     it 'função só de ver os agentes não contrata' do
       post contratar_url, params: tres_campos, headers: com_funcao(%w[autonomia_view]).create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:unauthorized).or have_http_status(:forbidden)
+      expect(response).to have_http_status(:unauthorized)
       expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 

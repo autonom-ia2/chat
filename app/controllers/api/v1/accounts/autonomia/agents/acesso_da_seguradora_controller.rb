@@ -35,11 +35,6 @@ class Api::V1::Accounts::Autonomia::Agents::AcessoDaSeguradoraController < Api::
 
   private
 
-  def buscar_contratado
-    @agent = agents_scope.find(params[:agent_id])
-    raise ActiveRecord::RecordNotFound unless @agent.contratado?
-  end
-
   # A flag do modelo desligada (ou sem o cofre): nada é conferido nem gravado, e a seguradora não é chamada.
   def recusar_modelo_indisponivel!
     modelo = ::Autonomia::Agents::Contratados.marca(@agent)['modelo']
