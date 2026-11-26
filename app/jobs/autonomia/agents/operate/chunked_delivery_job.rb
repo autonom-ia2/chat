@@ -10,7 +10,8 @@ module Autonomia
       #   - TURN-TOKEN: se chegou uma mensagem NOVA do cliente durante a entrega (o stamp de debounce
       #     do ReplyJob mudou), ABORTA o resto — o agente não "fala sozinho"; o novo settle responde. Com a opção
       #     `conversa_entrega_inteira` (#3211, só com a fila), só o 1º pedaço confere o turno: depois que a fala começou,
-      #     mensagem nova não a corta (o turno novo espera na fila).
+      #     mensagem nova não a corta (o turno novo espera na fila). #3258 (flag `agente_le_no_meio_do_turno`): o texto termina,
+      #     mas o comparativo do Seguro Viagem dessa fala fica segurado até o fim do turno novo (`ComparativoSegurado`).
       #   - ELEGIBILIDADE FRESCA: se um humano assumiu (deixou de pending/atribuiu), para e limpa typing.
       #   - IDEMPOTÊNCIA por (reply_to_message_id, chunk_index) via token composto em content_attributes:
       #     retry do Sidekiq nunca duplica um pedaço.
@@ -23,6 +24,8 @@ module Autonomia
         FalaDaCadeia = ::Autonomia::Agents::Operate::FalaDaCadeia
         # O turno ainda é este? (`current_turn?`, `bot_in_command?`, `respondida_junto?`)
         include TurnoDoPedaco
+        # Os cartões do último pedaço: descarte, retry e o comparativo segurado (#3258).
+        include CartoesDoPedaco
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
           @turno_segue = @fala_segue = false
@@ -65,13 +68,13 @@ module Autonomia
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
           if motivo
             descartar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, motivo)
-            reenfileirar_cartoes(conversation, reply_to_message_id, index, chunk) if motivo == :ja_postado
+            reenfileirar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, index) if motivo == :ja_postado
             return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
           end
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
           primeiro_pedaco(agent_inbox.agent, conversation, meta, posted) if index.zero?
-          ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(posted) # #1479 F3: o último pedaço é a âncora dos cartões
+          enfileirar_os_cartoes(posted) # #1479 F3: o último pedaço é a âncora dos cartões
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
         end
@@ -143,26 +146,6 @@ module Autonomia
           fresh.present? && fresh.id != agent_inbox.id
         end
 
-        # #1479 F3: a cadeia parou antes de postar o pedaço que leva os cartões (o último): eles não saem. Registro com o
-        # motivo da parada, só quando o turno tinha cartão. O retry de um pedaço já postado (`ja_postado`) e o fim da cadeia
-        # (`sem_pedaco`) não descartam.
-        def descartar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, motivo)
-          return if %i[ja_postado sem_pedaco].include?(motivo)
-          return if Array(chunks.last.to_h.dig('marca', ::Autonomia::Agents::Operate::CartoesDoTurno::NA_ANCORA)).empty?
-
-          ::Autonomia::Agents::Operate::CartoesDoTurno.descartados(conversation_id: conversation.id, agent: agent_inbox.agent.id,
-                                                                   msg: reply_to_message_id, motivo: motivo)
-        end
-
-        # #1479 F3: o retry do pedaço que leva os cartões e já entrou (`ja_postado`). O job anterior pode ter morrido entre
-        # postar o pedaço e enfileirar os cartões: enfileira de novo para o pedaço gravado. O job dos cartões é idempotente
-        # (token e desistência gravada), então o cartão sai uma vez só.
-        def reenfileirar_cartoes(conversation, reply_to_message_id, index, chunk)
-          return if Array(chunk.to_h.dig('marca', ::Autonomia::Agents::Operate::CartoesDoTurno::NA_ANCORA)).empty?
-
-          ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(chunk_message(conversation, reply_to_message_id, index))
-        end
-
         # Agenda o próximo pedaço após sua pausa, mostrando "digitando" durante a espera.
         def schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
           nxt = index + 1
@@ -170,7 +153,9 @@ module Autonomia
           if next_chunk.blank?
             typing.off
             FalaDaCadeia.acabou(conversation, agent_inbox.agent, reply_to_message_id) # #3235: o último pedaço saiu
-            return pedir_avaliacao(conversation, meta)
+            pedir_avaliacao(conversation, meta)
+            # #3258: o turno acabou de falar; o comparativo que uma fala anterior segurou sai ou é descartado.
+            return ::Autonomia::Agents::Operate::ComparativoSegurado.no_fim_do_turno(conversation, agent_inbox.agent, reply_to_message_id)
           end
 
           typing.on
@@ -221,6 +206,7 @@ module Autonomia
         # lock (NÃO usar return no bloco — dispararia rollback e descartaria a mensagem postada).
         # -> [a Message postada, nil] ou [nil, motivo] quando não postou (:turno_mudou, :dono_mudou, :ja_postado).
         # #3225: o 1º pedaço grava as mensagens que o turno leu no meio (as do meta), na mesma transação.
+        # #3258: e o pedaço do comparativo, o comparativo segurado (`com_o_comparativo_segurado`), também na mesma transação.
         def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk, meta = {})
           posted = nil
           motivo = nil
@@ -230,7 +216,10 @@ module Autonomia
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
             motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index, meta)
             lidas = index.zero? ? Array(meta['lidas_no_turno']) : []
-            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk, lidas) if motivo.nil?
+            if motivo.nil?
+              pedaco = com_o_comparativo_segurado(conversation, agent_inbox, reply_to_message_id, chunk, meta)
+              posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, pedaco, lidas)
+            end
           end
           [posted, motivo]
         end

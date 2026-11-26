@@ -38,6 +38,8 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   VOUCHER = ::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
   # Os cartões do Seguro Viagem: sem formato, resolvidos pela cotação da conversa.
   DO_SEGURO_VIAGEM = [COMPARATIVO, VOUCHER].freeze
+  # #3258: o comparativo da fala em que o cliente escreveu no meio fica segurado até o fim do turno seguinte.
+  SEGURADOS = ::Autonomia::Agents::Operate::ComparativoSegurado
 
   class << self
     # Os cartões marcados no turno, com o token, para gravar na âncora. {} sem cartão: a âncora fica como sempre.
@@ -115,8 +117,10 @@ class Autonomia::Agents::Operate::CartoesDoTurno
       "#{turno}:cartao:#{cartao['tipo']}:#{cartao['chave']}"
     end
 
+    # Os cartões que a âncora tem a enviar. #3258: sem o comparativo segurado (ou descartado) pelo `ComparativoSegurado`.
     def da_ancora(message)
       Array(message&.content_attributes.to_h[NA_ANCORA]).select { |cartao| cartao.is_a?(Hash) && cartao['token'].present? }
+                                                        .reject { |cartao| SEGURADOS.fora?(message, cartao) }
     end
 
     # O job da âncora: a que gravou a interação depois do áudio vai pela `EnviarInteracaoJob` (o worker antigo, no
@@ -157,8 +161,12 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   end
 
   # A mensagem que o cartão espera sair: a do cartão anterior da lista (já postado, a ordem é a da lista) ou a âncora.
-  # nil quando a anterior não está mais na conversa: o cartão não sai.
+  # nil quando a anterior não está mais na conversa: o cartão não sai. #3258: o comparativo solto depois do turno seguinte
+  # espera a resposta dele (`ComparativoSegurado.depois_de`).
   def anterior_de(cartao)
+    resposta_seguinte = SEGURADOS.depois_de(@ancora, cartao)
+    return resposta_seguinte if resposta_seguinte
+
     indice = cartoes.index(cartao)
     return @ancora if indice.nil? || indice.zero?
 

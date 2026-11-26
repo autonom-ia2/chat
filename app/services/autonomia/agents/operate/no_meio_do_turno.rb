@@ -7,6 +7,7 @@
 #   O turno da passagem e o de evento não têm âncora: nunca leem. Sem leitor, o pedido ao modelo fica o de antes.
 # - `respondida_junto?`: o turno desta mensagem já foi respondido por outro turno, que a leu (silêncio `respondida_junto`).
 # - `marca_das_lidas` e `metadata_da_leitura`: o que a resposta grava e o que vai ao evento `replied`.
+# - `fim_do_turno_com_segurado` (#3258): o turno acabou; o comparativo que uma fala anterior segurou sai ou é descartado.
 module Autonomia::Agents::Operate::NoMeioDoTurno
   LeituraNoTurno = ::Autonomia::Agents::Operate::LeituraNoTurno
   # O mesmo texto da transcrição na pergunta do turno (`Responder#query`).
@@ -77,5 +78,13 @@ module Autonomia::Agents::Operate::NoMeioDoTurno
 
   def metadata_da_leitura
     @leitura ? @leitura.metadata : {}
+  end
+
+  # #3258: o turno da mensagem do cliente acabou com a resposta inteira (texto ou voz) ou com o sinal de silêncio: o
+  # comparativo que uma fala anterior deste agente segurou sai depois desta resposta ou é descartado
+  # (`ComparativoSegurado.no_fim_do_turno`, só com a flag). Na entrega em pedaços, quem chama é a cadeia, no último
+  # pedaço. O turno da passagem e o de evento não têm âncora: nada aqui.
+  def fim_do_turno_com_segurado
+    ::Autonomia::Agents::Operate::ComparativoSegurado.no_fim_do_turno(@conversation, @agent, @reply_to_message_id)
   end
 end
