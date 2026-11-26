@@ -99,12 +99,16 @@ module Autonomia::Agents::Operate::ComparativoSegurado
     ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(ancora)
   end
 
-  # Sob o lock da âncora (estado fresco). -> [a ação, o motivo do descarte] ou nil (nada a fazer: já saiu, já decidido).
+  # Sob o lock da conversa e, dentro dele, o da âncora (estado fresco). -> [a ação, o motivo do descarte] ou nil (nada
+  # a fazer: já saiu, já decidido). O lock da conversa é o mesmo do `CartoesDoTurno#postar!`, na mesma ordem: o PDF
+  # velho não sai enquanto a decisão o descarta.
   def decidir!(ancora, token, turno)
-    ancora.with_lock do
-      estado = estados(ancora).dig(token, 'estado')
-      cartoes = ::Autonomia::Agents::Operate::CartoesDoTurno.new(ancora)
-      decisao(ancora, token, turno, estado, cartoes) if pendente?(estado, cartoes, token)
+    ancora.conversation.with_lock do
+      ancora.with_lock do
+        estado = estados(ancora).dig(token, 'estado')
+        cartoes = ::Autonomia::Agents::Operate::CartoesDoTurno.new(ancora)
+        decisao(ancora, token, turno, estado, cartoes) if pendente?(estado, cartoes, token)
+      end
     end
   end
 
