@@ -33,6 +33,9 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout].freeze
   # Separação de domínio: a chave do HMAC é derivada só para isto, nunca o `secret_key_base` cru.
   DOMINIO_DA_CHAVE = 'seguro_viagem/proposta'.freeze
+  # A Universal cancela o link de pagamento 24 h depois da compra (e-mail "Pagamento pedido", 26/11). Uma hora de folga
+  # para não devolver um link prestes a vencer; passado isso, a mesma proposta gera carrinho e link novos.
+  VALIDADE_DO_LINK = 23.hours
 
   VIAJANTE = [
     { 'name' => 'nome_completo', 'type' => 'string', 'required' => true, 'description' => 'Nome completo.' },
@@ -197,7 +200,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   end
 
   def guardada?(cotacao, chave)
-    cotacao.proposta.to_h['chave'] == chave
+    proposta = cotacao.proposta.to_h
+    proposta['chave'] == chave && link_vigente?(proposta['gerada_em'])
+  end
+
+  def link_vigente?(gerada_em)
+    momento = Time.zone.parse(gerada_em.to_s)
+    momento.present? && momento > VALIDADE_DO_LINK.ago
+  rescue ArgumentError
+    false
   end
 
   # A mesma cotação, o mesmo plano e o mesmo dado inteiro (viajantes já normalizados por `Viajantes`, com o contato e

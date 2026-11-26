@@ -111,6 +111,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
   end
 
+  it 'repetição idêntica depois de vencer o link (24 h na Universal) gera carrinho e link novos' do
+    link_novo = 'https://pagamento.universal-assistance.com/?IdCarrinho=bm92by1saW5r'
+    segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read)
+                  .merge('codigoCarrinho' => 987_655, 'urlVoucher' => link_novo)
+    stub_request(:post, "#{base}/v1/Compras")
+      .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
+    ferramenta(params).call
+    travel 23.hours + 1.minute do
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+    end
+    expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
+  end
+
   it 'repetição idêntica devolve o link guardado sem buscar o CEP (fonte de CEP fora)' do
     primeira = ferramenta(params).call
     expect(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).not_to receive(:buscar)
