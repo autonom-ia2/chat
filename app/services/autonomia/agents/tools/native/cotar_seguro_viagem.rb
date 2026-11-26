@@ -97,11 +97,13 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   end
 
   # Uma mensagem mais nova do cliente já abriu outro turno: este não vai postar, e a cotação seria lida por ninguém. Só
-  # no turno de uma mensagem do cliente (o da passagem e o de evento seguem). Com a conversa lida agora.
+  # no turno de uma mensagem do cliente (o da passagem e o de evento seguem). Com a conversa lida agora. #3225: a mensagem
+  # mais nova que este turno já leu no meio (`Delivery#lidas_no_turno`) não o supera: ele vai responder por ela.
   def turno_superado?
     mensagem = delivery.origin_message_id
     mensagem.present? &&
-      ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(Conversation.find(conversa.id), mensagem, agent)
+      ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(Conversation.find(conversa.id), mensagem, agent,
+                                                             lidas: delivery.lidas_no_turno)
   end
 
   # Os candidatos ainda não passaram pela regra de idade: se há algum, o vazio é da idade.

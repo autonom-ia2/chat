@@ -14,6 +14,15 @@ module Waha::RichNative::ResponderChoice
     items.each_with_index.map { |item, index| with_choice_text(item, messages[index]) }
   end
 
+  # O voto que chega no meio do turno (#3225, Autonomia::Agents::Operate::NoMeioDoTurno) é lido como no histórico, com a
+  # pergunta. O retirado, o trocado e o apagado não são legíveis (a regra do Waha::RichNative::AgentTurnGuard).
+  def texto_no_meio_do_turno(message)
+    return super unless Waha::RichNative::AiChoiceText.choice?(message)
+    return if c2y_out_of_history?(message) || c2y_stale_choice?(message)
+
+    c2y_choice_text(message)
+  end
+
   def with_choice_text(item, message)
     return item unless item.is_a?(Hash)
 

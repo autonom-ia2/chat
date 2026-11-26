@@ -111,6 +111,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       marca_do_debounce(77)
       expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
     end
+
+    # #3225: o turno que leu a mensagem nova no meio responde por ela, e a cotação dele vale.
+    it 'a mensagem nova já foi lida por este turno: cota' do
+      marca_do_debounce(78)
+      delivery.ler_no_turno([78])
+      expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
+    end
+
+    it 'este turno leu outra, não a mais nova: recusa' do
+      marca_do_debounce(79)
+      delivery.ler_no_turno([78])
+      expect(ferramenta(params).call).to eq(described_class::TURNO_SUPERADO)
+    end
   end
 
   it 'duas cotações no mesmo turno: duas cotações, e um comparativo só, o da última' do

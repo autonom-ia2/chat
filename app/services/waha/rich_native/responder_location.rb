@@ -23,6 +23,18 @@ module Waha::RichNative::ResponderLocation
     location ? [text.presence, location].compact.join("\n") : text
   end
 
+  # A localização que chega no meio do turno (#3225, Autonomia::Agents::Operate::NoMeioDoTurno) é lida como na pergunta:
+  # a legenda e o resumo. A apagada não (a regra do Waha::RichNative::AgentTurnGuard, que este prepend não atravessa).
+  def texto_no_meio_do_turno(message)
+    location = location_text_for(message)
+    return super if location.nil?
+    return if c2y_out_of_history?(message)
+
+    legenda = message.content.to_s.strip.presence
+    legenda = equipe.pergunta(legenda) if legenda && equipe.aplica?
+    [legenda, location].compact.join("\n")
+  end
+
   # A legenda do cliente (localização ao vivo com texto) fica, e a localização vem depois dela.
   def with_location_text(item, message)
     return item if !item.is_a?(Hash) || resumida_pela_equipe?(message)

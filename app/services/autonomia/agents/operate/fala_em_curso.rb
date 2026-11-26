@@ -72,6 +72,14 @@ module Autonomia::Agents::Operate::FalaEmCurso
     false
   end
 
+  # O id da mensagem do cliente cujo turno está falando (String), ou nil sem marca (#3225: a fila sabe se a fala é de um
+  # turno anterior à mensagem que espera).
+  def dono(conversation_id)
+    ::Redis::Alfred.get(chave_ocupada(conversation_id)).presence
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
+    nil
+  end
+
   # Quanto a fala dura: caracteres x taxa (160 ms ± 20%, sorteada uma vez por fala), com teto.
   def duracao_estimada_ms(texto)
     minima = (MS_POR_CARACTERE * (1 - VARIACAO)).round

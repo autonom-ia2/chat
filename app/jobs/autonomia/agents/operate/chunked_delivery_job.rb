@@ -21,6 +21,8 @@ module Autonomia
         # e na `low` ela esperava atrás das consultas de cotação.
         queue_as :medium
         FalaDaCadeia = ::Autonomia::Agents::Operate::FalaDaCadeia
+        # O turno ainda é este? (`current_turn?`, `respondida_junto?`)
+        include TurnoDoPedaco
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
           @turno_segue = @fala_segue = false
@@ -55,9 +57,9 @@ module Autonomia
 
           # Cliente mandou nova mensagem durante a entrega, ou um humano assumiu, ou acabaram os chunks:
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
-          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
+          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index, meta)
           typing.off # parando, ou a pausa ANTES deste pedaço já passou e estamos prestes a postar
-          posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk) if motivo.nil?
+          posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk, meta) if motivo.nil?
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
@@ -80,6 +82,8 @@ module Autonomia
         # #3211 (P1): parada antes do 1º pedaço sem postar apaga o fim previsto da fala deste turno (FalaDaCadeia.parou).
         def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
           FalaDaCadeia.parou(conversation, agent_inbox.agent, reply_to_message_id, index) { chunk_posted?(conversation, reply_to_message_id, 0) }
+          ::Autonomia::Agents::Operate::LeituraNoTurno.parou_nos_pedacos(conversation: conversation, msg: reply_to_message_id,
+                                                                         meta: meta, motivo: motivo, pedaco: index)
           case motivo
           when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
           when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
@@ -110,11 +114,13 @@ module Autonomia
         # #3211: o turno ainda é este? Do 2º pedaço em diante, com `conversa_entrega_inteira` (+ fila), a fala já começou e mensagem
         # nova não a corta: vale sem olhar o stamp (FalaDaCadeia.comecada?). O 1º pedaço sempre confere. Elegibilidade,
         # `ja_postado` e `pessoa_respondeu` seguem conferidos em todo pedaço.
-        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
+        # #3225: `respondida_junto` (1º pedaço, com a flag): o turno que estava falando leu esta mensagem e já respondeu.
+        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index, meta = {})
           comecada = FalaDaCadeia.comecada?(agent_inbox.agent, conversation.inbox, index)
-          return :turno_mudou unless comecada || current_turn?(conversation, reply_to_message_id)
+          return :turno_mudou unless comecada || current_turn?(conversation, reply_to_message_id, meta)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
           return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
+          return :respondida_junto if respondida_junto?(conversation, agent_inbox, reply_to_message_id, index)
 
           :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
         end
@@ -212,15 +218,17 @@ module Autonomia
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do
         # lock (NÃO usar return no bloco — dispararia rollback e descartaria a mensagem postada).
         # -> [a Message postada, nil] ou [nil, motivo] quando não postou (:turno_mudou, :dono_mudou, :ja_postado).
-        def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk)
+        # #3225: o 1º pedaço grava as mensagens que o turno leu no meio (as do meta), na mesma transação.
+        def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk, meta = {})
           posted = nil
           motivo = nil
           conversation.with_lock do
             # Revalidação AUTORITATIVA com estado fresco DENTRO do lock (fecha a corrida entre o check
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
-            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
-            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk) if motivo.nil?
+            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index, meta)
+            lidas = index.zero? ? Array(meta['lidas_no_turno']) : []
+            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk, lidas) if motivo.nil?
           end
           [posted, motivo]
         end
@@ -228,7 +236,7 @@ module Autonomia
         # `rich_message` (#1479): só o último pedaço o traz, com a interação já decidida pelo Responder. Com ele, o conteúdo
         # é o `corpo`; o `text` desse pedaço é a versão em texto inteira, para o worker que ainda não conhece o formato.
         # #1479 F3: a marca dele traz só as referências dos cartões; a mensagem grava os cartões resolvidos pela página.
-        def build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk)
+        def build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk, lidas = [])
           Messages::MessageBuilder.new(
             nil, conversation,
             ActionController::Parameters.new(
@@ -243,7 +251,8 @@ module Autonomia
                 # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`); F3: os cartões, resolvidos agora.
                 **::Autonomia::Agents::Operate::CartoesDoTurno.marca_resolvida(
                   chunk['marca'].to_h, agent: agent_inbox.agent, conversation_id: conversation.id, msg: reply_to_message_id
-                )
+                ),
+                **::Autonomia::Agents::Operate::LeituraNoTurno.marca(lidas)
               }
             )
           ).perform
@@ -268,14 +277,6 @@ module Autonomia
           "#{reply_to_message_id}:#{index}"
         end
 
-        # Mesmo token-guard do ReplyJob: o último incoming da janela de debounce ainda é o nosso?
-        # Sem stamp (conversa sem debounce, ex.: caminho de teste) -> considera válido (não aborta).
-        def current_turn?(conversation, reply_to_message_id)
-          stamp = conversation.reload.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-          pending = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
-          pending.blank? || pending == reply_to_message_id
-        end
-
         def bot_in_command?(conversation, agent_inbox = nil)
           # Revalida o CONTRATO INTEIRO com estado fresco, na MESMA caixa do agente (cada chunk):
           # sem responsável + agente ligado/ativo/não-interno/não-sistema + feature on + allowlist.
@@ -293,10 +294,11 @@ module Autonomia
           )
         end
 
-        # Os ids dos fatos de memória enviados ao modelo (#1755), quando houve memória no turno.
+        # Os ids dos fatos de memória enviados ao modelo (#1755), quando houve memória no turno. #3225: e as mensagens lidas
+        # no meio do turno, com as voltas.
         def memoria_do_meta(meta)
           ids = Array(meta['memoria_fact_ids']).select { |id| id.is_a?(Integer) }
-          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
+          (ids.empty? ? {} : { 'memoria_fact_ids' => ids }).merge(::Autonomia::Agents::Operate::LeituraNoTurno.do_meta(meta))
         end
       end
     end

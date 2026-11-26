@@ -8,6 +8,10 @@
 # - `na_fila?` (P2, `conversa_em_fila`): o turno novo deve esperar porque outro turno está falando. Só vale até o prazo
 #   da marca do debounce (`at` + `espera_ms`) mais TETO_DA_FILA: passado isso o turno segue mesmo com a marca ocupada, para
 #   uma marca presa nunca travar a conversa. Sem a marca do debounce, ou sem `at`, não há prazo, então nunca fila.
+#   #3225 (flag `agente_le_no_meio_do_turno`): quando quem fala é um turno ANTERIOR a esta mensagem, ele pode tê-la lido
+#   no meio e estar respondendo por ela (Operate::LeituraNoTurno; o que ele leu fica na memória dele, e daqui não se vê).
+#   Então o prazo é o teto do turno (TurnoEmCurso.teto_do_turno), sem o corte de TETO_DA_FILA; quando a fala acaba, o
+#   settle confere se ela foi respondida junto (ReplyJob#respondida_junto?) ou segue o caminho de sempre.
 # - `janela_do_settle`: quanto dura a janela do settle de uma rajada já marcada. Uma regra só para todos que a medem.
 module Autonomia::Agents::Operate::EsperaDaFala
   ESPERA_MINIMA = 1.second
@@ -30,7 +34,7 @@ module Autonomia::Agents::Operate::EsperaDaFala
     return false unless ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox)
     return false unless ::Autonomia::Agents::Operate::FalaEmCurso.ocupada_por_outro?(conversation.id, message_id)
 
-    prazo = prazo_da_fila(agent, conversation)
+    prazo = prazo_da_fila(agent, conversation, message_id)
     prazo.present? && agora < prazo
   end
 
@@ -57,13 +61,25 @@ module Autonomia::Agents::Operate::EsperaDaFala
     paridade.em_fila?(agent, nil) ? janela + TETO_DA_FILA : janela
   end
 
-  # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila. nil sem
-  # prazo.
-  def prazo_da_fila(agent, conversation)
+  # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila (ou o teto do
+  # turno, quando quem fala pode ter lido esta mensagem). nil sem prazo.
+  def prazo_da_fila(agent, conversation, message_id)
     marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
     return unless marca.is_a?(Hash) && marca['at'].present?
 
-    Time.zone.at(marca['at'].to_f) + janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true)
+    inicio = Time.zone.at(marca['at'].to_f)
+    return inicio + ::Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno(agent) if quem_fala_pode_ter_lido?(agent, conversation, message_id)
+
+    inicio + janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true)
   end
   private_class_method :prazo_da_fila
+
+  # #3225: a fala é de um turno anterior a esta mensagem (a âncora dele é menor), com a leitura do meio do turno ligada.
+  def quem_fala_pode_ter_lido?(agent, conversation, message_id)
+    return false unless ::Autonomia::Agents::Operate::LeituraNoTurno.ligada?(agent, conversation)
+
+    dono = ::Autonomia::Agents::Operate::FalaEmCurso.dono(conversation.id)
+    dono.present? && dono.to_i < message_id.to_i
+  end
+  private_class_method :quem_fala_pode_ter_lido?
 end
