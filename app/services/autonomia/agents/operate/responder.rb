@@ -1009,9 +1009,10 @@ module Autonomia
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
         # mensagens do cliente em diante (chat#625), com tudo o que o agente respondeu no meio, sob o teto
-        # `HISTORY_MAX_MESSAGES` (as mais recentes ficam).
+        # `HISTORY_MAX_MESSAGES` (as mais recentes ficam). Mensagens no mesmo instante (a automática da caixa e a do
+        # cliente) desempatam pelo id: sem isso a ordem dependia do banco.
         def recent_messages
-          @recent_messages ||= janela_do_historico.reorder(created_at: :desc)
+          @recent_messages ||= janela_do_historico.reorder(created_at: :desc, id: :desc)
                                                   .limit(::Autonomia::Agents::Config::HISTORY_MAX_MESSAGES)
                                                   .to_a
                                                   .reverse
@@ -1019,7 +1020,7 @@ module Autonomia
 
         def janela_do_historico
           chat = @conversation.messages.chat
-          desde = chat.incoming.reorder(created_at: :desc)
+          desde = chat.incoming.reorder(created_at: :desc, id: :desc)
                       .offset(::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES - 1)
                       .pick(:created_at)
           desde ? chat.where(created_at: desde..) : chat
