@@ -39,7 +39,8 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CatalogoDeCoberturas
   end
 
   def normalizar(nome)
-    I18n.transliterate(nome.to_s).downcase.delete('+').split.reject { |palavra| palavra == 'usa' }.join(' ')
+    # NFKC antes de transliterar: o espaço inseparável (NBSP) vira espaço comum, e não `?`.
+    I18n.transliterate(nome.to_s.unicode_normalize(:nfkc)).downcase.delete('+').split.reject { |palavra| palavra == 'usa' }.join(' ')
   end
 
   def achar(planos, nome)
