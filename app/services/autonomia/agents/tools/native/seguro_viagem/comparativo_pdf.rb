@@ -105,7 +105,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   def periodo_texto
     return SEM_VALOR if saida.nil? || retorno.nil?
 
-    dias = (retorno - saida).to_i + 1
+    dias = SeguroViagem::PorDia.dias(saida, retorno)
     "#{saida.strftime('%d/%m')} a #{retorno.strftime('%d/%m/%Y')} · #{dias} #{dias == 1 ? 'dia' : 'dias'}"
   end
 

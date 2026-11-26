@@ -43,12 +43,14 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
               .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
   end
 
-  # O que o modelo lê: o código, o nome, o preço em reais, as parcelas, as três coberturas principais e se o plano é
-  # anual (com os dias de cada viagem).
-  def resumo(planos)
+  # O que o modelo lê: o código, o nome, o preço em reais, o preço por dia e por pessoa (`PorDia`, nil no anual), as
+  # parcelas, as três coberturas principais e se o plano é anual (com os dias de cada viagem). O `pedido` é o da cotação
+  # guardada: as datas e as idades.
+  def resumo(planos, pedido)
     planos.map do |plano|
       { 'codigo' => plano['codigo'], 'nome' => plano['nome'],
         'preco_total' => plano['preco_total'].nil? ? nil : SeguroViagem::Dinheiro.brl(plano['preco_total']),
+        'por_dia_por_pessoa' => SeguroViagem::PorDia.por_pessoa(plano, pedido),
         'max_parcelas' => plano['max_parcelas'], 'principais' => plano['principais'], 'anual' => anual?(plano),
         'dias_por_viagem' => plano['dias_por_viagem'] }
     end

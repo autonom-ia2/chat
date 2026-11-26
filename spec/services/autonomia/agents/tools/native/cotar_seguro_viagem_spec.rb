@@ -35,10 +35,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
   it 'cota, guarda e devolve só o resumo' do
     saida = JSON.parse(ferramenta(params).call)
     esperado = [
-      { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00', 'max_parcelas' => 12,
+      { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00',
+        'por_dia_por_pessoa' => 'R$ 72,00', 'max_parcelas' => 12,
         'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' },
         'anual' => false, 'dias_por_viagem' => nil },
-      { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00', 'max_parcelas' => 12,
+      { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00',
+        'por_dia_por_pessoa' => 'R$ 42,00', 'max_parcelas' => 12,
         'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil },
         'anual' => false, 'dias_por_viagem' => nil }
     ]

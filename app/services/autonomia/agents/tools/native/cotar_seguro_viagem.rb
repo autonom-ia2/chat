@@ -8,8 +8,8 @@
 # de novo), calado ou respondido por uma pessoa não posta a resposta nem o PDF (`cartao_descartado`). E o turno que já
 # está superado nem cota: `ReplyJob.turno_superado?`, o critério da hora de postar, antes de chamar a Universal.
 #
-# O modelo recebe só o resumo: código do plano, nome, preço em reais, parcelas, as três coberturas principais e se o
-# plano é anual. Nunca comissão, markup nem ranking (R2): eles não saem de `Planos.de`.
+# O modelo recebe só o resumo: código do plano, nome, preço em reais, preço por dia e por pessoa (#3226), parcelas, as
+# três coberturas principais e se o plano é anual. Nunca comissão, markup nem ranking (R2): eles não saem de `Planos.de`.
 #
 # SÍNCRONA e NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas`, que deixa a
 # nota para a equipe, registra a recusa e devolve ao modelo o que fazer. Toda outra recusa passa por `recusar`/`error`
@@ -38,8 +38,8 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     def description
       'Cota o seguro viagem na seguradora com os países do roteiro, as datas de ida e volta e a idade de cada ' \
         'viajante; o comparativo dos planos em PDF sai junto com a sua resposta. Devolve os planos com o código (P1, P2...), o ' \
-        'preço total em reais, as parcelas, as coberturas principais e se o plano é anual. Chame só depois de o ' \
-        'cliente confirmar todos os dados; nunca invente preço nem cobertura.'
+        'preço total em reais, o preço por dia e por pessoa, as parcelas, as coberturas principais e se o plano é ' \
+        'anual. Chame só depois de o cliente confirmar todos os dados; nunca invente preço nem cobertura.'
     end
 
     def args_registraveis
@@ -91,7 +91,7 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     cotacao = guardar(resposta, planos, pedido_da_universal)
     delivery.trocar_cartao(SeguroViagem::EntregaDoComparativo.cartao(cotacao)) # um comparativo por turno: o da última
     JSON.generate({ cotacao: cotacao.pedido.slice('destinos', 'data_saida', 'data_retorno', 'idades'),
-                    planos: SeguroViagem::Planos.resumo(planos), pdf_vai_junto: true })
+                    planos: SeguroViagem::Planos.resumo(planos, cotacao.pedido), pdf_vai_junto: true })
   rescue Universal::Cliente::Erro => e
     SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
