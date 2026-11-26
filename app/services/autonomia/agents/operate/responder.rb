@@ -19,6 +19,9 @@ module Autonomia
       # MessageListener a ignora. SEGURANÇA/IP: só o texto destinado ao cliente é postado; nunca
       # instruction/scaffold/prompt vai à mensagem/log/content_attributes — só o id do agente.
       class Responder
+        # #3225: a leitura da mensagem que o cliente manda no meio do turno (Operate::NoMeioDoTurno).
+        include ::Autonomia::Agents::Operate::NoMeioDoTurno
+
         # Sinal de silêncio padrão (a instrução emite isto em vez de uma resposta). Override por agente
         # via config['silence_tokens'] (lista). Match exato após normalizar (trim + minúsculas + markdown).
         SILENCE_TOKEN = 'conversation_closed_for_now'.freeze
@@ -286,7 +289,7 @@ module Autonomia
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(
               agent: @agent, conversation: @conversation, result: result, message: outcome.message,
-              metadata: metadata_da_memoria
+              metadata: metadata_do_turno
             )
           end
           outcome
@@ -353,6 +356,7 @@ module Autonomia
         def parada_na_hora_de_postar
           return silencio_por_inelegibilidade unless still_eligible?
           return silencio_por_turno_superado if turno_superado?
+          return silencio_por_respondida_junto('na_entrega') if respondida_junto? # #3225: outro turno leu e respondeu esta
           return Result.replied(nil) if already_replied? # um settle anterior já entregou (retry): não é silêncio
 
           silencio_por_pessoa('na_entrega') if pessoa_respondeu?
@@ -374,7 +378,7 @@ module Autonomia
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
-                                                              message: outcome.message, metadata: metadata_da_memoria)
+                                                              message: outcome.message, metadata: metadata_do_turno)
           end
           outcome
         end
@@ -421,7 +425,8 @@ module Autonomia
             sender_type: 'AgentBot',
             sender_id: @agent_inbox.agent_bot_id,
             content_attributes: {
-              autonomia_agent_id: @agent.id, autonomia_reply_to_message_id: @reply_to_message_id, autonomia_voice: true, **cartoes
+              autonomia_agent_id: @agent.id, autonomia_reply_to_message_id: @reply_to_message_id, autonomia_voice: true, **cartoes,
+              **marca_das_lidas
             }
           )
           # meta['is_voice_message']=true -> os provedores (WhatsApp Cloud etc.) enviam como ÁUDIO DE VOZ
@@ -496,7 +501,7 @@ module Autonomia
           {
             'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
             'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
-            'posse' => @posse, **metadata_da_memoria, **marca_do_aviso(result)
+            'posse' => @posse, **metadata_do_turno, **marca_do_aviso(result)
           }
         end
 
@@ -504,6 +509,7 @@ module Autonomia
         def parada_antes_dos_pedacos
           return Result.replied(nil) if already_replied? # um settle anterior já entregou
           return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
+          return silencio_por_respondida_junto('antes_dos_pedacos') if respondida_junto? # #3225
 
           silencio_por_pessoa('na_entrega') if pessoa_respondeu? # a pessoa respondeu durante a IA; o job reconfere a cada pedaço
         end
@@ -515,6 +521,7 @@ module Autonomia
         def answer
           question = query
           turns = history
+          delivery.leitura = leitura # #3225: o leitor do meio do turno (nil sem a flag), que o Answerer passa ao laço
           ::Autonomia::Agents::Answerer.new(
             agent: @agent,
             query: question,
@@ -550,6 +557,12 @@ module Autonomia
         def metadata_da_memoria
           ids = @memoria&.ids.to_a
           ids.empty? ? {} : { 'memoria_fact_ids' => ids }
+        end
+
+        # O que vai ao evento `replied` (e ao meta dos pedaços): a memória e, com a leitura do meio do turno (#3225), as
+        # mensagens lidas e as voltas.
+        def metadata_do_turno
+          metadata_da_memoria.merge(metadata_da_leitura)
         end
 
         # As rodadas do turno (ajudante, Lia, pronta, padrão): a mesma função do Testar e do Copiloto (#2918).
@@ -609,8 +622,10 @@ module Autonomia
         # ChunkedDeliveryJob#current_turn? (sem marca, segue). Chamar só com estado fresco (depois de still_eligible?, que
         # relê a conversa, dentro do lock). Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora delas
         # posta como sempre. O critério é o ReplyJob.turno_superado?, o mesmo da entrega da consulta em segundo plano.
+        # #3225: a mensagem mais nova que este turno leu no meio (Delivery#lidas_no_turno) não o supera.
         def turno_superado?
-          ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(@conversation, @reply_to_message_id, @agent)
+          ::Autonomia::Agents::Operate::ReplyJob.turno_superado?(@conversation, @reply_to_message_id, @agent,
+                                                                 lidas: @delivery&.lidas_no_turno.to_a)
         end
 
         def silencio_por_turno_superado
@@ -712,9 +727,11 @@ module Autonomia
 
         # O único lugar que escreve a linha. Campos: dois ids nossos e um rótulo de lista fechada —
         # nada do que o cliente escreveu, nada do que o modelo respondeu.
+        # #3225: com a leitura do meio do turno, também as lidas e as voltas (LeituraNoTurno#no_silencio).
         def registrar_silencio(motivo)
           @ultimo_silencio = motivo
           Rails.logger.info("[autonomia][operate] silencio agent=#{@agent.id} conv=#{@conversation.id} motivo=#{motivo}")
+          @leitura&.no_silencio(motivo)
         end
 
         # CONTEXTO DE ENTREGA (#313). Só existe no atendimento — é o que autoriza uma ferramenta
@@ -790,7 +807,7 @@ module Autonomia
           message = last_incoming_message
           # #1807: e-mail recebido sem o histórico citado (flag `email_autoria`); o resto, o content de sempre.
           base = texto_base_da_pergunta(message)
-          transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
+          transcribed = media.transcripts.map { |text| "#{AUDIO_TRANSCRITO}#{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
           # #1775: e, com a flag da prévia, a linha da prévia do link vai embaixo.
@@ -994,9 +1011,10 @@ module Autonomia
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
         # mensagens do cliente em diante (chat#625), com tudo o que o agente respondeu no meio, sob o teto
-        # `HISTORY_MAX_MESSAGES` (as mais recentes ficam).
+        # `HISTORY_MAX_MESSAGES` (as mais recentes ficam). Mensagens no mesmo instante (a automática da caixa e a do
+        # cliente) desempatam pelo id: sem isso a ordem dependia do banco.
         def recent_messages
-          @recent_messages ||= janela_do_historico.reorder(created_at: :desc)
+          @recent_messages ||= janela_do_historico.reorder(created_at: :desc, id: :desc)
                                                   .limit(::Autonomia::Agents::Config::HISTORY_MAX_MESSAGES)
                                                   .to_a
                                                   .reverse
@@ -1004,7 +1022,7 @@ module Autonomia
 
         def janela_do_historico
           chat = @conversation.messages.chat
-          desde = chat.incoming.reorder(created_at: :desc)
+          desde = chat.incoming.reorder(created_at: :desc, id: :desc)
                       .offset(::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES - 1)
                       .pick(:created_at)
           desde ? chat.where(created_at: desde..) : chat
@@ -1029,7 +1047,7 @@ module Autonomia
               content_attributes: {
                 autonomia_agent_id: @agent.id,
                 autonomia_reply_to_message_id: @reply_to_message_id,
-                **formato, **cartoes
+                **formato, **cartoes, **marca_das_lidas # #3225: as mensagens lidas no meio do turno
               },
               **destinatarios_do_email
             )

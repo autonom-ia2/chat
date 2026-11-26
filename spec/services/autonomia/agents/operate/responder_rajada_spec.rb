@@ -158,10 +158,12 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
     settle_direto(ultima)
 
-    # A caixa já nasce com mensagens automáticas (template) antes da conversa; elas ficam no histórico da busca.
-    # O que importa: a cauda é o que veio antes da rajada, e nenhuma mensagem da rajada está nele.
+    # A caixa tem mensagens automáticas (template), e a do e-mail nasce logo depois do "oi", no mesmo instante (o relógio
+    # está parado): elas ficam no histórico da busca, na ordem do id. O que importa: a cauda é o que veio antes da
+    # rajada, e nenhuma mensagem da rajada está nele.
     historico = historicos.sole
-    expect(historico.last(3)).to eq(['oi', 'pedaço 0', 'pedaço 1'])
+    expect(historico.last(2)).to eq(['pedaço 0', 'pedaço 1'])
+    expect(historico.index('oi')).to be < historico.index('pedaço 0')
     expect(historico).not_to include('e pra 2 pessoas?', 'pedaço 2', 'saindo dia 02')
   end
 

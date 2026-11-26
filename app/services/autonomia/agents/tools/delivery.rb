@@ -168,6 +168,21 @@ class Autonomia::Agents::Tools::Delivery
     @cartoes.to_h.values
   end
 
+  # AS MENSAGENS DO CLIENTE QUE ESTE TURNO LEU NO MEIO (#3225, `Operate::LeituraNoTurno`): só os ids, em memória, pelo
+  # tempo do turno. É por aqui que a hora de postar e a ferramenta que confere o turno (`cotar_seguro_viagem`) sabem que a
+  # mensagem mais nova do cliente já está com este turno (`ReplyJob.turno_superado?`). Vazio sem a leitura.
+  def lidas_no_turno
+    @lidas_no_turno.to_a
+  end
+
+  # O leitor do turno (`Operate::LeituraNoTurno`), que o Responder deixa aqui para o `Answerer` passar ao laço. nil sem a
+  # leitura (a flag desligada, o turno sem âncora, o Testar, o Copiloto).
+  attr_accessor :leitura
+
+  def ler_no_turno(ids)
+    @lidas_no_turno = (lidas_no_turno + Array(ids)).uniq
+  end
+
   private
 
   def ocorrencias

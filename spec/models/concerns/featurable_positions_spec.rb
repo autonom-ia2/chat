@@ -59,7 +59,7 @@ RSpec.describe Featurable do
       carteira_seguros agente_modelos_seguro captain_classifier conversation_monitors
       campaign_analytics company_enrichment stripe_integration mobile_voice_push
       auto_translate copilot_workflows shopify_custom_apps captain_mcp_servers
-      agente_seguro_viagem_universal
+      agente_seguro_viagem_universal agente_le_no_meio_do_turno
     ]
   }.freeze
 

@@ -388,7 +388,9 @@ RSpec.describe Account do
         # Upgrade 4.20.1 (#3120): the next 2 upstream flags, off, at positions 59–60.
         feature_shopify_custom_apps: 288_230_376_151_711_744, feature_captain_mcp_servers: 576_460_752_303_423_488,
         # #3211: agente_seguro_viagem_universal depois dela, 61 (1 << 60), no fim da ext_2.
-        feature_agente_seguro_viagem_universal: 1_152_921_504_606_846_976
+        feature_agente_seguro_viagem_universal: 1_152_921_504_606_846_976,
+        # #3225: agente_le_no_meio_do_turno depois dela, 62 (1 << 61); sobra a 63.
+        feature_agente_le_no_meio_do_turno: 2_305_843_009_213_693_952
       )
     end
 

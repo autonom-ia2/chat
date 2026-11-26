@@ -12,6 +12,8 @@
 #                   `agente_resposta`), em reais quando a cotação existe. O consumo não guarda o agente: é o de todos.
 class Crm::Numeros::IaNoTime
   FEATURE_RESPOSTA = 'agente_resposta'.freeze
+  # #3225: as idas a mais do agente que leu a mensagem do meio do turno (Operate::LeituraNoTurno::FEATURE_DA_VOLTA).
+  FEATURE_VOLTA = 'agente_resposta_volta'.freeze
   MAX_ROBOS = 50
 
   # ganhos: { ids: os cards ganhos no mês, moeda: a da tela, valor: false sem sales_value_view (#2075) };
@@ -106,7 +108,8 @@ class Crm::Numeros::IaNoTime
   end
 
   def custo
-    usd = Crm::AiUsageEvent.for_account(@account.id).where(feature: FEATURE_RESPOSTA, created_at: @range).sum(:cost_estimate).to_d
+    usd = Crm::AiUsageEvent.for_account(@account.id).where(feature: [FEATURE_RESPOSTA, FEATURE_VOLTA], created_at: @range)
+                           .sum(:cost_estimate).to_d
     taxa = Crm::Ai::ExchangeRate.current[:rate]
     valor, moeda = @moeda == 'BRL' && taxa.present? ? [usd * taxa.to_d, 'BRL'] : [usd, 'USD']
     conversas = conta.respostas_da_ia.where(created_at: @range).distinct.count(:conversation_id)

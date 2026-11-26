@@ -70,6 +70,15 @@ module Waha::RichNative::AgentTurnGuard
     Waha::RichNative::TurnKinds.kind(message).nil?
   end
 
+  # A mensagem que chega no meio do turno (#3225, Autonomia::Agents::Operate::NoMeioDoTurno) passa pelas mesmas regras: o
+  # que sai do histórico (a apagada, o voto retirado, o aviso de visualização única) e o que não é pergunta (a bolha "abra
+  # no celular") não é legível, e a leitura para nela.
+  def texto_no_meio_do_turno(message)
+    return if c2y_out_of_history?(message) || !conta_na_pergunta?(message)
+
+    super
+  end
+
   # A janela do histórico (as últimas HISTORY_MAX_INTERACOES mensagens do cliente) conta só as interações reais: o voto
   # escondido, a bolha "abra no celular", o aviso de visualização única e a apagada saem da CONTAGEM antes do corte (sem
   # isto, empurravam mensagens reais para fora da janela). Elas continuam na janela, para o guard ver o turno; o

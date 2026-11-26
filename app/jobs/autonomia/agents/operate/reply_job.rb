@@ -35,7 +35,10 @@ module Autonomia
         # turno desta mensagem ficou velha. Só com a Fase 2 ou com a fila do agente (#3211, `conversa_em_fila`); fora
         # delas, nunca (posta como sempre). Sem marca, segue. Critério único da hora de postar (Responder#turno_superado?)
         # e da entrega da consulta em segundo plano (Tools::ConsultaNoTurno::TurnoSuperado). Ler com a conversa fresca.
-        def self.turno_superado?(conversation, message_id, agent)
+        # #3225: `lidas` são as mensagens que o turno leu no meio (Tools::Delivery#lidas_no_turno). A mais nova lida, ainda
+        # sem resposta própria, não supera o turno: ele responde por ela (Operate::LeituraNoTurno.cobre?). Sem lidas, o de
+        # sempre.
+        def self.turno_superado?(conversation, message_id, agent, lidas: [])
           return false if message_id.blank?
 
           fila = ::Autonomia::Agents::ParidadeDaConversa.em_fila?(agent, conversation.inbox)
@@ -43,7 +46,8 @@ module Autonomia
 
           stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
           pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
-          pendente.present? && pendente.to_s != message_id.to_s
+          pendente.present? && pendente.to_s != message_id.to_s &&
+            !::Autonomia::Agents::Operate::LeituraNoTurno.cobre?(conversation, pendente, lidas, agent)
         end
 
         # A marca do debounce de uma rajada: a mensagem pendente, quando e a espera dela (#3211, `espera_ms`). Uma forma só
@@ -102,6 +106,7 @@ module Autonomia
           return unless current_token?(conversation, message_id)
           return esperar_na_fila(conversation, message_id, posse) if na_fila?(conversation, agent_inbox, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
+          return respondida_junto(conversation, message_id) if respondida_junto?(conversation, agent_inbox, message_id)
           return posse_ja_tomada(conversation, agent_inbox, message_id) unless assumir_o_turno?(conversation, agent_inbox, message_id, posse)
 
           responder(conversation, agent_inbox, message_id, posse)
@@ -115,6 +120,20 @@ module Autonomia
                                                                     reply_to_message_id: message_id).respondida?
 
           soltar_turno(conversation, message_id)
+        end
+
+        # #3225: o turno que estava falando leu esta mensagem no meio e já respondeu por ela (Operate::LeituraNoTurno). Vem
+        # depois do assunto: se ela fez o CRM trocar o dono, o dono novo responde (a resposta que leu é de outro agente).
+        # Sem a flag, nem consulta o banco.
+        def respondida_junto?(conversation, agent_inbox, message_id)
+          ::Autonomia::Agents::Operate::LeituraNoTurno.respondida_junto?(conversation, message_id, agent_inbox.agent)
+        end
+
+        # Não chama a IA nem toma a posse: solta a marca do turno desta mensagem e deixa o rastro.
+        def respondida_junto(conversation, message_id)
+          soltar_turno(conversation, message_id)
+          ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:respondida_junto, conversation_id: conversation.id,
+                                                                                       msg: message_id, etapa: 'settle')
         end
 
         def assumir_o_turno?(conversation, agent_inbox, message_id, posse)

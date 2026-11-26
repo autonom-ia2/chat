@@ -113,6 +113,38 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       marca_do_debounce(77)
       expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
     end
+
+    # #3225: o turno que leu a mensagem nova no meio responde por ela, e a cotação dele vale.
+    it 'a mensagem nova já foi lida por este turno (com a chave): cota' do
+      account.enable_features!(Autonomia::Agents::Operate::LeituraNoTurno::FLAG)
+      marca_do_debounce(78)
+      delivery.ler_no_turno([78])
+      expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
+    end
+
+    # #3225 (revisão): B chegou depois da última leitura do laço. Com o leitor do turno, a ferramenta lê antes de conferir:
+    # B conta como lida, a cotação sai, e B vai ao modelo na próxima leitura.
+    it 'com o leitor do turno, a mensagem nova ainda não lida: a ferramenta lê, e cota', :aggregate_failures do
+      account.enable_features!(Autonomia::Agents::Operate::LeituraNoTurno::FLAG)
+      ancora = create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, content: 'Portugal')
+      nova = create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, content: 'Conhece lá?')
+      marca_do_debounce(nova.id)
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: nil, origin_message_id: ancora.id)
+      entrega.leitura = Autonomia::Agents::Operate::LeituraNoTurno.new(conversation: conversa, agent: contratado, delivery: entrega,
+                                                                       ancora: ancora.id, &:content)
+
+      saida = described_class.new(agent: contratado, params: params, delivery: entrega).call
+
+      expect(JSON.parse(saida)['pdf_vai_junto']).to be(true)
+      expect(entrega.lidas_no_turno).to eq([nova.id])
+      expect(entrega.leitura.na_rodada.last[:content].first[:text]).to eq('Conhece lá?')
+    end
+
+    it 'este turno leu outra, não a mais nova: recusa' do
+      marca_do_debounce(79)
+      delivery.ler_no_turno([78])
+      expect(ferramenta(params).call).to eq(described_class::TURNO_SUPERADO)
+    end
   end
 
   describe 'planos anuais só quando pedidos (#3226)' do

@@ -6,7 +6,8 @@ module Autonomia::Agents::Operate::TelemetriaDoTurno
                devolucao passagem passagem_recusada turno_da_passagem sinal_na_passagem
                turno_da_passagem_descartado turno_da_passagem_rodou link_recusado opcao_tocada
                localizacao_recebida cartao_nao_enviado cartao_descartado interacao_nao_enviada
-               interacao_degradada].freeze
+               interacao_degradada mensagem_lida_no_turno volta_do_turno leitura_parou respondida_junto
+               leitura_no_silencio].freeze
 
   module_function
 

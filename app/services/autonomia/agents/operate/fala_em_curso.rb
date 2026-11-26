@@ -75,6 +75,14 @@ module Autonomia::Agents::Operate::FalaEmCurso
     false
   end
 
+  # O id da mensagem do cliente cujo turno está falando (String), ou nil sem marca (#3225: a fila sabe se a fala é de um
+  # turno anterior à mensagem que espera).
+  def dono(conversation_id)
+    ::Redis::Alfred.get(chave_ocupada(conversation_id)).presence
+  rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError
+    nil
+  end
+
   # Segundos de espera antes do pedaço (`delay_ms`, já com o RitmoDoCanal), presos como o agendamento os prende. Uma
   # regra só para quem agenda o pedaço e para a duração da fala (#3235).
   def espera_do_pedaco(chunk)
