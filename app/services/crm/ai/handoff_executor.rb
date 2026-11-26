@@ -24,11 +24,12 @@ module Crm
       # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
       # Exceção (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`, regra f do Rodrigo): o nosso assistente já
       # prometeu ao cliente que uma pessoa vai assumir, ninguém assumiu e o problema não foi resolvido depois
-      # (`handoff.promised_by_our_assistant`, lido pelo modelo). A promessa é um fato à parte da intenção (`intent`), e
-      # só vale com um agente nosso dono da conversa (o caso do #1673): aí a IA do CRM cumpre a promessa pela Entrega de
-      # sempre, com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Sem dono nosso, ou com o agente
-      # protegido (só a Lia: `protegido_no_crm?`) dono, a promessa não muda nada. A espera vai com o motivo do pedido do robô
-      # (MOTIVO_DA_PROMESSA): foi o robô que prometeu, e a fila (HandoffDrainJob) não larga a espera de volta para ele.
+      # (`handoff.promised_by_our_assistant`, lido pelo modelo, e o aviso que o agente gravou: promessa_avisada?, #3256).
+      # A promessa é um fato à parte da intenção (`intent`), e só vale com um agente nosso dono da conversa (o caso do
+      # #1673): aí a IA do CRM cumpre a promessa pela Entrega de sempre, com as outras guardas valendo (pessoa já
+      # atribuída, intervalo, devolução). Sem dono nosso, ou com o agente protegido (só a Lia: `protegido_no_crm?`) dono,
+      # a promessa não muda nada. A espera vai com o motivo do pedido do robô (MOTIVO_DA_PROMESSA): foi o robô que
+      # prometeu, e a fila (HandoffDrainJob) não larga a espera de volta para ele.
       OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
       MOTIVO_DA_PROMESSA = 'robo_pediu'.freeze
@@ -102,12 +103,26 @@ module Crm
         @dono_ativo = ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
       end
 
-      # A promessa só conta com a flag, com um agente nosso dono da conversa e que não seja o protegido.
+      # A promessa só conta com a flag, com um agente nosso dono da conversa e que não seja o protegido, e com o aviso
+      # gravado por ele (promessa_avisada?).
       def promessa_a_cumprir?
         return @promessa_a_cumprir if defined?(@promessa_a_cumprir)
 
         @promessa_a_cumprir = FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) &&
-                              dono_ativo.present? && !dono_ativo.agent&.protegido_no_crm?
+                              dono_ativo.present? && !dono_ativo.agent&.protegido_no_crm? && promessa_avisada?
+      end
+
+      # #3256 (conversa 15486, 26/11): o modelo devolveu a promessa sem o agente ter prometido nada, e a conversa saiu do
+      # agente no meio da venda. A promessa é um FATO que o próprio agente grava ao avisar o cliente (o evento
+      # `avisou_que_chama_alguem`, Autonomia::Agents::AgenteSoInforma.avisou?): sem ele, a leitura do modelo não passa a
+      # conversa. O aviso só vale depois da última vez que a conversa voltou para a IA (Crm::Ai::DevolucaoAIa.em, o mesmo
+      # marco da guarda `devolvida_sem_pedido_novo`): a promessa de antes foi cumprida quando uma pessoa recebeu.
+      def promessa_avisada?
+        desde = DevolucaoAIa.em(@card, @conversation)
+        return true if ::Autonomia::Agents::AgenteSoInforma.avisou?(@conversation, dono_ativo.agent, desde: desde)
+
+        registrar('promessa_sem_aviso', motivo: desde ? 'depois_da_devolucao' : nil)
+        false
       end
 
       # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): o agente nosso não passa mais a conversa; avisou o

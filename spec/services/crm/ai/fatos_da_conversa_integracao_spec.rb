@@ -44,6 +44,9 @@ RSpec.describe Crm::Ai::FatosDaConversa do
                      sender: contact)
     fala = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
                             content: 'Vou chamar uma pessoa da equipe para te atender', sender: porta)
+    # O aviso que o agente grava com essa fala (#3256): sem ele, a promessa que o modelo lê não passa a conversa.
+    Autonomia::Agents::AgentEvent.create!(agent: agente_da_porta, account: account, conversation_id: conversation.id,
+                                          event_type: :avisou_que_chama_alguem, message_id: fala.id)
     Crm::Conversations::CardSyncer.new(conversation: conversation.reload, message: fala).perform
   end
 
