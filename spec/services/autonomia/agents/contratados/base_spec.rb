@@ -126,7 +126,7 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
   it 'a versão do deploy é a dos arquivos de base/ do modelo' do
     expect(described_class::VERSAO).to eq(described_class.versao_de(described_class::PASTA))
     expect(described_class.arquivos(described_class::PASTA).map { |a| a.basename.to_s })
-      .to eq(%w[condicoes_gerais.md folheto_de_produtos.md])
+      .to eq(%w[condicoes_gerais.md folheto_de_produtos.md material_de_venda.md])
   end
 
   it 'os arquivos de base/ viram um bloco por título ###' do
