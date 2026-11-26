@@ -167,6 +167,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(historico).not_to include('e pra 2 pessoas?', 'pedaço 2', 'saindo dia 02')
   end
 
+  # #3235: aqui a resposta sai inteira, na hora (sem a entrega em pedaços): a fala já acabou, o fim é agora. A soma das
+  # esperas dos pedaços está no responder_fim_da_fala_spec.
   it 'grava o fim previsto da fala ao responder, com o turno', :aggregate_failures do
     liga!('conversa_espera_a_fala')
     mensagem = escreve('oi')
@@ -174,8 +176,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
     fim = fala.fim_previsto(conversation.id)
 
-    # 'Claro, te ajudo.' = 16 caracteres; folga de 10 ms para o arredondamento em milissegundos.
-    expect(fim).to be_between(Time.current + ((16 * 0.128) - 0.01).seconds, Time.current + ((16 * 0.192) + 0.01).seconds)
+    expect(fim).to be_within(0.001.seconds).of(Time.current)
     expect(Redis::Alfred.get(fala.chave_do_fim(conversation.id))).to start_with("#{mensagem.id}:")
   end
 

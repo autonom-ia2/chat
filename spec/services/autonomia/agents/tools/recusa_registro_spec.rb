@@ -963,8 +963,44 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           end
           propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
         }
+      },
+      # #3246: a situação do pagamento e a segunda via do voucher; o carrinho é sempre o da proposta guardada.
+      'situacao_do_pagamento.rb#call#1' => {
+        espera: { motivo: 'pagamento_sem_conversa', slug: 'situacao_do_pagamento', conversa: '-' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SituacaoDoPagamento, entrega: nil) }
+      },
+      'situacao_do_pagamento.rb#call#2' => {
+        espera: { motivo: 'sem_proposta', slug: 'situacao_do_pagamento' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SituacaoDoPagamento, proposta: false) }
+      },
+      'segunda_via_do_voucher.rb#call#1' => {
+        espera: { motivo: 'pagamento_sem_conversa', slug: 'segunda_via_do_voucher', conversa: '-' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SegundaViaDoVoucher, entrega: nil) }
+      },
+      'segunda_via_do_voucher.rb#call#2' => {
+        espera: { motivo: 'sem_proposta', slug: 'segunda_via_do_voucher' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SegundaViaDoVoucher, proposta: false) }
+      },
+      'segunda_via_do_voucher.rb#conferir#1' => {
+        espera: { motivo: 'pagamento_cancelado', slug: 'segunda_via_do_voucher' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SegundaViaDoVoucher, status: 'Cancelado') }
+      },
+      'segunda_via_do_voucher.rb#conferir#2' => {
+        espera: { motivo: 'pagamento_pendente', slug: 'segunda_via_do_voucher' },
+        dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SegundaViaDoVoucher, status: 'Aguardando Pagamento') }
       }
     }
+  end
+
+  # #3246: a ferramenta do pagamento pelo `Bound`, com o acesso conferido e, com `proposta`, a cotação com o carrinho
+  # 987654 guardado. A Universal responde `status` no StatusPagamento.
+  def pagamento_de_viagem(ferramenta, entrega: delivery, proposta: true, status: 'Pago')
+    Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
+                                                  senha: 's3nha-teste', estado: 'ok')
+    guardar_cotacao_de_viagem(Time.current).update!(proposta: { 'codigo_carrinho' => 987_654 }) if proposta
+    stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
+      .to_return(status: 200, body: { 'statusPagamento' => status }.to_json)
+    bound_para(ferramenta).execute({ 'name' => ferramenta.slug, 'arguments' => '{}' }, delivery: entrega)
   end
 
   # #3211: a cotação do Seguro Viagem pelo `Bound`, com o acesso conferido e a Universal respondendo pela fixture.

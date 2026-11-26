@@ -465,11 +465,12 @@ module Autonomia
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
           @expected_chunks = chunks.length
+          @duracao_da_fala_ms = ::Autonomia::Agents::Operate::FalaEmCurso.duracao_da_cadeia_ms(chunks) # #3235: o fim previsto
 
           passar_o_turno_a_cadeia
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
-            .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
+            .set(wait: ::Autonomia::Agents::Operate::FalaEmCurso.espera_do_pedaco(chunks.first).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta_dos_pedacos(result))
           @cadeia_agendada = true
           Result.replied(nil)
@@ -663,19 +664,20 @@ module Autonomia
           outcome.status == :replied ? enfileirar_cartoes(outcome) : descartar_cartoes(@ultimo_silencio || outcome.status)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
           @entrega = outcome # #2154: a fala que saiu, para o aviso (avisou_que_chama_alguem)
-          prever_o_fim_da_fala(result, outcome)
+          prever_o_fim_da_fala(outcome)
           handoff_if_signaled(result) unless @calou_pela_pessoa
           evento_da_pessoa
         end
 
         # #3211 (P1): grava quando a fala deve terminar, para a rajada seguinte esperar por ela. Só quando houve fala: a
-        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para
-        # antes do 1º pedaço apaga o fim dele (ChunkedDeliveryJob).
-        def prever_o_fim_da_fala(result, outcome)
+        # cadeia de pedaços foi agendada ou a mensagem saiu inteira. Silêncio não grava. Leva o turno: a cadeia que para,
+        # ou que posta o último pedaço, apaga o fim dele (ChunkedDeliveryJob). #3235: a duração é a da entrega agendada
+        # (a soma das esperas dos pedaços); a resposta que saiu inteira já saiu, duração 0.
+        def prever_o_fim_da_fala(outcome)
           return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(@agent, @conversation.inbox)
           return unless @cadeia_agendada || outcome.message.present?
 
-          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, result.reply)
+          ::Autonomia::Agents::Operate::FalaEmCurso.prever_fim!(@conversation.id, @reply_to_message_id, @duracao_da_fala_ms.to_i)
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só

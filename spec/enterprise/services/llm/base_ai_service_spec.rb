@@ -136,10 +136,10 @@ RSpec.describe Llm::BaseAiService do
   describe '#chat' do
     it 'omits temperature when the model registry marks it unsupported' do
       llm_chat = instance_double(RubyLLM::Chat)
-      allow(RubyLLM).to receive(:chat).with(model: 'gpt-6.1-sol', protocol: :responses).and_return(llm_chat)
+      allow(RubyLLM).to receive(:chat).with(model: 'gpt-6.2-sol', protocol: :responses).and_return(llm_chat)
 
       expect(llm_chat).not_to receive(:with_temperature)
-      expect(service.chat(model: 'gpt-6.1-sol')).to eq(llm_chat)
+      expect(service.chat(model: 'gpt-6.2-sol')).to eq(llm_chat)
     end
 
     it 'sets temperature when the model registry marks it supported' do

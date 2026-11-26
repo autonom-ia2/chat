@@ -43,7 +43,8 @@ RSpec.describe Autonomia::Agents::Contratado do
 
   it 'ferramentas fixas do catálogo, mesmo com native_tool_slugs gravado' do
     agente = criar_contratado(config_extra: { 'native_tool_slugs' => %w[agendar_reuniao] })
-    expect(agente.ferramentas_nativas).to eq(%w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem])
+    expect(agente.ferramentas_nativas).to eq(%w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem
+                                                situacao_do_pagamento segunda_via_do_voucher])
   end
 
   it 'o tipo não muda depois de contratado' do

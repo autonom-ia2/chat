@@ -79,9 +79,9 @@ module Autonomia
         # A cadeia parou (o pedaço não foi postado; `posted` só vem sem motivo). A troca de dono pode refazer o turno, a
         # pessoa que respondeu deixa o rastro e (#2154) o cliente que escreveu depois de algum pedaço de uma fala que
         # avisou que vai chamar alguém não impede a avaliação da Atribuição. Os outros motivos só encerram.
-        # #3211 (P1): parada antes do 1º pedaço sem postar apaga o fim previsto da fala deste turno (FalaDaCadeia.parou).
+        # #3211 (P1) e #3235: a cadeia parou, em qualquer pedaço; a fala acabou e o fim previsto deste turno sai (FalaDaCadeia.acabou).
         def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
-          FalaDaCadeia.parou(conversation, agent_inbox.agent, reply_to_message_id, index) { chunk_posted?(conversation, reply_to_message_id, 0) }
+          FalaDaCadeia.acabou(conversation, agent_inbox.agent, reply_to_message_id)
           ::Autonomia::Agents::Operate::LeituraNoTurno.parou_nos_pedacos(conversation: conversation, msg: reply_to_message_id,
                                                                          meta: meta, motivo: motivo, pedaco: index)
           case motivo
@@ -169,11 +169,12 @@ module Autonomia
           next_chunk = chunks[nxt]
           if next_chunk.blank?
             typing.off
+            FalaDaCadeia.acabou(conversation, agent_inbox.agent, reply_to_message_id) # #3235: o último pedaço saiu
             return pedir_avaliacao(conversation, meta)
           end
 
           typing.on
-          wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
+          wait_seconds = ::Autonomia::Agents::Operate::FalaEmCurso.espera_do_pedaco(next_chunk)
           renovar_o_turno(conversation, reply_to_message_id)
           FalaDaCadeia.renovar(conversation, agent_inbox.agent, reply_to_message_id) # #3211 (P2): a fala segue no próximo pedaço
           self.class.set(wait: wait_seconds.seconds)

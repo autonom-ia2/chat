@@ -1,7 +1,7 @@
 module Autonomia
   module Agents
     module Knowledge
-      # IA Revisora de Qualidade do Conhecimento (gpt-6.1-sol, structured output via ResponsesClient).
+      # IA Revisora de Qualidade do Conhecimento (gpt-6.2-sol, structured output via ResponsesClient).
       # Avalia UMA fonte recém-ingerida: nota (0–100) + confiança + rótulo + recomendação
       # (aceitar/reenviar) + RESUMO. Depois, recompute_overall! agrega as fontes aceitas num MAPA DE
       # TEMAS + confiança geral que alimentam o Construtor.

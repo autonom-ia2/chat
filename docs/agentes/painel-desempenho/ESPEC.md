@@ -538,7 +538,7 @@ Decisões:
 - **Modo em lote (-50%) já no job de cada hora:** a conversa esfriou, a demora
   não importa. Exige estender `app/services/crm/ai/pricing.rb`, que hoje não
   cobre lote.
-- **Conferência:** modelo forte (`gpt-6.1-sol`), às cegas, só nos campos
+- **Conferência:** modelo forte (`gpt-6.2-sol`), às cegas, só nos campos
   conferidos (tema principal, marco dito, desfecho dito), saída curta.
 - **Feature de custo própria:** `painel_leitura` e `painel_conferencia` em
   `crm_ai_usage_events`, com agente e conversa preenchidos.

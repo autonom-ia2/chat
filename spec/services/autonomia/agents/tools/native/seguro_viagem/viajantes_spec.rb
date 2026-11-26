@@ -22,6 +22,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes do
                                    'nascimento' => Date.new(2014, 7, 1))
   end
 
+  # 26/11: a proposta parou com o telefone do WhatsApp (+55, 13 dígitos); o cliente não precisa digitar o próprio número.
+  it 'telefone com o DDI do Brasil perde o 55, e sem telefone aceito vale o do WhatsApp da conversa', :aggregate_failures do
+    viajantes, = described_class.conferir(titular: titular.merge('telefone' => '+55 (11) 98765-4321'), demais: [])
+    expect(viajantes.first['telefone']).to eq('11987654321')
+
+    viajantes, = described_class.conferir(titular: titular.merge('telefone' => 'o WhatsApp desta conversa'), demais: [],
+                                          telefone_da_conversa: '+5511912345678')
+    expect(viajantes.first['telefone']).to eq('11912345678')
+
+    viajantes, = described_class.conferir(titular: titular, demais: [], telefone_da_conversa: '+5511912345678')
+    expect(viajantes.first['telefone']).to eq('11987654321')
+
+    _, falta = described_class.conferir(titular: titular.merge('telefone' => nil), demais: [], telefone_da_conversa: nil)
+    expect(falta.campo).to eq('titular.telefone')
+  end
+
+  it 'DDD 55 (RS) não perde o 55, número com erro não é trocado pelo da conversa', :aggregate_failures do
+    expect(described_class.conferir(titular: titular.merge('telefone' => '55991234567'), demais: []).first.first['telefone'])
+      .to eq('55991234567')
+    expect(described_class.conferir(titular: titular.merge('telefone' => '+55 55 99123-4567'), demais: []).first.first['telefone'])
+      .to eq('55991234567')
+    _, falta = described_class.conferir(titular: titular.merge('telefone' => '987654321'), demais: [],
+                                        telefone_da_conversa: '+5511912345678')
+    expect(falta.campo).to eq('titular.telefone')
+  end
+
   it 'CPF com 10 dígitos é falta do CPF, sem levantar (R17)' do
     viajantes, falta = described_class.conferir(titular: titular.merge('cpf' => '5299822472'), demais: [])
     expect(viajantes).to be_nil

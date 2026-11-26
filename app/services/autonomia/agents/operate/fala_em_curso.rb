@@ -4,8 +4,10 @@
 # - `fala_em_curso` (CHAVE_OCUPADA): o id da mensagem do cliente cujo turno está falando (IA ou pedaços). Serve à fila
 #   (P2): o turno novo só segue quando a marca some ou deixa de ser de outro turno.
 # - `fim_da_fala` (CHAVE_DO_FIM): o instante previsto em que a fala termina, com o turno que o gravou
-#   ("<id da mensagem do cliente>:<ms epoch>"). Serve à espera da rajada (P1). A cadeia de pedaços que para antes do 1º
-#   pedaço apaga o fim do seu turno (`esquecer_o_fim`): não houve fala, e a rajada seguinte não espera por nada.
+#   ("<id da mensagem do cliente>:<ms epoch>"). Serve à espera da rajada (P1). #3235: o fim é a soma das esperas reais
+#   da cadeia agendada (`duracao_da_cadeia_ms`, os mesmos `delay_ms` que o ChunkedDeliveryJob usa), não uma estimativa
+#   pelo tamanho do texto: ~650 caracteres previam ~104 s para uma entrega de 38 s, e a rajada seguinte esperava à toa.
+#   E a cadeia apaga o fim do seu turno quando a fala acaba (`esquecer_o_fim`): no último pedaço e em qualquer parada.
 #
 # Por que não reaproveita o TurnoEmCurso: aquela marca é aberta a cada mensagem do cliente e a mais nova toma; esta é do
 # turno que está falando, e só ele a solta. As duas convivem.
@@ -20,11 +22,12 @@
 module Autonomia::Agents::Operate::FalaEmCurso
   CHAVE_OCUPADA = 'autonomia:fala_em_curso:%<conversa>d'.freeze
   CHAVE_DO_FIM = 'autonomia:fim_da_fala:%<conversa>d'.freeze
-  # Valores do fluxo externo: 160 ms por caractere (sorteado ±20% por fala), teto de 150 s, validade de 2,5 h.
-  MS_POR_CARACTERE = 160
-  VARIACAO = 0.2
+  # Valores do fluxo externo: teto de 150 s, validade de 2,5 h.
   TETO_DO_FIM_MS = 150_000
   TTL_DO_FIM = 9000
+  # A espera antes de cada pedaço, presa entre 0,1 s e 30 s: a mesma do agendamento (Responder e ChunkedDeliveryJob).
+  ESPERA_MINIMA_DO_PEDACO = 0.1
+  ESPERA_MAXIMA_DO_PEDACO = 30.0
 
   module_function
 
@@ -80,17 +83,22 @@ module Autonomia::Agents::Operate::FalaEmCurso
     nil
   end
 
-  # Quanto a fala dura: caracteres x taxa (160 ms ± 20%, sorteada uma vez por fala), com teto.
-  def duracao_estimada_ms(texto)
-    minima = (MS_POR_CARACTERE * (1 - VARIACAO)).round
-    maxima = (MS_POR_CARACTERE * (1 + VARIACAO)).round
-    [texto.to_s.length * rand(minima..maxima), TETO_DO_FIM_MS].min
+  # Segundos de espera antes do pedaço (`delay_ms`, já com o RitmoDoCanal), presos como o agendamento os prende. Uma
+  # regra só para quem agenda o pedaço e para a duração da fala (#3235).
+  def espera_do_pedaco(chunk)
+    (chunk['delay_ms'].to_i / 1000.0).clamp(ESPERA_MINIMA_DO_PEDACO, ESPERA_MAXIMA_DO_PEDACO)
   end
 
-  # Grava o fim previsto da fala do turno `message_id` ("<message_id>:<ms epoch>"). -> o instante gravado, ou nil se o
-  # Redis falhou.
-  def prever_fim!(conversation_id, message_id, texto, agora: Time.current)
-    fim = agora + (duracao_estimada_ms(texto) / 1000.0)
+  # Quanto a cadeia de pedaços leva para sair inteira: a soma das esperas de todos os pedaços, em ms (#3235).
+  def duracao_da_cadeia_ms(chunks)
+    (Array(chunks).sum { |chunk| espera_do_pedaco(chunk) } * 1000).round
+  end
+
+  # Grava o fim previsto da fala do turno `message_id` ("<message_id>:<ms epoch>"): agora mais `duracao_ms`, a duração
+  # real da entrega (duracao_da_cadeia_ms; 0 para a resposta que sai inteira na hora), com teto. -> o instante gravado,
+  # ou nil se o Redis falhou.
+  def prever_fim!(conversation_id, message_id, duracao_ms, agora: Time.current)
+    fim = agora + ([duracao_ms.to_i, TETO_DO_FIM_MS].min / 1000.0)
     ::Redis::Alfred.set(chave_do_fim(conversation_id), "#{message_id}:#{(fim.to_f * 1000).round}", ex: TTL_DO_FIM)
     fim
   rescue ::Redis::BaseError, ::ConnectionPool::TimeoutError

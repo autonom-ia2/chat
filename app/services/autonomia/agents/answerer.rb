@@ -363,7 +363,7 @@ module Autonomia
         }.to_json)
       end
 
-      # Roda o LLM (síncrono, schema, gpt-6.1-sol) e devolve o hash parseado, ou nil em qualquer
+      # Roda o LLM (síncrono, schema, gpt-6.2-sol) e devolve o hash parseado, ou nil em qualquer
       # falha de IA (credencial vazia, erro do cliente, timeout, JSON inválido) -> handoff seguro.
       def generate(snippets)
         credential = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve
@@ -383,8 +383,7 @@ module Autonomia
           max_rodadas: @max_rodadas,
           **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova), leitura: leitura_no_turno }.compact
         ) { |calls| execute_tool_calls(calls) }
-        parsed = JSON.parse(raw[:text])
-        parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
+        resposta_do_modelo(raw[:text])
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
       end
@@ -393,6 +392,15 @@ module Autonomia
       # no contexto de entrega, só no atendimento com a flag. Sem ela, o laço e o pedido ao modelo ficam os de antes.
       def leitura_no_turno
         @delivery&.leitura
+      end
+
+      # O texto do modelo como hash, ou nil se não for objeto JSON (ex.: "[]") -> handoff seguro, nunca 500.
+      # #3237: a busca na web põe `utm_source=openai` nos links; sai aqui, antes de a resposta ir a qualquer caminho.
+      def resposta_do_modelo(texto)
+        parsed = JSON.parse(texto)
+        return nil unless parsed.is_a?(Hash)
+
+        parsed.slice('reply').transform_values { |reply| LinkSemMarca.limpar(reply) }.then { |limpo| parsed.merge(limpo) }
       end
 
       # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.

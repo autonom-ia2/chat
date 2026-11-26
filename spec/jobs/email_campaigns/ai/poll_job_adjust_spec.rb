@@ -16,7 +16,7 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     allow(client).to receive(:retrieve) do |id|
-      { status: 'completed', model: 'gpt-6.1-sol', text: answers.fetch(id).to_json, usage: { 'input_tokens' => 10 } }
+      { status: 'completed', model: 'gpt-6.2-sol', text: answers.fetch(id).to_json, usage: { 'input_tokens' => 10 } }
     end
     allow(client).to receive(:create_background).and_return(id: 'resp_fix', status: 'queued')
     allow(EmailCampaigns::Ai::Broadcaster).to receive(:ready)

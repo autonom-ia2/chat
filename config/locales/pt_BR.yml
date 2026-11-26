@@ -2247,6 +2247,7 @@ pt_BR:
           acesso_recusado: "A seguradora recusou o login da corretora, então o agente não consegue cotar nem emitir. Confira o login da seguradora na página do agente e assuma esta conversa."
           indisponivel: "O sistema da seguradora não respondeu e o agente não conseguiu concluir esta etapa. Assuma esta conversa ou tente de novo mais tarde."
           sem_link: "A seguradora aceitou a compra, mas não devolveu o link de pagamento. Pegue o link no portal da seguradora e envie ao cliente."
+          voucher_nao_saiu: "O pagamento está confirmado, mas o agente não conseguiu pegar o voucher do seguro viagem na seguradora. Baixe o voucher no portal da seguradora e envie ao cliente."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

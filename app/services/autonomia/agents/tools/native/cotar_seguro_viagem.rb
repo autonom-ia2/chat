@@ -22,6 +22,9 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   TURNO_SUPERADO = 'O cliente escreveu de novo e esta resposta não vai sair. Não cote agora.'.freeze
   SO_ANUAIS = 'Para esta viagem a seguradora só devolveu planos anuais (valem para todas as viagens do ano). Diga isso ' \
               'ao cliente ao mostrar os planos.'.freeze
+  BRASIL_FORA = 'O Brasil saiu dos destinos: a seguradora não cota o Brasil junto de país de fora, e o seguro ' \
+                'internacional vale a partir da fronteira. Se o roteiro tem trecho no Brasil, diga isso ao cliente em uma ' \
+                'frase.'.freeze
 
   class << self
     include SeguroViagem::PortaDoContratado
@@ -51,10 +54,13 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     def params
       [
         { 'name' => 'destinos', 'type' => 'array', 'items' => 'string', 'required' => true,
-          'description' => 'Siglas ISO 3166 alfa-2 de cada país do roteiro com permanência. Viagem nacional: ["BR"].' },
+          'description' => 'Siglas ISO 3166 alfa-2 de cada país do roteiro com permanência. Cliente que deu só a ' \
+                           'região: o código da região (Europa X6, América do Norte X4, América do Sul X9, América ' \
+                           'Central X2, Caribe X1, África X5, Ásia X7, Oceania X8, Oriente Médio Y6). Viagem só no ' \
+                           'Brasil: ["BR"]; com país de fora, o Brasil não entra.' },
         { 'name' => 'nomes_dos_destinos', 'type' => 'array', 'items' => 'string', 'required' => false,
-          'description' => 'O nome de cada país no idioma da conversa, como o cliente lê (ex.: França), na mesma ordem ' \
-                           'de destinos.' },
+          'description' => 'O nome de cada país (ou da região) no idioma da conversa, como o cliente lê (ex.: França, ' \
+                           'Europa), na mesma ordem de destinos.' },
         { 'name' => 'data_saida', 'type' => 'string', 'required' => true, 'description' => 'Data de ida, AAAA-MM-DD.' },
         { 'name' => 'data_retorno', 'type' => 'string', 'required' => true, 'description' => 'Data de volta, AAAA-MM-DD.' },
         { 'name' => 'idades', 'type' => 'array', 'items' => 'integer', 'required' => true,
@@ -97,7 +103,7 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     delivery.trocar_cartao(SeguroViagem::EntregaDoComparativo.cartao(cotacao)) # um comparativo por turno: o da última
     JSON.generate({ cotacao: cotacao.pedido.slice('destinos', 'data_saida', 'data_retorno', 'idades'),
                     planos: SeguroViagem::Planos.resumo(planos, cotacao.pedido), pdf_vai_junto: true,
-                    **aviso_de_so_anuais(planos) })
+                    **aviso_de_so_anuais(planos), **aviso_do_brasil })
   rescue Universal::Cliente::Erro => e
     SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
@@ -108,6 +114,11 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     return {} if incluir_anuais? || !SeguroViagem::Planos.so_anuais?(planos)
 
     { aviso: SO_ANUAIS }
+  end
+
+  # O Brasil veio junto de país de fora e saiu dos destinos (`Pedido#brasil_fora?`): o modelo explica ao cliente.
+  def aviso_do_brasil
+    conferencia.brasil_fora? ? { aviso_brasil: BRASIL_FORA } : {}
   end
 
   # Uma mensagem mais nova do cliente já abriu outro turno: este não vai postar, e a cotação seria lida por ninguém. Só
@@ -146,11 +157,11 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     )
   end
 
-  # O nome de cada país como o cliente lê, escrito pelo modelo no idioma da conversa. Sem ele, com outro tamanho, ou
-  # com algum nome em branco ou acima de `TETO_DO_NOME_DO_PAIS`, o nome da Universal (ou a sigla, com a lista de países
-  # fora).
+  # O nome de cada país como o cliente lê, escrito pelo modelo no idioma da conversa (sem o do Brasil, quando ele saiu:
+  # `Pedido#nomes_dos_destinos`). Sem ele, com outro tamanho, ou com algum nome em branco ou acima de
+  # `TETO_DO_NOME_DO_PAIS`, o nome da Universal (ou a sigla, com a lista de países fora).
   def nomes_dos_destinos(destinos)
-    nomes = params['nomes_dos_destinos']
+    nomes = conferencia.nomes_dos_destinos
     validos = nomes.is_a?(Array) && nomes.size == destinos.size && nomes.all? { |nome| nome_do_pais?(nome) }
     validos ? nomes.map(&:strip) : Universal::Destinos.nomes_em(destinos, paises)
   end

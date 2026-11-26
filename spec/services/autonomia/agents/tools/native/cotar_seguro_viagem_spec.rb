@@ -220,6 +220,29 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     end
   end
 
+  describe 'região e Brasil (#3226)' do
+    it 'Brasil com país de fora: cota sem o Brasil, guarda sem o nome dele e devolve aviso_brasil' do
+      saida = JSON.parse(ferramenta(params.merge('destinos' => %w[BR PT], 'nomes_dos_destinos' => %w[Brasil Portugal])).call)
+      expect(saida['cotacao']['destinos']).to eq(['PT'])
+      expect(saida['aviso_brasil']).to eq(described_class::BRASIL_FORA)
+      expect(Autonomia::Agents::CotacaoDeViagem.last.pedido['destinos_nomes']).to eq(['Portugal'])
+      expect(a_request(:post, "#{base}/v1/Cotacao").with(body: hash_including('destinos' => ['PT']))).to have_been_made
+    end
+
+    it 'só o Brasil: cota o Brasil, sem aviso_brasil' do
+      saida = JSON.parse(ferramenta(params.merge('destinos' => ['BR'])).call)
+      expect(saida['cotacao']['destinos']).to eq(['BR'])
+      expect(saida).not_to have_key('aviso_brasil')
+    end
+
+    it 'região pelo código da Universal: cota com o código e guarda o nome da região' do
+      stub_request(:get, "#{base}/v1/destinos").to_return(status: 200, body: [{ 'pais' => 'EUROPA', 'siglaPais' => 'X6' }].to_json)
+      ferramenta(params.merge('destinos' => ['x6'], 'nomes_dos_destinos' => ['Europa'])).call
+      expect(a_request(:post, "#{base}/v1/Cotacao").with(body: hash_including('destinos' => ['X6']))).to have_been_made
+      expect(Autonomia::Agents::CotacaoDeViagem.last.pedido['destinos_nomes']).to eq(['Europa'])
+    end
+  end
+
   it 'sem conversa não cota' do
     expect(described_class.new(agent: contratado, params: params, delivery: nil).call).to include('cotacao_sem_conversa')
     expect(a_request(:post, "#{base}/v1/Cotacao")).not_to have_been_made

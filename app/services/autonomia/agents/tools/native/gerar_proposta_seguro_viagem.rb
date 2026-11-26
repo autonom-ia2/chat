@@ -33,6 +33,11 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout].freeze
   # Separação de domínio: a chave do HMAC é derivada só para isto, nunca o `secret_key_base` cru.
   DOMINIO_DA_CHAVE = 'seguro_viagem/proposta'.freeze
+  # A Universal cancela o link de pagamento 24 h depois da compra (e-mail "Pagamento pedido", 26/11). Uma hora de folga
+  # para não devolver um link prestes a vencer; passado isso, a mesma proposta gera carrinho e link novos.
+  VALIDADE_DO_LINK = 23.hours
+  # `{ "a": 1, "b": 2 }`: cada valor é uma palavra separada por espaço (`resposta`).
+  JSON_COM_ESPACO = { space: ' ', object_nl: ' ', array_nl: ' ' }.freeze
 
   VIAJANTE = [
     { 'name' => 'nome_completo', 'type' => 'string', 'required' => true, 'description' => 'Nome completo.' },
@@ -139,7 +144,9 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   # -> [viajantes, contato, nil] ou [nil, nil, Falta]
   def conferidos
-    viajantes, falta = SeguroViagem::Viajantes.conferir(titular: params['titular'], demais: params['demais_viajantes'])
+    viajantes, falta = SeguroViagem::Viajantes.conferir(
+      titular: params['titular'], demais: params['demais_viajantes'], telefone_da_conversa: conversa&.contact&.phone_number
+    )
     return [nil, nil, falta] if falta
 
     contato, falta = SeguroViagem::Viajantes.contato(params['contato_de_emergencia'])
@@ -178,24 +185,35 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     proposta
   end
 
-  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link, o valor que a seguradora devolveu e a
-  # hora. Compra sem `codigoCarrinho` (sem link): nil.
+  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link e a hora. Compra sem `urlVoucher` de
+  # pagamento válido (sem link): nil. O `valorBrutoBrl` da resposta volta 0 (#3244) e não é guardado.
   def proposta_da(compra, plano, chave)
     dados = compra.is_a?(Hash) ? compra : {}
-    link = SeguroViagem::Compra.link(dados['codigoCarrinho'])
+    link = SeguroViagem::Compra.link(dados['urlVoucher'])
     return nil if link.nil?
 
     { 'chave' => chave, 'codigo_do_plano' => plano['codigo'], 'codigo_carrinho' => dados['codigoCarrinho'],
-      'link' => link, 'valor_bruto_brl' => dados['valorBrutoBrl'], 'gerada_em' => Time.current.iso8601 }
+      'link' => link, 'gerada_em' => Time.current.iso8601 }
   end
 
+  # O JSON SAI COM ESPAÇO depois de `:` e `,` (#3246): o botão de link só reconhece o endereço que é uma palavra
+  # separada por espaço (`Interacao::Enderecos.dos_textos`), e no JSON compacto o link grudava no campo seguinte.
   def resposta(plano, proposta)
     JSON.generate({ link_de_pagamento: proposta['link'], numero_do_carrinho: proposta['codigo_carrinho'],
-                    plano: plano['nome'], total: SeguroViagem::Dinheiro.brl(plano['preco_total']) })
+                    plano: plano['nome'], total: SeguroViagem::Dinheiro.brl(plano['preco_total']),
+                    **SeguroViagem::Cancelamento.prazos(plano, hoje: fuso.today) }, JSON_COM_ESPACO)
   end
 
   def guardada?(cotacao, chave)
-    cotacao.proposta.to_h['chave'] == chave
+    proposta = cotacao.proposta.to_h
+    proposta['chave'] == chave && link_vigente?(proposta['gerada_em'])
+  end
+
+  def link_vigente?(gerada_em)
+    momento = Time.zone.parse(gerada_em.to_s)
+    momento.present? && momento > VALIDADE_DO_LINK.ago
+  rescue ArgumentError
+    false
   end
 
   # A mesma cotação, o mesmo plano e o mesmo dado inteiro (viajantes já normalizados por `Viajantes`, com o contato e
