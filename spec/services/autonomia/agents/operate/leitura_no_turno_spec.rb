@@ -135,6 +135,20 @@ RSpec.describe Autonomia::Agents::Operate::LeituraNoTurno do
       expect { leitura.antes_de_enviar('rascunho') }.to raise_error(NoMethodError)
     end
 
+    # Revisão do #3232: com a marca dentro do laço, a primeira ficava lida (e o piso passava dela) sem o texto chegar ao
+    # modelo; o turno postava cobrindo uma mensagem que ninguém leu.
+    it 'erro no meio da leitura não deixa nenhuma mensagem marcada como lida' do
+      leitura = described_class.new(conversation: conversation, agent: agent, delivery: delivery,
+                                    ancora: ancora.id) do |recebida|
+        recebida.content == 'E esqui?' ? recebida.metodo_que_nao_existe : recebida.content
+      end
+      recebe('Conhece lá?')
+      recebe('E esqui?')
+
+      expect { leitura.antes_de_enviar('rascunho') }.to raise_error(NoMethodError)
+      expect(delivery.lidas_no_turno).to eq([])
+    end
+
     it 'no teto de voltas: não lê mais, e registra' do
       leitura = leitor
       described_class::MAX_VOLTAS.times { leitura.contar_volta!(:antes_de_enviar) }

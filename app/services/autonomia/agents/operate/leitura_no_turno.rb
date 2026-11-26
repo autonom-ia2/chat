@@ -201,9 +201,10 @@ class Autonomia::Agents::Operate::LeituraNoTurno
     guardadas + novas
   end
 
-  # Lê na ordem e para na primeira ilegível. -> os textos lidos.
+  # Lê na ordem e para na primeira ilegível. -> os textos lidos. Só marca as lidas (e sobe o piso) depois de ler todos
+  # os textos: um erro no meio sobe sem deixar mensagem marcada como lida e com o texto perdido.
   def em_ordem(candidatas, etapa)
-    novas = []
+    lidas = []
     candidatas.each do |recebida|
       texto = texto_de(recebida)
       if texto.blank?
@@ -211,10 +212,10 @@ class Autonomia::Agents::Operate::LeituraNoTurno
         break
       end
 
-      novas << texto
-      marcar_lida(recebida, etapa)
+      lidas << [recebida, texto]
     end
-    novas
+    lidas.map(&:first).each { |recebida| marcar_lida(recebida, etapa) }
+    lidas.map(&:last)
   end
 
   def proximas
