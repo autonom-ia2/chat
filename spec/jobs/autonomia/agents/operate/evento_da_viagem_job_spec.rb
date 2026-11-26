@@ -59,7 +59,7 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
     allow(Autonomia::Agents::Answerer).to receive(:new).and_raise('o modelo nao devia ser chamado')
   end
 
-  def nota(tipo, motivo) = I18n.t("#{Autonomia::Agents::Operate::AvisoDaViagem::NOTAS}.#{tipo}.#{motivo}")
+  def nota(tipo, motivo, **) = I18n.t("#{Autonomia::Agents::Operate::AvisoDaViagem::NOTAS}.#{tipo}.#{motivo}", **)
 
   def universal_responde(status)
     stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
@@ -137,8 +137,8 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
       expect(cotacao.reload.proposta[voucher::MARCADO_NO_TURNO]).to eq(marca)
     end
 
-    # A nota do sistema não basta: sem "pago" da ferramenta, nenhum cartão de voucher é marcado.
-    it 'a ferramenta sem "pago" no turno do aviso: a fala sai sem cartão de voucher' do
+    # A nota do sistema não basta: sem "pago" da ferramenta, nenhum cartão de voucher é marcado, e a equipe fica sabendo.
+    it 'a ferramenta sem "pago" no turno do aviso: a fala sai sem cartão de voucher, e a nota avisa a equipe' do
       universal_responde('Aguardando Pagamento')
       bia_confere_e_responde('Ainda não aparece aqui.')
 
@@ -146,6 +146,26 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
 
       expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(publicas.sole)).to be_empty
       expect(jobs_de_cartoes).to be_empty
+      expect(privadas.sole.content).to include(nota(pago, 'sem_voucher'))
+    end
+
+    # O modelo esqueceu a ferramenta: a fala sai, o voucher não, e a equipe fica sabendo (uma nota só, mesmo no retry).
+    it 'o modelo responde sem chamar a ferramenta: fala pública, nota privada e nenhum PDF' do
+      lia_responde('Pagamento confirmado!')
+
+      rodar
+      sem_modelo
+      rodar
+
+      fala = publicas.sole
+      expect(fala.content).to eq('Pagamento confirmado!')
+      expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(fala)).to be_empty
+      nota_sem_voucher = privadas.sole
+      expect(nota_sem_voucher.content).to include(nota(pago, 'cabecalho', fatos: 'plano Plano Viagem Teste; pago em 26/11.'),
+                                                  nota(pago, 'sem_voucher'))
+      expect(nota_sem_voucher.content_attributes).to include(evento::CHAVE => "#{marca}:sem_voucher")
+      expect(jobs_de_cartoes).to be_empty
+      expect(mensagens.select { |message| message.content_attributes.to_h.key?(voucher::CHAVE) }).to be_empty
     end
 
     it 'com o voucher já enviado (a pessoa perguntou antes), não fala' do
@@ -260,6 +280,20 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
       rodar
 
       expect(publicas.map(&:content)).to eq(['Caiu sim!'])
+    end
+
+    # A âncora do cliente com a desistência gravada (`CartoesDoTurno#encerrar!`) não manda mais o voucher: não conta.
+    it 'com a âncora do cliente encerrada (cartão desistido), o aviso fala e manda o voucher' do
+      cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242))
+      Autonomia::Agents::Operate::CartoesDoTurno.new(ancora_do_cliente).encerrar!('pessoa_respondeu')
+      bia_confere_e_responde('Confirmado!')
+
+      rodar
+
+      fala = publicas.find_by(content: 'Confirmado!')
+      expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(fala).map { |cartao| cartao['tipo'] }).to eq([voucher::TIPO_DO_CARTAO])
+      expect(jobs_de_cartoes.map { |job| job[:args] }).to eq([[fala.id]])
+      expect(privadas).to be_empty
     end
 
     it 'com a marca do cliente sem âncora antes de o aviso começar, o aviso fala' do

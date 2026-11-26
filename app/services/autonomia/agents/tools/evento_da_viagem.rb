@@ -104,11 +104,12 @@ class Autonomia::Agents::Tools::EventoDaViagem
 
   # -> a mensagem desta conversa (pública ou nota) que já carrega a marca, ou nil. O `LIKE` é a peneira; quem decide é o
   # atributo, como em `Tools::Evento#mensagem`.
-  def mensagem(conversa = conversation)
+  # `com_marca`: outra marca deste evento (a nota do voucher que não foi, `AvisoDaViagem#notar_sem_voucher`).
+  def mensagem(conversa = conversation, com_marca: marca)
     return nil if conversa.blank?
 
-    conversa.messages.where('content_attributes::text LIKE ?', "%#{ActiveRecord::Base.sanitize_sql_like(marca)}%")
-            .detect { |message| message.content_attributes.to_h[CHAVE].to_s == marca }
+    conversa.messages.where('content_attributes::text LIKE ?', "%#{ActiveRecord::Base.sanitize_sql_like(com_marca)}%")
+            .detect { |message| message.content_attributes.to_h[CHAVE].to_s == com_marca }
   end
 
   def publicado?(conversa = conversation)
@@ -150,15 +151,21 @@ class Autonomia::Agents::Tools::EventoDaViagem
     marcado.present? && marcado != marca && ancora_com_o_voucher?(atual[VOUCHER::MARCADO_NA_MENSAGEM])
   end
 
-  # A âncora pública do turno aberto pela mensagem `mensagem_id` leva o cartão do voucher desta cotação?
+  # A âncora pública do turno aberto pela mensagem `mensagem_id` leva o cartão do voucher desta cotação, ainda a enviar?
   def ancora_com_o_voucher?(mensagem_id)
     return false if mensagem_id.blank? || conversation.blank?
 
     ancora = ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(conversation, mensagem_id)
-    return false if ancora.nil? || ancora.private
+    return false unless ancora_a_enviar?(ancora)
 
     ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora)
                                                 .any? { |cartao| VOUCHER.cartao?(cartao) && cartao['chave'].to_s == cotacao.id.to_s }
+  end
+
+  # Pública e sem a desistência gravada (`CartoesDoTurno#encerrar!`): a âncora encerrada não manda mais o cartão.
+  def ancora_a_enviar?(ancora)
+    ancora.present? && !ancora.private &&
+      ancora.content_attributes.to_h[::Autonomia::Agents::Operate::CartoesDoTurno::ENCERRADOS].blank?
   end
 
   def do_pagamento

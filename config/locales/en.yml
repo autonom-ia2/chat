@@ -1161,6 +1161,7 @@ en:
               ia_falhou: 'The voucher was NOT sent to the customer: the AI tried to talk to them twice and failed, and the conversation was handed to the team. Send the voucher to the customer.'
               fora_da_janela: 'The voucher was NOT sent to the customer: the channel window is closed, and the AI cannot write outside it. When the customer writes again, send the voucher; if they ask about the payment or the voucher, the AI sends it too.'
               carrinho_substituido: 'A previous cart in this conversation was paid, but it had already been replaced by another proposal. The voucher for that payment was NOT sent. Check it with the insurer.'
+              sem_voucher: 'The payment was confirmed by the automatic check and the AI talked to the customer, but the voucher was NOT sent: the AI did not confirm the payment with the insurer in this turn, or the insurer did not return paid. Check the payment and send the voucher, or ask the AI for a second copy of the voucher.'
             lembrete_de_pagamento:
               cabecalho: 'Travel insurance not paid yet: %{fatos}'
               inelegivel: 'The AI did not remind the customer about the payment: a team member is handling the conversation, or the agent cannot reply right now.'

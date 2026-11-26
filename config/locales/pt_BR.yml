@@ -2256,6 +2256,7 @@ pt_BR:
               ia_falhou: "O voucher NÃO foi enviado ao cliente: a IA tentou falar com ele duas vezes e não conseguiu, e a conversa foi passada para a equipe. Mande o voucher ao cliente."
               fora_da_janela: "O voucher NÃO foi enviado ao cliente: a janela do canal está fechada, e a IA não pode escrever fora dela. Quando o cliente voltar a escrever, mande o voucher; se ele perguntar do pagamento ou do voucher, a IA também manda."
               carrinho_substituido: "Um carrinho anterior desta conversa foi pago, mas ele já tinha sido substituído por outra proposta. O voucher desse pagamento NÃO foi enviado. Confira com a seguradora."
+              sem_voucher: "O pagamento foi confirmado na conferência automática e a IA falou com o cliente, mas o voucher NÃO foi enviado: a IA não conferiu o pagamento na seguradora neste turno, ou a seguradora não deu pago. Confira o pagamento e mande o voucher, ou peça à IA a segunda via do voucher."
             lembrete_de_pagamento:
               cabecalho: "Seguro viagem ainda não pago: %{fatos}"
               inelegivel: "A IA não lembrou o cliente do pagamento: a conversa está com um atendente, ou o agente não pode responder agora."
