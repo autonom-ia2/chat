@@ -87,6 +87,12 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
       marca!(cliente_escreve('E esqui?'))
       expect(superado?([segunda])).to be(true)
     end
+
+    it 'a chave foi desligada no meio do turno: superado (a mensagem nova responde)' do
+      marca!(segunda)
+      account.disable_features!(Autonomia::Agents::Operate::LeituraNoTurno::FLAG)
+      expect(superado?([segunda])).to be(true)
+    end
   end
 
   it 'o turno lê a mensagem nova no meio: uma resposta, com a lida gravada, e o settle dela não responde', :aggregate_failures do
@@ -101,6 +107,51 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
                                                          leitura::CHAVE => [segunda.id])
     expect(Autonomia::Agents::Answerer).to have_received(:new).once
     expect(linhas.join).to include('mensagem_lida_no_turno', 'respondida_junto', "msg=#{segunda.id}", 'etapa=settle')
+  end
+
+  # #3225 (revisão): A leu B no meio e não postou (a IA falhou, ou calou). Nada gravou B como lida: o settle de B responde.
+  describe 'A leu B e não postou' do
+    let(:primeira) { cliente_escreve('França, 15 a 20/01, 40 anos') }
+
+    def ia_le_b_e(desfecho)
+      segunda = nil
+      allow(Autonomia::Agents::Answerer).to receive(:new) do |delivery:, agent:, **|
+        resposta = double('Answerer') # rubocop:disable RSpec/VerifiedDoubles
+        allow(resposta).to receive(:answer) do
+          next resposta_de(agent) if segunda # o turno de B: responde
+
+          segunda = cliente_escreve('Conhece lá?').tap { |mensagem| gatilho(mensagem) }
+          delivery.leitura.antes_de_enviar('rascunho')
+          desfecho.call
+        end
+        resposta
+      end
+      gatilho(primeira)
+      rodar_turno!
+      segunda
+    end
+
+    def resposta_de(agent)
+      Autonomia::Agents::AnswerResult.new(reply: "Resposta de #{agent.name}.", confidence: 0.9,
+                                          handoff: { should: false, reason: nil }, used_knowledge: [], answered_from_knowledge: false)
+    end
+
+    it 'a IA de A falhou depois de ler B: o settle de B responde B', :aggregate_failures do
+      segunda = ia_le_b_e(-> { raise StandardError, 'caiu' })
+
+      expect(respostas.count).to eq(1)
+      expect(respostas.sole.content_attributes['autonomia_reply_to_message_id']).to eq(segunda.id)
+    end
+
+    it 'A calou depois de ler B: o settle de B responde B', :aggregate_failures do
+      segunda = ia_le_b_e(lambda {
+        Autonomia::Agents::AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
+                                            used_knowledge: [], answered_from_knowledge: false)
+      })
+
+      expect(respostas.count).to eq(1)
+      expect(respostas.sole.content_attributes['autonomia_reply_to_message_id']).to eq(segunda.id)
+    end
   end
 
   describe 'o settle da mensagem que outro turno leu' do
@@ -160,8 +211,19 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
       expect(Time.zone.at(settles_na_fila.sole[:at])).to be_within(0.5.seconds).of(2.seconds.from_now)
     end
 
-    it 'passado o teto do turno, desiste e responde' do
-      travel Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno(agente_da_porta) + 1.second
+    it 'com o prazo de quem lê ainda correndo: segue esperando' do
+      travel Autonomia::Agents::Operate::LeituraNoTurno::PRAZO_DE_QUEM_LE
+      clear_enqueued_jobs
+      settle(segunda)
+
+      expect(respostas).to be_empty
+    end
+
+    # O turno que falava morreu sem soltar a fala (OOM, deploy): a fila não espera o teto da Lia (horas).
+    it 'passado o prazo de quem lê (bem antes do teto do turno), desiste e responde', :aggregate_failures do
+      prazo = 6.seconds + Autonomia::Agents::Operate::EsperaDaFala::TETO_DA_FILA + Autonomia::Agents::Operate::LeituraNoTurno::PRAZO_DE_QUEM_LE
+      expect(prazo).to be < Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno(agente_da_porta)
+      travel prazo + 1.second
       settle(segunda)
 
       expect(respostas.count).to eq(1)

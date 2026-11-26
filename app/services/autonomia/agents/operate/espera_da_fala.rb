@@ -10,7 +10,7 @@
 #   uma marca presa nunca travar a conversa. Sem a marca do debounce, ou sem `at`, não há prazo, então nunca fila.
 #   #3225 (flag `agente_le_no_meio_do_turno`): quando quem fala é um turno ANTERIOR a esta mensagem, ele pode tê-la lido
 #   no meio e estar respondendo por ela (Operate::LeituraNoTurno; o que ele leu fica na memória dele, e daqui não se vê).
-#   Então o prazo é o teto do turno (TurnoEmCurso.teto_do_turno), sem o corte de TETO_DA_FILA; quando a fala acaba, o
+#   Então o prazo ganha o de quem lê (LeituraNoTurno::PRAZO_DE_QUEM_LE, sem a parcela da Lia); quando a fala acaba, o
 #   settle confere se ela foi respondida junto (ReplyJob#respondida_junto?) ou segue o caminho de sempre.
 # - `janela_do_settle`: quanto dura a janela do settle de uma rajada já marcada. Uma regra só para todos que a medem.
 module Autonomia::Agents::Operate::EsperaDaFala
@@ -61,16 +61,17 @@ module Autonomia::Agents::Operate::EsperaDaFala
     paridade.em_fila?(agent, nil) ? janela + TETO_DA_FILA : janela
   end
 
-  # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila (ou o teto do
-  # turno, quando quem fala pode ter lido esta mensagem). nil sem prazo.
+  # O instante em que a fila desiste: o `at` da marca do debounce mais a janela do settle com o teto da fila. #3225: quando
+  # quem fala pode ter lido esta mensagem, mais o prazo de quem lê (LeituraNoTurno::PRAZO_DE_QUEM_LE, sem a parcela da
+  # Lia), para a fila não desistir no meio de uma volta. nil sem prazo.
   def prazo_da_fila(agent, conversation, message_id)
     marca = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
     return unless marca.is_a?(Hash) && marca['at'].present?
 
-    inicio = Time.zone.at(marca['at'].to_f)
-    return inicio + ::Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno(agent) if quem_fala_pode_ter_lido?(agent, conversation, message_id)
+    prazo = Time.zone.at(marca['at'].to_f) + janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true)
+    return prazo unless quem_fala_pode_ter_lido?(agent, conversation, message_id)
 
-    inicio + janela_do_settle(agent: agent, marca: marca, inbox: conversation.inbox, com_a_fila: true)
+    prazo + ::Autonomia::Agents::Operate::LeituraNoTurno::PRAZO_DE_QUEM_LE
   end
   private_class_method :prazo_da_fila
 

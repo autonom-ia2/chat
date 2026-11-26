@@ -30,6 +30,15 @@ class Autonomia::Agents::Operate::LeituraNoTurno
   LIMITE = 10
   # A Lia fica fora, pelo tipo (regra da casa: o comportamento dela não muda).
   TIPO_FORA = 'insurance_quote'.freeze
+  # QUANTO O TURNO QUE LÊ PODE DURAR, para a fila (`EsperaDaFala.prazo_da_fila`) do turno de uma mensagem que ele pode
+  # ter lido. Sem a parcela da Lia (ela não lê): o relógio do laço mais longo de quem lê (o de sempre, o das prontas ou
+  # o do principal com ajudante), mais uma ida de cada vez até o fim, a de antes da 1ª leitura e as duas de cada volta
+  # (a rodada e o fechamento), cada uma até REQUEST_TIMEOUT, mais a cadeia de pedaços inteira. Passou disto, o turno que
+  # falava morreu sem soltar a fala (OOM, deploy): a fila desiste e a mensagem é respondida.
+  PRAZO_DE_QUEM_LE = ([::Crm::Ai::ResponsesClient::MAX_SEGUNDOS_DE_FERRAMENTA, ::Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS,
+                       ::Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA].max +
+                      (((2 * MAX_VOLTAS) + 1) * ::Crm::Ai::ResponsesClient::REQUEST_TIMEOUT) +
+                      (::Autonomia::Agents::Config::HUMANIZE[:max_total_delay_ms] / 1000)).seconds
   AVISO_ANTES_DE_ENVIAR = 'A resposta acima ainda não foi enviada ao cliente. Enquanto você a preparava, ele mandou ' \
                           '%<o_que>s. Escreva uma resposta só, que sirva para tudo o que ele disse. O que as ferramentas ' \
                           'já trouxeram continua valendo: chame de novo só se o pedido mudou.'.freeze
@@ -44,11 +53,13 @@ class Autonomia::Agents::Operate::LeituraNoTurno
         paridade.espera_a_fala?(agent, conversation.inbox)
     end
 
-    # A mensagem mais nova do cliente (`pendente`, a da marca do debounce) foi lida pelo turno (`lidas`) e ainda não tem
-    # resposta própria: o turno que leu responde por ela. Sem lidas, nem consulta o banco.
-    def cobre?(conversation, pendente, lidas)
+    # A mensagem mais nova do cliente (`pendente`, a da marca do debounce) foi lida pelo turno (`lidas`) do `agent`, a
+    # chave segue ligada e ela ainda não tem resposta própria: o turno que leu responde por ela. Sem lidas, nem consulta o
+    # banco. Chave desligada no meio do turno: não cobre (o turno que leu fica superado e a mensagem nova responde).
+    def cobre?(conversation, pendente, lidas, agent)
       ids = Array(lidas).map(&:to_s)
       return false if pendente.blank? || ids.exclude?(pendente.to_s)
+      return false unless ligada?(agent, conversation)
 
       !respondida_propria?(conversation, pendente)
     end
@@ -129,7 +140,7 @@ class Autonomia::Agents::Operate::LeituraNoTurno
 
   # Na rodada de ferramentas: o que chegou entra depois das saídas, como fala do cliente, com o aviso do Guia. [] sem nada.
   def na_rodada(esgotado: false)
-    novas = ler(:rodada, esgotado)
+    novas = com_as_guardadas(ler(:rodada, esgotado))
     return [] if novas.empty?
 
     [mensagem('developer', ::Autonomia::Agents::Answerer::AVISO_DE_MENSAGEM_NOVA), *falas(novas)]
@@ -138,11 +149,20 @@ class Autonomia::Agents::Operate::LeituraNoTurno
   # Antes de enviar: com algo novo, o rascunho volta como fala do agente (só o texto, nunca os itens de raciocínio), o
   # aviso de que ele não foi enviado e o que chegou. [] sem nada.
   def antes_de_enviar(rascunho, esgotado: false)
-    novas = ler(:antes_de_enviar, esgotado)
+    novas = com_as_guardadas(ler(:antes_de_enviar, esgotado))
     return [] if novas.empty?
 
     o_que = novas.size == 1 ? 'a mensagem a seguir' : 'as mensagens a seguir'
     [mensagem('assistant', rascunho.to_s), mensagem('developer', format(AVISO_ANTES_DE_ENVIAR, o_que: o_que)), *falas(novas)]
+  end
+
+  # A ferramenta que confere o turno antes de agir (`cotar_seguro_viagem`) lê o que chegou, para não recusar o trabalho
+  # que este turno vai entregar cobrindo a mensagem nova. O que ela leu já conta como lido e vai ao modelo na próxima
+  # leitura do laço (`na_rodada` ou `antes_de_enviar`), mesmo com o relógio ou o teto: lida, a mensagem não tem outro
+  # turno que a responda.
+  def ler_agora
+    @guardadas = Array(@guardadas) + ler(:ferramenta, false)
+    nil
   end
 
   def contar_volta!(etapa)
@@ -175,6 +195,12 @@ class Autonomia::Agents::Operate::LeituraNoTurno
     em_ordem(candidatas, etapa)
   end
 
+  def com_as_guardadas(novas)
+    guardadas = Array(@guardadas)
+    @guardadas = []
+    guardadas + novas
+  end
+
   # Lê na ordem e para na primeira ilegível. -> os textos lidos.
   def em_ordem(candidatas, etapa)
     novas = []
@@ -195,12 +221,12 @@ class Autonomia::Agents::Operate::LeituraNoTurno
     @conversation.messages.chat.incoming.where('id > ?', @piso).reorder(:id).limit(LIMITE).to_a
   end
 
-  # Erro ao ler a mensagem (a transcrição, a citação) conta como ilegível: a leitura para e o caminho é o de hoje.
+  # A falha esperada de mídia (a transcrição, o download) já chega aqui como nil: o `MessageMedia` a registra e devolve
+  # sem transcrição, e a mensagem é ilegível. A citação (`Responder#quoted_context`) também resolve a dela. Nada é
+  # resgatado aqui: erro de programação sobe e derruba o turno, que o Responder registra (`responder_failed`), em vez de
+  # parar a leitura calado.
   def texto_de(recebida)
     @texto.call(recebida)
-  rescue StandardError => e
-    Rails.logger.warn("[autonomia][operate] leitura_no_turno_falhou conv=#{@conversation.id} msg=#{recebida.id} #{e.class.name}")
-    nil
   end
 
   def marcar_lida(recebida, etapa)

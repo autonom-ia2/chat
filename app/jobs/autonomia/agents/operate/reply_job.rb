@@ -47,7 +47,7 @@ module Autonomia
           stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
           pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
           pendente.present? && pendente.to_s != message_id.to_s &&
-            !::Autonomia::Agents::Operate::LeituraNoTurno.cobre?(conversation, pendente, lidas)
+            !::Autonomia::Agents::Operate::LeituraNoTurno.cobre?(conversation, pendente, lidas, agent)
         end
 
         # A marca do debounce de uma rajada: a mensagem pendente, quando e a espera dela (#3211, `espera_ms`). Uma forma só

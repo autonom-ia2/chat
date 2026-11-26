@@ -21,7 +21,7 @@ module Autonomia
         # e na `low` ela esperava atrás das consultas de cotação.
         queue_as :medium
         FalaDaCadeia = ::Autonomia::Agents::Operate::FalaDaCadeia
-        # O turno ainda é este? (`current_turn?`, `respondida_junto?`)
+        # O turno ainda é este? (`current_turn?`, `bot_in_command?`, `respondida_junto?`)
         include TurnoDoPedaco
 
         def perform(conversation_id, agent_inbox_id, reply_to_message_id, chunks, index = 0, meta = {})
@@ -88,6 +88,7 @@ module Autonomia
           when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
           when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
           when :turno_mudou then pedir_avaliacao(conversation, meta) if index.positive?
+          when :respondida_junto then rastro_de_respondida_junto(conversation, reply_to_message_id)
           end
         end
 
@@ -117,7 +118,7 @@ module Autonomia
         # #3225: `respondida_junto` (1º pedaço, com a flag): o turno que estava falando leu esta mensagem e já respondeu.
         def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index, meta = {})
           comecada = FalaDaCadeia.comecada?(agent_inbox.agent, conversation.inbox, index)
-          return :turno_mudou unless comecada || current_turn?(conversation, reply_to_message_id, meta)
+          return :turno_mudou unless comecada || current_turn?(conversation, reply_to_message_id, meta, agent_inbox.agent)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
           return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
           return :respondida_junto if respondida_junto?(conversation, agent_inbox, reply_to_message_id, index)
@@ -275,12 +276,6 @@ module Autonomia
 
         def chunk_token(reply_to_message_id, index)
           "#{reply_to_message_id}:#{index}"
-        end
-
-        def bot_in_command?(conversation, agent_inbox = nil)
-          # Revalida o CONTRATO INTEIRO com estado fresco, na MESMA caixa do agente (cada chunk):
-          # sem responsável + agente ligado/ativo/não-interno/não-sistema + feature on + allowlist.
-          ::Autonomia::Agents::Operate.no_comando?(conversation, agent_inbox)
         end
 
         def log_replied(agent, conversation, meta, message)

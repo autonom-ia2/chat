@@ -83,6 +83,7 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
       end
 
       expect(respondidas).to eq([primeira.id])
+      expect(linhas.join).to include('respondida_junto', "msg=#{segunda.id}", 'etapa=pedaco')
       expect(linhas.join).not_to include('leitura_no_silencio')
     end
 

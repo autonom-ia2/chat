@@ -100,6 +100,19 @@ RSpec.describe Autonomia::Agents::Operate::LeituraNoTurno do
     end
   end
 
+  describe '#ler_agora (a ferramenta que confere o turno)' do
+    it 'o que ela leu conta como lido e vai ao modelo na próxima leitura, mesmo com o relógio esgotado', :aggregate_failures do
+      leitura = leitor
+      nova = recebe('Conhece lá?')
+
+      expect(leitura.ler_agora).to be_nil
+      expect(delivery.lidas_no_turno).to eq([nova.id])
+      expect(textos(leitura.antes_de_enviar('rascunho', esgotado: true)).last).to eq('Conhece lá?')
+      expect(leitura.na_rodada).to eq([])
+      expect(linhas.join).to include('mensagem_lida_no_turno', 'etapa=ferramenta')
+    end
+  end
+
   describe 'onde a leitura para' do
     it 'na ilegível: lê a de antes, para nela e não lê nada depois, nem na leitura seguinte', :aggregate_failures do
       leitura = leitor
@@ -113,14 +126,13 @@ RSpec.describe Autonomia::Agents::Operate::LeituraNoTurno do
       expect(linhas.join).to include('leitura_parou', "lida=#{ilegivel.id}", 'motivo=ilegivel')
     end
 
-    it 'erro ao ler a mensagem conta como ilegível' do
-      leitura = described_class.new(conversation: conversation, agent: agent, delivery: delivery, ancora: ancora.id) do |_m|
-        raise ArgumentError, 'falhou'
-      end
+    # A falha esperada (a transcrição) já chega como texto nil: o `responder_no_meio_do_turno_spec` prova o caminho real.
+    it 'erro de programação ao ler a mensagem sobe (não para a leitura calado)' do
+      leitura = described_class.new(conversation: conversation, agent: agent, delivery: delivery, ancora: ancora.id,
+                                    &:metodo_que_nao_existe)
       recebe('Conhece lá?')
 
-      expect(leitura.antes_de_enviar('rascunho')).to eq([])
-      expect(delivery.lidas_no_turno).to be_empty
+      expect { leitura.antes_de_enviar('rascunho') }.to raise_error(NoMethodError)
     end
 
     it 'no teto de voltas: não lê mais, e registra' do
@@ -193,19 +205,24 @@ RSpec.describe Autonomia::Agents::Operate::LeituraNoTurno do
     end
 
     it 'lida e sem resposta própria: o turno que leu responde por ela' do
-      expect(described_class.cobre?(conversation, nova.id, [nova.id])).to be(true)
+      expect(described_class.cobre?(conversation, nova.id, [nova.id], agent)).to be(true)
     end
 
     it 'lida, mas o turno dela já respondeu: não cobre (o turno que leu fica superado)' do
       responde(reply_to: nova.id)
-      expect(described_class.cobre?(conversation, nova.id, [nova.id])).to be(false)
+      expect(described_class.cobre?(conversation, nova.id, [nova.id], agent)).to be(false)
     end
 
     it 'não lida: não cobre, sem consultar o banco' do
       pendente = nova.id
       allow(conversation).to receive(:messages).and_call_original
-      expect(described_class.cobre?(conversation, pendente, [])).to be(false)
+      expect(described_class.cobre?(conversation, pendente, [], agent)).to be(false)
       expect(conversation).not_to have_received(:messages)
+    end
+
+    it 'lida, mas a chave foi desligada no meio do turno: não cobre (o turno que leu fica superado)' do
+      account.disable_features!(described_class::FLAG)
+      expect(described_class.cobre?(conversation.reload, nova.id, [nova.id], agent)).to be(false)
     end
 
     it 'respondida junto: a resposta do mesmo agente gravou a lida', :aggregate_failures do

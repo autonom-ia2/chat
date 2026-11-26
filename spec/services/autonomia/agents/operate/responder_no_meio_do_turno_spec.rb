@@ -7,7 +7,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) { conta_da_fase2.tap { |conta| conta.enable_features!(Autonomia::Agents::Operate::LeituraNoTurno::FLAG) } }
   let(:inbox) { create(:inbox, account: account) }
-  let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
   let(:agent) { criar_principal(account) }
   let(:agent_inbox) do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: create(:agent_bot, account: account))
@@ -83,9 +83,75 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
         expect(transcricoes).not_to have_received(:transcribe)
       end
 
+      it 'transcrição que falha (o erro da transcrição): não, e a falha fica com o leitor de mídia', :aggregate_failures do
+        sem_cache = recebe('').tap do |mensagem|
+          mensagem.attachments.create!(account: account, file_type: :audio, external_url: 'https://exemplo.invalid/audio2.ogg')
+        end
+        allow(transcricoes).to receive(:transcribe).and_raise(Crm::Ai::TranscriptionClient::Error, 'falhou')
+
+        expect(texto(Message.find(sem_cache.id))).to be_nil
+        expect(transcricoes).to have_received(:transcribe)
+      end
+
       it 'com a leitura de mídia desligada: não' do
         with_modified_env(AI_AGENT_MEDIA: 'false') { expect(texto(Message.find(audio.id))).to be_nil }
       end
+    end
+  end
+
+  # #3225 (revisão): a resposta de A, que leu B, sai enquanto a IA do turno de B ainda trabalha. Na hora de postar, o
+  # turno de B fica calado (`respondida_junto`), em texto e em pedaços, e nada novo sai.
+  describe 'o turno de B, quando a resposta de A já leu B' do
+    let(:segunda) { recebe('Conhece lá?') }
+    let(:linhas) { [] }
+    let(:resposta_de_a) { 'Resposta de A, que leu B.' }
+
+    before do
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => segunda.id } })
+      allow(Autonomia::Agents::Answerer).to receive(:new) do
+        instance_double(Autonomia::Agents::Answerer).tap do |ia|
+          allow(ia).to receive(:answer) do
+            a_responde_lendo_b
+            Autonomia::Agents::AnswerResult.new(reply: "Resposta de B.\n\nCom mais um pedaço.", confidence: 0.9,
+                                                handoff: { should: false, reason: nil })
+          end
+        end
+      end
+      allow(Rails.logger).to receive(:info).and_call_original
+      allow(Rails.logger).to receive(:info).with(a_string_including('[autonomia]')) { |linha| linhas << linha }
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    end
+
+    def a_responde_lendo_b
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                       sender: agent_inbox.agent_bot, content: resposta_de_a,
+                       content_attributes: { 'autonomia_agent_id' => agent.id, 'autonomia_reply_to_message_id' => ancora.id,
+                                             Autonomia::Agents::Operate::LeituraNoTurno::CHAVE => [segunda.id] })
+    end
+
+    def turno_de_b
+      described_class.new(conversation: conversation, agent_inbox: agent_inbox, reply_to_message_id: segunda.id).perform
+    end
+
+    it 'em texto: silêncio na entrega, e nenhuma mensagem nova', :aggregate_failures do
+      resultado = with_modified_env(AI_HUMANIZE_DELIVERY: 'false') { turno_de_b }
+
+      expect(resultado.status).to eq(:silenced)
+      expect(conversation.messages.outgoing.pluck(:content)).to eq([resposta_de_a])
+      expect(linhas.join).to include('motivo=respondida_junto', 'etapa=na_entrega', "msg=#{segunda.id}")
+    end
+
+    it 'em pedaços: para antes de agendar o 1º, e nenhuma mensagem nova', :aggregate_failures do
+      digitando = instance_double(Autonomia::Agents::Operate::TypingIndicator, on: nil, off: nil)
+      allow(Autonomia::Agents::Operate::TypingIndicator).to receive(:new).and_return(digitando)
+
+      resultado = with_modified_env(AI_HUMANIZE_DELIVERY: 'true') { turno_de_b }
+
+      expect(resultado.status).to eq(:silenced)
+      expect(conversation.messages.outgoing.pluck(:content)).to eq([resposta_de_a])
+      expect(ActiveJob::Base.queue_adapter.enqueued_jobs.map { |item| item[:job] })
+        .not_to include(Autonomia::Agents::Operate::ChunkedDeliveryJob)
+      expect(linhas.join).to include('motivo=respondida_junto', 'etapa=antes_dos_pedacos', "msg=#{segunda.id}")
     end
   end
 
