@@ -328,7 +328,8 @@ module Autonomia
         # retry não faz a busca (LIKE) da âncora.
         def pode_ter_ancora?
           ::Autonomia::Agents::Tools::Native::CartaoDaPagina.ligado?(@conversation.account) ||
-            ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account)
+            ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account) ||
+            Array(@delivery&.cartoes).any? # #3223: o comparativo do Seguro Viagem não depende da flag do mapa e do contato
         end
 
         def erro_ao_enfileirar(error, ancora)

@@ -19,6 +19,9 @@
 # equipe que escreveu ao cliente depois da âncora (`PessoaDaEquipe.respondeu_depois?`), nem com a conta desligada
 # (`CartaoDaPagina.ligado?`). Não é o `still_eligible?` inteiro: ele barraria o cartão do turno que pediu passagem. A
 # desistência fica gravada na âncora (`autonomia_cartoes_encerrados`, `encerrar!`): um retry tardio não manda o cartão.
+# O COMPARATIVO DO SEGURO VIAGEM (#3223, `SeguroViagem::EntregaDoComparativo`) é um cartão deste mesmo caminho: sai depois
+# da âncora, com o token e os descartes de sempre, mas não é formato (`rich_message` nil) nem depende da flag do mapa e do
+# contato: na hora de postar vira o PDF da cotação, anexado. Nos pedaços ele resolve pela cotação, não pela página.
 # A mensagem do cartão NÃO leva `autonomia_reply_to_message_id`: o `already_replied?` continua olhando só a resposta.
 # O conteúdo vai vazio (o formato da Meta não tem corpo); na caixa que não leva o formato (e-mail, chat do site), a
 # mesma regra da interação (`Interacao.sai_o_formato?`): sai a versão em texto, sem `rich_message`. O log leva só ids.
@@ -29,6 +32,7 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   CAMPOS = %w[tipo chave rich_message].freeze
   REFERENCIA = %w[tipo chave token].freeze
   NATIVO = ::Autonomia::Agents::Tools::Native::CartaoDaPagina
+  COMPARATIVO = ::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
 
   class << self
     # Os cartões marcados no turno, com o token, para gravar na âncora. {} sem cartão: a âncora fica como sempre.
@@ -77,10 +81,13 @@ class Autonomia::Agents::Operate::CartoesDoTurno
     end
 
     # As referências resolvidas pela página do agente agora (o contato, com o telefone do agente primeiro, como
-    # `enviar_contato`). -> [os cartões completos, quantos não resolveram].
+    # `enviar_contato`); o comparativo, sem formato (o PDF nasce ao postar). -> [os cartões completos, quantos não
+    # resolveram].
     def resolver(referencias, agent)
       pagina = NATIVO.pagina(agent)
       completos = Array(referencias).filter_map do |referencia|
+        next referencia.slice(*REFERENCIA).merge('rich_message' => nil) if COMPARATIVO.cartao?(referencia)
+
         formato = formato_na_pagina(agent, pagina, referencia)
         referencia.slice(*REFERENCIA).merge('rich_message' => formato) if formato
       end
@@ -168,7 +175,7 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   # postou); senão o motivo de não postar. Erro sobe para quem chama.
   def postar!(cartao)
     @conversation.with_lock do
-      motivo = motivo_para_nao_postar
+      motivo = motivo_para_nao_postar(cartao)
       construir!(cartao) unless motivo || postado?(cartao)
       motivo
     end
@@ -176,13 +183,17 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   private
 
-  def motivo_para_nao_postar
+  # O comparativo não depende da flag do mapa e do contato; sem a cotação (apagada com a conversa), não sai.
+  def motivo_para_nao_postar(cartao)
     return 'pessoa_respondeu' if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @ancora.id)
+    return (COMPARATIVO.cotacao_do(cartao, @conversation) ? nil : 'cotacao_sumiu') if COMPARATIVO.cartao?(cartao)
 
     'desligado' unless NATIVO.ligado?(@conversation.account)
   end
 
   def construir!(cartao)
+    return comparativo!(cartao) if COMPARATIVO.cartao?(cartao)
+
     formato = sai_o_formato?(cartao)
     Messages::MessageBuilder.new(
       nil, @conversation,
@@ -195,6 +206,13 @@ class Autonomia::Agents::Operate::CartoesDoTurno
         }
       )
     ).perform
+  end
+
+  # O PDF da cotação, anexado, com o agente e o token do turno (`EntregaDoComparativo`).
+  def comparativo!(cartao)
+    COMPARATIVO.new(conversation: @conversation, cotacao: COMPARATIVO.cotacao_do(cartao, @conversation), sender_id: @ancora.sender_id,
+                    atributos: { 'autonomia_agent_id' => @ancora.content_attributes.to_h['autonomia_agent_id'],
+                                 TOKEN => cartao['token'] }).postar!
   end
 
   def postada(token)
