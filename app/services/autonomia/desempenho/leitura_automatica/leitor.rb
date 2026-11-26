@@ -12,7 +12,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Leitor
   class Falha < StandardError; end
 
   FEATURE = 'painel_leitura'.freeze
-  MODELO = 'gpt-6.1-sol'.freeze
+  MODELO = 'gpt-6.2-sol'.freeze
   ESFORCO = 'high'.freeze
   TEMPO = 300
   NOME_DO_ESQUEMA = 'procuras'.freeze

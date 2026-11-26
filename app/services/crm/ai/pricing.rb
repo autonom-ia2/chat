@@ -25,7 +25,9 @@ module Crm
       # gpt-6-sol fica na tabela PARA SEMPRE: as linhas históricas de uso gravadas com esse nome
       # precisam precificar retroativo sem cair em ZERO_RATE. gpt-6.1-sol = MESMAS tarifas, exceto
       # leitura de cache pela METADE (0.1 vs 0.2) — toda a economia da migração vem do cache hit.
+      # gpt-6.2-sol (#3242) = MESMAS tarifas do 6.1-sol; o 6.1 fica pelas linhas históricas.
       DEFAULT_RATES = {
+        'gpt-6.2-sol' => { input: 2.0, cached: 0.1, cache_write: 2.5, output: 10.0 },
         'gpt-6.1-sol' => { input: 2.0, cached: 0.1, cache_write: 2.5, output: 10.0 },
         'gpt-6-sol' => { input: 2.0, cached: 0.2, cache_write: 2.5, output: 10.0 },
         'gpt-6-luna' => { input: 0.1, cached: 0.01, cache_write: 0.125, output: 0.5 },
