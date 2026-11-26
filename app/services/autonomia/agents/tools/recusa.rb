@@ -119,7 +119,8 @@ module Autonomia::Agents::Tools::Recusa
     'destino_invalido' => 'a seguradora não atende algum destino pedido; nada foi cotado',
     'idade_fora_do_limite' => 'nenhum plano da seguradora aceita a idade de algum viajante; nada foi guardado',
     'sem_plano' => 'a seguradora não devolveu plano para a viagem; nada foi guardado',
-    # #3223: o cliente escreveu de novo antes da cotação; o turno não posta, e nada foi cotado.
+    # #3223: o cliente escreveu de novo antes da cotação; o turno não posta, e nada foi cotado. Só log: não é falha de
+    # fora e não vai à nota da equipe (`RecusasRecentes::NA_NOTA`).
     'turno_superado' => 'uma mensagem mais nova do cliente abriu outro turno, e este não posta; a viagem não foi cotada',
     # #3211: as recusas de `detalhes_da_cotacao`, que lê a última cotação guardada da conversa.
     'sem_cotacao' => 'a conversa ainda não tem cotação de viagem guardada; o modelo cota primeiro',

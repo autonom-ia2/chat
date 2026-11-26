@@ -183,12 +183,19 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   private
 
-  # O comparativo não depende da flag do mapa e do contato; sem a cotação (apagada com a conversa), não sai.
   def motivo_para_nao_postar(cartao)
     return 'pessoa_respondeu' if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @ancora.id)
-    return (COMPARATIVO.cotacao_do(cartao, @conversation) ? nil : 'cotacao_sumiu') if COMPARATIVO.cartao?(cartao)
+    return motivo_do_comparativo(cartao) if COMPARATIVO.cartao?(cartao)
 
     'desligado' unless NATIVO.ligado?(@conversation.account)
+  end
+
+  # O comparativo não depende da flag do mapa e do contato: só dos agentes ligados na conta e da cotação na conversa
+  # (apagada com ela, não sai).
+  def motivo_do_comparativo(cartao)
+    return 'desligado' unless ::Autonomia::Agents::Config.enabled?(@conversation.account)
+
+    'cotacao_sumiu' if COMPARATIVO.cotacao_do(cartao, @conversation).nil?
   end
 
   def construir!(cartao)

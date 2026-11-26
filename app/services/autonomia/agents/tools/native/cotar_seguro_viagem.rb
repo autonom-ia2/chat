@@ -89,7 +89,7 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     return sem_planos(candidatos) if planos.empty?
 
     cotacao = guardar(resposta, planos, pedido_da_universal)
-    delivery.marcar_cartao(SeguroViagem::EntregaDoComparativo.cartao(cotacao))
+    delivery.trocar_cartao(SeguroViagem::EntregaDoComparativo.cartao(cotacao)) # um comparativo por turno: o da última
     JSON.generate({ cotacao: cotacao.pedido.slice('destinos', 'data_saida', 'data_retorno', 'idades'),
                     planos: SeguroViagem::Planos.resumo(planos), pdf_vai_junto: true })
   rescue Universal::Cliente::Erro => e

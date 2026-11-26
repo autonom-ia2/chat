@@ -151,6 +151,13 @@ class Autonomia::Agents::Tools::Delivery
     @cartoes["#{cartao['tipo']}:#{cartao['chave']}"] ||= cartao
   end
 
+  # UM CARTÃO DO TIPO POR TURNO (#3223): o novo substitui o do mesmo tipo marcado antes. O comparativo do Seguro Viagem:
+  # duas cotações no mesmo turno mandam só o PDF da última.
+  def trocar_cartao(cartao)
+    @cartoes = @cartoes.to_h.reject { |_, marcado| marcado['tipo'] == cartao['tipo'] }
+    marcar_cartao(cartao)
+  end
+
   # Os cartões marcados no turno, na ordem em que foram marcados.
   def cartoes
     @cartoes.to_h.values

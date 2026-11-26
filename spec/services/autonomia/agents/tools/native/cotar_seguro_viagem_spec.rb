@@ -103,16 +103,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       expect(delivery.cartoes).to be_empty
     end
 
+    it 'a recusa de turno superado fica só no log, fora da nota da equipe' do
+      expect(Autonomia::Agents::Tools::RecusasRecentes::NA_NOTA).not_to include('turno_superado')
+    end
+
     it 'a marca aponta para a mensagem deste turno: cota' do
       marca_do_debounce(77)
       expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
     end
   end
 
-  it 'a mesma viagem duas vezes: duas cotações, cada uma com o seu cartão' do
+  it 'duas cotações no mesmo turno: duas cotações, e um comparativo só, o da última' do
     2.times { ferramenta(params).call }
     expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.twice
-    expect(delivery.cartoes.pluck('chave')).to eq(Autonomia::Agents::CotacaoDeViagem.order(:id).pluck(:id).map(&:to_s))
+    expect(delivery.cartoes.pluck('chave')).to eq([Autonomia::Agents::CotacaoDeViagem.order(:id).last.id.to_s])
   end
 
   describe 'o nome de cada país (#3223)' do

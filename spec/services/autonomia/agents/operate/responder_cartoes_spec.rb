@@ -332,19 +332,20 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
-  # #1479 (LOW a da F3): a guarda "já respondido" só procura a âncora quando o turno pode ter cartão ou interação pendente.
+  # #1479 (LOW a da F3): a guarda "já respondido" procura a âncora; desde o #3223 sempre (o comparativo do Seguro Viagem
+  # não depende de flag, e o retry pode não marcar cartão nenhum).
   describe 'a guarda "já respondido" e a busca da âncora' do
     before { allow(Autonomia::Agents::Operate::CartoesDoTurno).to receive(:ancora_do_turno).and_call_original }
 
     context 'without the cards flag and with the interaction off' do
       let(:account) { conta_da_fase2 }
 
-      it 'o retry não consulta a âncora' do
+      it 'o retry consulta a âncora mesmo assim (#3223)' do
         allow(Autonomia::Agents::Operate::InteracaoDepoisDoAudio).to receive(:ligada?).and_return(false)
         responde('Fica no Centro.', [])
         2.times { perform }
         expect(enviadas.size).to eq(1)
-        expect(Autonomia::Agents::Operate::CartoesDoTurno).not_to have_received(:ancora_do_turno)
+        expect(Autonomia::Agents::Operate::CartoesDoTurno).to have_received(:ancora_do_turno).once
       end
     end
 

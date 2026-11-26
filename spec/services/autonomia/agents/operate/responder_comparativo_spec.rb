@@ -4,7 +4,7 @@ require 'rails_helper'
 # resposta, pelo `EnviarCartoesJob`, e só quando ela saiu. O turno superado (o cliente escreveu durante a IA) não posta a
 # resposta nem o PDF, e o descarte fica registrado. Não depende da flag do mapa e do contato.
 RSpec.describe Autonomia::Agents::Operate::Responder do
-  let(:account) { conta_da_fase2 } # sem `agentes_enviar_local_e_contato`
+  let(:account) { conta_da_fase2.tap { |conta| conta.disable_features!('agentes_enviar_local_e_contato') } }
   let(:cloud) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:inbox) { cloud.inbox }
   let(:contact_inbox) { create(:contact_inbox, inbox: inbox, source_id: '5511937016094') }
@@ -14,6 +14,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:agent_inbox) { Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot) }
   let(:entrega) { Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo }
   let(:linhas) { [] }
+  let(:nao_enviados) { [] }
   let!(:pergunta) { mensagem_do_cliente('França, 15 a 20/01, 40, 38 e 10 anos') }
 
   around do |example|
@@ -24,6 +25,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Rails.logger).to receive(:info).and_call_original
     allow(Rails.logger).to receive(:info).with(a_string_including('cartao_descartado')) { |linha| linhas << linha }
+    allow(Rails.logger).to receive(:info).with(a_string_including('cartao_nao_enviado')) { |linha| nao_enviados << linha }
+  end
+
+  it 'a conta destes exemplos está sem o envio do mapa e do contato' do
+    expect(account.feature_enabled?('agentes_enviar_local_e_contato')).to be(false)
   end
 
   def mensagem_do_cliente(texto)
@@ -132,6 +138,80 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     2.times { perform }
     rodar_cartoes
     expect(pdfs.size).to eq(1)
+  end
+
+  it 'retry: a 1ª rodada postou a resposta e morreu antes de enfileirar; a 2ª não cota e o PDF sai assim mesmo' do
+    chamadas = 0
+    allow(Autonomia::Agents::Operate::EnviarCartoesJob).to receive(:perform_later).and_wrap_original do |original, *args|
+      chamadas += 1
+      raise Redis::CannotConnectError if chamadas == 1
+
+      original.call(*args)
+    end
+    responde('Segue a cotação.', [entrega.cartao(cotacao)])
+    perform
+    responde('Segue a cotação.', [])
+    perform
+    rodar_cartoes
+
+    expect(pdfs.size).to eq(1)
+    expect(enviadas.size).to eq(2)
+  end
+
+  it 'agentes desligados na conta antes de o PDF sair: ele não sai, e fica registrado' do
+    responde('Segue a cotação.', [entrega.cartao(cotacao)])
+    perform
+    account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_enabled' => false))
+    rodar_cartoes
+
+    expect(pdfs).to be_empty
+    expect(nao_enviados.sole).to include("conv=#{conversation.id}", 'motivo=desligado')
+  end
+
+  describe 'entrega em pedaços' do
+    around { |example| with_modified_env(AI_HUMANIZE_DELIVERY: 'true') { example.run } }
+
+    before do
+      digitando = instance_double(Autonomia::Agents::Operate::TypingIndicator, on: nil, off: nil)
+      allow(Autonomia::Agents::Operate::TypingIndicator).to receive(:new).and_return(digitando)
+    end
+
+    def pedacos_agendados
+      job = ActiveJob::Base.queue_adapter.enqueued_jobs.reverse.find { |item| item[:job] == Autonomia::Agents::Operate::ChunkedDeliveryJob }
+      ActiveJob::Arguments.deserialize(job[:args])[3]
+    end
+
+    def entregar(pedacos)
+      pedacos.each_index do |indice|
+        Autonomia::Agents::Operate::ChunkedDeliveryJob.new.perform(conversation.id, agent_inbox.id, pergunta.id, pedacos, indice, {})
+      end
+    end
+
+    it 'o último pedaço sai, depois o PDF' do
+      responde("Segue a cotação.\n\nNo PDF estão todas as coberturas.", [entrega.cartao(cotacao)])
+      perform
+      pedacos = pedacos_agendados
+      expect(pedacos.size).to be > 1
+
+      entregar(pedacos)
+      rodar_cartoes
+      expect(enviadas.last).to eq(pdfs.sole)
+      expect(enviadas.size).to eq(pedacos.size + 1)
+    end
+
+    it 'o turno mudou antes do último pedaço: o PDF não sai, e o descarte fica registrado' do
+      responde("Segue a cotação.\n\nNo PDF estão todas as coberturas.", [entrega.cartao(cotacao)])
+      perform
+      pedacos = pedacos_agendados
+      superar(mensagem_do_cliente('e o meu filho?'))
+      # A cadeia para no 1º pedaço e não agenda os outros: o que leva o cartão (o último) nunca sai.
+      Autonomia::Agents::Operate::ChunkedDeliveryJob.new.perform(conversation.id, agent_inbox.id, pergunta.id, pedacos, 0, {})
+      rodar_cartoes
+
+      expect(pdfs).to be_empty
+      expect(jobs_dos_cartoes).to be_empty
+      expect(linhas.sole).to include("conv=#{conversation.id}", "msg=#{pergunta.id}", 'motivo=turno_mudou')
+    end
   end
 
   it 'nos pedaços, o comparativo resolve pela cotação, não pela página' do
