@@ -13,6 +13,7 @@
 class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents::Tools::Native::Base
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   Catalogo = SeguroViagem::CatalogoDeCoberturas
+  Codigos = Autonomia::Seguradoras::Universal::Codigos
 
   AVISO = 'Sem preço: o preço só sai na cotação.'.freeze
   AVISO_INTERNACIONAL = 'Valores com "$" são em dólar. Cada plano "USA +" tem as mesmas coberturas do plano de mesmo ' \
@@ -55,44 +56,48 @@ class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents:
     end
   end
 
-  # Com `nacional` explícito lê só aquele catálogo. Sem ele (nil), procura cada nome nos DOIS catálogos (cada um com o
-  # seu cache de 24 h): o nome do plano já diz o catálogo, e o cliente que pergunta "quanto cobre o Master?" não sabe
-  # (nem precisa saber) se a viagem é nacional. Nome achado nos dois (não deve acontecer): vale o internacional.
+  # Com `nacional` explícito lê só aquele catálogo. Sem ele (nil), lê o internacional e só lê o nacional quando algum
+  # nome pedido não foi achado no internacional (ou quando a lista é vazia, que pede todos): o nome do plano já diz o
+  # catálogo, e o cliente que pergunta "quanto cobre o Master?" não sabe (nem precisa saber) se a viagem é nacional.
+  # Nome achado nos dois (não deve acontecer): vale o internacional, que é lido primeiro.
   def call
-    catalogos = ler_catalogos
+    catalogos = ler_em_ordem
     escolhidos, desconhecidos = escolher(catalogos)
     fora_do_ar = catalogos.any? { |catalogo| catalogo[:erro] }
     return tratar_falha(catalogos) if escolhidos.empty? && fora_do_ar
     # Com um catálogo fora, o nome que não apareceu pode estar nele: não é "fora do catálogo" (o aviso diz isso).
     return fora_do_catalogo(desconhecidos, catalogos) if desconhecidos.any? && !fora_do_ar
 
-    responder(escolhidos, catalogos)
+    tratar_acesso_recusado(catalogos)
+    responder(escolhidos, desconhecidos, catalogos)
   end
 
   private
 
-  # -> [{ nome: 'internacional' | 'nacional', planos: [...] }] ou, com a Universal fora, `{ nome:, erro: }`. Só o erro do
-  # cliente HTTP é guardado; qualquer outro levanta.
-  def ler_catalogos
-    consultados.map do |nacional|
-      nome = nacional ? 'nacional' : 'internacional'
-      { nome: nome, planos: Catalogo.planos(cliente.beneficios(nacional: nacional)) }
-    rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
-      { nome: nome, erro: e }
-    end
+  # -> [{ nome: 'internacional' | 'nacional', planos: [...] }] ou, com a Universal fora, `{ nome:, erro: }`.
+  def ler_em_ordem
+    catalogos = [ler(params['nacional'].nil? ? false : nacional?)]
+    return catalogos unless params['nacional'].nil?
+    return catalogos if pedidos.any? && escolher(catalogos).last.empty?
+
+    catalogos + [ler(true)]
   end
 
-  # Internacional primeiro: é ele que vence quando o mesmo nome existe nos dois.
-  def consultados
-    return [false, true] if params['nacional'].nil?
+  # Só o erro do cliente HTTP é guardado; qualquer outro levanta.
+  def ler(nacional)
+    nome = nacional ? 'nacional' : 'internacional'
+    { nome: nome, planos: Catalogo.planos(cliente.beneficios(nacional: nacional)) }
+  rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
+    { nome: nome, erro: e }
+  end
 
-    [nacional?]
+  def pedidos
+    Array(params['planos']).map { |pedido| pedido.to_s.strip }.reject(&:empty?)
   end
 
   # -> [[{ 'plano', 'coberturas', 'catalogo' }], nomes que nenhum catálogo consultado tem]
   def escolher(catalogos)
     consultaveis = catalogos.reject { |catalogo| catalogo[:erro] }
-    pedidos = Array(params['planos']).map { |pedido| pedido.to_s.strip }.reject(&:empty?)
     return [consultaveis.flat_map { |catalogo| marcar(catalogo, catalogo[:planos]) }, []] if pedidos.empty?
 
     achados = pedidos.index_with { |pedido| achar_em_ordem(consultaveis, pedido) }
@@ -116,9 +121,9 @@ class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents:
     planos.map { |plano| plano.slice('plano', 'coberturas').merge('catalogo' => catalogo[:nome]) }
   end
 
-  def responder(escolhidos, catalogos)
+  def responder(escolhidos, desconhecidos, catalogos)
     nomes = escolhidos.pluck('catalogo').uniq
-    JSON.generate({ catalogo: nomes.join(' e '), aviso: aviso(nomes, catalogos),
+    JSON.generate({ catalogo: nomes.join(' e '), aviso: aviso(nomes, desconhecidos, catalogos),
                     planos: nomes.size > 1 ? escolhidos : escolhidos.map { |plano| plano.except('catalogo') } })
   end
 
@@ -128,16 +133,29 @@ class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents:
                                       "catálogo são: #{planos.pluck('plano').join(', ')}.", faltando: ['planos'])
   end
 
-  # Nada foi achado e há catálogo que não respondeu: a falha da seguradora, como nas outras ferramentas.
+  # Nada foi achado e há catálogo que não respondeu: a falha da seguradora, como nas outras ferramentas. Acesso recusado
+  # vence indisponível, porque pede a equipe e marca o acesso.
   def tratar_falha(catalogos)
-    erro = catalogos.filter_map { |catalogo| catalogo[:erro] }.first
+    erros = catalogos.filter_map { |catalogo| catalogo[:erro] }
+    erro = erros.find { |e| e.codigo == Codigos::ACESSO_RECUSADO } || erros.first
     SeguroViagem::Falhas.tratar_sem_dado_do_cliente(erro, acao: self.class.slug, agent: agent, conversation: conversa)
   end
 
-  def aviso(nomes, catalogos)
+  # Falha parcial com algo achado: o acesso recusado continua tendo de ser marcado (o texto de `Falhas` não vai ao modelo).
+  def tratar_acesso_recusado(catalogos)
+    erro = catalogos.filter_map { |catalogo| catalogo[:erro] }.find { |e| e.codigo == Codigos::ACESSO_RECUSADO }
+    return unless erro
+
+    SeguroViagem::Falhas.tratar_sem_dado_do_cliente(erro, acao: self.class.slug, agent: agent, conversation: conversa)
+  end
+
+  # O aviso do catálogo fora do ar só sai quando há nome que ficou sem procurar nele, e diz quais.
+  def aviso(nomes, desconhecidos, catalogos)
     texto = nomes.include?('internacional') ? "#{AVISO} #{AVISO_INTERNACIONAL}" : AVISO
     fora = catalogos.select { |catalogo| catalogo[:erro] }.pluck(:nome)
-    fora.empty? ? texto : "#{texto} Catálogo #{fora.join(' e ')} fora do ar agora: o que não foi achado pode estar nele."
+    return texto if fora.empty? || desconhecidos.empty?
+
+    "#{texto} Catálogo #{fora.join(' e ')} fora do ar agora: não deu para procurar #{desconhecidos.join(', ')} nele."
   end
 
   # A ferramenta nativa recebe os argumentos como o modelo mandou (`Bound#run_native`, sem `ParamsTipados`): vale `true`

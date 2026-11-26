@@ -98,7 +98,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
 
   # Sem `nacional`, os dois catálogos são lidos (cada um com o seu cache); o primeiro que tem o nome responde.
   context 'without nacional (o nome do plano diz o catálogo)' do
-    it '"Master" acha no internacional, e o catálogo nacional também é lido' do
+    it '"Master" acha no internacional e o nacional nem é chamado (leitura tardia)' do
       internacional = catalogo
       nacional = catalogo(nacional: true)
       saida = JSON.parse(consultar({ 'planos' => ['Master'], 'nacional' => nil }))
@@ -109,10 +109,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
       expect(nacional).not_to have_been_requested
     end
 
-    it '"Nacional +" acha no nacional; o campo ausente vale o mesmo que nil' do
-      catalogo
-      catalogo(nacional: true)
+    it '"Nacional +" acha no nacional, depois de ler os dois; o campo ausente vale o mesmo que nil' do
+      internacional = catalogo
+      nacional = catalogo(nacional: true)
       saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
+      expect(internacional).to have_been_requested
+      expect(nacional).to have_been_requested
       expect(saida['catalogo']).to eq('nacional')
       expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
       expect(saida['aviso']).not_to include('dólar')
@@ -134,12 +136,34 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
       expect(texto).to include('Platinum', 'Master USA +', 'Nacional +')
     end
 
-    it 'um catálogo fora e o outro acha: devolve o que achou, com o aviso do que ficou de fora' do
+    it 'um catálogo fora e o outro acha tudo: devolve, sem aviso de catálogo fora' do
       catalogo(status: 500, corpo: '')
       catalogo(nacional: true)
       saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
       expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
-      expect(saida['aviso']).to include('internacional fora do ar')
+      expect(saida['aviso']).not_to include('fora do ar')
+    end
+
+    it 'um catálogo fora e um nome sem achar: devolve o que achou e o aviso diz qual nome ficou sem procurar' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Nacional +', 'Platinum'] }))
+      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      expect(saida['aviso']).to include('internacional fora do ar', 'Platinum')
+    end
+
+    it 'acesso recusado num catálogo com o outro achando: devolve e marca o acesso como recusado' do
+      catalogo(status: 401, corpo: '')
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
+      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      expect(contratado.acesso_da_seguradora.reload.estado).to eq('recusado')
+    end
+
+    it 'um catálogo recusado e outro indisponível, nada achado: vale o acesso recusado' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true, status: 401, corpo: '')
+      expect(consultar({ 'planos' => ['Master'] })).to eq(falhas::TEXTO_PASSAR)
     end
 
     it 'um catálogo fora e nada achado no outro: trata a falha, sem dizer que o plano não existe' do
