@@ -27,6 +27,8 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   LETRAS = ('A'..'Z')
   DIGITOS = ('0'..'9')
   BRASIL = 'BR'.freeze
+  # Códigos que a lista da Universal aceita mas que voltam sem plano (medido em 26/11): o modelo troca pelo que cota.
+  SEM_PLANO = { 'X3' => 'X9', 'Y5' => 'US' }.freeze
 
   TEXTOS = {
     destinos: 'Informe cada país do roteiro pela sigla de duas letras (ISO 3166), por exemplo ["PT"], ou só a região ' \
@@ -36,7 +38,8 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
     data_retorno: 'A data de volta precisa vir no formato AAAA-MM-DD.',
     retorno_antes: 'A data de volta é antes da data de ida. Confirme as datas com o cliente.',
     idades: "Informe a idade de cada viajante, um número inteiro de 0 a #{IDADE_MAX} por pessoa.".freeze,
-    motivo: "O motivo só pode ser #{MOTIVOS.join(', ')} ou nulo.".freeze
+    motivo: "O motivo só pode ser #{MOTIVOS.join(', ')} ou nulo.".freeze,
+    sem_plano: 'X3 e Y5 não têm plano na seguradora: use X9 para a América do Sul e US para Orlando.'
   }.freeze
 
   def initialize(params, hoje:, tarifa_acordo:)
@@ -90,9 +93,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   end
 
   def falta_nos_destinos
-    return nil if destinos.present? && destinos.all? { |sigla| sigla?(sigla) }
+    return Falta.new('destinos', TEXTOS[:destinos]) unless destinos.present? && destinos.all? { |sigla| sigla?(sigla) }
+    return Falta.new('destinos', TEXTOS[:sem_plano]) if destinos.any? { |sigla| SEM_PLANO.key?(sigla) }
 
-    Falta.new('destinos', TEXTOS[:destinos])
+    nil
   end
 
   def falta_nas_datas

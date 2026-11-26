@@ -36,6 +36,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Pedido do
     end
   end
 
+  # Medido em 26/11: X3 (América do Sul mais Brasil) e Y5 (EUA com Orlando) existem na lista e voltam sem plano.
+  it 'X3 e Y5 são recusados com o código que cota' do
+    %w[X3 y5].each do |codigo|
+      _, falta = described_class.new(base.merge('destinos' => [codigo]), hoje: hoje, tarifa_acordo: false).conferir
+      expect(falta).to have_attributes(campo: 'destinos', texto: include('X9', 'US'))
+    end
+  end
+
   # #3226: a região vai pelo código da Universal (letra + letra ou dígito). Começar por dígito ou ter um caractere só
   # não é código de nada na Universal; a lista dela confere o resto.
   it 'código de região (X4, X6, Y6) passa; "X", "4X", "X-" e "XYZ" não' do
