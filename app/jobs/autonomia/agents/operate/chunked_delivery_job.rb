@@ -154,8 +154,8 @@ module Autonomia
             typing.off
             FalaDaCadeia.acabou(conversation, agent_inbox.agent, reply_to_message_id) # #3235: o último pedaço saiu
             pedir_avaliacao(conversation, meta)
-            # #3258: o turno acabou de falar; o comparativo que uma fala anterior segurou sai ou é descartado.
-            return ::Autonomia::Agents::Operate::ComparativoSegurado.no_fim_do_turno(conversation, agent_inbox.agent, reply_to_message_id)
+            # #3258: o turno acabou de falar; o comparativo que uma fala anterior segurou sai ou é descartado (no job dele).
+            return ::Autonomia::Agents::Operate::ComparativoSegurado.decidir_depois(conversation, agent_inbox.agent, reply_to_message_id)
           end
 
           typing.on

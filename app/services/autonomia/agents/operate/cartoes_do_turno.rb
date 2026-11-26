@@ -190,13 +190,14 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   # Posta o cartão sob o lock da conversa, conferindo de novo que ele não saiu (dois jobs da mesma âncora), que nenhuma
   # pessoa da equipe escreveu depois da âncora e que a conta segue ligada. -> nil quando postou (ou outro job já o
-  # postou); senão o motivo de não postar. Erro sobe para quem chama.
+  # postou); senão o motivo de não postar. Erro sobe para quem chama. #3258: o comparativo que a decisão descartou (ou
+  # segurou) depois que este job montou a lista não sai, conferido na âncora relida sob o lock; não é desistência.
   def postar!(cartao)
     return voucher!(cartao) if VOUCHER.cartao?(cartao)
 
     @conversation.with_lock do
       motivo = motivo_para_nao_postar(cartao)
-      construir!(cartao) unless motivo || postado?(cartao)
+      construir!(cartao) unless motivo || postado?(cartao) || SEGURADOS.fora?(@ancora.reload, cartao)
       motivo
     end
   end

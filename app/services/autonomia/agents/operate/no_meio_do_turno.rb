@@ -81,10 +81,11 @@ module Autonomia::Agents::Operate::NoMeioDoTurno
   end
 
   # #3258: o turno da mensagem do cliente acabou com a resposta inteira (texto ou voz) ou com o sinal de silêncio: o
-  # comparativo que uma fala anterior deste agente segurou sai depois desta resposta ou é descartado
-  # (`ComparativoSegurado.no_fim_do_turno`, só com a flag). Na entrega em pedaços, quem chama é a cadeia, no último
-  # pedaço. O turno da passagem e o de evento não têm âncora: nada aqui.
+  # comparativo que uma fala anterior deste agente segurou sai depois desta resposta ou é descartado. Aqui só se
+  # enfileira a decisão, com os ids (`ComparativoSegurado.decidir_depois`, só com a flag): ela não roda dentro do turno
+  # nem do resgate dele. Na entrega em pedaços, quem enfileira é a cadeia, no último pedaço. O turno da passagem e o de
+  # evento não têm âncora: nada aqui.
   def fim_do_turno_com_segurado
-    ::Autonomia::Agents::Operate::ComparativoSegurado.no_fim_do_turno(@conversation, @agent, @reply_to_message_id)
+    ::Autonomia::Agents::Operate::ComparativoSegurado.decidir_depois(@conversation, @agent, @reply_to_message_id)
   end
 end

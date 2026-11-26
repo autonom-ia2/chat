@@ -18,14 +18,15 @@ module Autonomia::Agents::Operate::ChunkedDeliveryJob::CartoesDoPedaco
   # #1479 F3: o retry do pedaço que leva os cartões e já entrou (`ja_postado`). O job anterior pode ter morrido entre
   # postar o pedaço e enfileirar os cartões: enfileira de novo para o pedaço gravado. O job dos cartões é idempotente
   # (token e desistência gravada), então o cartão sai uma vez só; o comparativo segurado fica fora da lista dele.
-  # #3258: no retry do último pedaço, o fim do turno de novo (o anterior pode ter morrido antes dele; ele é idempotente).
+  # #3258: no retry do último pedaço, a decisão do comparativo segurado é enfileirada de novo (o job anterior pode ter
+  # morrido antes de enfileirá-la; ela é idempotente).
   def reenfileirar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, index)
     chunk = chunks[index]
     ultimo = chunks[index + 1].blank?
     unless Array(chunk.to_h.dig('marca', ::Autonomia::Agents::Operate::CartoesDoTurno::NA_ANCORA)).empty?
       ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(chunk_message(conversation, reply_to_message_id, index))
     end
-    ::Autonomia::Agents::Operate::ComparativoSegurado.no_fim_do_turno(conversation, agent_inbox.agent, reply_to_message_id) if ultimo
+    ::Autonomia::Agents::Operate::ComparativoSegurado.decidir_depois(conversation, agent_inbox.agent, reply_to_message_id) if ultimo
   end
 
   # #3258: sob o lock, antes de postar o pedaço que leva o comparativo, a `motivo_da_parada` já passou. Se ainda assim uma
