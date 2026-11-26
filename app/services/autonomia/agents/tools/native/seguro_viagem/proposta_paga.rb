@@ -33,6 +33,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga
   # Destinos e idades sem ordem: a lista é a mesma viagem ainda que o modelo a tenha escrito em outra ordem.
   def assinatura(cotacao)
     pedido = cotacao.pedido.to_h
-    [pedido['destinos'].to_a.map(&:to_s).sort, pedido['data_saida'], pedido['data_retorno'], pedido['idades'].to_a.sort]
+    [pedido['destinos'].to_a.map(&:to_s).sort, pedido['data_saida'], pedido['data_retorno'], pedido['idades'].to_a.map(&:to_i).sort]
   end
 end

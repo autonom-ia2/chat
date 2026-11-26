@@ -39,7 +39,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   # #3247: o seguro já pago não vira proposta nova. Sem molde: o texto diz o que é verdade e o que cabe a cada caso.
   TEXTO_JA_PAGO = 'O seguro desta viagem já está pago, então não gero outra proposta: ela apagaria o rastro do que foi ' \
                   'pago e o cliente pagaria de novo. Se ele quer o voucher, use segunda_via_do_voucher. Se é outra viagem ' \
-                  '(outros destinos, outras datas ou outros viajantes), cote essa viagem de novo. Troca de plano, de data ' \
+                  '(outros destinos, outras datas ou outros viajantes), cote a viagem nova. Troca de plano, de data ' \
                   'ou de viajante num seguro já pago, e cancelamento, são com a equipe: passe a conversa para ela.'.freeze
   # O `SELECT … FOR UPDATE` do lock que passou do `statement_timeout` (ou do `lock_timeout`) do banco.
   ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout].freeze

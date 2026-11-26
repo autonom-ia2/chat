@@ -232,7 +232,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
 
     it 'dado corrigido (outro e-mail) numa cotação paga: recusa, o pago_em fica' do
       cotacao.update!(proposta: paga)
-      ferramenta(params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))).call
+      expect(ferramenta(params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))).call)
+        .to eq(described_class::TEXTO_JA_PAGO)
       sem_chamada_a_fora
       expect(cotacao.reload.proposta['voucher_enviado_em']).to be_present
     end
