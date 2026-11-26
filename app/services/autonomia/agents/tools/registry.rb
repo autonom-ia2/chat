@@ -73,7 +73,9 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem,
     # #3246 — o pagamento da proposta: a situação e a segunda via do voucher.
     Autonomia::Agents::Tools::Native::SituacaoDoPagamento,
-    Autonomia::Agents::Tools::Native::SegundaViaDoVoucher
+    Autonomia::Agents::Tools::Native::SegundaViaDoVoucher,
+    # #3249 — as coberturas dos planos pelo catálogo, antes da cotação.
+    Autonomia::Agents::Tools::Native::CoberturasDosPlanos
   ].freeze
 
   TOOLS = (DE_ATENDIMENTO + DO_GUIA + DO_CONTRATADO).freeze

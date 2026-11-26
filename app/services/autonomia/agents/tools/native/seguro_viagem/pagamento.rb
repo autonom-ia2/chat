@@ -34,10 +34,8 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Pagamento
   # O erro da Universal nas ferramentas do pagamento. Aqui não há dado do cliente a corrigir (o carrinho é o nosso, e
   # "voucher não encontrado" não é dado errado): o pedido inválido é tratado como indisponível.
   def falha(erro, acao:, agent:, conversation:)
-    if erro.codigo == Autonomia::Seguradoras::Universal::Codigos::PEDIDO_INVALIDO
-      erro = Autonomia::Seguradoras::Universal::Cliente::Erro.new(Autonomia::Seguradoras::Universal::Codigos::INDISPONIVEL)
-    end
-    Autonomia::Agents::Tools::Native::SeguroViagem::Falhas.tratar(erro, acao: acao, agent: agent, conversation: conversation)
+    Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
+      .tratar_sem_dado_do_cliente(erro, acao: acao, agent: agent, conversation: conversation)
   end
 
   # `status`: o corpo do `StatusPagamento`.

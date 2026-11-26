@@ -6,10 +6,11 @@
 #   corta; o job deixa de conferir o turno. O 1º pedaço sempre confere.
 # - `renovar` (P2, `conversa_em_fila`): a fala continua no próximo pedaço; renova a marca de quem fala (FalaEmCurso),
 #   só se é deste turno.
-# - `parou` (P1, `conversa_espera_a_fala`): a cadeia parou antes do 1º pedaço sem postá-lo (mensagem nova, troca de dono,
-#   pessoa assumiu). Não houve fala, e o fim previsto que o Responder gravou faria a rajada seguinte esperar por nada:
-#   apaga só o fim deste turno (FalaEmCurso.esquecer_o_fim, compare-and-delete). O bloco diz se o 1º pedaço já foi
-#   postado (o retry de um pedaço que entrou não apaga: a fala aconteceu); só é chamado com a opção ligada.
+# - `acabou` (P1, `conversa_espera_a_fala`): a fala deste turno acabou, porque o último pedaço saiu ou porque a cadeia
+#   parou em qualquer pedaço (mensagem nova, troca de dono, pessoa assumiu, retry de um pedaço que já entrou). Os pedaços
+#   que faltavam não vão sair, e o fim previsto que o Responder gravou faria a rajada seguinte esperar por eles: apaga só
+#   o fim deste turno (FalaEmCurso.esquecer_o_fim, compare-and-delete; o fim de um turno mais novo fica). #3235: antes
+#   só a parada antes do 1º pedaço apagava, e o fim ficava até passar.
 module Autonomia::Agents::Operate::FalaDaCadeia
   module_function
 
@@ -23,9 +24,8 @@ module Autonomia::Agents::Operate::FalaDaCadeia
     ::Autonomia::Agents::Operate::FalaEmCurso.renovar(conversation.id, message_id)
   end
 
-  def parou(conversation, agent, message_id, index)
-    return unless index.zero? && ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, conversation.inbox)
-    return if yield
+  def acabou(conversation, agent, message_id)
+    return unless ::Autonomia::Agents::ParidadeDaConversa.espera_a_fala?(agent, conversation.inbox)
 
     ::Autonomia::Agents::Operate::FalaEmCurso.esquecer_o_fim(conversation.id, message_id)
   end

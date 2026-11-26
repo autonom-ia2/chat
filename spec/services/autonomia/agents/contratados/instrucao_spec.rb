@@ -81,12 +81,24 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              'pediu anual depois de uma cotação sem eles', '(salvo a 3.5)')
   end
 
-  # Decisão do Rodrigo (26/11): o formulário do site manda o destino por região; o agente pergunta os países antes de cotar.
-  it 'região sem país vira uma pergunta pelos países, nunca cotação presumida (formulário do site)' do
+  # Decisão do Rodrigo (26/11, #3226): região sem país cota direto pelo código da Universal, sem perguntar os países;
+  # com país de fora, o Brasil sai dos destinos.
+  it 'região sem país cota pelo código da região, nunca X3 nem Y5, e o Brasil sai com país de fora' do
     texto = described_class.renderizar(agente(marca), hoje: hoje)
-    expect(texto).not_to include('"Europa" sem país: pergunte quais países')
-    expect(texto).to include('Região sem país ("Europa", "América do Norte"', 'Nunca escolha o país pelo cliente nem cote a região.',
-                             'Se o destino veio como região', '"Brasil" é país: `["BR"]`.')
+    expect(texto).not_to include('pergunte só os países', 'pergunte quais países', 'nem cote a região',
+                                 'inclua o Brasil e o outro país')
+    expect(texto).to include('cote pela região (7.5), sem perguntar os países',
+                             'Europa `X6`, América do Norte `X4`, América do Sul `X9`, América Central `X2`, Caribe `X1`, ' \
+                             'África `X5`, Ásia `X7`, Oceania `X8`, Oriente Médio `Y6`',
+                             'Nunca `X3` nem `Y5`', 'Orlando é `["US"]`', 'Viagem só no Brasil: `["BR"]`.',
+                             'o Brasil não entra em `destinos`', 'vale a partir da fronteira', '`aviso_brasil`', '`["Europa"]`')
+  end
+
+  it 'valor de cobertura antes da cotação vem de coberturas_dos_planos; preço continua só da cotação (#3249)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('diga que o valor aparece na cotação')
+    expect(texto).to include('- `coberturas_dos_planos`:', '| `coberturas_dos_planos` |', 'Preço é só da cotação.',
+                             'nunca do folheto nem de memória')
   end
 
   it 'escreve a data por extenso com o dia da semana' do

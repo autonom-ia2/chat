@@ -5,7 +5,15 @@
 # idade e mais seis meses de folga (`data_saida << (idade * 12 + 6)`): a idade na data da viagem fica a que o cliente
 # disse, sem cair na borda do aniversário. O nome é "Viajante N": nenhum dado pessoal vai na cotação.
 #
-# Sem expressão regular: a sigla é conferida letra a letra, a data por `Date.iso8601`, a idade por `Integer`.
+# O DESTINO é a sigla do país (ISO, "PT") ou o código da região da Universal ("X6", Europa), quando o cliente deu só a
+# região (#3226). Os dois têm dois caracteres: letra e depois letra ou dígito. "X" sozinho e "4X" não passam (nenhum
+# código da Universal começa por dígito); se a sigla existe, quem diz é a lista da Universal (`Destinos.validas_em?`).
+#
+# O BRASIL SAI quando há país de fora (#3226): a Universal não cota o Brasil junto (0 produtos em qualquer
+# classificação), e o seguro internacional vale a partir da fronteira (condições gerais, 11.7 b). Viagem só no Brasil
+# continua `["BR"]`. O nome do Brasil sai junto, da mesma posição em `nomes_dos_destinos`.
+#
+# Sem expressão regular: a sigla é conferida caractere a caractere, a data por `Date.iso8601`, a idade por `Integer`.
 class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   Falta = Data.define(:campo, :texto)
 
@@ -17,16 +25,21 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   MESES_DE_FOLGA = 6
   TAMANHO_DA_SIGLA = 2
   LETRAS = ('A'..'Z')
+  DIGITOS = ('0'..'9')
+  BRASIL = 'BR'.freeze
+  # Códigos que a lista da Universal aceita mas que voltam sem plano (medido em 26/11): o modelo troca pelo que cota.
+  SEM_PLANO = { 'X3' => 'X9', 'Y5' => 'US' }.freeze
 
   TEXTOS = {
-    destinos: 'Informe cada país do roteiro pela sigla de duas letras (ISO 3166), por exemplo ["PT"]. Viagem ' \
-              'nacional: ["BR"].',
+    destinos: 'Informe cada país do roteiro pela sigla de duas letras (ISO 3166), por exemplo ["PT"], ou só a região ' \
+              'pelo código da Universal, por exemplo ["X6"] para Europa. Viagem só no Brasil: ["BR"].',
     data_saida: 'A data de ida precisa vir no formato AAAA-MM-DD.',
     saida_passada: 'A data de ida já passou. Confirme a data com o cliente.',
     data_retorno: 'A data de volta precisa vir no formato AAAA-MM-DD.',
     retorno_antes: 'A data de volta é antes da data de ida. Confirme as datas com o cliente.',
     idades: "Informe a idade de cada viajante, um número inteiro de 0 a #{IDADE_MAX} por pessoa.".freeze,
-    motivo: "O motivo só pode ser #{MOTIVOS.join(', ')} ou nulo.".freeze
+    motivo: "O motivo só pode ser #{MOTIVOS.join(', ')} ou nulo.".freeze,
+    sem_plano: 'X3 e Y5 não têm plano na seguradora: use X9 para a América do Sul e US para Orlando.'
   }.freeze
 
   def initialize(params, hoje:, tarifa_acordo:)
@@ -47,6 +60,21 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
     @idades ||= lista('idades').map { |idade| idade.is_a?(Integer) ? idade : Integer(idade.to_s, 10, exception: false) }
   end
 
+  # Os nomes que o modelo escreveu, sem o do Brasil quando o Brasil saiu (a mesma posição da sigla). Lista de outro
+  # tamanho fica como veio: quem nomeia (`CotarSeguroViagem`) já a troca pelo nome da Universal.
+  def nomes_dos_destinos
+    nomes = @params['nomes_dos_destinos']
+    return nomes unless brasil_fora? && nomes.is_a?(Array) && nomes.size == siglas_pedidas.size
+
+    nomes.reject.with_index { |_nome, indice| siglas_pedidas[indice] == BRASIL }
+  end
+
+  # O Brasil veio junto de algum país de fora e saiu dos destinos.
+  def brasil_fora?
+    siglas = siglas_pedidas.uniq
+    siglas.include?(BRASIL) && siglas.size > 1
+  end
+
   private
 
   def montar
@@ -65,9 +93,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   end
 
   def falta_nos_destinos
-    return nil if destinos.present? && destinos.all? { |sigla| sigla?(sigla) }
+    return Falta.new('destinos', TEXTOS[:destinos]) unless destinos.present? && destinos.all? { |sigla| sigla?(sigla) }
+    return Falta.new('destinos', TEXTOS[:sem_plano]) if destinos.any? { |sigla| SEM_PLANO.key?(sigla) }
 
-    Falta.new('destinos', TEXTOS[:destinos])
+    nil
   end
 
   def falta_nas_datas
@@ -92,11 +121,18 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::Pedido
   end
 
   def destinos
-    @destinos ||= lista('destinos').map { |sigla| sigla.to_s.strip.upcase }.uniq
+    @destinos ||= brasil_fora? ? siglas_pedidas.uniq - [BRASIL] : siglas_pedidas.uniq
+  end
+
+  def siglas_pedidas
+    @siglas_pedidas ||= lista('destinos').map { |sigla| sigla.to_s.strip.upcase }
   end
 
   def sigla?(sigla)
-    sigla.length == TAMANHO_DA_SIGLA && sigla.each_char.all? { |letra| LETRAS.cover?(letra) }
+    return false unless sigla.length == TAMANHO_DA_SIGLA
+
+    primeiro, segundo = sigla.chars
+    LETRAS.cover?(primeiro) && (LETRAS.cover?(segundo) || DIGITOS.cover?(segundo))
   end
 
   def saida

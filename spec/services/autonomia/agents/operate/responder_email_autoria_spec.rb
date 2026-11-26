@@ -54,12 +54,10 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   # Pega: o fim previsto da fala gravado para e-mail (a rajada seguinte esperaria por nada).
   it 'na caixa de e-mail, o Responder não grava o fim previsto da fala' do
     cenario!
-    resposta = Autonomia::Agents::AnswerResult.new(reply: 'Claro.', confidence: 0.9, handoff: { should: false, reason: nil },
-                                                   used_knowledge: [], answered_from_knowledge: false, raw_reply: 'Claro.')
     outcome = Struct.new(:message).new(build_stubbed(:message))
     allow(Autonomia::Agents::Operate::FalaEmCurso).to receive(:prever_fim!)
 
-    responder.send(:prever_o_fim_da_fala, resposta, outcome)
+    responder.send(:prever_o_fim_da_fala, outcome)
 
     expect(Autonomia::Agents::Operate::FalaEmCurso).not_to have_received(:prever_fim!)
   end
