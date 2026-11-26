@@ -234,7 +234,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     end
 
     it 'dado corrigido com o anterior sem pagamento (statusPagamento vazio): cancela uma vez, compra e guarda o novo' do
-      anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => '')
+      anterior_responde({ 'statusVoucher' => 'Ativo', 'statusPagamento' => '' })
 
       expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
 
@@ -246,7 +246,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
 
     %w[Cancelado CANCELADO].each do |cancelado|
       it "anterior já cancelado (#{cancelado}): não chama o cancelamento e compra o novo" do
-        anterior_responde('statusVoucher' => 'Cancelado', 'statusPagamento' => cancelado)
+        anterior_responde({ 'statusVoucher' => 'Cancelado', 'statusPagamento' => cancelado })
 
         expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
 
@@ -258,7 +258,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     # Cancelar é irreversível: só o vazio cancela. Pago ainda sem `pago_em`, em pagamento, valor novo ou ausente: recusa.
     ['Pago', 'Aguardando Pagamento', 'Em Processamento', nil].each do |pagamento|
       it "anterior com statusPagamento #{pagamento.inspect}: nem cancela nem compra, recusa com nota à equipe" do
-        anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => pagamento, 'dataPagamento' => '2026-11-24T14:00:00')
+        anterior_responde({ 'statusVoucher' => 'Ativo', 'statusPagamento' => pagamento, 'dataPagamento' => '2026-11-24T14:00:00' })
         expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('pagamento_do_anterior_em_aberto', anything)
 
         expect(ferramenta(corrigidos).call).to eq(anterior::TEXTO_EM_ABERTO)
@@ -387,7 +387,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       it 'a nova tentativa, mesmo com o dado anterior, não devolve o link morto: compra de novo sem cancelar' do
         stub_request(:post, compras).to_timeout
         ferramenta(corrigidos).call
-        anterior_responde('statusVoucher' => 'Cancelado', 'statusPagamento' => 'Cancelado')
+        anterior_responde({ 'statusVoucher' => 'Cancelado', 'statusPagamento' => 'Cancelado' })
         stub_request(:post, compras).to_return(status: 200, body: JSON.parse(file_fixture('../universal/compras_ok.json').read)
                                                                      .merge('codigoCarrinho' => 987_656, 'urlVoucher' => link_novo).to_json)
 
