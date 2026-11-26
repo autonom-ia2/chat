@@ -126,6 +126,19 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
       expect(jobs_de_cartoes.map { |job| job[:args] }).to eq([[fala.id]])
     end
 
+    # O run anterior postou a fala sem o voucher e morreu antes da nota: a nova tentativa grava a nota, uma só.
+    it 'a nova tentativa com a fala já postada sem o voucher grava a nota da equipe uma vez, sem PDF' do
+      create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :outgoing, sender: agent_bot,
+                       content: 'Pagamento confirmado!', content_attributes: { evento::CHAVE => marca })
+      sem_modelo
+
+      2.times { rodar }
+
+      expect(publicas.count).to eq(1)
+      expect(privadas.sole.content).to include(nota(pago, 'sem_voucher'))
+      expect(jobs_de_cartoes).to be_empty
+    end
+
     # O modelo chama `situacao_do_pagamento` duas vezes no turno do aviso: o cartão é o mesmo (tipo e cotação), um só.
     it 'a ferramenta chamada duas vezes no turno do aviso marca um voucher só' do
       bia_confere_e_responde('Confirmado!', vezes: 2)
@@ -225,11 +238,15 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
                        content: content, content_attributes: atributos)
     end
 
-    # A âncora pública do turno do cliente: a resposta à mensagem 4242, com o cartão do voucher marcado nele.
+    # A âncora pública do turno do cliente: a resposta à mensagem 4242, com o cartão do voucher marcado nele. O cartão é
+    # marcado aqui (idempotente quando a ferramenta do cliente já marcou): sem ele, a âncora não prova nada.
     def ancora_do_cliente
+      turno_do_cliente.marcar_cartao(voucher.cartao(cotacao))
       mensagem_do_bot('Caiu sim!', Autonomia::Agents::Operate::CartoesDoTurno.marca(turno_do_cliente)
                                                                              .merge('autonomia_reply_to_message_id' => 4242))
     end
+
+    def cartoes_da(mensagem) = Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(mensagem).map { |cartao| cartao['tipo'] }
 
     def vouchers = publicas.select { |message| message.content_attributes.to_h.key?(voucher::CHAVE) }
 
@@ -274,23 +291,29 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
 
     it 'com o voucher marcado pelo cliente e a âncora postada antes de o aviso começar, o modelo nem roda' do
       cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242))
-      ancora_do_cliente
+      expect(cartoes_da(ancora_do_cliente)).to eq([voucher::TIPO_DO_CARTAO])
       sem_modelo
 
       rodar
 
       expect(publicas.map(&:content)).to eq(['Caiu sim!'])
+      expect(privadas).to be_empty
+      expect(reagendados).to be_empty
     end
 
     # A âncora do cliente com a desistência gravada (`CartoesDoTurno#encerrar!`) não manda mais o voucher: não conta.
     it 'com a âncora do cliente encerrada (cartão desistido), o aviso fala e manda o voucher' do
       cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242))
-      Autonomia::Agents::Operate::CartoesDoTurno.new(ancora_do_cliente).encerrar!('pessoa_respondeu')
+      ancora = ancora_do_cliente
+      expect(cartoes_da(ancora)).to eq([voucher::TIPO_DO_CARTAO])
+      Autonomia::Agents::Operate::CartoesDoTurno.new(ancora).encerrar!('pessoa_respondeu')
+      # A guarda de antes do modelo (`motivo_para_calar`) é quem decide: sem a checagem da âncora encerrada, ela calaria
+      # aqui, e a ferramenta do aviso nem chegaria a regravar a marca.
       bia_confere_e_responde('Confirmado!')
 
       rodar
 
-      fala = publicas.find_by(content: 'Confirmado!')
+      fala = publicas.find_by!(content: 'Confirmado!')
       expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(fala).map { |cartao| cartao['tipo'] }).to eq([voucher::TIPO_DO_CARTAO])
       expect(jobs_de_cartoes.map { |job| job[:args] }).to eq([[fala.id]])
       expect(privadas).to be_empty

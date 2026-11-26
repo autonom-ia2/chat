@@ -57,14 +57,16 @@ class Autonomia::Agents::Operate::EventoDaViagemJob < ApplicationJob
   end
 
   # A nova tentativa que acha a fala do evento já postada (o run anterior morreu depois de postar, antes de enfileirar o
-  # cartão): no `pagamento_confirmado`, o cartão do voucher gravado na âncora entra na fila pelo caminho de sempre
-  # (`CartoesDoTurno.enfileirar`); o token barra o que já saiu.
+  # cartão ou de gravar a nota): no `pagamento_confirmado`, o cartão do voucher gravado na âncora entra na fila pelo
+  # caminho de sempre (`CartoesDoTurno.enfileirar`; o token barra o que já saiu). A âncora sem o voucher desta cotação,
+  # com o voucher ainda não coberto, vira a nota da equipe (`notar_sem_voucher`; a marca própria barra a repetida).
   def ja_publicado(evento, conversation)
     anotar(evento.cotacao.id, evento.tipo, 'ja_publicado')
     ancora = evento.mensagem(conversation)
     return unless evento.pagamento_confirmado? && ancora && !ancora.private
+    return ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(ancora) if evento.voucher_na_ancora?(ancora)
 
-    ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(ancora)
+    aviso(evento).notar_sem_voucher unless evento.voucher_coberto_agora?
   end
 
   # A proposta trocada: o `pagamento_confirmado` dela vira nota (o carrinho anterior foi pago); o resto, só log.
