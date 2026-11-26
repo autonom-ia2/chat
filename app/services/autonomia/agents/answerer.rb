@@ -381,12 +381,18 @@ module Autonomia
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
           max_rodadas: @max_rodadas,
-          **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova) }.compact
+          **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova), leitura: leitura_no_turno }.compact
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      # #3225: a leitura da mensagem que o cliente manda no meio do turno (`Operate::LeituraNoTurno`), que o Responder deixa
+      # no contexto de entrega, só no atendimento com a flag. Sem ela, o laço e o pedido ao modelo ficam os de antes.
+      def leitura_no_turno
+        @delivery&.leitura
       end
 
       # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.

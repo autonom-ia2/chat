@@ -4,6 +4,8 @@ require 'resolv'
 module Crm
   module Ai
     class ResponsesClient
+      include LacoComLeitura
+
       # `status`: o HTTP da resposta, quando houve resposta. `passageira?`: a falha que pode passar sozinha, depois das
       # novas tentativas daqui (rede, tempo esgotado, 408, 429 e 5xx); quem chama decide se tenta de novo mais tarde
       # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira. `tempo_esgotado?`: o
@@ -125,35 +127,13 @@ module Crm
       # Plataforma precisa (#568) e o que a esteira anterior não conseguia fazer.
       # A última rodada SEMPRE vai sem ferramenta — é isso que garante que o laço
       # termina, mesmo com um modelo que insista em chamar.
-      def create_with_tool_executor(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
-                                    timeout: REQUEST_TIMEOUT, max_rodadas: 1, max_segundos: MAX_SEGUNDOS_DE_FERRAMENTA)
-        unless block_given? && tools.present?
-          return create(model: model, instructions: instructions, input: input, schema: schema,
-                        reasoning_effort: reasoning_effort, tools: tools, timeout: timeout)
-        end
+      #
+      # `leitura:` (#3225) é a leitura da mensagem que o cliente manda no meio do turno (`Operate::LeituraNoTurno`): com
+      # ela, o laço é o do `LacoComLeitura`. Sem ela (o padrão), o laço é o de sempre (`laco_de_ferramentas`).
+      def create_with_tool_executor(leitura: nil, **, &)
+        return laco_com_leitura(novo_laco(leitura: leitura, **), &) if leitura
 
-        conversa = normalize_input(input)
-        usadas = []
-        comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-        max_rodadas.to_i.clamp(1, MAX_RODADAS_DE_FERRAMENTA).times do
-          break if tempo_esgotado?(comeco, max_segundos)
-
-          payload, started_at = rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
-          usadas |= tools_used(payload)
-          log_call(model, tools, usadas, started_at)
-          record_usage(payload['usage'], model, reasoning_effort, started_at)
-
-          calls = function_calls(payload)
-          return respondido(payload, model, tools, started_at, reasoning_effort, usadas) if calls.empty?
-
-          conversa += Array(payload['output']) + Array(yield(calls))
-        end
-
-        # Acabaram as rodadas (ou o tempo) e ele ainda queria chamar. A última
-        # ida vai SEM ferramenta: ou ele responde com o que já leu, ou diz que
-        # não conseguiu — nunca fica girando.
-        fechamento(model, instructions, conversa, schema, reasoning_effort, tools, timeout, usadas)
+        laco_de_ferramentas(**, &)
       end
 
       # Background mode: a OpenAI aceita o pedido e processa do lado dela; retorna na hora um
@@ -199,6 +179,38 @@ module Crm
       end
 
       private
+
+      # O laço de sempre (sem a leitura do meio do turno).
+      def laco_de_ferramentas(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
+                              timeout: REQUEST_TIMEOUT, max_rodadas: 1, max_segundos: MAX_SEGUNDOS_DE_FERRAMENTA)
+        unless block_given? && tools.present?
+          return create(model: model, instructions: instructions, input: input, schema: schema,
+                        reasoning_effort: reasoning_effort, tools: tools, timeout: timeout)
+        end
+
+        conversa = normalize_input(input)
+        usadas = []
+        comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+        max_rodadas.to_i.clamp(1, MAX_RODADAS_DE_FERRAMENTA).times do
+          break if tempo_esgotado?(comeco, max_segundos)
+
+          payload, started_at = rodada(model, instructions, conversa, schema, reasoning_effort, tools, timeout)
+          usadas |= tools_used(payload)
+          log_call(model, tools, usadas, started_at)
+          record_usage(payload['usage'], model, reasoning_effort, started_at)
+
+          calls = function_calls(payload)
+          return respondido(payload, model, tools, started_at, reasoning_effort, usadas) if calls.empty?
+
+          conversa += Array(payload['output']) + Array(yield(calls))
+        end
+
+        # Acabaram as rodadas (ou o tempo) e ele ainda queria chamar. A última
+        # ida vai SEM ferramenta: ou ele responde com o que já leu, ou diz que
+        # não conseguiu — nunca fica girando.
+        fechamento(model, instructions, conversa, schema, reasoning_effort, tools, timeout, usadas)
+      end
 
       # O laço já gastou o orçamento de tempo? Medido em relógio monotônico, que
       # não anda para trás com ajuste de hora do sistema.
@@ -435,12 +447,13 @@ module Crm
 
       # Telemetria de consumo (Gestão IA). Só dispara quando o cliente foi construído com
       # feature+account; o próprio UsageRecorder é best-effort e nunca levanta.
-      def record_usage(usage, model, reasoning_effort, started_at)
+      # `feature:` (#3225): a etiqueta desta ida, quando não é a do cliente (as voltas da leitura no meio do turno).
+      def record_usage(usage, model, reasoning_effort, started_at, feature: @feature)
         return if @feature.blank? || @account.blank?
 
         latency = started_at ? ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round : nil
         UsageRecorder.record(
-          account: @account, feature: @feature, model: model, usage: usage,
+          account: @account, feature: feature, model: model, usage: usage,
           reasoning_effort: reasoning_effort, latency_ms: latency, pipeline: @pipeline
         )
       end
