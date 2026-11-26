@@ -23,7 +23,7 @@ module Autonomia::Agents::Contratados
       pasta: Pathname.new(__dir__).join('contratados', 'seguro_viagem_universal'),
       arquivo: 'instrucao.md',
       ferramentas_nativas: %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem situacao_do_pagamento
-                              segunda_via_do_voucher],
+                              segunda_via_do_voucher coberturas_dos_planos],
       prontas: %w[cep cpf],
       seguradora: 'universal',
       conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true)

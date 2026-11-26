@@ -176,6 +176,81 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
     end
   end
 
+  # #3249: o catálogo de coberturas, sem preço, guardado por um dia por emissor e tipo de viagem.
+  describe 'beneficios' do
+    let(:catalogo) { file_fixture('../universal/beneficios_internacional.json').read }
+
+    around do |exemplo|
+      original = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      begin
+        exemplo.run
+      ensure
+        Rails.cache = original
+      end
+    end
+
+    def stub_beneficios(nacional, status: 200, corpo: catalogo)
+      stub_request(:get, "#{base}/v1/beneficios")
+        .with(query: { 'idioma' => 'portugues', 'tipoTarifa' => '1', 'nacional' => nacional.to_s },
+              headers: { 'Login' => 'corretor.teste', 'Senha' => 's3nha-teste' })
+        .to_return(status: status, body: corpo)
+    end
+
+    it 'GET em português, tarifa 1, com o tipo de viagem, e devolve o corpo' do
+      stub = stub_beneficios(false)
+      expect(cliente.beneficios(nacional: false)).to eq(JSON.parse(catalogo))
+      expect(stub).to have_been_requested
+    end
+
+    it 'leitura de até 15 s, sem repetição do GET' do
+      capturado = nil
+      allow(Net::HTTP).to(receive(:new).and_wrap_original { |original, *args| capturado = original.call(*args) })
+      stub_beneficios(false)
+      cliente.beneficios(nacional: false)
+      expect([capturado.read_timeout, capturado.max_retries]).to eq([15, 0])
+    end
+
+    it 'a segunda chamada vem do cache, separado por nacional e internacional' do
+      internacional = stub_beneficios(false)
+      nacional = stub_beneficios(true, corpo: file_fixture('../universal/beneficios_nacional.json').read)
+      2.times { cliente.beneficios(nacional: false) }
+      2.times { cliente.beneficios(nacional: true) }
+      expect(internacional).to have_been_requested.once
+      expect(nacional).to have_been_requested.once
+    end
+
+    it 'o cache é por emissor, e a chave não leva login nem senha' do
+      stub = stub_beneficios(false)
+      outro = described_class.new(login: 'outro.corretor.teste', senha: 's3nha-teste')
+      allow(Rails.cache).to receive(:fetch).and_call_original
+
+      [cliente, outro, cliente].each { |quem| quem.beneficios(nacional: false) }
+
+      expect(stub).to have_been_requested.twice
+      expect(Rails.cache).to have_received(:fetch).with(a_string_including(cliente.emissor), anything).twice
+      expect(Rails.cache).not_to have_received(:fetch).with(a_string_including('corretor.teste'), anything)
+      expect(Rails.cache).not_to have_received(:fetch).with(a_string_including('s3nha-teste'), anything)
+    end
+
+    it 'a falha levanta e não fica no cache' do
+      stub_beneficios(false, status: 500, corpo: '')
+      expect { cliente.beneficios(nacional: false) }
+        .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+      stub = stub_beneficios(false)
+      expect(cliente.beneficios(nacional: false)).to eq(JSON.parse(catalogo))
+      expect(stub).to have_been_requested.once
+    end
+
+    it 'catálogo sem plano conta como falha (indisponivel) e não fica no cache' do
+      stub_beneficios(false, corpo: { 'beneficios' => [], 'produtos' => [] }.to_json)
+      expect { cliente.beneficios(nacional: false) }
+        .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+      stub_beneficios(false)
+      expect(cliente.beneficios(nacional: false)).to eq(JSON.parse(catalogo))
+    end
+  end
+
   it 'log sem credencial, sem corpo, sem dado pessoal (R2/R5)' do
     saida = StringIO.new
     allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(saida))

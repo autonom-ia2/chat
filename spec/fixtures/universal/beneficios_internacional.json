@@ -1,0 +1,148 @@
+{
+  "beneficios": [
+    {
+      "descricao": "Despesas Médicas e Hospitalares (por evento)",
+      "descricaoCompleta": "",
+      "idBeneficio": 2899,
+      "imagem": null,
+      "ordem": 1,
+      "tipoBeneficio": 1,
+      "categoriaBeneficio": 2
+    },
+    {
+      "descricao": "Perda de Bagagem",
+      "descricaoCompleta": "",
+      "idBeneficio": 2595,
+      "imagem": null,
+      "ordem": 3,
+      "tipoBeneficio": 1,
+      "categoriaBeneficio": 2
+    },
+    {
+      "descricao": "Cancelamento de viagem - plus reason",
+      "descricaoCompleta": "",
+      "idBeneficio": 2601,
+      "imagem": null,
+      "ordem": 4,
+      "tipoBeneficio": 1,
+      "categoriaBeneficio": 2
+    },
+    {
+      "descricao": "Concierge",
+      "descricaoCompleta": null,
+      "idBeneficio": 40,
+      "imagem": null,
+      "ordem": 12,
+      "tipoBeneficio": 2,
+      "categoriaBeneficio": 1
+    }
+  ],
+  "produtos": [
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2899,
+          "valor": "$150.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Anual Multiviagens UA 150(30 Dias)",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5382316
+    },
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2899,
+          "valor": "$500.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2595,
+          "valor": "$2.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2601,
+          "valor": "$2.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Exclusive USA +\t",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5383124
+    },
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2899,
+          "valor": "$80.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2595,
+          "valor": "$1.500"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2601,
+          "valor": "$2.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Value USA +",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5382737
+    },
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2899,
+          "valor": "$40.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2595,
+          "valor": "$1.300"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2601,
+          "valor": "$500"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Master USA +",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5382350
+    }
+  ]
+}

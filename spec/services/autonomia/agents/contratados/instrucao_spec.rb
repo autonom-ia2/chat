@@ -89,6 +89,13 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              'Se o destino veio como região', '"Brasil" é país: `["BR"]`.')
   end
 
+  it 'valor de cobertura antes da cotação vem de coberturas_dos_planos; preço continua só da cotação (#3249)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('diga que o valor aparece na cotação')
+    expect(texto).to include('- `coberturas_dos_planos`:', '| `coberturas_dos_planos` |', 'Preço é só da cotação.',
+                             'nunca do folheto nem de memória')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end
