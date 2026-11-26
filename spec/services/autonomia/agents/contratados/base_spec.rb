@@ -161,6 +161,16 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
       videos = material.each_line.flat_map(&:split).select { |palavra| palavra.include?('youtube.com') || palavra.include?('youtu.be') }
       expect(videos.uniq).to match_array(conferidos)
     end
+
+    it 'cada vídeo está no bloco que a busca traz para a pergunta, com a ressalva dele' do
+      blocos = described_class.blocos(material)
+      bloco = ->(titulo) { blocos.find { |texto| texto.start_with?("### Universal Assistance: #{titulo}") } }
+
+      expect(bloco.call('reembolso, como pedir')).to include('LU8TIYR5XpE', '2023', 'despesa médica', 'reembolso-checklist')
+      expect(bloco.call('app e serviços digitais')).to include('KNaqJzSUZbE', '5rqzlIByuUg', 'Argentina')
+      expect(bloco.call('o que fazer na hora do problema')).to include('KNaqJzSUZbE', 'Argentina')
+      expect(material).not_to include('reembolso.br@')
+    end
   end
 
   it 'em dia: versão do deploy e trechos prontos' do
