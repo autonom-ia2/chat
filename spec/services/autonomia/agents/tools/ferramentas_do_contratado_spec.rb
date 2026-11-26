@@ -4,7 +4,8 @@ require 'rails_helper'
 # O nome do arquivo é o da Tarefa 19; o assunto é o Registry.
 RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/SpecFilePathFormat
   let(:slugs) do
-    %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem situacao_do_pagamento segunda_via_do_voucher]
+    %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem situacao_do_pagamento segunda_via_do_voucher
+       coberturas_dos_planos]
   end
   let(:account) { create(:account) }
   let(:marca) do
@@ -47,7 +48,7 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
     expect(described_class.for_agent(contratado).map(&:slug)).to eq([])
   end
 
-  it 'contratado com acesso ok recebe todas (#3246: com a situação do pagamento e a segunda via)' do
+  it 'contratado com acesso ok recebe todas (#3246: situação do pagamento e segunda via; #3249: coberturas dos planos)' do
     acesso_ok!
     expect(described_class.for_agent(contratado).map(&:slug)).to eq(slugs)
   end

@@ -32,6 +32,8 @@ module Autonomia::Agents::Tools::MotivosDoSeguroViagem
     'pagamento_sem_conversa' => 'não há conversa para conferir o pagamento do seguro viagem (Testar, Copiloto, playground)',
     'sem_proposta' => 'a conversa ainda não tem proposta de seguro viagem com carrinho; nada foi consultado na seguradora',
     'pagamento_pendente' => 'o pagamento da proposta ainda não aparece como feito; o voucher não existe e nada foi enviado',
-    'pagamento_cancelado' => 'o pagamento da proposta aparece como cancelado na seguradora; nada foi enviado'
+    'pagamento_cancelado' => 'o pagamento da proposta aparece como cancelado na seguradora; nada foi enviado',
+    # #3249: a recusa de `coberturas_dos_planos`, que lê o catálogo de coberturas sem cotar.
+    'plano_fora_do_catalogo' => 'o modelo pediu um plano que o catálogo de coberturas da seguradora não tem'
   }.freeze
 end

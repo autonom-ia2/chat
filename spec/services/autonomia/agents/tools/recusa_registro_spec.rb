@@ -1013,8 +1013,25 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
       'segunda_via_do_voucher.rb#conferir#2' => {
         espera: { motivo: 'pagamento_pendente', slug: 'segunda_via_do_voucher' },
         dispara: -> { pagamento_de_viagem(Autonomia::Agents::Tools::Native::SegundaViaDoVoucher, status: 'Aguardando Pagamento') }
+      },
+      # #3249: as coberturas pelo catálogo, sem cotar; o nome que o catálogo não tem é recusado com os que existem.
+      'coberturas_dos_planos.rb#fora_do_catalogo#1' => {
+        espera: { motivo: 'plano_fora_do_catalogo', slug: 'coberturas_dos_planos', faltando: 'planos' },
+        dispara: -> { coberturas_de_viagem(['Platinum']) }
       }
     }
+  end
+
+  # #3249: as coberturas pelo `Bound`, com o acesso conferido e a Universal respondendo pelo catálogo internacional.
+  def coberturas_de_viagem(planos)
+    Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
+                                                  senha: 's3nha-teste', estado: 'ok')
+    stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/beneficios")
+      .with(query: hash_including('nacional' => 'false'))
+      .to_return(status: 200, body: file_fixture('../universal/beneficios_internacional.json').read)
+    bound_para(Autonomia::Agents::Tools::Native::CoberturasDosPlanos)
+      .execute({ 'name' => 'coberturas_dos_planos', 'arguments' => { planos: planos, nacional: false }.to_json },
+               delivery: delivery)
   end
 
   # #3246: a ferramenta do pagamento pelo `Bound`, com o acesso conferido e, com `proposta`, a cotação com o carrinho
