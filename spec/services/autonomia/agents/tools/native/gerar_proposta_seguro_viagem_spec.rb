@@ -82,10 +82,53 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       .to eq('https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==')
   end
 
-  it 'devolve ao modelo só o link, o carrinho, o plano e o total' do
+  # A regra do P1 na fixture: multa 0 até 2026-11-24T00:00 (meia-noite), ou seja, até o fim de 23/11, que já passou no
+  # dia da proposta (24/11): sem prazo para o cliente (#3246).
+  it 'devolve ao modelo só o link, o carrinho, o plano, o total e até quando cancela sem custo' do
     expect(JSON.parse(ferramenta(params).call))
       .to eq('link_de_pagamento' => 'https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==',
-             'numero_do_carrinho' => 987_654, 'plano' => 'Especial UA 100K BRL', 'total' => 'R$ 360,00')
+             'numero_do_carrinho' => 987_654, 'plano' => 'Especial UA 100K BRL', 'total' => 'R$ 360,00',
+             'cancelamento_sem_custo_ate' => nil)
+  end
+
+  # #3246: no JSON compacto o link grudava no campo seguinte (`...==","numero_do_carrinho"`), e o botão de link nunca o
+  # reconhecia entre os endereços da saída da ferramenta.
+  it 'o link de pagamento sai separado por espaço, e o botão de link o reconhece na saída' do
+    saida = ferramenta(params).call
+    expect(Autonomia::Agents::Interacao::Enderecos.dos_textos([saida]))
+      .to include('https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==')
+    expect(Autonomia::Agents::Interacao::Enderecos.do_dono(dono: ['Pague em https://pagamento.universal-assistance.com'],
+                                                           ferramentas: [saida]))
+      .to include('https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==')
+  end
+
+  describe 'cancelamento_sem_custo_ate' do
+    def com_regra(regra)
+      planos = cotacao.planos.map { |guardado| guardado['codigo'] == 'P1' ? guardado.merge('regra_cancelamento' => regra) : guardado }
+      cotacao.update!(planos: planos)
+      JSON.parse(ferramenta(params).call)['cancelamento_sem_custo_ate']
+    end
+
+    it 'o maior "ate" sem multa; meia-noite vale até o fim do dia anterior' do
+      regra = [{ 'de' => '2026-11-24T00:00:00', 'ate' => '2026-12-02T00:00:00', 'multa' => 0, 'geraCredito' => false },
+               { 'de' => '2026-12-02T00:00:00', 'ate' => '2027-01-31T00:00:00', 'multa' => 50, 'geraCredito' => false }]
+      expect(com_regra(regra)).to eq('01/12/2026')
+    end
+
+    it '"ate" fora da meia-noite vale o próprio dia' do
+      expect(com_regra([{ 'ate' => '2026-12-02T18:00:00-03:00', 'multa' => 0 }])).to eq('02/12/2026')
+    end
+
+    it 'dia que já passou não é prazo: nil' do
+      expect(com_regra([{ 'ate' => '2026-11-23T18:00:00', 'multa' => 0 }])).to be_nil
+      expect(com_regra([{ 'ate' => '2026-11-25T00:00:00', 'multa' => 0 }])).to eq('24/11/2026')
+    end
+
+    it 'sem faixa sem multa, ou sem regra: nil' do
+      expect(com_regra([{ 'ate' => '2026-12-02T00:00:00', 'multa' => 30 }])).to be_nil
+      expect(com_regra([{ 'ate' => '2026-12-02T00:00:00', 'multa' => nil }])).to be_nil
+      expect(com_regra([])).to be_nil
+    end
   end
 
   it 'idempotente: a mesma chamada não gera segunda proposta' do

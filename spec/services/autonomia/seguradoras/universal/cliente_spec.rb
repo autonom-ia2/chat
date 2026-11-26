@@ -118,6 +118,64 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
     end
   end
 
+  # #3246: o pagamento e o voucher pelo carrinho da proposta. Respostas com dados fictícios.
+  describe 'status_do_pagamento e url_do_voucher' do
+    let(:status_pago) do
+      { 'idCarrinhoCompra' => 987_654, 'statusVoucher' => 'Ativo', 'statusPagamento' => 'Pago', 'formaPagamento' => 2,
+        'dataPagamento' => '2026-11-26T11:47:40' }
+    end
+
+    it 'status do pagamento: GET com o carrinho no caminho, e devolve o corpo' do
+      stub = stub_request(:get, "#{base}/v1/StatusPagamento/987654")
+             .with(headers: { 'Login' => 'corretor.teste', 'Senha' => 's3nha-teste' })
+             .to_return(status: 200, body: status_pago.to_json)
+      expect(cliente.status_do_pagamento(987_654)).to eq(status_pago)
+      expect(stub).to have_been_requested
+    end
+
+    it 'url do voucher: GET pelo carrinho, em português, impressão b' do
+      corpo = { 'url' => 'https://voucher.exemplo.test/PrintVoucher/?numeroCarrinho=dGVzdGU=&idioma=portugues' }
+      stub = stub_request(:get, "#{base}/v1/Voucher/imprimir/987654")
+             .with(query: { 'tipoParametro' => 'idCarrinho', 'tipoImpressao' => 'b', 'idioma' => 'portugues' })
+             .to_return(status: 200, body: corpo.to_json)
+      expect(cliente.url_do_voucher('987654')).to eq(corpo)
+      expect(stub).to have_been_requested
+    end
+
+    it 'carrinho que não é inteiro positivo só de dígitos é recusado antes de qualquer chamada' do
+      ['', nil, '0', '-5', '12a', '12/../x', '١٢', ' 12', 12.5, 0].each do |carrinho|
+        expect { cliente.status_do_pagamento(carrinho) }
+          .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('pedido_invalido') }
+        expect { cliente.url_do_voucher(carrinho) }
+          .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('pedido_invalido') }
+      end
+      expect(a_request(:get, ->(uri) { uri.host == 'api-br.universal-assistance.com' })).not_to have_been_made
+    end
+
+    it 'carrinho inexistente (500) vira indisponivel' do
+      stub_request(:get, "#{base}/v1/StatusPagamento/987654").to_return(status: 500, body: '')
+      expect { cliente.status_do_pagamento(987_654) }
+        .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+    end
+
+    it 'voucher não encontrado (400 com texto puro) vira pedido_invalido sem mensagem' do
+      stub_request(:get, "#{base}/v1/Voucher/imprimir/987654").with(query: hash_including({}))
+                                                              .to_return(status: 400, body: '"Voucher não encontrado."')
+      expect { cliente.url_do_voucher(987_654) }.to raise_error(described_class::Erro) { |e|
+        expect(e.codigo).to eq('pedido_invalido')
+        expect(e.mensagem_da_seguradora).to be_nil
+      }
+    end
+
+    it 'leitura de até 15 s, sem repetição do GET' do
+      capturado = nil
+      allow(Net::HTTP).to(receive(:new).and_wrap_original { |original, *args| capturado = original.call(*args) })
+      stub_request(:get, "#{base}/v1/StatusPagamento/987654").to_return(status: 200, body: status_pago.to_json)
+      cliente.status_do_pagamento(987_654)
+      expect([capturado.read_timeout, capturado.max_retries]).to eq([15, 0])
+    end
+  end
+
   it 'log sem credencial, sem corpo, sem dado pessoal (R2/R5)' do
     saida = StringIO.new
     allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(saida))
