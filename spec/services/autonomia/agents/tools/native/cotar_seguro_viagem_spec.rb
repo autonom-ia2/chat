@@ -115,7 +115,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     end
 
     # #3225: o turno que leu a mensagem nova no meio responde por ela, e a cotação dele vale.
-    it 'a mensagem nova já foi lida por este turno: cota' do
+    it 'a mensagem nova já foi lida por este turno (com a chave): cota' do
+      account.enable_features!(Autonomia::Agents::Operate::LeituraNoTurno::FLAG)
       marca_do_debounce(78)
       delivery.ler_no_turno([78])
       expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
