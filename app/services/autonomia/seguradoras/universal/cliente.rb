@@ -1,5 +1,6 @@
 # Cliente HTTP da API da Universal Assistance (#3211). Só transporte: monta o pedido, traduz o status em um dos
-# códigos de `Codigos::TODOS` e devolve o JSON. Quem decide o que fazer com o erro é quem chama.
+# códigos de `Codigos::TODOS` e devolve o JSON. Quem decide o que fazer com o erro é quem chama. A exceção é o catálogo
+# de coberturas (`beneficios`, #3249), que é guardado aqui por um dia.
 #
 # O log tem uma linha por chamada e nunca leva cabeçalho, corpo, login, URL com query nem a mensagem de exceção:
 # o corpo da compra traz CPF e o cabeçalho traz a senha do corretor.
@@ -12,7 +13,8 @@ class Autonomia::Seguradoras::Universal::Cliente
   # um GET que estourou a leitura (Setup e destinos), dobrando a espera; os POST ele já não repete. As outras chamadas
   # rodam no turno do agente, em job.
   ABERTURA = 3
-  LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40, status_do_pagamento: 15, url_do_voucher: 15 }.freeze
+  LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40, status_do_pagamento: 15, url_do_voucher: 15,
+              beneficios: 15 }.freeze
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
@@ -24,6 +26,11 @@ class Autonomia::Seguradoras::Universal::Cliente
   DIGITOS = ('0'..'9')
   # Separação de domínio do resumo do login (`emissor`): a chave do HMAC é derivada só para isto.
   DOMINIO_DO_EMISSOR = 'universal/emissor'.freeze
+  # O catálogo de coberturas dos planos (#3249), em português e na tarifa 1, guardado por um dia por emissor e por tipo
+  # de viagem (nacional ou internacional). A chave leva o `emissor`, nunca o login nem a senha.
+  CONSULTA_DOS_BENEFICIOS = 'idioma=portugues&tipoTarifa=1'.freeze
+  CHAVE_DOS_BENEFICIOS = 'autonomia:universal:beneficios:v1:'.freeze
+  VALIDADE_DOS_BENEFICIOS = 1.day
 
   class Erro < StandardError
     attr_reader :codigo, :mensagem_da_seguradora
@@ -78,7 +85,26 @@ class Autonomia::Seguradoras::Universal::Cliente
     chamar(:url_do_voucher, Net::HTTP::Get, "/v1/Voucher/imprimir/#{carrinho!(carrinho)}?#{CONSULTA_DO_VOUCHER}")
   end
 
+  # #3249: o catálogo de coberturas de cada plano, sem preço: `{ "beneficios" => [{ idBeneficio, descricao }],
+  # "produtos" => [{ descricao, beneficios: [{ idBeneficio, valor }] }] }`. Guardado por um dia: muda pouco, e a
+  # pergunta de cobertura antes da cotação não pode esperar a Universal a cada turno. A falha levanta e não fica
+  # guardada; o catálogo sem plano conta como falha (`indisponivel`), para um dia inteiro não responder "não existe".
+  def beneficios(nacional:)
+    nacional = nacional == true
+    chave = "#{CHAVE_DOS_BENEFICIOS}#{emissor}:#{nacional ? 'nacional' : 'internacional'}"
+    Rails.cache.fetch(chave, expires_in: VALIDADE_DOS_BENEFICIOS) do
+      catalogo = chamar(:beneficios, Net::HTTP::Get, "/v1/beneficios?#{CONSULTA_DOS_BENEFICIOS}&nacional=#{nacional}")
+      raise Erro, Autonomia::Seguradoras::Universal::Codigos::INDISPONIVEL unless catalogo_com_planos?(catalogo)
+
+      catalogo
+    end
+  end
+
   private
+
+  def catalogo_com_planos?(catalogo)
+    catalogo.is_a?(Hash) && catalogo['produtos'].is_a?(Array) && catalogo['produtos'].any?
+  end
 
   # O carrinho vai no caminho: só um inteiro positivo, escrito só com dígitos. Outra coisa é recusada antes da chamada,
   # como pedido inválido, sem mensagem.

@@ -32,6 +32,14 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     end
   end
 
+  # A falha de uma consulta em que não há dado do cliente a corrigir (o pagamento pelo carrinho guardado, o catálogo de
+  # coberturas): o pedido inválido é tratado como indisponível (#3246, #3249).
+  def tratar_sem_dado_do_cliente(erro, acao:, agent:, conversation:)
+    invalido = erro.codigo == Codigos::PEDIDO_INVALIDO
+    tratado = invalido ? Autonomia::Seguradoras::Universal::Cliente::Erro.new(Codigos::INDISPONIVEL) : erro
+    tratar(tratado, acao: acao, agent: agent, conversation: conversation)
+  end
+
   # A compra voltou sem link de pagamento válido (`urlVoucher`).
   def sem_link(acao:, agent:, conversation:)
     nota(conversation, 'sem_link', acao)

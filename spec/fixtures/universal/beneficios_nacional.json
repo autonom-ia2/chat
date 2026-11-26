@@ -1,0 +1,81 @@
+{
+  "beneficios": [
+    {
+      "descricao": "Despesas Médicas e Hospitalares (por evento)",
+      "descricaoCompleta": "",
+      "idBeneficio": 2898,
+      "imagem": null,
+      "ordem": 1,
+      "tipoBeneficio": 1,
+      "categoriaBeneficio": 2
+    },
+    {
+      "descricao": "Despesas Farmacêuticas",
+      "descricaoCompleta": "",
+      "idBeneficio": 2604,
+      "imagem": null,
+      "ordem": 5,
+      "tipoBeneficio": 1,
+      "categoriaBeneficio": 2
+    },
+    {
+      "descricao": "Concierge",
+      "descricaoCompleta": null,
+      "idBeneficio": 40,
+      "imagem": null,
+      "ordem": 12,
+      "tipoBeneficio": 2,
+      "categoriaBeneficio": 1
+    }
+  ],
+  "produtos": [
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2898,
+          "valor": "R$ 300.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2604,
+          "valor": "R$ 2.250"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Nacional Premium +",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5383939
+    },
+    {
+      "avulso": false,
+      "beneficios": [
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2898,
+          "valor": "R$ 100.000"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 2604,
+          "valor": "R$ 1.500"
+        },
+        {
+          "beneficioDestaque": false,
+          "idBeneficio": 40,
+          "valor": " SIM"
+        }
+      ],
+      "beneficiosOpcionais": [],
+      "descricao": "Nacional +",
+      "idBeneficioDestaque": 0,
+      "idProduto": 5382322
+    }
+  ]
+}
