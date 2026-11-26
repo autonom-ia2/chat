@@ -93,7 +93,7 @@ RSpec.describe Autonomia::Agents::Contratados::VarreduraDoPagamentoJob, type: :j
 
   # Duas varreduras ao mesmo tempo: a segunda roda com a reserva da primeira já gravada (o UPDATE confere o espaçamento
   # de novo), e não pega a mesma linha.
-  it 'duas varreduras não reservam a mesma linha' do
+  it 'o espaçamento conferido no UPDATE barra a segunda reserva da linha recém-reservada' do
     alvo = cotacao
     primeira = described_class.new
     segunda = described_class.new

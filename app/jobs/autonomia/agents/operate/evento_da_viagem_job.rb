@@ -4,16 +4,21 @@
 #
 # A ORDEM, antes de falar:
 #   1. evento morto (a cotação sumiu, a proposta foi trocada) ou sem conversa: só log. O `pagamento_confirmado` de uma
-#      proposta trocada vira nota à equipe (o carrinho anterior foi pago), sem voucher;
+#      proposta trocada vira nota à equipe (um carrinho anterior foi pago), sem voucher;
 #   2. turno do cliente em curso (`TurnoEmCurso`, ou a fala da cadeia de pedaços, `FalaEmCurso`): espera, com teto;
-#   3. o voucher que já saiu (ou, no lembrete, o pagamento que chegou ou foi cancelado): não fala;
-#   4. JANELA FECHADA (`can_reply_automatically?`): o modelo não roda. O `pagamento_confirmado` vira nota à equipe; o
+#   3. o voucher que já saiu ou que o turno do cliente já marcou (no lembrete: o pagamento que chegou ou foi cancelado,
+#      ou a hora do lembrete que passou): não fala;
+#   4. a fala do evento já postada (nova tentativa): não fala de novo; no `pagamento_confirmado`, o cartão do voucher
+#      é reenfileirado pela âncora (o token barra o repetido);
+#   5. elegibilidade (`Operate.eligible_agent_inbox`, o mesmo agente da cotação): inelegível vira nota, sem PDF. Vem
+#      antes da janela: com humano no comando, a nota diz isso, e não que a janela fechou;
+#   6. JANELA FECHADA (`can_reply_automatically?`): o modelo não roda. O `pagamento_confirmado` vira nota à equipe; o
 #      lembrete, só log;
-#   5. elegibilidade (`Operate.eligible_agent_inbox`, o mesmo agente da cotação): inelegível vira nota, sem PDF;
-#   6. fala: turno do modelo com a nota do sistema (`ResponderAoEventoDaViagem`).
+#   7. fala: turno do modelo com a nota do sistema (`ResponderAoEventoDaViagem`).
 #
-# FALHA DO TURNO (IA falhou, resposta vazia): UMA nova tentativa, com espera; falhou de novo, escala com nota, como o
-# `EventoJob`. O sinal de silêncio não é falha: só a nota. Nunca frase pronta ao cliente.
+# FALHA DO TURNO (IA falhou, resposta vazia): UMA nova tentativa, com espera; falhou de novo, o `pagamento_confirmado`
+# escala com nota, como o `EventoJob`, e o lembrete fica só na nota (sem passar a conversa: ninguém pediu nada). O sinal
+# de silêncio não é falha: só a nota. Nunca frase pronta ao cliente.
 class Autonomia::Agents::Operate::EventoDaViagemJob < ApplicationJob
   queue_as :medium
 
@@ -42,10 +47,24 @@ class Autonomia::Agents::Operate::EventoDaViagemJob < ApplicationJob
   def seguir(evento, conversation, passo)
     motivo = evento.motivo_para_calar
     return anotar(evento.cotacao.id, evento.tipo, motivo) if motivo
-    return anotar(evento.cotacao.id, evento.tipo, 'ja_publicado') if evento.publicado?(conversation)
+    return ja_publicado(evento, conversation) if evento.publicado?(conversation)
+
+    agent_inbox = vinculo(evento.cotacao, conversation)
+    return aviso(evento).notar('inelegivel') if agent_inbox.nil?
     return fora_da_janela(evento) unless conversation.can_reply_automatically?
 
-    falar(evento, conversation, passo)
+    falar(evento, conversation, agent_inbox, passo)
+  end
+
+  # A nova tentativa que acha a fala do evento já postada (o run anterior morreu depois de postar, antes de enfileirar o
+  # cartão): no `pagamento_confirmado`, o cartão do voucher gravado na âncora entra na fila pelo caminho de sempre
+  # (`CartoesDoTurno.enfileirar`); o token barra o que já saiu.
+  def ja_publicado(evento, conversation)
+    anotar(evento.cotacao.id, evento.tipo, 'ja_publicado')
+    ancora = evento.mensagem(conversation)
+    return unless evento.pagamento_confirmado? && ancora && !ancora.private
+
+    ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(ancora)
   end
 
   # A proposta trocada: o `pagamento_confirmado` dela vira nota (o carrinho anterior foi pago); o resto, só log.
@@ -62,13 +81,11 @@ class Autonomia::Agents::Operate::EventoDaViagemJob < ApplicationJob
     aviso(evento).notar('fora_da_janela')
   end
 
-  def falar(evento, conversation, passo)
-    agent_inbox = vinculo(evento.cotacao, conversation)
-    return aviso(evento).notar('inelegivel') if agent_inbox.nil?
-
+  def falar(evento, conversation, agent_inbox, passo)
     resultado = ::Autonomia::Agents::Operate::ResponderAoEventoDaViagem.new(conversation: conversation, agent_inbox: agent_inbox,
                                                                             evento: evento).perform
-    return anotar(evento.cotacao.id, evento.tipo, 'falou') if resultado.status == :replied
+    # `replied` sem mensagem: a guarda da hora de postar calou (a fala já estava lá, ou o voucher já saiu ou foi marcado).
+    return anotar(evento.cotacao.id, evento.tipo, resultado.message ? 'falou' : 'calou_na_hora_de_postar') if resultado.status == :replied
     return aviso(evento).notar('inelegivel') if resultado.error == 'nao_elegivel'
     return aviso(evento).notar('silencio') if resultado.error == 'sinal'
 
@@ -80,6 +97,8 @@ class Autonomia::Agents::Operate::EventoDaViagemJob < ApplicationJob
       anotar(evento.cotacao.id, evento.tipo, "nova_tentativa causa=#{motivo.presence || '-'}")
       return reagendar(evento, passo.merge(tentativa: passo[:tentativa] + 1), ESPERA_DA_NOVA_TENTATIVA)
     end
+
+    return aviso(evento).notar('ia_falhou') unless evento.pagamento_confirmado?
 
     anotar(evento.cotacao.id, evento.tipo, "escalado causa=#{motivo.presence || '-'}")
     aviso(evento).escalar(agent_inbox)

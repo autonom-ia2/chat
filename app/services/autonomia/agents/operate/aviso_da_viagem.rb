@@ -2,29 +2,23 @@
 # o evento que nasce da proposta (`Tools::EventoDaViagem`), e não de uma execução. A Lia fica como estava.
 #
 # Dois caminhos, e nenhum escreve ao cliente:
-#   - `notar`: a conversa tem humano no comando, o agente não pode falar, a janela do canal fechou, a IA decidiu calar
-#     ou a proposta paga foi trocada por outra. O evento vira NOTA PRIVADA, com os fatos (sem o link);
-#   - `escalar`: o turno do evento falhou duas vezes. A conversa é liberada para a equipe como no `AvisoAoAtendente`
-#     (`bot_handoff!` sob o lock, só com o espelho no comando, e o evento `handed_off`), e a mesma nota.
+#   - `notar`: a conversa tem humano no comando, o agente não pode falar, a janela do canal fechou, a IA decidiu calar,
+#     a IA falhou no lembrete, ou a proposta paga foi trocada por outra. O evento vira NOTA PRIVADA, com os fatos (sem o
+#     link; na proposta trocada, sem fatos: os guardados são os da proposta nova);
+#   - `escalar`: o turno do `pagamento_confirmado` falhou duas vezes. A conversa é liberada para a equipe como no
+#     `AvisoAoAtendente` (`bot_handoff!` sob o lock, só com o espelho no comando, e o evento `handed_off`), e a nota.
+#
+# Os textos ficam no catálogo (`NOTAS`, en e pt_BR). No `pagamento_confirmado`, a nota sempre diz que o pagamento foi
+# confirmado e que o voucher NÃO foi enviado, e o que a equipe faz.
 #
 # A NOTA CARREGA A MARCA DO EVENTO (`EventoDaViagem::CHAVE`), conferida sob o lock da conversa: o retry não a duplica, e
 # o evento que já teve nota não fala depois. O texto é para a EQUIPE, nunca para o cliente.
 class Autonomia::Agents::Operate::AvisoDaViagem
-  MOTIVOS = {
-    'inelegivel' => 'A IA não falou com o cliente sobre isto: a conversa está com um atendente, ou o agente não pode ' \
-                    'responder agora.',
-    'silencio' => 'A IA decidiu não falar com o cliente sobre isto agora. Confira a conversa se precisar retomar.',
-    'ia_falhou' => 'A IA tentou falar com o cliente sobre isto duas vezes e não conseguiu. A conversa foi passada para a ' \
-                   'equipe.',
-    'fora_da_janela' => 'A IA não pode escrever ao cliente agora: a janela do canal está fechada. O voucher sai quando o ' \
-                        'cliente voltar a escrever e a IA conferir o pagamento.',
-    'carrinho_substituido' => 'Este carrinho foi pago, mas a proposta da conversa já tinha sido trocada por outra. O ' \
-                              'voucher deste pagamento não foi enviado; confira com a seguradora.'
-  }.freeze
-  CABECALHO = {
-    ::Autonomia::Agents::Tools::EventoDaViagem::PAGAMENTO_CONFIRMADO => 'Pagamento do seguro viagem confirmado',
-    ::Autonomia::Agents::Tools::EventoDaViagem::LEMBRETE => 'Seguro viagem ainda não pago'
-  }.freeze
+  # Os textos (en e pt_BR), por tipo de evento e motivo: `<tipo>.cabecalho` (com os fatos) e `<tipo>.<motivo>`.
+  NOTAS = 'autonomia.contratados.universal.notas.aviso_de_pagamento'.freeze
+  MOTIVOS = %w[inelegivel silencio ia_falhou fora_da_janela carrinho_substituido].freeze
+  # A proposta paga foi trocada: os fatos guardados agora são os da proposta NOVA, e a nota não os mostra.
+  SEM_FATOS = %w[carrinho_substituido].freeze
 
   def initialize(evento:)
     @evento = evento
@@ -77,10 +71,12 @@ class Autonomia::Agents::Operate::AvisoDaViagem
     ).perform
   end
 
+  # No `pagamento_confirmado`, toda nota diz que o pagamento caiu e que o voucher NÃO foi enviado, e o que a equipe faz.
   def texto(motivo)
-    [
-      "#{CABECALHO.fetch(@evento.tipo, @evento.tipo)}: #{@evento.fatos(com_link: false)}",
-      MOTIVOS.fetch(motivo, MOTIVOS['inelegivel'])
-    ].join("\n")
+    motivo = 'inelegivel' unless MOTIVOS.include?(motivo)
+    corpo = I18n.t("#{NOTAS}.#{@evento.tipo}.#{motivo}")
+    return corpo if SEM_FATOS.include?(motivo)
+
+    [I18n.t("#{NOTAS}.#{@evento.tipo}.cabecalho", fatos: @evento.fatos(com_link: false)), corpo].join("\n")
   end
 end

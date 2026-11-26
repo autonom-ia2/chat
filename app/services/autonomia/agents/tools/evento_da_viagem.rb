@@ -21,10 +21,13 @@ class Autonomia::Agents::Tools::EventoDaViagem
   # Até quando o link vale, para o cliente: a mesma folga de uma hora da proposta reaproveitada (a Universal cancela o
   # link 24 h depois da compra; `GerarPropostaSeguroViagem::VALIDADE_DO_LINK`).
   VALIDADE_DO_LINK = Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem::VALIDADE_DO_LINK
+  VOUCHER = Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
+  HoraDoLembrete = Autonomia::Agents::Tools::Native::SeguroViagem::HoraDoLembrete
 
   DESCRICOES = {
-    PAGAMENTO_CONFIRMADO => 'a seguradora confirmou agora o pagamento da proposta desta conversa. O voucher em PDF sai ' \
-                            'logo abaixo da sua mensagem, sem você mandar nada.',
+    PAGAMENTO_CONFIRMADO => 'a conferência automática viu agora o pagamento da proposta desta conversa como pago. ' \
+                            'Confirme com situacao_do_pagamento antes de falar; o voucher em PDF sai logo abaixo da sua ' \
+                            'mensagem.',
     LEMBRETE => 'a proposta desta conversa ainda não foi paga, e o link de pagamento vence em breve. É um lembrete; a ' \
                 'pessoa não pediu nada agora.'
   }.freeze
@@ -77,14 +80,26 @@ class Autonomia::Agents::Tools::EventoDaViagem
     "viagem:#{cotacao&.id}:#{gerada_em_i}:#{tipo}"
   end
 
-  # -> por que o evento não tem mais o que dizer, ou nil. O voucher que já saiu (a pessoa perguntou e a ferramenta o
-  # mandou); no lembrete, também o pagamento que chegou ou foi cancelado depois da conferência.
+  # -> por que o evento não tem mais o que dizer, ou nil. O voucher que já saiu ou que o turno do cliente já marcou (a
+  # pessoa perguntou e a ferramenta cuidou); no lembrete, também o pagamento que chegou ou foi cancelado depois da
+  # conferência, e a hora que passou (`SeguroViagem::HoraDoLembrete`: o evento pode ter esperado o turno do cliente, a
+  # nova tentativa da IA ou a fila).
   def motivo_para_calar
     return 'voucher_ja_enviado' if proposta['voucher_enviado_em'].present?
-    return if pagamento_confirmado?
+    return motivo_do_pagamento if pagamento_confirmado?
     return 'ja_pago' if proposta['pago_em'].present?
+    return 'cancelado' if proposta['situacao'] == CANCELADO
 
-    'cancelado' if proposta['situacao'] == CANCELADO
+    HoraDoLembrete.motivo(cotacao, self.class.gerada_em(proposta))
+  end
+
+  # Na hora de postar, sob o lock da conversa (`ResponderAoEventoDaViagem#already_replied?`), com a proposta RELIDA do
+  # banco: o voucher deste pagamento já saiu ou outro turno (o do cliente que perguntou "caiu?") já o marcou? O modelo
+  # demora: o turno do cliente pode ter conferido o pagamento enquanto o aviso esperava a IA.
+  def voucher_coberto_agora?
+    return false unless pagamento_confirmado?
+
+    voucher_de_outro_turno?(Autonomia::Agents::CotacaoDeViagem.where(id: cotacao&.id).pick(:proposta).to_h)
   end
 
   # -> a mensagem desta conversa (pública ou nota) que já carrega a marca, ou nil. O `LIKE` é a peneira; quem decide é o
@@ -118,6 +133,19 @@ class Autonomia::Agents::Tools::EventoDaViagem
   end
 
   private
+
+  def motivo_do_pagamento
+    'voucher_marcado_por_outro_turno' if voucher_de_outro_turno?(proposta)
+  end
+
+  # O voucher já saiu, ou o cartão dele foi marcado por um turno que não é este evento (`EntregaDoVoucher.marcar`). A
+  # marca do próprio evento (o modelo chamou `situacao_do_pagamento` no turno do aviso) não cala: é o mesmo cartão.
+  def voucher_de_outro_turno?(atual)
+    return true if atual['voucher_enviado_em'].present?
+
+    marcado = atual[VOUCHER::MARCADO_NO_TURNO].to_s
+    marcado.present? && marcado != marca
+  end
 
   def do_pagamento
     data = data_curta(proposta['pago_em'])

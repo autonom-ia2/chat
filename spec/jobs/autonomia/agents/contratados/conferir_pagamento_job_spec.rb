@@ -93,6 +93,31 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirPagamentoJob, type: :job 
       expect(cotacao.proposta['conferencias']).to eq(1)
     end
 
+    it 'a fila que falha não desfaz quando o voucher saiu nesse meio-tempo, nem o valor que outra execução gravou' do
+      universal('Pago', data: '2026-11-26T11:53:08.773')
+      allow(Autonomia::Agents::Operate::EventoDaViagemJob).to receive(:perform_later) do
+        cotacao.update!(proposta: cotacao.reload.proposta.merge('voucher_enviado_em' => agora.iso8601))
+        false
+      end
+
+      conferir
+
+      expect(cotacao.reload.proposta).to include('pago_em' => '2026-11-26T11:53:08.773', 'aviso_pago_em' => agora.iso8601)
+    end
+
+    it 'a fila que falha só desfaz a chave que ainda tem o valor desta execução' do
+      universal('Pago', data: '2026-11-26T11:53:08.773')
+      allow(Autonomia::Agents::Operate::EventoDaViagemJob).to receive(:perform_later) do
+        cotacao.update!(proposta: cotacao.reload.proposta.merge('aviso_pago_em' => 'outra-execucao'))
+        false
+      end
+
+      conferir
+
+      expect(cotacao.reload.proposta).not_to have_key('pago_em')
+      expect(cotacao.proposta['aviso_pago_em']).to eq('outra-execucao')
+    end
+
     it 'a fila que recusa (perform_later devolve false) também desfaz' do
       universal('Pago')
       allow(Autonomia::Agents::Operate::EventoDaViagemJob).to receive(:perform_later).and_return(false)
