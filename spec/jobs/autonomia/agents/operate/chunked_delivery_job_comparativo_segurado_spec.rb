@@ -112,6 +112,11 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
     rodar_turno!(decisao_job)
   end
 
+  # Quantas decisões estão na fila para cada turno (o 3º argumento do job: a mensagem do cliente do turno).
+  def decisoes_por_turno
+    jobs_de(decisao_job).map { |job| ActiveJob::Arguments.deserialize(job[:args])[2] }.tally
+  end
+
   def enviar_cartoes!
     rodar_turno!(cartoes_job)
   end
@@ -319,7 +324,9 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
         Autonomia::Agents::Operate::Responder.new(conversation: conversation, agent_inbox: vinculo_da_porta,
                                                   reply_to_message_id: no_meio.id).perform
       end
-      expect(jobs_de(decisao_job).size).to eq(1)
+      # Uma decisão por turno: a do turno seguinte (no_meio), enfileirada pelo Responder. A outra na fila é a do fim da
+      # própria fala velha (o último pedaço, no `before`), que não decide nada dela.
+      expect(decisoes_por_turno).to eq(pergunta.id => 1, no_meio.id => 1)
       decidir!
       enviar_cartoes!
 

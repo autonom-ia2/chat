@@ -54,7 +54,7 @@ module Autonomia::Agents::Operate::ComparativoSegurado
 
   # A âncora recém-postada: a linha de cada comparativo que ela segurou.
   def segurou(ancora)
-    estados(ancora).each { |token, valor| registrar(['segurou', nil], ancora, token) if valor.to_h['estado'] == SEGURADO }
+    estados(ancora).each { |token, valor| rastrear(['segurou', nil], ancora, token) if valor.to_h['estado'] == SEGURADO }
   end
 
   # Fora da lista do `EnviarCartoesJob` agora: o segurado (espera o turno seguinte) e o descartado.
@@ -93,7 +93,7 @@ module Autonomia::Agents::Operate::ComparativoSegurado
     decisao = decidir!(ancora, token, turno)
     return if decisao.nil?
 
-    registrar(decisao, ancora, token)
+    rastrear(decisao, ancora, token)
     return rastro_do_descarte(ancora, decisao.last) if decisao.first == 'descartou'
 
     ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(ancora)
@@ -198,8 +198,10 @@ module Autonomia::Agents::Operate::ComparativoSegurado
     Array(marca[NA_ANCORA]).select { |cartao| COMPARATIVO.cartao?(cartao) }.filter_map { |cartao| cartao['token'] }
   end
 
+  # A linha da decisão (`TelemetriaDoTurno`). Não é recusa ao modelo: por isso não se chama `registrar` (o nome que a
+  # varredura das recusas, `VarreduraDeRecusas::REGISTRADORES`, lê como saída de recusa quando chamado sem receptor).
   # `decisao`: [a ação, o motivo do descarte ou nil].
-  def registrar(decisao, ancora, token)
+  def rastrear(decisao, ancora, token)
     atributos = ancora.content_attributes.to_h
     cotacao = Array(atributos[NA_ANCORA]).find { |cartao| cartao.to_h['token'] == token }.to_h['chave']
     ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:comparativo_segurado, conversation_id: ancora.conversation_id,
