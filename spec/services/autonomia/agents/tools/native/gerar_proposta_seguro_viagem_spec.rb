@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     da_cotacao = lambda do |requisicao|
       corpo = JSON.parse(requisicao.body)
       corpo['DadosBasicos']['ValorCompra'].to_d == BigDecimal(plano['preco_total']) &&
-        corpo['DadosProdutos']['CodigoProduto'] == plano['id_produto'] && corpo['DadosBasicos']['FormaPagamento'] == 8
+        corpo['DadosProdutos']['CodigoProduto'] == plano['id_produto'] && corpo['DadosBasicos']['FormaPagamento'] == 7
     end
     expect(a_request(:post, "#{base}/v1/Compras").with(&da_cotacao)).to have_been_made.once
   end
