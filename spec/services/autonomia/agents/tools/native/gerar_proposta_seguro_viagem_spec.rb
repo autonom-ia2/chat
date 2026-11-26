@@ -197,6 +197,103 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
   end
 
+  # #3247: seguro pago não se refaz.
+  describe 'proposta já paga' do
+    let(:paga) do
+      { 'chave' => 'x', 'codigo_do_plano' => 'P1', 'codigo_carrinho' => 987_654, 'link' => 'https://pagamento.exemplo.test/',
+        'gerada_em' => Time.current.iso8601, 'pago_em' => '2026-11-24T10:00:00', 'voucher_enviado_em' => '2026-11-24T10:05:00' }
+    end
+
+    def cotacao_nova(pedido_mudado = {})
+      pedido = cotacao.pedido.merge('universal' => { 'tipoTarifa' => 2 }).merge(pedido_mudado)
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: contratado,
+                                                 id_cotacao: 'COT-TESTE-2', planos: cotacao.planos, pedido: pedido)
+    end
+
+    def sem_chamada_a_fora
+      expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+      expect(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).not_to have_received(:buscar)
+    end
+
+    it 'cotação com pago_em: recusa proposta_ja_paga, sem Universal, sem CEP e com a proposta intacta' do
+      cotacao.update!(proposta: paga)
+      expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('proposta_ja_paga', anything)
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_JA_PAGO)
+      sem_chamada_a_fora
+      expect(cotacao.reload.proposta).to eq(paga)
+    end
+
+    it 'chave idêntica com o link vencido (> 23 h): recusa, sem carrinho novo' do
+      cotacao.update!(proposta: paga.merge('gerada_em' => (23.hours + 1.minute).ago.iso8601))
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_JA_PAGO)
+      sem_chamada_a_fora
+      expect(cotacao.reload.proposta['pago_em']).to eq('2026-11-24T10:00:00')
+    end
+
+    it 'dado corrigido (outro e-mail) numa cotação paga: recusa, o pago_em fica' do
+      cotacao.update!(proposta: paga)
+      expect(ferramenta(params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))).call)
+        .to eq(described_class::TEXTO_JA_PAGO)
+      sem_chamada_a_fora
+      expect(cotacao.reload.proposta['voucher_enviado_em']).to be_present
+    end
+
+    it 'cotação anterior paga + cotação nova da mesma viagem: recusa, sem Universal e sem CEP' do
+      cotacao.update!(proposta: paga)
+      nova = cotacao_nova('destinos' => ['PT'])
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_JA_PAGO)
+      sem_chamada_a_fora
+      expect(nova.reload.proposta).to be_nil
+    end
+
+    it 'a mesma viagem com outra ordem de idades e de destinos também é a mesma viagem' do
+      cotacao.update!(proposta: paga, pedido: cotacao.pedido.merge('destinos' => %w[PT ES], 'idades' => [45, 10]))
+      cotacao_nova('destinos' => %w[ES PT], 'idades' => [10, 45])
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_JA_PAGO)
+      sem_chamada_a_fora
+    end
+
+    it 'cotação anterior paga + cotação nova de OUTRA viagem (outra data): gera normalmente' do
+      cotacao.update!(proposta: paga)
+      nova = cotacao_nova('data_saida' => '2027-03-02', 'data_retorno' => '2027-03-06')
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to be_present
+      expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.once
+      expect(nova.reload.proposta['codigo_carrinho']).to be_present
+      expect(cotacao.reload.proposta['pago_em']).to eq('2026-11-24T10:00:00')
+    end
+
+    it 'cotação anterior da mesma viagem SEM pago_em não impede' do
+      cotacao.update!(proposta: paga.except('pago_em', 'voucher_enviado_em'))
+      cotacao_nova
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to be_present
+    end
+
+    it 'cotação paga de OUTRO agente na conversa não impede' do
+      outro = Autonomia::Agents::Agent.create!(account: account, name: 'Outra', agent_type: 'sdr', instruction: 'retrato',
+                                               config: { 'contratado' => { 'modelo' => 'seguro_viagem_universal' } })
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: outro, id_cotacao: 'o-1',
+                                                 planos: [], pedido: cotacao.pedido, proposta: paga)
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to be_present
+    end
+
+    # A varredura do pagamento grava `pago_em` entre a primeira conferência e o lock: o `with_lock` relê a cotação.
+    it 'pago_em gravado depois da primeira conferência: a conferência sob o lock recusa, sem Universal' do
+      gravada = false
+      conferencia = Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga
+      allow(conferencia).to receive(:impedindo).and_wrap_original do |original, *argumentos|
+        resultado = original.call(*argumentos)
+        unless gravada
+          gravada = true
+          Autonomia::Agents::CotacaoDeViagem.where(id: cotacao.id).update_all(proposta: paga) # rubocop:disable Rails/SkipsModelValidations
+        end
+        resultado
+      end
+      expect(ferramenta(params).call).to eq(described_class::TEXTO_JA_PAGO)
+      expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+      expect(cotacao.reload.proposta).to eq(paga)
+    end
+  end
+
   it 'repetição idêntica devolve o link guardado sem buscar o CEP (fonte de CEP fora)' do
     primeira = ferramenta(params).call
     expect(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).not_to receive(:buscar)

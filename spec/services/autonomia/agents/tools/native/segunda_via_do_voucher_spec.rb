@@ -38,6 +38,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::SegundaViaDoVoucher do
     expect(delivery.cartoes).to eq([voucher.cartao(cotacao)])
   end
 
+  # #3247: a última cotação da conversa pode não ter proposta; a paga é de uma anterior.
+  it 'a última cotação sem proposta: manda o voucher da anterior paga' do
+    Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: contratado, id_cotacao: 'c-2',
+                                               planos: [], pedido: { 'idades' => [45] })
+    universal('Pago')
+    expect(JSON.parse(pedir)).to eq('voucher_vai_junto' => true)
+    expect(delivery.cartoes).to eq([voucher.cartao(cotacao)])
+  end
+
   it 'pago e voucher já enviado antes: a segunda via sai de novo' do
     cotacao.update!(proposta: proposta.merge('voucher_enviado_em' => 1.day.ago.iso8601))
     universal('Pago')

@@ -49,6 +49,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::SituacaoDoPagamento do
     expect(delivery.cartoes).to be_empty
   end
 
+  # #3247: a última cotação da conversa pode não ter proposta; a paga é de uma anterior.
+  it 'a última cotação sem proposta: confere a proposta da anterior' do
+    cotacao_com(nil)
+    universal('Pago', data: '2026-11-26T11:53:08.773')
+    expect(conferir).to include('situacao' => 'pago')
+    expect(cotacao.reload.proposta).to include('pago_em' => '2026-11-26T11:53:08.773')
+  end
+
   it 'pago_em fica o primeiro visto' do
     cotacao.update!(proposta: proposta.merge('pago_em' => '2026-11-26T11:47:40'))
     universal('Pago', data: '2026-11-27T09:00:00')
