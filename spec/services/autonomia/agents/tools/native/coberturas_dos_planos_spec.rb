@@ -96,7 +96,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
       .with('plano_fora_do_catalogo', hash_including(slug: 'coberturas_dos_planos', faltando: ['planos']))
   end
 
-  # Sem `nacional`, os dois catálogos são lidos (cada um com o seu cache); o primeiro que tem o nome responde.
+  # Sem `nacional`, o internacional é lido primeiro; o nacional só quando falta nome nele (leitura tardia).
   context 'without nacional (o nome do plano diz o catálogo)' do
     it '"Master" acha no internacional e o nacional nem é chamado (leitura tardia)' do
       internacional = catalogo
@@ -152,11 +152,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
       expect(saida['aviso']).to include('internacional fora do ar', 'Platinum')
     end
 
-    it 'acesso recusado num catálogo com o outro achando: devolve e marca o acesso como recusado' do
+    it 'acesso recusado no internacional: o nacional nem é tentado (mesma credencial), passa e marca o acesso' do
       catalogo(status: 401, corpo: '')
-      catalogo(nacional: true)
-      saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
-      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      nacional = catalogo(nacional: true)
+      expect(consultar({ 'planos' => ['Nacional +'] })).to eq(falhas::TEXTO_PASSAR)
+      expect(nacional).not_to have_been_requested
       expect(contratado.acesso_da_seguradora.reload.estado).to eq('recusado')
     end
 

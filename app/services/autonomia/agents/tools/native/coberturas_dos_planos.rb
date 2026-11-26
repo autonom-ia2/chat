@@ -78,6 +78,8 @@ class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents:
   def ler_em_ordem
     catalogos = [ler(params['nacional'].nil? ? false : nacional?)]
     return catalogos unless params['nacional'].nil?
+    # A mesma credencial lê os dois catálogos: recusada no primeiro, o segundo não é tentado.
+    return catalogos if catalogos.first[:erro]&.codigo == Codigos::ACESSO_RECUSADO
     return catalogos if pedidos.any? && escolher(catalogos).last.empty?
 
     catalogos + [ler(true)]
@@ -159,7 +161,7 @@ class Autonomia::Agents::Tools::Native::CoberturasDosPlanos < Autonomia::Agents:
   end
 
   # A ferramenta nativa recebe os argumentos como o modelo mandou (`Bound#run_native`, sem `ParamsTipados`): vale `true`
-  # e o texto "true"; qualquer outra coisa informada é viagem ao exterior. Ausente (nil) é tratado em `consultados`.
+  # e o texto "true"; qualquer outra coisa informada é viagem ao exterior. Ausente (nil) é tratado em `ler_em_ordem`.
   def nacional?
     [true, 'true'].include?(params['nacional'])
   end
