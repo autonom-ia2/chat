@@ -73,6 +73,13 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              '`por_dia_por_pessoa`', 'destino com sanção', 'Use o bloco da objeção que veio na base')
   end
 
+  it 'mostra só os destaques, anual só pedido e nunca diz que o PDF traz todas as coberturas (#3226, 2º teste real)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('No PDF estão todas as coberturas', 'o resto está no PDF')
+    expect(texto).to include('só dos planos com `destaque`', 'No PDF estão também as outras', '`incluir_anuais: true`',
+                             'Nunca diga que as demais estão no PDF', 'é só me dizer.')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end

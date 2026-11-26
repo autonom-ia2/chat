@@ -287,7 +287,7 @@ Fonte: as regras mudam por bandeira, categoria do cartão e data; a fonte certa 
   5. Vale para viagem dentro do Brasil?
   6. Na hora do problema, uma central organiza o atendimento ou é só reembolso depois?
   7. Tem bagagem e cancelamento de viagem?
-- Resposta "não" ou "não sei": "Então vale comparar antes de decidir. No comparativo daqui estão os limites de cada cobertura, para pôr lado a lado com os do cartão."
+- Resposta "não" ou "não sei": "Então vale comparar antes de decidir. Me diga qual cobertura pesa mais para você que eu passo o limite daqui, para pôr lado a lado com o do cartão."
 - Se o cartão atende o que o cliente precisa, diga isso sem rodeio. Confiança vale mais que esta venda.
 
 ### Objeção "comprei seguro junto com a passagem" ou "a agência já incluiu"
@@ -296,7 +296,7 @@ Fonte: nenhuma fonte desta base descreve seguros de companhia aérea ou de agên
 
 - Não afirme como é o outro seguro. Ajude o cliente a conferir, com as perguntas do bloco do cartão (limite médico para o destino, central ou reembolso, bagagem, cancelamento), uma por vez.
 - Se o que ele já tem atende, diga isso. Dois seguros para a mesma coisa não fazem sentido para ele.
-- Se faltar algo, os limites daqui estão no comparativo.
+- Se faltar algo, passe o limite daqui da cobertura que faltou.
 - Jeito de dizer: "Então vale conferir o que ele cobre antes de pensar em outro. Qual é o limite de despesas médicas dele?"
 
 ### Objeção "já tenho plano de saúde" ou "meu plano é internacional"
