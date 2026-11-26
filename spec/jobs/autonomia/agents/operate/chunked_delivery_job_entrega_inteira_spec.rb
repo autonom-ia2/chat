@@ -129,20 +129,21 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
   end
 
   # Revisão final F4 (P1): a cadeia parou antes do 1º pedaço sem postar (aqui, mensagem nova): não houve fala, e o fim
-  # previsto do turno some, para a rajada seguinte não esperar por nada. O fim de outro turno fica.
+  # previsto do turno some, para a rajada seguinte não esperar por nada. O fim de outro turno fica. #3235: o mesmo quando
+  # a fala acaba depois (o último pedaço saiu, ou a cadeia parou num pedaço do meio).
   describe 'fim previsto da fala (P1)' do
     def fim_gravado = Redis::Alfred.get(fala.chave_do_fim(conversation.id))
 
     it 'parou no 1º pedaço sem postar: o fim deste turno some' do
       liga!('conversa_espera_a_fala')
-      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      fala.prever_fim!(conversation.id, m1.id, 1800)
       pedaco!(0) # para por turno_mudou: o turno é o da m2
       expect(fim_gravado).to be_nil
     end
 
     it 'o fim de outro turno fica' do
       liga!('conversa_espera_a_fala')
-      fala.prever_fim!(conversation.id, m2.id, 'Outra fala.')
+      fala.prever_fim!(conversation.id, m2.id, 1800)
       pedaco!(0)
       expect(fim_gravado).to start_with("#{m2.id}:")
     end
@@ -150,15 +151,53 @@ RSpec.describe Autonomia::Agents::Operate::ChunkedDeliveryJob, :um_turno do
     it 'o 1º pedaço saiu: o fim fica' do
       liga!('conversa_espera_a_fala')
       conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
-      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      fala.prever_fim!(conversation.id, m1.id, 1800)
       pedaco!(0)
       expect(respostas.pluck(:content)).to eq(['Primeira parte da resposta.'])
       expect(fim_gravado).to start_with("#{m1.id}:")
     end
 
+    # Pega: o fim ficar gravado depois que a fala acabou, e a rajada seguinte esperar pelo resto de uma previsão.
+    it 'o último pedaço saiu: o fim deste turno some', :aggregate_failures do
+      liga!('conversa_espera_a_fala')
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+      fala.prever_fim!(conversation.id, m1.id, 1800)
+      pedaco!(1)
+      expect(respostas.pluck(:content)).to eq(['Segunda parte da resposta.'])
+      expect(fim_gravado).to be_nil
+    end
+
+    it 'o último pedaço saiu: o fim de outro turno fica' do
+      liga!('conversa_espera_a_fala')
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+      fala.prever_fim!(conversation.id, m2.id, 1800)
+      pedaco!(1)
+      expect(fim_gravado).to start_with("#{m2.id}:")
+    end
+
+    # Pega: a parada do 2º pedaço em diante deixar o fim de pé (os pedaços que faltavam não vão sair).
+    it 'parou no 2º pedaço (mensagem nova, sem a entrega inteira): o fim deste turno some', :aggregate_failures do
+      desligar_paridade!(agente_da_porta, 'conversa_entrega_inteira')
+      liga!('conversa_espera_a_fala')
+      fala.prever_fim!(conversation.id, m1.id, 1800)
+      pedaco!(1) # para por turno_mudou: o turno é o da m2
+      expect(respostas).to be_empty
+      expect(fim_gravado).to be_nil
+    end
+
+    it 'o retry de um pedaço que já entrou para a cadeia: o fim deste turno some' do
+      liga!('conversa_espera_a_fala')
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => m1.id } })
+      pedaco!(0)
+      fala.prever_fim!(conversation.id, m1.id, 1800)
+      clear_enqueued_jobs
+      pedaco!(0) # ja_postado
+      expect(fim_gravado).to be_nil
+    end
+
     it 'opção desligada: o fim não é tocado' do
       desligar_paridade!(agente_da_porta, 'conversa_espera_a_fala')
-      fala.prever_fim!(conversation.id, m1.id, 'Primeira parte da resposta.')
+      fala.prever_fim!(conversation.id, m1.id, 1800)
       pedaco!(0)
       expect(fim_gravado).to start_with("#{m1.id}:")
     end
