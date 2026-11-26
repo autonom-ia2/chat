@@ -70,7 +70,10 @@ module Autonomia::Agents::Tools::Registry
     # é só o contratado com acesso conferido (`available_for?`, `Tools::Native::SeguroViagem::PortaDoContratado`).
     Autonomia::Agents::Tools::Native::CotarSeguroViagem,
     Autonomia::Agents::Tools::Native::DetalhesDaCotacao,
-    Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem
+    Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem,
+    # #3246 — o pagamento da proposta: a situação e a segunda via do voucher.
+    Autonomia::Agents::Tools::Native::SituacaoDoPagamento,
+    Autonomia::Agents::Tools::Native::SegundaViaDoVoucher
   ].freeze
 
   TOOLS = (DE_ATENDIMENTO + DO_GUIA + DO_CONTRATADO).freeze

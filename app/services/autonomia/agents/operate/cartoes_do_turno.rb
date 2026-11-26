@@ -22,6 +22,8 @@
 # O COMPARATIVO DO SEGURO VIAGEM (#3223, `SeguroViagem::EntregaDoComparativo`) é um cartão deste mesmo caminho: sai depois
 # da âncora, com o token e os descartes de sempre, mas não é formato (`rich_message` nil) nem depende da flag do mapa e do
 # contato: na hora de postar vira o PDF da cotação, anexado. Nos pedaços ele resolve pela cotação, não pela página.
+# O VOUCHER DO SEGURO VIAGEM (#3246, `SeguroViagem::EntregaDoVoucher`) segue as mesmas regras do comparativo, com uma
+# diferença: o PDF vem da Universal pela rede, e é baixado fora do lock da conversa (`voucher!`).
 # A mensagem do cartão NÃO leva `autonomia_reply_to_message_id`: o `already_replied?` continua olhando só a resposta.
 # O conteúdo vai vazio (o formato da Meta não tem corpo); na caixa que não leva o formato (e-mail, chat do site), a
 # mesma regra da interação (`Interacao.sai_o_formato?`): sai a versão em texto, sem `rich_message`. O log leva só ids.
@@ -33,6 +35,9 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   REFERENCIA = %w[tipo chave token].freeze
   NATIVO = ::Autonomia::Agents::Tools::Native::CartaoDaPagina
   COMPARATIVO = ::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
+  VOUCHER = ::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
+  # Os cartões do Seguro Viagem: sem formato, resolvidos pela cotação da conversa.
+  DO_SEGURO_VIAGEM = [COMPARATIVO, VOUCHER].freeze
 
   class << self
     # Os cartões marcados no turno, com o token, para gravar na âncora. {} sem cartão: a âncora fica como sempre.
@@ -81,12 +86,12 @@ class Autonomia::Agents::Operate::CartoesDoTurno
     end
 
     # As referências resolvidas pela página do agente agora (o contato, com o telefone do agente primeiro, como
-    # `enviar_contato`); o comparativo, sem formato (o PDF nasce ao postar). -> [os cartões completos, quantos não
-    # resolveram].
+    # `enviar_contato`); o comparativo e o voucher, sem formato (o PDF nasce ao postar). -> [os cartões completos,
+    # quantos não resolveram].
     def resolver(referencias, agent)
       pagina = NATIVO.pagina(agent)
       completos = Array(referencias).filter_map do |referencia|
-        next referencia.slice(*REFERENCIA).merge('rich_message' => nil) if COMPARATIVO.cartao?(referencia)
+        next referencia.slice(*REFERENCIA).merge('rich_message' => nil) if do_seguro_viagem(referencia)
 
         formato = formato_na_pagina(agent, pagina, referencia)
         referencia.slice(*REFERENCIA).merge('rich_message' => formato) if formato
@@ -99,6 +104,11 @@ class Autonomia::Agents::Operate::CartoesDoTurno
       when 'location' then NATIVO.locais(pagina).find { |local| local['id'] == referencia['chave'] }&.dig('rich_message')
       when 'contact' then NATIVO.contato_do_agente(agent, pagina) if referencia['chave'] == NATIVO::CHAVE_DO_CONTATO
       end
+    end
+
+    # A classe do cartão do Seguro Viagem (`DO_SEGURO_VIAGEM`), ou nil.
+    def do_seguro_viagem(cartao)
+      DO_SEGURO_VIAGEM.find { |entrega| entrega.cartao?(cartao) }
     end
 
     def token(turno, cartao)
@@ -174,6 +184,8 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   # pessoa da equipe escreveu depois da âncora e que a conta segue ligada. -> nil quando postou (ou outro job já o
   # postou); senão o motivo de não postar. Erro sobe para quem chama.
   def postar!(cartao)
+    return voucher!(cartao) if VOUCHER.cartao?(cartao)
+
     @conversation.with_lock do
       motivo = motivo_para_nao_postar(cartao)
       construir!(cartao) unless motivo || postado?(cartao)
@@ -183,19 +195,52 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   private
 
+  # O VOUCHER (#3246) é baixado FORA do lock da conversa: a Universal (até 15 s) e o download (até 20 s) não seguram a
+  # conversa. As guardas são conferidas antes, sem lock (para não baixar à toa), e de novo sob ele (`anexar_voucher`),
+  # como nos outros cartões. Falha da Universal ou do download: a nota da equipe já saiu, e o motivo é `voucher_nao_saiu`.
+  def voucher!(cartao)
+    impedimento = motivo_para_nao_postar(cartao)
+    return impedimento if impedimento || postado?(cartao)
+
+    entrega = VOUCHER.new(conversation: @conversation, cotacao: VOUCHER.cotacao_do(cartao, @conversation),
+                          sender_id: @ancora.sender_id, atributos: atributos_do(cartao))
+    blob = entrega.baixar
+    blob.nil? ? VOUCHER::NAO_SAIU : anexar_voucher(entrega, blob, cartao)
+  end
+
+  # Sob o lock da conversa: confere as guardas de novo e cria a mensagem. O PDF que não virou mensagem (a guarda mudou
+  # durante o download, erro ao criar) vai para a limpeza.
+  def anexar_voucher(entrega, blob, cartao)
+    anexado = nil
+    @conversation.with_lock do
+      impedimento = motivo_para_nao_postar(cartao)
+      anexado = entrega.criar(blob) unless impedimento || postado?(cartao)
+      impedimento
+    end
+  ensure
+    ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: 'voucher') if anexado.nil?
+  end
+
   def motivo_para_nao_postar(cartao)
     return 'pessoa_respondeu' if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @ancora.id)
-    return motivo_do_comparativo(cartao) if COMPARATIVO.cartao?(cartao)
+
+    entrega = self.class.do_seguro_viagem(cartao)
+    return motivo_do_seguro_viagem(entrega, cartao) if entrega
 
     'desligado' unless NATIVO.ligado?(@conversation.account)
   end
 
-  # O comparativo não depende da flag do mapa e do contato: só dos agentes ligados na conta e da cotação na conversa
-  # (apagada com ela, não sai).
-  def motivo_do_comparativo(cartao)
+  # O comparativo e o voucher não dependem da flag do mapa e do contato: só dos agentes ligados na conta e da cotação na
+  # conversa (apagada com ela, não sai).
+  def motivo_do_seguro_viagem(entrega, cartao)
     return 'desligado' unless ::Autonomia::Agents::Config.enabled?(@conversation.account)
 
-    'cotacao_sumiu' if COMPARATIVO.cotacao_do(cartao, @conversation).nil?
+    'cotacao_sumiu' if entrega.cotacao_do(cartao, @conversation).nil?
+  end
+
+  # O que o cartão do Seguro Viagem grava na mensagem: o agente e o token do turno.
+  def atributos_do(cartao)
+    { 'autonomia_agent_id' => @ancora.content_attributes.to_h['autonomia_agent_id'], TOKEN => cartao['token'] }
   end
 
   def construir!(cartao)
@@ -218,8 +263,7 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   # O PDF da cotação, anexado, com o agente e o token do turno (`EntregaDoComparativo`).
   def comparativo!(cartao)
     COMPARATIVO.new(conversation: @conversation, cotacao: COMPARATIVO.cotacao_do(cartao, @conversation), sender_id: @ancora.sender_id,
-                    atributos: { 'autonomia_agent_id' => @ancora.content_attributes.to_h['autonomia_agent_id'],
-                                 TOKEN => cartao['token'] }).postar!
+                    atributos: atributos_do(cartao)).postar!
   end
 
   def postada(token)

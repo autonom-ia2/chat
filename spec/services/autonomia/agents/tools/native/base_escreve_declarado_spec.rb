@@ -8,7 +8,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   let(:escrevem) do
     [nativas::InsuranceQuote, nativas::InsuranceQuoteProposal, nativas::AgendarReuniao, nativas::EnviarLocalizacao,
      nativas::EnviarContato, nativas::GuiaAcao, nativas::GuiaExecucao, nativas::GuiaLembrar, nativas::GuiaEsquecer,
-     nativas::GuiaTarefa, nativas::CotarSeguroViagem, nativas::GerarPropostaSeguroViagem]
+     nativas::GuiaTarefa, nativas::CotarSeguroViagem, nativas::GerarPropostaSeguroViagem, nativas::SegundaViaDoVoucher]
   end
 
   it 'toda nativa do catálogo declara escreve? na própria ferramenta' do
@@ -23,7 +23,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     catalogo = Autonomia::Agents::Tools::Registry::TOOLS
 
     expect(catalogo.select(&:escreve?)).to match_array(escrevem)
-    expect(catalogo.reject(&:escreve?)).to include(nativas::HorariosDisponiveis, nativas::CepLookup, nativas::GuiaLeitura)
+    expect(catalogo.reject(&:escreve?)).to include(nativas::HorariosDisponiveis, nativas::CepLookup, nativas::GuiaLeitura,
+                                                   nativas::SituacaoDoPagamento)
   end
 
   it 'sem declaração, vale escrita (o lado seguro)' do

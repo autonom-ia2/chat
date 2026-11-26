@@ -190,7 +190,11 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # download (`#baixar`) e na do armazenamento (motivo `armazenamento`, com a classe da exceção em
   # `causa`). O arquivo temporário do download vive só dentro do bloco e é fechado sempre — gravado
   # ou não.
-  def gravar(run_id:)
+  #
+  # SEM EXECUÇÃO (`run_id` nil, #3246): o voucher do Seguro Viagem é baixado na hora de postar o cartão do turno, fora
+  # de um `ToolRun`. O blob sai SEM a marca: a marca diz "desta execução", e não há execução para o varredor conferir.
+  # Quem grava assim apaga o blob quando a mensagem não nasce (`CartoesDoTurno#voucher!`), como o comparativo do turno.
+  def gravar(run_id: nil)
     baixar { |pdf| gravar_blob(pdf, run_id) }
   end
 
@@ -254,7 +258,7 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # `upload_without_unfurling` são as duas metades de `create_and_upload!` (activestorage 7.2.3.1).
   def gravar_blob(pdf, run_id)
     blob = ActiveStorage::Blob.build_after_unfurling(io: pdf, filename: nome, content_type: TIPO_PDF, identify: false,
-                                                     metadata: self.class.marca(run_id: run_id))
+                                                     metadata: run_id.nil? ? {} : self.class.marca(run_id: run_id))
     blob.save!
     blob.upload_without_unfurling(pdf)
     blob

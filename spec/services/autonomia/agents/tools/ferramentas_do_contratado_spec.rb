@@ -1,9 +1,11 @@
 require 'rails_helper'
 
-# #3211 — as três ferramentas do Seguro Viagem Universal só chegam ao contratado com o acesso à seguradora conferido.
+# #3211 — as ferramentas do Seguro Viagem Universal só chegam ao contratado com o acesso à seguradora conferido.
 # O nome do arquivo é o da Tarefa 19; o assunto é o Registry.
 RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/SpecFilePathFormat
-  let(:slugs) { %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem] }
+  let(:slugs) do
+    %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem situacao_do_pagamento segunda_via_do_voucher]
+  end
   let(:account) { create(:account) }
   let(:marca) do
     { 'modelo' => 'seguro_viagem_universal', 'nome_agente' => 'Bia', 'nome_corretora' => 'Corretora Exemplo',
@@ -45,7 +47,7 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
     expect(described_class.for_agent(contratado).map(&:slug)).to eq([])
   end
 
-  it 'contratado com acesso ok recebe as três' do
+  it 'contratado com acesso ok recebe todas (#3246: com a situação do pagamento e a segunda via)' do
     acesso_ok!
     expect(described_class.for_agent(contratado).map(&:slug)).to eq(slugs)
   end

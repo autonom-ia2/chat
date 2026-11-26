@@ -22,7 +22,8 @@ module Autonomia::Agents::Contratados
       agent_type: 'sdr',
       pasta: Pathname.new(__dir__).join('contratados', 'seguro_viagem_universal'),
       arquivo: 'instrucao.md',
-      ferramentas_nativas: %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem],
+      ferramentas_nativas: %w[cotar_seguro_viagem detalhes_da_cotacao gerar_proposta_seguro_viagem situacao_do_pagamento
+                              segunda_via_do_voucher],
       prontas: %w[cep cpf],
       seguradora: 'universal',
       conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true)
