@@ -8,8 +8,8 @@
 # de novo), calado ou respondido por uma pessoa não posta a resposta nem o PDF (`cartao_descartado`). E o turno que já
 # está superado nem cota: `ReplyJob.turno_superado?`, o critério da hora de postar, antes de chamar a Universal.
 #
-# O modelo recebe só o resumo: código do plano, nome, preço em reais, parcelas, as três coberturas principais e se o
-# plano é anual. Nunca comissão, markup nem ranking (R2): eles não saem de `Planos.de`.
+# O modelo recebe só o resumo: código do plano, nome, preço em reais, preço por dia e por pessoa (#3226), parcelas, as
+# três coberturas principais e se o plano é anual. Nunca comissão, markup nem ranking (R2): eles não saem de `Planos.de`.
 #
 # SÍNCRONA e NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas`, que deixa a
 # nota para a equipe, registra a recusa e devolve ao modelo o que fazer. Toda outra recusa passa por `recusar`/`error`
@@ -20,6 +20,8 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   # O nome de um país que o modelo escreve: mais que isso não é nome de país, e o selo da capa não comporta.
   TETO_DO_NOME_DO_PAIS = 60
   TURNO_SUPERADO = 'O cliente escreveu de novo e esta resposta não vai sair. Não cote agora.'.freeze
+  SO_ANUAIS = 'Para esta viagem a seguradora só devolveu planos anuais (valem para todas as viagens do ano). Diga isso ' \
+              'ao cliente ao mostrar os planos.'.freeze
 
   class << self
     include SeguroViagem::PortaDoContratado
@@ -38,12 +40,12 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     def description
       'Cota o seguro viagem na seguradora com os países do roteiro, as datas de ida e volta e a idade de cada ' \
         'viajante; o comparativo dos planos em PDF sai junto com a sua resposta. Devolve os planos com o código (P1, P2...), o ' \
-        'preço total em reais, as parcelas, as coberturas principais e se o plano é anual. Chame só depois de o ' \
-        'cliente confirmar todos os dados; nunca invente preço nem cobertura.'
+        'preço total em reais, o preço por dia e por pessoa, o destaque (o mesmo do PDF), as parcelas, as coberturas ' \
+        'principais e se o plano é anual. Chame só depois de o cliente confirmar todos os dados; nunca invente preço nem cobertura.'
     end
 
     def args_registraveis
-      %w[destinos data_saida data_retorno motivo]
+      %w[destinos data_saida data_retorno motivo incluir_anuais]
     end
 
     def params
@@ -58,7 +60,10 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
         { 'name' => 'idades', 'type' => 'array', 'items' => 'integer', 'required' => true,
           'description' => 'Idade de cada viajante, um inteiro por pessoa, na ordem em que o cliente informou.' },
         { 'name' => 'motivo', 'type' => 'string', 'required' => false, 'enum' => %w[lazer estudo negocios gestante cruzeiro],
-          'description' => 'Só quando o cliente contou: gestante, estudo, negocios ou cruzeiro. Sem indicação, null.' }
+          'description' => 'Só quando o cliente contou: gestante, estudo, negocios ou cruzeiro. Sem indicação, null.' },
+        { 'name' => 'incluir_anuais', 'type' => 'boolean', 'required' => false,
+          'description' => 'true só quando o cliente contou que viaja várias vezes no ano ou pediu plano anual ou ' \
+                           'multiviagem. Sem isso, false: os planos anuais ficam fora da cotação e do PDF.' }
       ]
     end
   end
@@ -85,15 +90,24 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
   def cotar(pedido_da_universal)
     resposta = cliente.cotar(pedido_da_universal)
     candidatos = SeguroViagem::Planos.candidatos(resposta)
-    planos = SeguroViagem::Planos.para_idades(candidatos, idades)
+    planos = SeguroViagem::Planos.para_idades(candidatos, idades, incluir_anuais: incluir_anuais?)
     return sem_planos(candidatos) if planos.empty?
 
     cotacao = guardar(resposta, planos, pedido_da_universal)
     delivery.trocar_cartao(SeguroViagem::EntregaDoComparativo.cartao(cotacao)) # um comparativo por turno: o da última
     JSON.generate({ cotacao: cotacao.pedido.slice('destinos', 'data_saida', 'data_retorno', 'idades'),
-                    planos: SeguroViagem::Planos.resumo(planos), pdf_vai_junto: true })
+                    planos: SeguroViagem::Planos.resumo(planos, cotacao.pedido), pdf_vai_junto: true,
+                    **aviso_de_so_anuais(planos) })
   rescue Universal::Cliente::Erro => e
     SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+  end
+
+  # Sem `incluir_anuais`, os anuais só voltam quando a seguradora não devolveu nenhum plano de viagem única: o modelo
+  # precisa dizer isso ao cliente, que não pediu anual.
+  def aviso_de_so_anuais(planos)
+    return {} if incluir_anuais? || !SeguroViagem::Planos.so_anuais?(planos)
+
+    { aviso: SO_ANUAIS }
   end
 
   # Uma mensagem mais nova do cliente já abriu outro turno: este não vai postar, e a cotação seria lida por ninguém. Só
@@ -141,6 +155,12 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
 
   def conversa
     delivery.try(:conversation)
+  end
+
+  # A ferramenta nativa recebe os argumentos como o modelo mandou (`Bound#run_native`, sem `ParamsTipados`): vale `true`
+  # e o texto "true"; qualquer outra coisa deixa os anuais de fora.
+  def incluir_anuais?
+    [true, 'true'].include?(params['incluir_anuais'])
   end
 
   # O `Pedido` lê os parâmetros uma vez; as idades vêm dele, já inteiras.

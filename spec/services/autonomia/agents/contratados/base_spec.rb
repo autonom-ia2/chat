@@ -126,7 +126,7 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
   it 'a versão do deploy é a dos arquivos de base/ do modelo' do
     expect(described_class::VERSAO).to eq(described_class.versao_de(described_class::PASTA))
     expect(described_class.arquivos(described_class::PASTA).map { |a| a.basename.to_s })
-      .to eq(%w[condicoes_gerais.md folheto_de_produtos.md])
+      .to eq(%w[condicoes_gerais.md folheto_de_produtos.md material_de_venda.md])
   end
 
   it 'os arquivos de base/ viram um bloco por título ###' do
@@ -135,6 +135,26 @@ RSpec.describe Autonomia::Agents::Contratados::Base do
     blocos = arquivos.flat_map { |arquivo| described_class.blocos(arquivo.read) }
     expect(blocos.size).to eq(titulos)
     expect(blocos).to all(start_with('### '))
+  end
+
+  describe 'o material de venda não passa canal de venda da Universal (#3226)' do
+    let(:material) { described_class::PASTA.join('material_de_venda.md').read(encoding: 'UTF-8') }
+    let(:caminhos_permitidos) do
+      %w[app/ asistencia/ reembolso-requisitos reembolso-checklist condicoes-gerais]
+        .map { |caminho| "https://www.universal-assistance.com/br/#{caminho}" }
+    end
+
+    it 'sem televendas nem WhatsApp de vendas' do
+      ['0800 333 3000', '2107-0349', '2107 0349', '551121070349', 'wa.me'].each do |canal|
+        expect(material).not_to include(canal)
+      end
+    end
+
+    it 'todo link do site da Universal é de assistência, app, reembolso ou condições gerais, nunca a página inicial' do
+      links = material.each_line.flat_map(&:split).select { |palavra| palavra.include?('universal-assistance.com') }
+      expect(links).not_to be_empty
+      expect(links).to all(satisfy { |link| link.start_with?(*caminhos_permitidos) })
+    end
   end
 
   it 'em dia: versão do deploy e trechos prontos' do
