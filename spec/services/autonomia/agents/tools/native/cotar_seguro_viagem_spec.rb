@@ -26,7 +26,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
                                                   capacidades: { 'tarifa_acordo' => true })
     stub_request(:get, "#{base}/v1/destinos").to_return(status: 200, body: file_fixture('../universal/destinos.json').read)
     stub_request(:post, "#{base}/v1/Cotacao").to_return(status: 200, body: file_fixture('../universal/cotacao.json').read)
-    allow(Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo).to receive(:postar).and_return(true)
   end
 
   def ferramenta(argumentos)
@@ -37,12 +36,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     saida = JSON.parse(ferramenta(params).call)
     esperado = [
       { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00', 'max_parcelas' => 12,
-        'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' } },
+        'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' },
+        'anual' => false, 'dias_por_viagem' => nil },
       { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00', 'max_parcelas' => 12,
-        'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil } }
+        'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil },
+        'anual' => false, 'dias_por_viagem' => nil }
     ]
     expect(saida['planos']).to eq(esperado)
-    expect(saida['pdf_enviado']).to be(true)
+    expect(saida['pdf_vai_junto']).to be(true)
     cotacao = Autonomia::Agents::CotacaoDeViagem.last
     expect(cotacao.id_cotacao).to eq('COT-TESTE-1')
     expect(cotacao.pedido.except('universal')).to eq('destinos' => ['PT'], 'destinos_nomes' => ['Portugal'],
@@ -51,6 +52,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     expect(cotacao.pedido['universal']['passageiros']).to eq([{ 'nome' => 'Viajante 1', 'dataNascimento' => '1981-08-02' }])
     expect(cotacao.idades).to eq([45])
     expect(a_request(:post, "#{base}/v1/Cotacao").with(body: hash_including('tipoTarifa' => 2, 'classificacoes' => [1]))).to have_been_made
+  end
+
+  it 'o PDF fica marcado como cartão do turno, e a ferramenta não posta nada (#3223)' do
+    ferramenta(params).call
+    cotacao = Autonomia::Agents::CotacaoDeViagem.last
+    expect(delivery.cartoes).to eq([{ 'tipo' => 'comparativo_viagem', 'chave' => cotacao.id.to_s, 'rich_message' => nil }])
+    expect(conversa.messages.count).to eq(0)
   end
 
   it 'devolve a viagem conferida e nenhum campo interno da seguradora (R2)' do
@@ -75,6 +83,68 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     allow(Rails.logger).to receive(:warn)
     ferramenta(params.merge('idades' => [100])).call
     expect(Rails.logger).to have_received(:warn).with(a_string_including('catálogo sem id conhecido')).once
+  end
+
+  describe 'o turno que já foi superado não cota (#3223)' do
+    let(:delivery) { Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: nil, origin_message_id: 77) }
+
+    def marca_do_debounce(mensagem)
+      conversa.update!(additional_attributes: { Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => mensagem } })
+    end
+
+    before { Autonomia::Agents::Fase2.ligar!(account) }
+
+    it 'o cliente escreveu de novo: recusa curta, sem chamar a seguradora, sem cotação e sem cartão' do
+      marca_do_debounce(78)
+      expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('turno_superado', anything)
+      expect(ferramenta(params).call).to eq(described_class::TURNO_SUPERADO)
+      expect(a_request(:post, "#{base}/v1/Cotacao")).not_to have_been_made
+      expect(Autonomia::Agents::CotacaoDeViagem.count).to eq(0)
+      expect(delivery.cartoes).to be_empty
+    end
+
+    it 'a recusa de turno superado fica só no log, fora da nota da equipe' do
+      expect(Autonomia::Agents::Tools::RecusasRecentes::NA_NOTA).not_to include('turno_superado')
+    end
+
+    it 'a marca aponta para a mensagem deste turno: cota' do
+      marca_do_debounce(77)
+      expect(JSON.parse(ferramenta(params).call)['pdf_vai_junto']).to be(true)
+    end
+  end
+
+  it 'duas cotações no mesmo turno: duas cotações, e um comparativo só, o da última' do
+    2.times { ferramenta(params).call }
+    expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.twice
+    expect(delivery.cartoes.pluck('chave')).to eq([Autonomia::Agents::CotacaoDeViagem.order(:id).last.id.to_s])
+  end
+
+  describe 'o nome de cada país (#3223)' do
+    before do
+      stub_request(:get, "#{base}/v1/destinos")
+        .to_return(status: 200, body: [{ 'pais' => 'FRANCA', 'siglaPais' => 'FR' }, { 'pais' => 'ITALIA', 'siglaPais' => 'IT' }].to_json)
+    end
+
+    def nomes_guardados(argumentos)
+      ferramenta(params.merge(argumentos)).call
+      Autonomia::Agents::CotacaoDeViagem.last.pedido['destinos_nomes']
+    end
+
+    it 'o nome que o modelo escreveu no idioma da conversa' do
+      expect(nomes_guardados('destinos' => %w[fr it], 'nomes_dos_destinos' => [' França ', 'Itália'])).to eq(%w[França Itália])
+    end
+
+    it 'sem o nome, com outro tamanho ou com nome em branco: o nome da Universal' do
+      expect(nomes_guardados('destinos' => ['fr'])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [46], 'nomes_dos_destinos' => %w[França Itália])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [47], 'nomes_dos_destinos' => [' '])).to eq(['FRANCA'])
+    end
+
+    it 'nome acima do teto: o nome da Universal; no teto, o do modelo' do
+      teto = described_class::TETO_DO_NOME_DO_PAIS
+      expect(nomes_guardados('destinos' => ['fr'], 'nomes_dos_destinos' => ['F' * (teto + 1)])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [46], 'nomes_dos_destinos' => ['F' * teto])).to eq(['F' * teto])
+    end
   end
 
   it 'sem conversa não cota' do

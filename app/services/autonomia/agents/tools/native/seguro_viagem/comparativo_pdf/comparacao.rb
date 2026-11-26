@@ -1,10 +1,13 @@
 # "COMPARE AS OPÇÕES" no comparativo de Seguro Viagem (#3211): um cartão por plano, 3 por fileira (2 quando a cotação
-# tem até 2 planos), do mais barato ao mais caro, com o selo do rótulo, o preço total, o valor para médico e hospital,
-# o preço por pessoa e as outras coberturas principais. O link das condições gerais e a SUSEP ficam na última parte.
+# tem até 2 planos, contando os anuais), do mais barato ao mais caro, com o selo do rótulo, o preço total, o valor
+# para médico e hospital, o preço por pessoa e as outras coberturas principais. O link das condições gerais e a SUSEP
+# ficam na última parte.
 #
 # CARTÃO INTEIRO: todos os cartões têm a mesma altura (a do maior), medida antes de desenhar, e as seções alinhadas;
 # uma fileira que não cabe no resto da folha vai inteira para a seguinte. Com a altura fixa, a 1ª folha tem um número
 # certo de vagas, e a recomendada sempre cai numa delas (`Ordem.com_recomendada_ate`).
+#
+# PLANOS ANUAIS (#3223): depois dos cartões de viagem única vem a seção deles (`Anuais`), com cartões do mesmo tamanho.
 #
 # FALTA DE COBERTURA: a Universal manda, em cada plano, a lista inteira dos benefícios dele (o catálogo da resposta é
 # a soma dessas listas; conferido na cotação real gravada). Com a lista, cobertura ausente é "Não inclui"; sem lista
@@ -35,8 +38,13 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
   # Devolve onde ficou a última fileira: `topo` dela, quantos cartões `ocupadas` tem e o `fim` (a borda de baixo).
   def comparacao
     @doc.start_new_page
-    inicio = cabecalho_da_comparacao(false)
-    ultima = cartoes.each_slice(colunas).reduce(nil) do |anterior, fileira|
+    ultima = fileiras(cartoes, cabecalho_da_comparacao(false))
+    anuais.empty? ? ultima : secao_dos_anuais(ultima)
+  end
+
+  # Os cartões em fileiras a partir de `inicio`. Devolve onde ficou a última fileira.
+  def fileiras(itens, inicio)
+    ultima = itens.each_slice(colunas).reduce(nil) do |anterior, fileira|
       topo = anterior.nil? ? inicio : anterior[:fim] + ENTRE_FILEIRAS
       topo = fileira_de_cartoes(fileira, topo)
       { topo: topo, ocupadas: fileira.size, fim: topo + altura_do_cartao }
@@ -75,8 +83,9 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
     topo
   end
 
+  # Pelos planos todos: os anuais têm o mesmo tamanho de cartão.
   def colunas
-    planos.size >= 3 ? 3 : 2
+    todos.size >= 3 ? 3 : 2
   end
 
   def respiro_do_cartao
@@ -141,7 +150,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf::Comparaca
   # As alturas que variam, a maior de cada uma entre todos os cartões (todos ficam com a mesma altura).
   def alturas
     @alturas ||= begin
-      medidas = planos.map { |plano| medidas_do_cartao(plano) }
+      medidas = todos.map { |plano| medidas_do_cartao(plano) }
       { nome: medidas.pluck(:nome).max, dmh: medidas.pluck(:dmh).max, por_pessoa: medidas.pluck(:por_pessoa).max,
         detalhes: medidas.pluck(:detalhes).transpose.map(&:max) }
     end

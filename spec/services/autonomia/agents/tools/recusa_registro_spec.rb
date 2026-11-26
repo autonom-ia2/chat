@@ -884,7 +884,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'pedido_invalido', slug: 'cotar_seguro_viagem', faltando: 'data_saida' },
         dispara: -> { cotar_viagem(viagem.merge(data_saida: '2020-01-01')) }
       },
+      # #3223: o cliente escreveu de novo (a marca do debounce aponta para outra mensagem): o turno não posta e não cota.
       'cotar_seguro_viagem.rb#call#3' => {
+        espera: { motivo: 'turno_superado', slug: 'cotar_seguro_viagem' },
+        dispara: lambda {
+          Autonomia::Agents::Fase2.ligar!(account)
+          conversation.update!(additional_attributes: { Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => 78 } })
+          cotar_viagem(viagem)
+        }
+      },
+      'cotar_seguro_viagem.rb#call#4' => {
         espera: { motivo: 'destino_invalido', slug: 'cotar_seguro_viagem', faltando: 'destinos' },
         dispara: -> { cotar_viagem(viagem.merge(destinos: ['XX'])) }
       },

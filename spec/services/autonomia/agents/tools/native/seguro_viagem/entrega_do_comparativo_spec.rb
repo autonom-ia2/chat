@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversa) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
   let(:atendente) { create(:user, account: account) }
@@ -10,7 +10,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparat
     { 'modelo' => 'seguro_viagem_universal', 'nome_agente' => 'Bia', 'nome_corretora' => 'Corretora Exemplo',
       'sobre_corretora' => 'Corretora de seguros desde 2010.' }
   end
-  let!(:contratado) do
+  let(:contratado) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'sdr', instruction: 'retrato',
                                      config: { 'contratado' => marca })
   end
@@ -27,72 +27,51 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparat
                 'motivo' => nil, 'universal' => {} }
     )
   end
-  let(:marcador) { "content_attributes::text LIKE '%autonomia_comparativo_viagem%'" }
+  let(:atributos) { { 'autonomia_agent_id' => contratado.id, 'autonomia_cartao_token' => 'mensagem:1:cartao:comparativo_viagem:1' } }
 
-  before do
-    enable_test_encryption!
-    Autonomia::Agents::AgentInbox.create!(agent: contratado, inbox: inbox, account: account, agent_bot: agent_bot)
+  def postar
+    described_class.new(conversation: conversa, cotacao: cotacao, sender_id: agent_bot.id, atributos: atributos).postar!
   end
 
-  around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
+  before { enable_test_encryption! }
 
-  it 'posta o PDF uma vez por cotação, sem texto' do
-    2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }
-    mensagens = conversa.messages.where(marcador)
-    expect(mensagens.count).to eq(1)
-    expect(mensagens.first.content).to be_nil
-    expect(mensagens.first.attachments.first.file.content_type).to eq('application/pdf')
+  it 'o cartão do turno: o tipo e o id da cotação, sem formato' do
+    expect(described_class.cartao(cotacao)).to eq('tipo' => 'comparativo_viagem', 'chave' => cotacao.id.to_s, 'rich_message' => nil)
+    expect(described_class.cartao?(described_class.cartao(cotacao))).to be(true)
+    expect(described_class.cartao?('tipo' => 'location')).to be(false)
   end
 
-  it 'com responsável na conversa vira nota privada, e a nota também conta para não repetir (R7)' do
+  it 'a cotação do cartão só nesta conversa' do
+    cartao = described_class.cartao(cotacao)
+    expect(described_class.cotacao_do(cartao, conversa)).to eq(cotacao)
+    expect(described_class.cotacao_do(cartao, create(:conversation, account: account, inbox: inbox))).to be_nil
+  end
+
+  it 'posta o PDF anexado, sem texto, com o marcador da cotação e os atributos do cartão' do
+    mensagem = postar
+    expect(mensagem.content).to be_nil
+    expect(mensagem.private).to be(false)
+    expect(mensagem.sender).to eq(agent_bot)
+    expect(mensagem.attachments.sole.file.content_type).to eq('application/pdf')
+    expect(mensagem.content_attributes).to include(atributos.merge(described_class::CHAVE => cotacao.id))
+  end
+
+  it 'com responsável na conversa vira nota privada' do
     conversa.update!(assignee: atendente)
-    2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }
-    expect(conversa.messages.last.private).to be(true)
-    expect(conversa.messages.where(marcador).count).to eq(1)
+    expect(postar.private).to be(true)
   end
 
-  it 'sem responsável é pública, e a pública também conta para não repetir (R7)' do
-    2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }
-    expect(conversa.messages.where(marcador).pluck(:private)).to eq([false])
+  it 'erro ao gerar o PDF sobe (quem registra é o EnviarCartoesJob), sem mensagem' do
+    desenho = instance_double(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf)
+    allow(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf).to receive(:new).and_return(desenho)
+    allow(desenho).to receive(:render).and_raise(Prawn::Errors::CannotFit)
+    expect { postar }.to raise_error(Prawn::Errors::CannotFit)
+    expect(conversa.messages.count).to eq(0)
   end
 
-  it 'outra cotação da mesma conversa posta o seu PDF' do
-    outra = Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: contratado,
-                                                       id_cotacao: 'c-2', planos: planos, pedido: cotacao.pedido)
-    [cotacao, outra].each { |item| described_class.postar(conversation: conversa, cotacao: item, agent: contratado) }
-    expect(conversa.messages.where(marcador).count).to eq(2)
-  end
-
-  describe 'falhas' do
-    let(:rastreador) { instance_double(ChatwootExceptionTracker, capture_exception: nil) }
-
-    before { allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador) }
-
-    it 'falha conhecida do Active Storage: false, sem mensagem, e o erro vai ao rastreador' do
-      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(ActiveStorage::IntegrityError)
-
-      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
-      expect(conversa.messages.where(marcador).count).to eq(0)
-      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveStorage::IntegrityError), account: account)
-      expect(rastreador).to have_received(:capture_exception)
-    end
-
-    it 'falha conhecida do desenho (Prawn) e da rede: false' do
-      desenho = instance_double(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf)
-      allow(Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf).to receive(:new).and_return(desenho)
-      allow(desenho).to receive(:render).and_raise(Prawn::Errors::CannotFit)
-      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
-
-      allow(desenho).to receive(:render).and_return('%PDF-teste')
-      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(Errno::ECONNRESET)
-      expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(false)
-    end
-
-    it 'erro fora das falhas conhecidas é defeito nosso: sobe' do
-      allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_raise(NoMethodError)
-
-      expect { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }.to raise_error(NoMethodError)
-      expect(rastreador).not_to have_received(:capture_exception)
-    end
+  it 'erro ao criar a mensagem apaga o arquivo e sobe' do
+    allow(Messages::MessageBuilder).to receive(:new).and_raise(ActiveRecord::StatementInvalid)
+    expect { postar }.to raise_error(ActiveRecord::StatementInvalid)
+    expect(ActiveStorage::Blob.count).to eq(0)
   end
 end

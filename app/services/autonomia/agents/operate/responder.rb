@@ -300,8 +300,9 @@ module Autonomia
         # #1479 F3: depois do lock e do commit, o job que manda os cartões (e, na voz, a interação gravada no áudio) quando
         # a âncora sair. A âncora é a que este run postou ou, quando a guarda disse "já respondido" (retry), a que já
         # existe, com o que ELA gravou. Na entrega em pedaços agendada agora, quem enfileira é o ChunkedDeliveryJob, no
-        # último pedaço. A resposta nova sem nada a enviar nem consulta a âncora; o retry só a procura quando o turno pode
-        # ter cartão ou interação depois do áudio (`pode_ter_ancora?`). O retry cuja âncora não tem nada, com cartão
+        # último pedaço. A resposta nova sem nada a enviar nem consulta a âncora; o retry ("já respondido") sempre a procura
+        # (#3223): o comparativo do Seguro Viagem não depende de flag, e o retry não cota de novo, então nem a flag nem os
+        # cartões deste run dizem se a âncora tem o que enviar. O retry cuja âncora não tem nada, com cartão
         # marcado neste run: o cartão novo não sai (`cartao_descartado` motivo=ja_respondido). Erro ao enfileirar não muda
         # o turno, porque a resposta já saiu: log com os ids e a classe, tracker e `cartao_nao_enviado` (e, com a
         # interação gravada no áudio, `interacao_nao_enviada`) motivo=erro_ao_enfileirar.
@@ -317,18 +318,9 @@ module Autonomia
           erro_ao_enfileirar(e, ancora)
         end
 
-        # A âncora que um run anterior deste turno postou, ou nil. A busca (LIKE) só roda quando o turno pode tê-la.
+        # A âncora que um run anterior deste turno postou, ou nil. A busca (LIKE) só roda no retry ("já respondido").
         def ancora_do_retry
-          ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id) if pode_ter_ancora?
-        end
-
-        # #1479: o turno pode ter gravado cartões (a conta com o envio do mapa e do contato) ou a interação depois do
-        # áudio (a interação ligada: `InteracaoDepoisDoAudio.ligada?`, o mesmo gate de quem a posta). Não olha a voz do
-        # agente: ela pode ter sido desligada entre o áudio e o retry, e a pergunta gravada ficaria sem job. Fora disso, o
-        # retry não faz a busca (LIKE) da âncora.
-        def pode_ter_ancora?
-          ::Autonomia::Agents::Tools::Native::CartaoDaPagina.ligado?(@conversation.account) ||
-            ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account)
+          ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id)
         end
 
         def erro_ao_enfileirar(error, ancora)

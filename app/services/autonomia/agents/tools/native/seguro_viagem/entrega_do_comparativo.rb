@@ -1,94 +1,70 @@
-# A ENTREGA DO COMPARATIVO EM PDF na conversa (#3211): gera o PDF da cotação e o posta UMA vez por cotação, sem
-# legenda (quem fala junto do arquivo é a Lia). Com responsável na conversa vira nota privada, como a entrega das
-# ferramentas assíncronas.
+# O COMPARATIVO EM PDF COMO CARTÃO DO TURNO (#3211, #3223): `cotar_seguro_viagem` não posta nada; marca o cartão
+# (`cartao`) no contexto do turno, e o `Operate::CartoesDoTurno` o posta depois da resposta, só quando ela saiu, com o
+# token e o descarte dos outros cartões (turno superado, silêncio, pessoa respondeu). Antes, o PDF saía de dentro da
+# ferramenta, e o turno que era descartado depois deixava o PDF na conversa sem a resposta (o primeiro teste real).
 #
-# UMA VEZ POR COTAÇÃO (R7): o marcador `autonomia_comparativo_viagem` (o id da cotação) vai no `content_attributes` da
-# PRÓPRIA mensagem do PDF, e a conferência é feita sob o lock da conversa, SEM filtrar `private`: o PDF pode ter saído
-# público ou como nota, e nos dois casos ele já conta.
+# NÃO DEPENDE DA FLAG DOS CARTÕES (`agentes_enviar_local_e_contato`): o cartão não tem formato (`rich_message` nil); o
+# PDF nasce na hora de postar, da cotação guardada (`cotacao_do`), e sai como anexo sem legenda (quem fala junto é a
+# resposta do turno). Com responsável na conversa vira nota privada, como sempre. O marcador `CHAVE` (o id da cotação)
+# continua na mensagem.
 #
-# FALHA CONHECIDA NÃO LEVANTA: é entrega sobre uma conversa que já funciona. A falha que o desenho, o arquivo, a rede, o
-# Active Storage ou o banco podem dar (`FALHAS_DA_ENTREGA`) vira log com ids e classe, vai ao rastreador e devolve
-# `false`, e a ferramenta diz ao modelo `pdf_enviado: false` (a instrução só cita o PDF com `true`). Outro erro é
-# defeito nosso e sobe.
+# Erro ao gerar ou postar SOBE para o `EnviarCartoesJob`, que registra `cartao_nao_enviado` motivo=erro_ao_postar (log
+# com ids e a classe, tracker) e não relança: a resposta já saiu. O blob da falha ao criar a mensagem é apagado.
 class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
+  TIPO_DO_CARTAO = 'comparativo_viagem'.freeze
   CHAVE = 'autonomia_comparativo_viagem'.freeze
   NOME_DO_ARQUIVO = 'comparativo-seguro-viagem.pdf'.freeze
-  # O Prawn (texto que não cabe ou com caractere fora da fonte, fonte ou imagem), o arquivo e o disco (a fonte, o logo,
-  # o serviço local do Active Storage), a rede (o serviço de nuvem do Active Storage), o Active Storage e o banco (o
-  # lock da conversa e a mensagem).
-  FALHAS_DA_ENTREGA = [
-    *Prawn::Errors.constants.map { |nome| Prawn::Errors.const_get(nome) }.grep(Class),
-    EncodingError, IOError, SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError,
-    ActiveStorage::Error, ActiveRecord::ActiveRecordError
-  ].freeze
 
-  # -> true quando o PDF foi postado agora; false quando já existia ou falhou.
-  def self.postar(conversation:, cotacao:, agent:)
-    new(conversation: conversation, cotacao: cotacao, agent: agent).postar
+  # O cartão que a ferramenta marca no turno (`Delivery#marcar_cartao`): o tipo e o id da cotação, sem formato.
+  def self.cartao(cotacao)
+    { 'tipo' => TIPO_DO_CARTAO, 'chave' => cotacao.id.to_s, 'rich_message' => nil }
   end
 
-  def initialize(conversation:, cotacao:, agent:)
+  def self.cartao?(cartao)
+    cartao.to_h['tipo'] == TIPO_DO_CARTAO
+  end
+
+  # A cotação do cartão, só desta conversa; nil quando ela não existe mais.
+  def self.cotacao_do(cartao, conversation)
+    Autonomia::Agents::CotacaoDeViagem.find_by(id: cartao['chave'].to_i, conversation_id: conversation.id)
+  end
+
+  # `atributos`: o que o cartão grava na mensagem (o agente e o token do turno). Quem chama já tem o lock da conversa e
+  # já conferiu que o cartão não saiu (`CartoesDoTurno#postar!`).
+  def initialize(conversation:, cotacao:, sender_id:, atributos:)
     @conversation = conversation
     @cotacao = cotacao
-    @agent = agent
+    @sender_id = sender_id
+    @atributos = atributos
   end
 
-  def postar
-    return false if postado?
-
-    postou = false
-    # O lock é numa cópia lida agora: a conversa do turno pode ter atributos alterados em memória, e o Rails recusa
-    # travar registro com mudança não gravada.
-    @conversation = @conversation.class.find(@conversation.id)
-    @conversation.with_lock { postou = criar_se_nova }
-    postou
-  rescue *FALHAS_DA_ENTREGA => e
-    Rails.logger.warn("[autonomia][seguro_viagem] comparativo_falhou conv=#{@conversation&.id} cotacao=#{@cotacao&.id} " \
-                      "agente=#{@agent&.id} #{e.class}")
-    ChatwootExceptionTracker.new(e, account: @agent&.account).capture_exception
-    false
-  end
-
-  # O `content_attributes` é `store` (texto serializado): o `LIKE` é a peneira barata, e quem decide é a comparação
-  # exata do id da cotação.
-  def postado?
-    @conversation.messages.where('content_attributes::text LIKE ?', "%#{CHAVE}%")
-                 .any? { |message| message.content_attributes.to_h[CHAVE].to_i == @cotacao.id }
-  end
-
-  def criar(blob)
-    agent_inbox = ::Autonomia::Agents::QuemResponde.agent_inbox(@conversation)
-    Messages::MessageBuilder.new(
-      nil, @conversation,
-      ActionController::Parameters.new(
-        content: nil, attachments: [blob.signed_id], message_type: 'outgoing',
-        sender_type: 'AgentBot', sender_id: agent_inbox&.agent_bot_id,
-        private: @conversation.assignee_id.present?,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @cotacao.id }
-      )
-    ).perform
-  end
-
-  private
-
-  # O blob só nasce depois da conferência sob o lock: dois turnos juntos não deixam arquivo órfão.
-  def criar_se_nova
-    return false if postado?
-
+  def postar!
     blob = gravar_blob
     begin
-      criar(blob).present?
+      criar(blob)
     rescue StandardError
       blob.purge
       raise
     end
   end
 
+  def criar(blob)
+    Messages::MessageBuilder.new(
+      nil, @conversation,
+      ActionController::Parameters.new(
+        content: nil, attachments: [blob.signed_id], message_type: 'outgoing', sender_type: 'AgentBot',
+        sender_id: @sender_id, private: @conversation.assignee_id.present?,
+        content_attributes: @atributos.merge(CHAVE => @cotacao.id)
+      )
+    ).perform
+  end
+
+  private
+
   def gravar_blob
-    nome = @agent.marca_do_contratado.to_h['nome_corretora']
+    nome = @cotacao.agent.marca_do_contratado.to_h['nome_corretora']
     pdf = SeguroViagem::ComparativoPdf.new(cotacao: @cotacao, nome_corretora: nome).render
-    ActiveStorage::Blob.create_and_upload!(io: StringIO.new(pdf), filename: NOME_DO_ARQUIVO,
-                                           content_type: 'application/pdf')
+    ActiveStorage::Blob.create_and_upload!(io: StringIO.new(pdf), filename: NOME_DO_ARQUIVO, content_type: 'application/pdf')
   end
 end

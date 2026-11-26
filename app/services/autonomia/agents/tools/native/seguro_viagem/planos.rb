@@ -10,9 +10,14 @@
 #
 # Os valores de cobertura (`principais`, `coberturas`) são o texto que a Universal escreve ("R$ 100.000"), sem prefixo
 # nosso. O preço vai em texto decimal (`'360.0'`): quem formata em reais é `Dinheiro.brl`.
+#
+# PLANOS ANUAIS (#3223): a cotação de viagem única também traz os anuais multiviagem (`multiviagem: true`), e eles
+# entram, como no fluxo antigo do n8n. Cada plano guarda `multiviagem` e os dias de cada viagem do ano
+# (`dias_por_viagem`); quem separa os anuais é quem mostra (o PDF e a instrução).
 module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
-  IDS_DMH = [2898].freeze
+  # Despesas médicas e hospitalares, vistas na API: 2898 na viagem nacional, 2899 na internacional (#3223).
+  IDS_DMH = [2898, 2899].freeze
   IDS_BAGAGEM = [2595].freeze
   IDS_CANCELAMENTO = [2601].freeze
 
@@ -38,13 +43,20 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
               .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
   end
 
-  # O que o modelo lê: o código, o nome, o preço em reais, as parcelas e as três coberturas principais.
+  # O que o modelo lê: o código, o nome, o preço em reais, as parcelas, as três coberturas principais e se o plano é
+  # anual (com os dias de cada viagem).
   def resumo(planos)
     planos.map do |plano|
       { 'codigo' => plano['codigo'], 'nome' => plano['nome'],
         'preco_total' => plano['preco_total'].nil? ? nil : SeguroViagem::Dinheiro.brl(plano['preco_total']),
-        'max_parcelas' => plano['max_parcelas'], 'principais' => plano['principais'] }
+        'max_parcelas' => plano['max_parcelas'], 'principais' => plano['principais'], 'anual' => anual?(plano),
+        'dias_por_viagem' => plano['dias_por_viagem'] }
     end
+  end
+
+  # Cotação guardada antes do #3223 não tem a chave: é de viagem única.
+  def anual?(plano)
+    plano['multiviagem'] == true
   end
 
   # { id_beneficio => benefício do catálogo da resposta }
@@ -73,8 +85,17 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
       'moeda' => produto['simboloMoeda'], 'cambio' => cambio_da_resposta.nil? ? tarifa['cambio'] : cambio_da_resposta,
       'max_parcelas' => produto['maxParcelas'], 'idade_minima' => produto['idadeMinima'],
       'idade_maxima' => produto['idadeMaxima'], 'regra_cancelamento' => regra_cancelamento(produto),
-      'faixas' => faixas(tarifa), 'coberturas' => coberturas(produto, catalogo), 'principais' => principais(produto)
+      'faixas' => faixas(tarifa), 'coberturas' => coberturas(produto, catalogo), 'principais' => principais(produto),
+      'multiviagem' => produto['multiviagem'] == true, 'dias_por_viagem' => dias_por_viagem(produto)
     }
+  end
+
+  # Os dias de cada viagem do plano anual, do campo que vier preenchido; viagem única, nil.
+  def dias_por_viagem(produto)
+    return nil unless produto['multiviagem'] == true
+
+    dias = [produto['diasMultiviagem'], produto['quantidadeDiasMultiviagem']].map { |valor| Integer(valor, exception: false) }
+    dias.find { |valor| valor.to_i.positive? }
   end
 
   # Lista branca também aqui (R2): só as quatro chaves da regra, nunca o que mais a Universal puser.
@@ -123,6 +144,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
     valor.nil? ? nil : BigDecimal(valor.to_s).to_s('F')
   end
 
-  private_class_method :catalogo_de, :com_despesas_medicas, :plano, :regra_cancelamento, :faixas, :coberturas,
-                       :principais, :principal, :beneficios, :id_de, :decimal
+  private_class_method :catalogo_de, :com_despesas_medicas, :plano, :dias_por_viagem, :regra_cancelamento, :faixas,
+                       :coberturas, :principais, :principal, :beneficios, :id_de, :decimal
 end
