@@ -933,16 +933,24 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'gerar_proposta_seguro_viagem.rb#call#2' => {
+        espera: { motivo: 'plano_inexistente', slug: 'gerar_proposta_seguro_viagem', faltando: 'codigo_do_plano' },
+        dispara: -> { propor_viagem(proposta_de_viagem.merge(codigo_do_plano: 'P9')) }
+      },
+      'gerar_proposta_seguro_viagem.rb#recusa_da_cotacao#1' => {
         espera: { motivo: 'sem_cotacao', slug: 'gerar_proposta_seguro_viagem' },
         dispara: -> { propor_viagem(proposta_de_viagem, cotacao: nil) }
       },
-      'gerar_proposta_seguro_viagem.rb#call#3' => {
+      # #3247: o seguro desta viagem já foi pago (nesta cotação ou noutra da mesma viagem): nada vai à Universal.
+      'gerar_proposta_seguro_viagem.rb#recusa_da_cotacao#2' => {
+        espera: { motivo: 'proposta_ja_paga', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          allow(Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga).to receive(:impedindo).and_return(true)
+          propor_viagem(proposta_de_viagem)
+        }
+      },
+      'gerar_proposta_seguro_viagem.rb#recusa_da_cotacao#3' => {
         espera: { motivo: 'recotar', slug: 'gerar_proposta_seguro_viagem' },
         dispara: -> { propor_viagem(proposta_de_viagem, cotacao: 2.days.ago) }
-      },
-      'gerar_proposta_seguro_viagem.rb#call#4' => {
-        espera: { motivo: 'plano_inexistente', slug: 'gerar_proposta_seguro_viagem', faltando: 'codigo_do_plano' },
-        dispara: -> { propor_viagem(proposta_de_viagem.merge(codigo_do_plano: 'P9')) }
       },
       'gerar_proposta_seguro_viagem.rb#conferir_e_propor#1' => {
         espera: { motivo: 'pedido_invalido', slug: 'gerar_proposta_seguro_viagem', faltando: 'titular.cpf' },
@@ -963,8 +971,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'cep_nao_encontrado', slug: 'gerar_proposta_seguro_viagem', faltando: 'titular.cep' },
         dispara: -> { propor_viagem(proposta_de_viagem) }
       },
-      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST.
+      # #3247: o pagamento gravado entre a primeira conferência e o lock da cotação (a varredura): recusa, sem POST.
       'gerar_proposta_seguro_viagem.rb#propor#1' => {
+        espera: { motivo: 'proposta_ja_paga', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          allow(Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga).to receive_messages(impedindo: false, paga?: true)
+          propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
+        }
+      },
+      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST.
+      'gerar_proposta_seguro_viagem.rb#propor#2' => {
         espera: { motivo: 'proposta_em_andamento', slug: 'gerar_proposta_seguro_viagem' },
         dispara: lambda {
           allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_wrap_original do |original, *args|
