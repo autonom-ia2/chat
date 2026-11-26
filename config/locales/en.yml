@@ -1153,6 +1153,20 @@ en:
           indisponivel: 'The insurer system did not answer. The agent could not finish this step. Take over this conversation or try again later.'
           sem_link: 'The insurer accepted the purchase but did not return the payment link. Get the link from the insurer portal and send it to the customer.'
           voucher_nao_saiu: 'The payment is confirmed, but the agent could not get the travel insurance voucher from the insurer. Download the voucher from the insurer portal and send it to the customer.'
+          aviso_de_pagamento:
+            pagamento_confirmado:
+              cabecalho: 'Travel insurance payment confirmed: %{fatos}'
+              inelegivel: 'The voucher was NOT sent to the customer: the AI did not talk to them because a team member is handling the conversation or the agent cannot reply right now. Send the voucher, or ask the AI for a second copy of the voucher when the customer writes.'
+              silencio: 'The voucher was NOT sent to the customer: the AI decided not to talk to them about this now. Send the voucher, or ask the AI for a second copy of the voucher when the customer writes.'
+              ia_falhou: 'The voucher was NOT sent to the customer: the AI tried to talk to them twice and failed, and the conversation was handed to the team. Send the voucher to the customer.'
+              fora_da_janela: 'The voucher was NOT sent to the customer: the channel window is closed, and the AI cannot write outside it. When the customer writes again, send the voucher; if they ask about the payment or the voucher, the AI sends it too.'
+              carrinho_substituido: 'A previous cart in this conversation was paid, but it had already been replaced by another proposal. The voucher for that payment was NOT sent. Check it with the insurer.'
+              sem_voucher: 'The payment was confirmed by the automatic check and the AI talked to the customer, but the voucher was NOT sent: the AI did not confirm the payment with the insurer in this turn, or the insurer did not return paid. Check the payment and send the voucher, or ask the AI for a second copy of the voucher.'
+            lembrete_de_pagamento:
+              cabecalho: 'Travel insurance not paid yet: %{fatos}'
+              inelegivel: 'The AI did not remind the customer about the payment: a team member is handling the conversation, or the agent cannot reply right now.'
+              silencio: 'The AI decided not to remind the customer about the payment now.'
+              ia_falhou: 'The AI tried to remind the customer about the payment twice and failed. Nothing was sent to the customer.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'

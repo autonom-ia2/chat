@@ -2248,6 +2248,20 @@ pt_BR:
           indisponivel: "O sistema da seguradora não respondeu e o agente não conseguiu concluir esta etapa. Assuma esta conversa ou tente de novo mais tarde."
           sem_link: "A seguradora aceitou a compra, mas não devolveu o link de pagamento. Pegue o link no portal da seguradora e envie ao cliente."
           voucher_nao_saiu: "O pagamento está confirmado, mas o agente não conseguiu pegar o voucher do seguro viagem na seguradora. Baixe o voucher no portal da seguradora e envie ao cliente."
+          aviso_de_pagamento:
+            pagamento_confirmado:
+              cabecalho: "Pagamento do seguro viagem confirmado: %{fatos}"
+              inelegivel: "O voucher NÃO foi enviado ao cliente: a IA não falou com ele porque a conversa está com um atendente ou o agente não pode responder agora. Mande o voucher, ou peça à IA a segunda via do voucher quando o cliente escrever."
+              silencio: "O voucher NÃO foi enviado ao cliente: a IA decidiu não falar com ele sobre isto agora. Mande o voucher, ou peça à IA a segunda via do voucher quando o cliente escrever."
+              ia_falhou: "O voucher NÃO foi enviado ao cliente: a IA tentou falar com ele duas vezes e não conseguiu, e a conversa foi passada para a equipe. Mande o voucher ao cliente."
+              fora_da_janela: "O voucher NÃO foi enviado ao cliente: a janela do canal está fechada, e a IA não pode escrever fora dela. Quando o cliente voltar a escrever, mande o voucher; se ele perguntar do pagamento ou do voucher, a IA também manda."
+              carrinho_substituido: "Um carrinho anterior desta conversa foi pago, mas ele já tinha sido substituído por outra proposta. O voucher desse pagamento NÃO foi enviado. Confira com a seguradora."
+              sem_voucher: "O pagamento foi confirmado na conferência automática e a IA falou com o cliente, mas o voucher NÃO foi enviado: a IA não conferiu o pagamento na seguradora neste turno, ou a seguradora não deu pago. Confira o pagamento e mande o voucher, ou peça à IA a segunda via do voucher."
+            lembrete_de_pagamento:
+              cabecalho: "Seguro viagem ainda não pago: %{fatos}"
+              inelegivel: "A IA não lembrou o cliente do pagamento: a conversa está com um atendente, ou o agente não pode responder agora."
+              silencio: "A IA decidiu não lembrar o cliente do pagamento agora."
+              ia_falhou: "A IA tentou lembrar o cliente do pagamento duas vezes e não conseguiu. Nada foi enviado ao cliente."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

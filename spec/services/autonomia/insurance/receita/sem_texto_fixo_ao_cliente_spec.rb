@@ -26,6 +26,8 @@ module TextoAoCliente
       { tipo: :nota_privada, motivo: 'o que a IA não conseguiu antes de encaminhar, para a equipe' },
     'app/services/autonomia/agents/operate/aviso_ao_atendente.rb::Autonomia::Agents::Operate::AvisoAoAtendente#postar_nota' =>
       { tipo: :nota_privada, motivo: 'o evento da cotação de que a IA não falou, para quem atende' },
+    'app/services/autonomia/agents/operate/aviso_da_viagem.rb::Autonomia::Agents::Operate::AvisoDaViagem#postar_nota' =>
+      { tipo: :nota_privada, motivo: 'o aviso de pagamento do seguro viagem de que a IA não falou, para a equipe (#3246b)' },
     'app/services/autonomia/agents/operate/cartoes_do_turno.rb::Autonomia::Agents::Operate::CartoesDoTurno#construir!' =>
       { tipo: :outro, motivo: 'o mapa ou o cartão de contato da página que o modelo pediu pela ferramenta (#1479 F3): ' \
                               'conteúdo vazio com o formato, ou só a versão em texto do cartão (nome, endereço, link do ' \
@@ -46,6 +48,9 @@ module TextoAoCliente
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno aberto pela passagem de uma pessoa (#1630)' },
     'app/services/autonomia/agents/operate/responder_ao_evento.rb::Autonomia::Agents::Operate::ResponderAoEvento#post_reply!' =>
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno acionado por um evento da cotação' },
+    'app/services/autonomia/agents/operate/responder_ao_evento_da_viagem.rb::' \
+    'Autonomia::Agents::Operate::ResponderAoEventoDaViagem#post_reply!' =>
+      { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno acionado pelo aviso de pagamento do seguro viagem (#3246b)' },
     'app/services/autonomia/agents/tools/async_publisher.rb::Autonomia::Agents::Tools::AsyncPublisher#build_message!' =>
       { tipo: :anexo_sem_texto, motivo: 'o arquivo da ferramenta (comparativo, proposta), sem legenda; privado com humano atribuído' },
     'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb::' \

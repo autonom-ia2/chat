@@ -30,14 +30,19 @@ class Autonomia::Agents::Tools::Delivery
   #
   # `passagem` é o id da passagem que abriu o turno da passagem (#1630, `Operate::ResponderAPassagem`), ou nil. Com ele
   # o principal não recebe as ferramentas que passam a conversa (`Answerer#enabled_agent_tools`).
+  #
+  # `marca_do_evento` é o `turno` do evento que não vem de uma execução (#3246b, o aviso de pagamento do Seguro Viagem,
+  # `Tools::EventoDaViagem#marca`). Sem ela, o turno de evento é o de sempre (`evento:<execução>:<tipo>`).
   # rubocop:disable Metrics/ParameterLists
-  def initialize(conversation:, agent_inbox:, origin_message_id: nil, evento: nil, execucao_do_evento: nil, passagem: nil)
+  def initialize(conversation:, agent_inbox:, origin_message_id: nil, evento: nil, execucao_do_evento: nil, passagem: nil,
+                 marca_do_evento: nil)
     @conversation = conversation
     @agent_inbox = agent_inbox
     @origin_message_id = origin_message_id
     @evento = evento
     @execucao_do_evento = execucao_do_evento
     @passagem = passagem
+    @marca_do_evento = marca_do_evento
     @runs = []
   end
   # rubocop:enable Metrics/ParameterLists
@@ -58,7 +63,7 @@ class Autonomia::Agents::Tools::Delivery
     @turno ||= if @origin_message_id.present?
                  "mensagem:#{@origin_message_id}"
                elsif turno_de_evento?
-                 "evento:#{@execucao_do_evento&.id}:#{@evento}"
+                 @marca_do_evento.presence || "evento:#{@execucao_do_evento&.id}:#{@evento}"
                elsif turno_da_passagem?
                  "passagem:#{@passagem}"
                else

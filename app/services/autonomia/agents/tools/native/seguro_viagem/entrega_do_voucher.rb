@@ -15,8 +15,11 @@
 # SÓ DA UNIVERSAL: a URL do PDF só é baixada com o host `universal-assistance.com` ou um subdomínio dele.
 #
 # UM VOUCHER POR COTAÇÃO ENTRE TURNOS QUE CORREM JUNTOS (`saiu_depois?`): dois turnos que viram "pago" antes de o
-# primeiro voucher sair marcam um cartão cada. O segundo não sai se já há, depois da âncora dele, um voucher da mesma
-# cotação (de outro cartão). A segunda via de um turno seguinte sai: a âncora dela é mais nova que o voucher anterior.
+# primeiro voucher sair marcam um cartão cada. O segundo não sai se já há, depois do PISO do turno dele, um voucher da
+# mesma cotação (de outro cartão). O piso é a mensagem do cliente que abriu o turno (`autonomia_reply_to_message_id` da
+# âncora), e não a âncora: o turno do cliente que começou antes do PDF do aviso automático e postou depois dele vê esse
+# PDF. No turno de evento, sem mensagem de origem, o piso é a âncora. A segunda via de um turno seguinte sai: a mensagem
+# que abriu esse turno é mais nova que o voucher anterior.
 #
 # O BLOB LEVA DADO PESSOAL e é gravado antes da mensagem, fora de uma execução: vai com a finalidade `FINALIDADE`, e o
 # varredor apaga o que ficou sem mensagem (`blobs_sem_mensagem`, `ReapStaleRunsJob`).
@@ -41,9 +44,26 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
   FALHAS = [Autonomia::Seguradoras::Universal::Cliente::Erro, Arquivo::Indisponivel].freeze
   FINALIDADE = 'voucher_do_turno'.freeze
   HOST_DA_UNIVERSAL = 'universal-assistance.com'.freeze
+  # As chaves da proposta com o turno que marcou o cartão do voucher por último e a mensagem do cliente que abriu esse
+  # turno (nil no turno de evento) (`marcar`).
+  MARCADO_NO_TURNO = 'voucher_marcado_no_turno'.freeze
+  MARCADO_NA_MENSAGEM = 'voucher_marcado_na_mensagem'.freeze
+  REPLY_TO = 'autonomia_reply_to_message_id'.freeze
 
   def self.cartao(cotacao)
     { 'tipo' => TIPO_DO_CARTAO, 'chave' => cotacao.id.to_s, 'rich_message' => nil }
+  end
+
+  # Marca o cartão do voucher no turno e grava na proposta QUAL turno o marcou (`MARCADO_NO_TURNO`, o `Delivery#turno`) e
+  # a mensagem do cliente que o abriu (`MARCADO_NA_MENSAGEM`), sob o lock da cotação. É o que o aviso automático do
+  # pagamento (`Tools::EventoDaViagem`) confere, na hora de postar, para não mandar um segundo "confirmado" e um segundo
+  # PDF quando o turno do cliente já marcou o voucher e postou a âncora dele, e o PDF ainda não saiu (`voucher_enviado_em`
+  # só é gravado quando ele sai). O próprio turno do aviso grava a marca dele, e ela não o cala. Proposta nova (outro
+  # carrinho) substitui a guardada inteira: a marca vai junto.
+  def self.marcar(delivery, cotacao)
+    marca = { MARCADO_NO_TURNO => delivery.turno, MARCADO_NA_MENSAGEM => delivery.origin_message_id }
+    cotacao.with_lock { cotacao.update!(proposta: cotacao.proposta.to_h.merge(marca)) }
+    delivery.marcar_cartao(cartao(cotacao))
   end
 
   def self.cartao?(cartao)
@@ -55,15 +75,21 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
     Autonomia::Agents::CotacaoDeViagem.find_by(id: cartao['chave'].to_i, conversation_id: conversation.id)
   end
 
-  # Já saiu, depois da âncora `ancora_id`, um voucher desta cotação por OUTRO cartão (`token` é o deste)? O `LIKE` é a
-  # peneira; quem decide é o atributo.
-  def self.saiu_depois?(conversation, cotacao_id:, ancora_id:, token:)
-    conversation.messages.outgoing.where(sender_type: 'AgentBot').where('id > ?', ancora_id)
+  # Já saiu, depois do piso do turno da `ancora` (`piso_do_turno`), um voucher desta cotação por OUTRO cartão (`token` é
+  # o deste)? O `LIKE` é a peneira; quem decide é o atributo.
+  def self.saiu_depois?(conversation, cotacao_id:, ancora:, token:)
+    conversation.messages.outgoing.where(sender_type: 'AgentBot').where('id > ?', piso_do_turno(ancora))
                 .where('content_attributes::text LIKE ?', "%#{CHAVE}%")
                 .any? do |message|
                   atributos = message.content_attributes.to_h
                   atributos[CHAVE].to_s == cotacao_id.to_s && atributos['autonomia_cartao_token'].to_s != token.to_s
                 end
+  end
+
+  # A mensagem do cliente que abriu o turno da âncora, ou a própria âncora (turno de evento, sem mensagem de origem).
+  def self.piso_do_turno(ancora)
+    origem = ancora.content_attributes.to_h[REPLY_TO].to_i
+    origem.positive? ? origem : ancora.id
   end
 
   # Os blobs de voucher sem mensagem, criados antes de `antes_de`: o processo morreu entre o blob e a mensagem. A

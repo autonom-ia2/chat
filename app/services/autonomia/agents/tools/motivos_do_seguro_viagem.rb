@@ -24,6 +24,8 @@ module Autonomia::Agents::Tools::MotivosDoSeguroViagem
     'quantidade_de_viajantes' => 'a proposta veio com um número de viajantes diferente do da cotação',
     'cep_nao_encontrado' => 'o endereço do titular não saiu pelo CEP (CEP não achado ou consulta de CEP indisponível)',
     'proposta_em_andamento' => 'outra chamada está gerando a proposta desta cotação e a espera pelo lock passou do tempo do banco',
+    # #3246b: o turno do aviso de pagamento (`ResponderAoEventoDaViagem`) não gera proposta que o cliente não pediu.
+    'proposta_turno_de_evento' => 'o turno foi acionado por um aviso do sistema sobre o pagamento, e não gera proposta nova',
     # #3246: as recusas de `situacao_do_pagamento` e `segunda_via_do_voucher`; o carrinho é sempre o da proposta guardada.
     'pagamento_sem_conversa' => 'não há conversa para conferir o pagamento do seguro viagem (Testar, Copiloto, playground)',
     'sem_proposta' => 'a conversa ainda não tem proposta de seguro viagem com carrinho; nada foi consultado na seguradora',

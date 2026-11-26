@@ -68,17 +68,12 @@ class Autonomia::Agents::Tools::Native::SituacaoDoPagamento < Autonomia::Agents:
     cotacao.with_lock do
       proposta = cotacao.proposta.to_h
       enviado = proposta['voucher_enviado_em'].present?
-      cotacao.update!(proposta: proposta.merge('pago_em' => pago_em(status))) if proposta['pago_em'].blank?
+      cotacao.update!(proposta: proposta.merge('pago_em' => Pagamento.pago_em(status))) if proposta['pago_em'].blank?
     end
     return false if enviado
 
-    delivery.marcar_cartao(SeguroViagem::EntregaDoVoucher.cartao(cotacao))
+    SeguroViagem::EntregaDoVoucher.marcar(delivery, cotacao)
     true
-  end
-
-  def pago_em(status)
-    data = Pagamento.corpo(status)['dataPagamento'].to_s
-    data.empty? ? Time.current.iso8601 : data
   end
 
   def conversa

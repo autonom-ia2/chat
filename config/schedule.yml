@@ -303,6 +303,13 @@ autonomia_contratados_base_em_dia_job:
   class: 'Autonomia::Agents::Contratados::BaseEmDiaJob'
   queue: scheduled_jobs
 
+# executed every 5 minutes (#3246b); travel insurance proposals still waiting for payment are checked with the insurer:
+# the hired agent tells the customer when the payment is confirmed (with the voucher) and reminds once before the link expires.
+autonomia_contratados_varredura_do_pagamento_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::Agents::Contratados::VarreduraDoPagamentoJob'
+  queue: scheduled_jobs
+
 email_campaign_recipient_import_maintenance_job:
   cron: '*/5 * * * *'
   class: 'EmailCampaigns::RecipientImportMaintenanceJob'

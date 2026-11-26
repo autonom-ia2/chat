@@ -46,6 +46,23 @@ RSpec.describe Autonomia::Agents::Operate::CartoesDoTurno do
     conversa.messages.reload.outgoing.where(private: false).where.not(id: ancora.id)
   end
 
+  def pergunta_do_cliente
+    create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, sender: conversa.contact,
+                     content: 'Caiu?')
+  end
+
+  # A âncora do turno aberto pela mensagem `origem`, com o `cartao` dele.
+  def ancora_respondendo(origem, cartao_do_turno)
+    create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :outgoing, sender: agent_bot,
+                     content: 'Caiu, sim!',
+                     content_attributes: { 'autonomia_agent_id' => contratado.id, 'autonomia_reply_to_message_id' => origem.id,
+                                           described_class::NA_ANCORA => [cartao_do_turno] })
+  end
+
+  def cartao_do_turno(turno)
+    entrega.cartao(cotacao).merge('token' => described_class.token(turno, entrega.cartao(cotacao)))
+  end
+
   it 'posta o PDF anexado com o token do turno, e o mesmo cartão não sai duas vezes' do
     pdf_responde("%PDF-1.6\n%%EOF\n")
 
@@ -104,6 +121,30 @@ RSpec.describe Autonomia::Agents::Operate::CartoesDoTurno do
 
     expect(described_class.new(nova).postar!(seguinte)).to be_nil
     expect(a_request(:get, url_do_pdf)).to have_been_made.twice
+  end
+
+  # O piso é a mensagem do cliente que abriu o turno: o pedido de segunda via feito DEPOIS do voucher anterior sai.
+  it 'segunda via pedida depois do voucher anterior, com a mensagem de origem na âncora, sai de novo' do
+    pdf_responde("%PDF-1.6\n%%EOF\n")
+    cartoes.postar!(cartao)
+    pergunta = pergunta_do_cliente
+    seguinte = cartao_do_turno("mensagem:#{pergunta.id}")
+
+    expect(described_class.new(ancora_respondendo(pergunta, seguinte)).postar!(seguinte)).to be_nil
+    expect(a_request(:get, url_do_pdf)).to have_been_made.twice
+  end
+
+  # A corrida simétrica do aviso automático (#3246b): o cliente perguntou "caiu?", o aviso (turno de evento, sem mensagem
+  # de origem) postou a âncora e o PDF, e só depois o turno do cliente postou a âncora dele. O piso do cliente é a
+  # pergunta, que veio antes do PDF do aviso: o voucher do cliente não sai.
+  it 'turno do cliente aberto antes do PDF do aviso e postado depois dele: o voucher do cliente não sai' do
+    pdf_responde("%PDF-1.6\n%%EOF\n")
+    pergunta = pergunta_do_cliente
+    expect(cartoes.postar!(cartao)).to be_nil # a âncora do aviso e o PDF dele
+    do_cliente = cartao_do_turno("mensagem:#{pergunta.id}")
+
+    expect(described_class.new(ancora_respondendo(pergunta, do_cliente)).postar!(do_cliente)).to eq('voucher_ja_saiu')
+    expect(a_request(:get, url_do_pdf)).to have_been_made.once
   end
 
   it 'pessoa da equipe respondeu depois da âncora: não baixa nem posta' do
