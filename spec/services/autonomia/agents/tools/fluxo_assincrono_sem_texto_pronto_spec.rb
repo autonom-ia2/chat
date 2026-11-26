@@ -7,7 +7,7 @@ require 'rails_helper'
 #   - ESTÁTICA: todo ponto do fluxo (motor, publicador, ferramentas, turno de evento, aviso ao atendente) que cria
 #     mensagem é conhecido, e cada um só cria o que pode — o publicador, anexo com `content: nil`; o aviso ao
 #     atendente e a nota interna da ferramenta para a equipe (chat#612), nota com `private: true`; o turno de evento, o
-#     texto que o modelo devolveu; a entrega do comparativo do seguro viagem (#3211), o PDF sem legenda. Um sexto
+#     texto que o modelo devolveu; a entrega do comparativo do seguro viagem (#3211) e a do voucher (#3246), o PDF sem legenda. Um sétimo
 #     ponto, ou um desses mudando o que grava, reprova aqui: é assim que a frase pronta voltaria.
 #   - DINÂMICA: os caminhos reais do motor (começo, recusa, conclusão, falha, prazo, varredor, a execução que
 #     atravessou o deploy com as frases do especialista nos argumentos) rodam, e toda mensagem pública do bot na
@@ -49,14 +49,15 @@ RSpec.describe 'Fluxo assíncrono sem texto pronto' do # rubocop:disable RSpec/D
       parametros.arguments.arguments.select { |arg| arg.respond_to?(:elements) }.flat_map(&:elements)
     end
 
-    it 'so cinco arquivos do fluxo criam mensagem' do
+    it 'so seis arquivos do fluxo criam mensagem' do
       criam = arquivos_do_fluxo.select { |caminho| criadores.any? { |criador| File.read(Rails.root.join(caminho)).include?(criador) } }
 
       expect(criam).to contain_exactly('app/services/autonomia/agents/tools/async_publisher.rb',
                                        'app/services/autonomia/agents/tools/nota_interna.rb',
                                        'app/services/autonomia/agents/operate/aviso_ao_atendente.rb',
                                        'app/services/autonomia/agents/operate/responder_ao_evento.rb',
-                                       'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb')
+                                       'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb',
+                                       'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_voucher.rb')
     end
 
     it 'o publicador so cria anexo, sem texto' do
@@ -69,6 +70,14 @@ RSpec.describe 'Fluxo assíncrono sem texto pronto' do # rubocop:disable RSpec/D
     # #3211: o PDF do comparativo do seguro viagem sai sem legenda; quem fala junto do arquivo é o modelo.
     it 'a entrega do comparativo so cria anexo, sem texto' do
       chamada = chamadas_ao_builder('app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb').sole
+
+      expect(parametro(chamada, :content)).to eq('nil')
+      expect(parametro(chamada, :attachments)).to eq('[blob.signed_id]')
+    end
+
+    # #3246: o PDF do voucher do seguro viagem também sai sem legenda; quem fala junto do arquivo é o modelo.
+    it 'a entrega do voucher so cria anexo, sem texto' do
+      chamada = chamadas_ao_builder('app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_voucher.rb').sole
 
       expect(parametro(chamada, :content)).to eq('nil')
       expect(parametro(chamada, :attachments)).to eq('[blob.signed_id]')

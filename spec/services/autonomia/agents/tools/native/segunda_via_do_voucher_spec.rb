@@ -68,7 +68,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SegundaViaDoVoucher do
 
   it 'o carrinho é sempre o da proposta guardada, nunca o do modelo' do
     stub = universal('Pago')
-    pedir('carrinho' => '111')
+    pedir({ 'carrinho' => '111' })
     expect(stub).to have_been_requested.once
     expect(a_request(:get, "#{base}/v1/StatusPagamento/111")).not_to have_been_made
   end
