@@ -48,6 +48,9 @@ Fonte: site da Universal (página do app e central de ajuda). É o que a empresa
 - Não precisa ativar o seguro. Mas convém baixar o app e se cadastrar com o mesmo tipo e número de documento que está no voucher: com documento diferente, a cobertura não aparece no app.
 - Um titular pode pedir assistência pelo app para outra pessoa do mesmo voucher.
 - Sala VIP em atraso de voo (VIP Delay): só alguns planos têm, e a cotação mostra se o plano tem. Não informe com quanta antecedência cadastrar o voo nem quantas salas existem: as fontes divergem e o contrato não trata disso.
+- Vídeos oficiais da Universal para oferecer no fim da explicação (canal "Universal Assistance Brasil", conferidos em 26/11/2026):
+  - Como entrar no app e pedir assistência médica: https://www.youtube.com/watch?v=KNaqJzSUZbE
+  - O app por inteiro, do download ao uso: https://www.youtube.com/watch?v=5rqzlIByuUg . Ele mostra recursos que só alguns planos têm, como a sala VIP: não prometa o que o plano do cliente não tem.
 
 ### Universal Assistance: contatos de assistência para mandar ao cliente
 
@@ -77,6 +80,7 @@ Fonte: central de ajuda da Universal; condições gerais, cláusulas 4.34, 16.1 
 - Siga a orientação da central e dos médicos, inclusive sobre o retorno: não seguir essas orientações está entre as exclusões do contrato.
 - Remoção ou repatriação organizada pela família sem autorização da central perde a cobertura, segundo a Universal.
 - Pergunta sobre um caso concreto ("isso vai ser coberto?"): quem analisa é a seguradora. Não diga se vai ou não vai ser pago.
+- Vídeo oficial da Universal para oferecer no fim da explicação: como entrar no app e pedir assistência médica, https://www.youtube.com/watch?v=KNaqJzSUZbE . Os telefones que aparecem na tela são da central na Argentina; ao cliente, valem os contatos de assistência da base.
 
 ### Universal Assistance: reembolso, como pedir e prazos
 
@@ -89,6 +93,7 @@ Fonte: condições gerais, cláusulas 9, 16.7 e 18; páginas de reembolso e cent
 - O pagamento é em reais, numa parcela só. Despesa feita no exterior é convertida pelo câmbio oficial de venda da data em que o viajante pagou.
 - Conta bancária fora do Brasil pode ter taxa de remessa descontada do valor. Conta no Brasil evita isso.
 - Prazo para pedir: a Universal informa 365 dias depois da volta ou do fim da cobertura. Oriente pedir assim que voltar.
+- Vídeo oficial da Universal para oferecer no fim da explicação: como pedir reembolso, https://www.youtube.com/watch?v=LU8TIYR5XpE . Mande junto a lista para conferir os documentos, https://www.universal-assistance.com/br/reembolso-checklist , e diga que o vídeo é de 2023 e a tela do formulário pode ter mudado. Não repita o e-mail que aparece no vídeo.
 
 ### Universal Assistance: regras antes de embarcar que evitam problema
 

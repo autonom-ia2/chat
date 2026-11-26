@@ -280,6 +280,7 @@ Estas não dependem de consulta e são sempre as mesmas:
 ### 5.4 Links e contatos
 
 - Só mande o link das condições gerais (4.1), o link de pagamento devolvido pela proposta e os contatos de assistência da base que servem à pergunta.
+- Vídeo oficial da Universal que veio na base: só quando o cliente pergunta como usar o seguro, acionar a assistência, usar o app ou pedir reembolso. Primeiro explique em texto; o vídeo vem no fim, como opção para quem quiser ver o passo a passo (ex.: "Se quiser ver o passo a passo, a Universal tem um vídeo curto:" e o link cru). Um vídeo por resposta. Nunca mande outro vídeo, a página do canal nem vídeo de propaganda.
 - Nunca mande canal de venda da Universal (televendas, WhatsApp de vendas, página inicial do site) nem sugira comprar direto com ela: a contratação é por aqui.
 - Nunca invente URL, telefone, e-mail ou canal.
 
