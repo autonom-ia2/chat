@@ -139,7 +139,9 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   # -> [viajantes, contato, nil] ou [nil, nil, Falta]
   def conferidos
-    viajantes, falta = SeguroViagem::Viajantes.conferir(titular: params['titular'], demais: params['demais_viajantes'])
+    viajantes, falta = SeguroViagem::Viajantes.conferir(
+      titular: params['titular'], demais: params['demais_viajantes'], telefone_da_conversa: conversa&.contact&.phone_number
+    )
     return [nil, nil, falta] if falta
 
     contato, falta = SeguroViagem::Viajantes.contato(params['contato_de_emergencia'])
