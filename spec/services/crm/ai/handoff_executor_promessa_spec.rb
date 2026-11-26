@@ -22,6 +22,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
     allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({ pessoa.id => 'online' })
     account.enable_features!(Crm::Ai::FatosDaConversa::FLAG)
+    account.enable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
   end
 
   def entregar(handoff) = described_class.new(card: card, handoff: handoff, trigger: Crm::Ai::FatosDaConversa::TRIGGER_DO_ROBO).perform
@@ -53,6 +54,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
   it 'o agente protegido segue com a conversa mesmo com a promessa' do
     allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    avisar!
 
     expect(entregar(prometida)).to have_attributes(status: :skipped, error: 'owned_by_our_agent')
     expect(conversation.reload.assignee_id).to be_nil
@@ -76,12 +78,14 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
   it 'sem agente nosso dono da conversa, a promessa não vira pedido (só a intenção de sempre)' do
     allow(Autonomia::Agents::QuemResponde).to receive(:dono_ativo).and_return(nil)
+    avisar!
 
     expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
   end
 
   it 'o agente protegido: a promessa sozinha não vira pedido' do
     allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    avisar!
 
     expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
   end
@@ -98,6 +102,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
   it 'sem a flag, a promessa não muda nada (como antes)' do
     account.disable_features!(Crm::Ai::FatosDaConversa::FLAG)
+    avisar!
 
     expect(entregar(prometida)).to have_attributes(status: :skipped, error: 'owned_by_our_agent')
   end
@@ -129,7 +134,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
       expect(entregar(prometida)).to have_attributes(status: :skipped, error: 'owned_by_our_agent')
       expect(conversation.reload.assignee_id).to be_nil
-      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=promessa_sem_aviso', 'motivo=depois_da_devolucao'))
+      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=promessa_sem_aviso', 'motivo=depois_do_marco'))
     end
 
     it 'o aviso de depois da devolução é promessa nova: passa', :aggregate_failures do
@@ -140,6 +145,29 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
       expect(entregar(prometida)).to have_attributes(status: :handed_off, assignee: pessoa)
       expect(conversation.reload.assignee_id).to eq(pessoa.id)
+    end
+
+    it 'sem agente_so_informa (o aviso não é gravado), a promessa sem aviso passa como antes' do
+      account.disable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
+
+      expect(entregar(prometida)).to have_attributes(status: :handed_off, assignee: pessoa)
+    end
+
+    it 'o aviso de antes da última resolução, com a conversa reaberta, não passa', :aggregate_failures do
+      allow(Rails.logger).to receive(:info).and_call_original
+      avisar!(quando: 30.minutes.ago)
+      ReportingEvent.create!(name: 'conversation_resolved', value: 600, account_id: account.id, inbox_id: inbox.id,
+                             conversation_id: conversation.id, event_start_time: 1.hour.ago, event_end_time: 10.minutes.ago)
+
+      expect(entregar(prometida)).to have_attributes(status: :skipped, error: 'owned_by_our_agent')
+      expect(conversation.reload.assignee_id).to be_nil
+      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=promessa_sem_aviso', 'motivo=depois_do_marco'))
+    end
+
+    it 'sem passagem e sem resolução não há marco: o aviso de qualquer hora vale' do
+      avisar!(quando: 3.days.ago)
+
+      expect(entregar(prometida)).to have_attributes(status: :handed_off, assignee: pessoa)
     end
   end
 end

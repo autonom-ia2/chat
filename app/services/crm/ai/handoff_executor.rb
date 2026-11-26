@@ -115,14 +115,26 @@ module Crm
       # #3256 (conversa 15486, 26/11): o modelo devolveu a promessa sem o agente ter prometido nada, e a conversa saiu do
       # agente no meio da venda. A promessa é um FATO que o próprio agente grava ao avisar o cliente (o evento
       # `avisou_que_chama_alguem`, Autonomia::Agents::AgenteSoInforma.avisou?): sem ele, a leitura do modelo não passa a
-      # conversa. O aviso só vale depois da última vez que a conversa voltou para a IA (Crm::Ai::DevolucaoAIa.em, o mesmo
-      # marco da guarda `devolvida_sem_pedido_novo`): a promessa de antes foi cumprida quando uma pessoa recebeu.
+      # conversa. O evento só é gravado com a flag `agente_so_informa`; desligada, tudo como antes. O aviso só vale depois
+      # do marco_da_promessa; sem marco, vale o de qualquer hora.
       def promessa_avisada?
-        desde = DevolucaoAIa.em(@card, @conversation)
+        return true unless ::Autonomia::Agents::AgenteSoInforma.ligada?(@card.account)
+
+        desde = marco_da_promessa
         return true if ::Autonomia::Agents::AgenteSoInforma.avisou?(@conversation, dono_ativo.agent, desde: desde)
 
-        registrar('promessa_sem_aviso', motivo: desde ? 'depois_da_devolucao' : nil)
+        registrar('promessa_sem_aviso', motivo: desde ? 'depois_do_marco' : nil)
         false
+      end
+
+      # O mais recente entre a última vez que a conversa voltou para a IA (Crm::Ai::DevolucaoAIa.em, o mesmo marco da
+      # guarda `devolvida_sem_pedido_novo`: a promessa de antes foi cumprida quando uma pessoa recebeu) e a última
+      # resolução (o episódio acabou; reaberta, a promessa antiga não vale). A hora da resolução é a do evento de
+      # relatório (`event_end_time`, a mesma que o ReportingEventListener usa na reabertura). nil sem nenhum dos dois.
+      def marco_da_promessa
+        resolvida = ReportingEvent.where(account_id: @conversation.account_id, conversation_id: @conversation.id,
+                                         name: 'conversation_resolved').maximum(:event_end_time)
+        [DevolucaoAIa.em(@card, @conversation), resolvida].compact.max
       end
 
       # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): o agente nosso não passa mais a conversa; avisou o
