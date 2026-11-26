@@ -157,9 +157,10 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
     delivery.try(:conversation)
   end
 
-  # O parâmetro chega tipado (`ParamsTipados`): só `true` inclui os anuais.
+  # A ferramenta nativa recebe os argumentos como o modelo mandou (`Bound#run_native`, sem `ParamsTipados`): vale `true`
+  # e o texto "true"; qualquer outra coisa deixa os anuais de fora.
   def incluir_anuais?
-    params['incluir_anuais'] == true
+    [true, 'true'].include?(params['incluir_anuais'])
   end
 
   # O `Pedido` lê os parâmetros uma vez; as idades vêm dele, já inteiras.

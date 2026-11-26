@@ -82,7 +82,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Planos do
     candidatos = described_class.candidatos(sem_ids)
     expect(candidatos.pluck('nome')).to eq(['Especial UA 100K BRL', 'Especial UA 30K BRL', 'Produto Teste Sem DMH'])
     expect(candidatos.first).not_to have_key('codigo')
-    expect(described_class.para_idades(candidatos, [99]).pluck('codigo', 'nome')).to eq([['P1', 'Produto Teste Sem DMH']])
+    expect(described_class.para_idades(candidatos, [99], incluir_anuais: false).pluck('codigo', 'nome')).to eq([['P1', 'Produto Teste Sem DMH']])
   end
 
   describe 'destino internacional e planos anuais (#3223)' do
@@ -107,18 +107,27 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Planos do
     end
 
     it 'o anual entra, marcado, com os dias de cada viagem; o de viagem única fica sem' do
-      planos = described_class.de(com_anual, idades: [45])
+      planos = described_class.de(com_anual, idades: [45], incluir_anuais: true)
       expect(planos.pluck('codigo', 'multiviagem', 'dias_por_viagem'))
         .to eq([['P1', false, nil], ['P2', false, nil], ['P3', true, 30]])
     end
 
+    it 'sem incluir_anuais (o padrão), o anual fica fora e os códigos são só dos de viagem única (#3226)' do
+      expect(described_class.de(com_anual, idades: [45]).pluck('codigo', 'multiviagem')).to eq([['P1', false], ['P2', false]])
+    end
+
+    it 'só anuais e sem incluir_anuais: os anuais ficam, para a cotação não voltar vazia (#3226)' do
+      so_anual = com_anual.merge('produtos' => [com_anual['produtos'].last])
+      expect(described_class.de(so_anual, idades: [45]).pluck('codigo', 'multiviagem')).to eq([['P1', true]])
+    end
+
     it 'os dias do anual vêm do campo que estiver preenchido' do
       com_anual['produtos'].last.merge!('diasMultiviagem' => 0, 'quantidadeDiasMultiviagem' => 60)
-      expect(described_class.de(com_anual, idades: [45]).last['dias_por_viagem']).to eq(60)
+      expect(described_class.de(com_anual, idades: [45], incluir_anuais: true).last['dias_por_viagem']).to eq(60)
     end
 
     it 'o resumo diz ao modelo se o plano é anual e os dias de cada viagem; anual sem preço por dia (#3226)' do
-      resumo = described_class.resumo(described_class.de(com_anual, idades: [45]), pedido)
+      resumo = described_class.resumo(described_class.de(com_anual, idades: [45], incluir_anuais: true), pedido)
       expect(resumo.pluck('nome', 'anual', 'dias_por_viagem'))
         .to eq([['Especial UA 100K BRL', false, nil], ['Especial UA 30K BRL', false, nil],
                 ['Anual Multiviagens UA 100 (30 Dias)', true, 30]])

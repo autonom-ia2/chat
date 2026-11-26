@@ -195,33 +195,79 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
   end
 
   describe 'destaques e anuais não pedidos (#3226)' do
-    let(:planos) do
-      [['P1', 'Especial UA 250K BRL', '540.0', 'R$ 250.000'], ['P2', 'Especial UA 30K BRL', '210.0', 'R$ 30.000'],
-       ['P3', 'Especial UA 100K BRL', '360.0', 'R$ 100.000'], ['P4', 'Especial UA 60K BRL', '285.0', 'R$ 60.000']]
-        .map do |codigo, nome, preco, valor|
-          { 'codigo' => codigo, 'nome' => nome, 'preco_total' => preco, 'max_parcelas' => 12, 'idade_minima' => 0,
-            'idade_maxima' => 65, 'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => preco }],
-            'coberturas' => [dmh.merge('valor' => valor)] }
-        end
+    let(:quatro) do
+      [plano('Especial UA 250K BRL', '540.0', 'R$ 250.000'), plano('Especial UA 30K BRL', '210.0', 'R$ 30.000'),
+       plano('Especial UA 100K BRL', '360.0', 'R$ 100.000'), plano('Especial UA 60K BRL', '285.0', 'R$ 60.000')]
     end
-    let(:pdf) { described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo') }
+    let(:planos) { modulos::Planos.para_idades(quatro, pedido['idades'], incluir_anuais: false) }
 
-    it 'o destaque que o modelo lê é o mesmo selo do PDF, plano a plano' do
-      nomes = Autonomia::Agents::Tools::Native::SeguroViagem::Destaques::NOMES
+    def modulos = Autonomia::Agents::Tools::Native::SeguroViagem
+
+    # Sem código: quem numera é `Planos.para_idades`, como na cotação.
+    def plano(nome, preco, valor, anual: false)
+      { 'nome' => nome, 'preco_total' => preco, 'max_parcelas' => 12, 'idade_minima' => 0, 'idade_maxima' => 65,
+        'multiviagem' => anual, 'dias_por_viagem' => anual ? 30 : nil, 'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => preco }],
+        'coberturas' => [dmh.merge('valor' => valor)] }
+    end
+
+    def anuais = [plano('Anual UA 150', '150.0', 'R$ 300.000', anual: true), plano('Anual UA 300', '600.0', 'R$ 300.000', anual: true)]
+
+    def numerados(lista, incluir_anuais:) = modulos::Planos.para_idades(lista, pedido['idades'], incluir_anuais: incluir_anuais)
+
+    # -> [o selo do PDF por código, o destaque do resumo por código], só dos planos que têm um.
+    def destaques_dos_dois
+      nomes = modulos::Destaques::NOMES
+      pdf = described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo')
       do_pdf = pdf.send(:planos).pluck('codigo').zip(pdf.send(:rotulos).map { |rotulo| nomes[rotulo] }).to_h.compact
-      resumo = Autonomia::Agents::Tools::Native::SeguroViagem::Planos.resumo(cotacao.planos, cotacao.pedido)
-      do_resumo = resumo.reject { |plano| plano['destaque'].nil? }.to_h { |plano| [plano['codigo'], plano['destaque']] }
+      resumo = modulos::Planos.resumo(cotacao.planos, cotacao.pedido)
+      [do_pdf, resumo.to_h { |item| [item['codigo'], item['destaque']] }.compact]
+    end
 
+    it '4 planos: o destaque que o modelo lê é o mesmo selo do PDF, e a capa mostra a recomendada' do
+      do_pdf, do_resumo = destaques_dos_dois
       expect(do_resumo).to eq(do_pdf)
       expect(do_resumo.values).to contain_exactly('mais_economica', 'mais_recomendada', 'maior_cobertura')
-      expect(do_resumo['P2']).to eq('mais_economica')
-      expect(do_resumo['P1']).to eq('maior_cobertura')
-      recomendado = resumo.find { |plano| plano['destaque'] == 'mais_recomendada' }['nome']
+      recomendado = cotacao.planos.find { |item| item['codigo'] == do_resumo.key('mais_recomendada') }['nome']
       expect(normalizar(leitor.pages[0].text)).to include('Opção mais recomendada para esta viagem', recomendado)
     end
 
-    it 'cotação sem anuais, porque o cliente não pediu: o PDF não tem a seção dos anuais' do
-      expect(texto).not_to include('Se você viaja mais vezes no ano', 'Planos anuais')
+    it 'empate de preço: os dois apontam os mesmos planos' do
+      planos.replace(numerados([plano('Especial UA 30K BRL', '210.0', 'R$ 30.000'), plano('Especial UA 60K BRL', '210.0', 'R$ 60.000'),
+                                plano('Especial UA 100K BRL', '360.0', 'R$ 100.000')], incluir_anuais: false))
+      do_pdf, do_resumo = destaques_dos_dois
+      expect(do_resumo).to eq(do_pdf)
+      expect(do_resumo.key('mais_economica')).to eq('P2')
+    end
+
+    it '1 plano: opcao_disponivel no resumo e "Opção disponível" no PDF' do
+      planos.replace(numerados([plano('Especial UA 100K BRL', '360.0', 'R$ 100.000')], incluir_anuais: false))
+      do_pdf, do_resumo = destaques_dos_dois
+      expect(do_resumo).to eq(do_pdf)
+      expect(do_resumo).to eq('P1' => 'opcao_disponivel')
+      expect(texto).to include('Opção disponível')
+    end
+
+    it '2 planos: os dois apontam os mesmos planos' do
+      planos.replace(numerados(quatro.first(2), incluir_anuais: false))
+      do_pdf, do_resumo = destaques_dos_dois
+      expect(do_resumo).to eq(do_pdf)
+      expect(do_resumo.size).to eq(2)
+    end
+
+    it 'anuais pedidos e misturados: anual sem destaque nos dois, e a seção dos anuais aparece' do
+      planos.replace(numerados(anuais.first(1) + quatro + anuais.last(1), incluir_anuais: true))
+      do_pdf, do_resumo = destaques_dos_dois
+      codigos_anuais = cotacao.planos.select { |item| item['multiviagem'] }.pluck('codigo')
+      expect(do_resumo).to eq(do_pdf)
+      expect(codigos_anuais.size).to eq(2)
+      expect(do_resumo.keys & codigos_anuais).to be_empty
+      expect(texto).to include('Se você viaja mais vezes no ano', 'Anual UA 150')
+    end
+
+    it 'anuais na resposta e não pedidos: a cotação fica sem eles e o PDF sem a seção' do
+      planos.replace(numerados(anuais.first(1) + quatro + anuais.last(1), incluir_anuais: false))
+      expect(cotacao.planos.pluck('multiviagem')).to all(be(false))
+      expect(texto).not_to include('Se você viaja mais vezes no ano', 'Planos anuais', 'Anual UA')
     end
   end
 

@@ -140,6 +140,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
         .to eq([['P1', false, 'mais_recomendada'], ['P2', false, 'mais_economica'], ['P3', true, nil]])
     end
 
+    it 'incluir_anuais em texto ("true"), como a ferramenta nativa recebe sem conversão: inclui; "false" não' do
+      expect(cotar_com(resposta['produtos'] + [anual], params.merge('incluir_anuais' => 'true'))['planos'].pluck('anual'))
+        .to eq([false, false, true])
+      expect(cotar_com(resposta['produtos'] + [anual], params.merge('incluir_anuais' => 'false'))['planos'].pluck('anual'))
+        .to eq([false, false])
+    end
+
     it 'só anuais e o cliente não pediu: devolve os anuais e avisa que só há anuais' do
       saida = cotar_com([anual])
       expect(saida['planos'].pluck('anual')).to eq([true])
