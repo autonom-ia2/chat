@@ -37,12 +37,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     saida = JSON.parse(ferramenta(params).call)
     esperado = [
       { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00', 'max_parcelas' => 12,
-        'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' } },
+        'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' },
+        'anual' => false, 'dias_por_viagem' => nil },
       { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00', 'max_parcelas' => 12,
-        'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil } }
+        'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil },
+        'anual' => false, 'dias_por_viagem' => nil }
     ]
     expect(saida['planos']).to eq(esperado)
-    expect(saida['pdf_enviado']).to be(true)
+    expect(saida.slice('pdf_enviado', 'ja_cotada')).to eq('pdf_enviado' => true, 'ja_cotada' => false)
     cotacao = Autonomia::Agents::CotacaoDeViagem.last
     expect(cotacao.id_cotacao).to eq('COT-TESTE-1')
     expect(cotacao.pedido.except('universal')).to eq('destinos' => ['PT'], 'destinos_nomes' => ['Portugal'],
@@ -75,6 +77,80 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
     allow(Rails.logger).to receive(:warn)
     ferramenta(params.merge('idades' => [100])).call
     expect(Rails.logger).to have_received(:warn).with(a_string_including('catálogo sem id conhecido')).once
+  end
+
+  describe 'a mesma viagem pedida de novo no dia (#3223)' do
+    let(:cotacoes) { Autonomia::Agents::CotacaoDeViagem }
+    let(:entrega) { Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo }
+
+    it 'devolve a mesma cotação, sem chamar a seguradora nem gravar outra, e o PDF dela' do
+      primeira = JSON.parse(ferramenta(params).call)
+      segunda = JSON.parse(ferramenta(params.merge('destinos' => ['PT'])).call)
+
+      expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.once
+      expect(cotacoes.count).to eq(1)
+      expect(segunda).to eq(primeira.merge('ja_cotada' => true))
+      expect(entrega).to have_received(:postar).with(conversation: conversa, cotacao: cotacoes.last, agent: contratado).twice
+    end
+
+    it 'os mesmos países em outra ordem são a mesma viagem' do
+      ferramenta(params.merge('destinos' => %w[PT ES])).call
+      expect(JSON.parse(ferramenta(params.merge('destinos' => %w[ES PT])).call)['ja_cotada']).to be(true)
+      expect(cotacoes.count).to eq(1)
+    end
+
+    it 'outra idade, outra data ou outro motivo: cota de novo' do
+      ferramenta(params).call
+      ferramenta(params.merge('idades' => [46])).call
+      ferramenta(params.merge('data_retorno' => '2027-02-07')).call
+      ferramenta(params.merge('motivo' => 'estudo')).call
+      expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.times(4)
+      expect(cotacoes.count).to eq(4)
+    end
+
+    it 'as idades em outra ordem: cota de novo (a ordem é a do cliente)' do
+      ferramenta(params.merge('idades' => [45, 12])).call
+      ferramenta(params.merge('idades' => [12, 45])).call
+      expect(cotacoes.count).to eq(2)
+    end
+
+    it 'no dia seguinte, no fuso da conta: cota de novo' do
+      ferramenta(params).call
+      travel_to Time.utc(2026, 11, 25, 15, 0, 0)
+      expect(JSON.parse(ferramenta(params).call)['ja_cotada']).to be(false)
+      expect(cotacoes.count).to eq(2)
+    end
+
+    it 'a cotação de outro agente na mesma conversa não vale' do
+      outro = Autonomia::Agents::Agent.create!(account: account, name: 'Outro', agent_type: 'custom')
+      cotacoes.create!(account: account, conversation: conversa, agent: outro, id_cotacao: 'c-outro', planos: [],
+                       pedido: { 'destinos' => ['PT'], 'data_saida' => '2027-02-02', 'data_retorno' => '2027-02-06',
+                                 'idades' => [45], 'motivo' => nil })
+      expect(JSON.parse(ferramenta(params).call)['ja_cotada']).to be(false)
+      expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.once
+    end
+  end
+
+  describe 'o nome de cada país (#3223)' do
+    before do
+      stub_request(:get, "#{base}/v1/destinos")
+        .to_return(status: 200, body: [{ 'pais' => 'FRANCA', 'siglaPais' => 'FR' }, { 'pais' => 'ITALIA', 'siglaPais' => 'IT' }].to_json)
+    end
+
+    def nomes_guardados(argumentos)
+      ferramenta(params.merge(argumentos)).call
+      Autonomia::Agents::CotacaoDeViagem.last.pedido['destinos_nomes']
+    end
+
+    it 'o nome que o modelo escreveu no idioma da conversa' do
+      expect(nomes_guardados('destinos' => %w[fr it], 'nomes_dos_destinos' => [' França ', 'Itália'])).to eq(%w[França Itália])
+    end
+
+    it 'sem o nome, com outro tamanho ou com nome em branco: o nome da Universal' do
+      expect(nomes_guardados('destinos' => ['fr'])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [46], 'nomes_dos_destinos' => %w[França Itália])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [47], 'nomes_dos_destinos' => [' '])).to eq(['FRANCA'])
+    end
   end
 
   it 'sem conversa não cota' do

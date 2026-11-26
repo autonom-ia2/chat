@@ -44,6 +44,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparat
     expect(mensagens.first.attachments.first.file.content_type).to eq('application/pdf')
   end
 
+  it 'o PDF que já está na conversa não sai de novo, e a resposta diz que ele está lá (#3223)' do
+    expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(true)
+    expect(described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado)).to be(true)
+    expect(conversa.messages.where(marcador).count).to eq(1)
+  end
+
   it 'com responsável na conversa vira nota privada, e a nota também conta para não repetir (R7)' do
     conversa.update!(assignee: atendente)
     2.times { described_class.postar(conversation: conversa, cotacao: cotacao, agent: contratado) }

@@ -41,6 +41,19 @@ class Autonomia::Agents::CotacaoDeViagem < ApplicationRecord
     where(conversation_id: conversation_id, autonomia_agent_id: agent_id).order(:id).last
   end
 
+  # A cotação de HOJE (no fuso da conta) deste agente na conversa com a mesma viagem de `pedido`, ou nil (#3223): a
+  # mesma viagem pedida de novo no dia não chama a seguradora nem manda outro PDF. A mais nova, se houver mais de uma.
+  def self.da_mesma_viagem(conversation_id, agent_id, pedido, fuso:)
+    where(conversation_id: conversation_id, autonomia_agent_id: agent_id, created_at: fuso.now.beginning_of_day..)
+      .order(id: :desc).find { |cotacao| viagem(cotacao.pedido) == viagem(pedido) }
+  end
+
+  # O que identifica a viagem: os destinos em ordem alfabética, a ida, a volta, as idades na ordem e o motivo.
+  def self.viagem(pedido)
+    dados = pedido.to_h
+    [dados['destinos'].to_a.sort, dados['data_saida'], dados['data_retorno'], dados['idades'].to_a, dados['motivo'].presence]
+  end
+
   def plano(codigo)
     planos.to_a.find { |plano| plano['codigo'] == codigo }
   end

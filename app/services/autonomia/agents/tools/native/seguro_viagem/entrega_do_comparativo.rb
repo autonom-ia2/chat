@@ -4,7 +4,8 @@
 #
 # UMA VEZ POR COTAÇÃO (R7): o marcador `autonomia_comparativo_viagem` (o id da cotação) vai no `content_attributes` da
 # PRÓPRIA mensagem do PDF, e a conferência é feita sob o lock da conversa, SEM filtrar `private`: o PDF pode ter saído
-# público ou como nota, e nos dois casos ele já conta.
+# público ou como nota, e nos dois casos ele já conta. A cotação repetida no dia (#3223) chama de novo: o PDF que já
+# está na conversa não sai outra vez, e a resposta diz que ele está lá.
 #
 # FALHA CONHECIDA NÃO LEVANTA: é entrega sobre uma conversa que já funciona. A falha que o desenho, o arquivo, a rede, o
 # Active Storage ou o banco podem dar (`FALHAS_DA_ENTREGA`) vira log com ids e classe, vai ao rastreador e devolve
@@ -23,7 +24,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
     ActiveStorage::Error, ActiveRecord::ActiveRecordError
   ].freeze
 
-  # -> true quando o PDF foi postado agora; false quando já existia ou falhou.
+  # -> true quando o PDF desta cotação está na conversa (já estava, ou foi postado agora); false quando falhou.
   def self.postar(conversation:, cotacao:, agent:)
     new(conversation: conversation, cotacao: cotacao, agent: agent).postar
   end
@@ -35,7 +36,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
   end
 
   def postar
-    return false if postado?
+    return true if postado?
 
     postou = false
     # O lock é numa cópia lida agora: a conversa do turno pode ter atributos alterados em memória, e o Rails recusa
@@ -74,7 +75,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo
 
   # O blob só nasce depois da conferência sob o lock: dois turnos juntos não deixam arquivo órfão.
   def criar_se_nova
-    return false if postado?
+    return true if postado?
 
     blob = gravar_blob
     begin
