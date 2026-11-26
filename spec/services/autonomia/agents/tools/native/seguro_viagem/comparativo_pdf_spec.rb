@@ -194,6 +194,37 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
     end
   end
 
+  describe 'destaques e anuais não pedidos (#3226)' do
+    let(:planos) do
+      [['P1', 'Especial UA 250K BRL', '540.0', 'R$ 250.000'], ['P2', 'Especial UA 30K BRL', '210.0', 'R$ 30.000'],
+       ['P3', 'Especial UA 100K BRL', '360.0', 'R$ 100.000'], ['P4', 'Especial UA 60K BRL', '285.0', 'R$ 60.000']]
+        .map do |codigo, nome, preco, valor|
+          { 'codigo' => codigo, 'nome' => nome, 'preco_total' => preco, 'max_parcelas' => 12, 'idade_minima' => 0,
+            'idade_maxima' => 65, 'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => preco }],
+            'coberturas' => [dmh.merge('valor' => valor)] }
+        end
+    end
+    let(:pdf) { described_class.new(cotacao: cotacao, nome_corretora: 'Corretora Exemplo') }
+
+    it 'o destaque que o modelo lê é o mesmo selo do PDF, plano a plano' do
+      nomes = Autonomia::Agents::Tools::Native::SeguroViagem::Destaques::NOMES
+      do_pdf = pdf.send(:planos).pluck('codigo').zip(pdf.send(:rotulos).map { |rotulo| nomes[rotulo] }).to_h.compact
+      resumo = Autonomia::Agents::Tools::Native::SeguroViagem::Planos.resumo(cotacao.planos, cotacao.pedido)
+      do_resumo = resumo.reject { |plano| plano['destaque'].nil? }.to_h { |plano| [plano['codigo'], plano['destaque']] }
+
+      expect(do_resumo).to eq(do_pdf)
+      expect(do_resumo.values).to contain_exactly('mais_economica', 'mais_recomendada', 'maior_cobertura')
+      expect(do_resumo['P2']).to eq('mais_economica')
+      expect(do_resumo['P1']).to eq('maior_cobertura')
+      recomendado = resumo.find { |plano| plano['destaque'] == 'mais_recomendada' }['nome']
+      expect(normalizar(leitor.pages[0].text)).to include('Opção mais recomendada para esta viagem', recomendado)
+    end
+
+    it 'cotação sem anuais, porque o cliente não pediu: o PDF não tem a seção dos anuais' do
+      expect(texto).not_to include('Se você viaja mais vezes no ano', 'Planos anuais')
+    end
+  end
+
   it 'não traz comissão, id de produto nem o código interno do plano' do
     expect(texto).not_to include('comissao', '99,9', '5382451', 'P1', 'P2')
   end

@@ -37,18 +37,26 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
   end
 
   # Os candidatos que aceitam a idade de todos os viajantes (`Faixas.dentro_do_limite?`), com o código "P1", "P2"...
-  # na ordem depois do filtro.
-  def para_idades(candidatos, idades)
-    candidatos.select { |plano| idades.all? { |idade| SeguroViagem::Faixas.dentro_do_limite?(plano, idade) } }
-              .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
+  # na ordem depois do filtro. Sem `incluir_anuais` (#3226), os anuais ficam de fora quando há plano de viagem única;
+  # só com anuais, eles ficam (a cotação não volta vazia por isso).
+  def para_idades(candidatos, idades, incluir_anuais: true)
+    aceitos = candidatos.select { |plano| idades.all? { |idade| SeguroViagem::Faixas.dentro_do_limite?(plano, idade) } }
+    aceitos = aceitos.reject { |plano| anual?(plano) }.presence || aceitos unless incluir_anuais
+    aceitos.each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
   end
 
-  # O que o modelo lê: o código, o nome, o preço em reais, o preço por dia e por pessoa (`PorDia`, nil no anual), as
-  # parcelas, as três coberturas principais e se o plano é anual (com os dias de cada viagem). O `pedido` é o da cotação
-  # guardada: as datas e as idades.
+  # Todos os planos são anuais (a seguradora não devolveu plano de viagem única para esta viagem).
+  def so_anuais?(planos)
+    planos.any? && planos.all? { |plano| anual?(plano) }
+  end
+
+  # O que o modelo lê: o código, o nome, o destaque (`Destaques`, o mesmo do PDF), o preço em reais, o preço por dia e
+  # por pessoa (`PorDia`, nil no anual), as parcelas, as três coberturas principais e se o plano é anual (com os dias de
+  # cada viagem). O `pedido` é o da cotação guardada: as datas e as idades.
   def resumo(planos, pedido)
+    destaques = SeguroViagem::Destaques.por_codigo(planos)
     planos.map do |plano|
-      { 'codigo' => plano['codigo'], 'nome' => plano['nome'],
+      { 'codigo' => plano['codigo'], 'nome' => plano['nome'], 'destaque' => destaques[plano['codigo']],
         'preco_total' => plano['preco_total'].nil? ? nil : SeguroViagem::Dinheiro.brl(plano['preco_total']),
         'por_dia_por_pessoa' => SeguroViagem::PorDia.por_pessoa(plano, pedido),
         'max_parcelas' => plano['max_parcelas'], 'principais' => plano['principais'], 'anual' => anual?(plano),

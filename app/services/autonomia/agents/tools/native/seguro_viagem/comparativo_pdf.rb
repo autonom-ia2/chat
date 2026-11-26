@@ -10,7 +10,8 @@
 # Os planos vão do mais barato ao mais caro (`Ordem`); os rótulos (mais econômica, mais recomendada, maior cobertura)
 # seguem a regra fixa de `Rotulos`.
 #
-# PLANOS ANUAIS (#3223): valem para todas as viagens do ano e não se comparam com o preço de uma viagem só. Com algum
+# PLANOS ANUAIS (#3223): valem para todas as viagens do ano e não se comparam com o preço de uma viagem só. Só entram
+# na cotação quando o cliente pediu (`incluir_anuais`, #3226); sem eles, o PDF não tem a seção. Com algum
 # plano de viagem única, a capa, os rótulos e a comparação com o mais barato olham só os de viagem única (`planos`), e
 # os anuais (`anuais`) vão na seção deles, sem rótulo. Só com anuais, eles são os `planos` e a capa os trata como hoje.
 #
@@ -54,9 +55,10 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
     @todos ||= Ordem.por_preco(@cotacao.planos.to_a)
   end
 
-  # Os planos que a capa e os rótulos olham: os de viagem única; sem nenhum, os anuais.
+  # Os planos que a capa e os rótulos olham: os de viagem única; sem nenhum, os anuais. A mesma escolha do resumo ao
+  # modelo (`Destaques`, #3226).
   def planos
-    @planos ||= todos.reject { |plano| SeguroViagem::Planos.anual?(plano) }.presence || todos
+    @planos ||= SeguroViagem::Destaques.comparaveis(todos)
   end
 
   # Os anuais que vão na seção própria, depois dos de viagem única (vazio quando eles já são os `planos`).
@@ -65,7 +67,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   end
 
   def rotulos
-    @rotulos ||= Rotulos.de(planos)
+    @rotulos ||= SeguroViagem::Destaques.rotulos(planos)
   end
 
   def pedido
