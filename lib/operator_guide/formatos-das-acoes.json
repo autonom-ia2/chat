@@ -3767,7 +3767,7 @@
         "tipo": "string"
       },
       "instruction": {
-        "max_caracteres": 50000,
+        "max_caracteres": 100000,
         "tipo": "string"
       },
       "mode": {
@@ -11449,7 +11449,7 @@
         "tipo": "string"
       },
       "instruction": {
-        "max_caracteres": 50000,
+        "max_caracteres": 100000,
         "tipo": "string"
       },
       "mode": {
@@ -24788,7 +24788,7 @@
         "tipo": "string"
       },
       "instruction": {
-        "max_caracteres": 50000,
+        "max_caracteres": 100000,
         "tipo": "string"
       },
       "mode": {
