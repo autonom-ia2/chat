@@ -41,9 +41,21 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
   FALHAS = [Autonomia::Seguradoras::Universal::Cliente::Erro, Arquivo::Indisponivel].freeze
   FINALIDADE = 'voucher_do_turno'.freeze
   HOST_DA_UNIVERSAL = 'universal-assistance.com'.freeze
+  # A chave da proposta com o turno que marcou o cartão do voucher por último (`marcar`).
+  MARCADO_NO_TURNO = 'voucher_marcado_no_turno'.freeze
 
   def self.cartao(cotacao)
     { 'tipo' => TIPO_DO_CARTAO, 'chave' => cotacao.id.to_s, 'rich_message' => nil }
+  end
+
+  # Marca o cartão do voucher no turno e grava na proposta QUAL turno o marcou (`MARCADO_NO_TURNO`, o `Delivery#turno`),
+  # sob o lock da cotação. É o que o aviso automático do pagamento (`Tools::EventoDaViagem`) confere, na hora de postar,
+  # para não mandar um segundo "confirmado" e um segundo PDF quando o turno do cliente já marcou o voucher e ele ainda
+  # não saiu (`voucher_enviado_em` só é gravado quando o PDF sai). O próprio turno do aviso grava a marca dele, e ela não
+  # o cala. Proposta nova (outro carrinho) substitui a guardada inteira: a marca vai junto.
+  def self.marcar(delivery, cotacao)
+    cotacao.with_lock { cotacao.update!(proposta: cotacao.proposta.to_h.merge(MARCADO_NO_TURNO => delivery.turno)) }
+    delivery.marcar_cartao(cartao(cotacao))
   end
 
   def self.cartao?(cartao)

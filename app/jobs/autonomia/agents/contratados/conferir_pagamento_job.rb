@@ -6,8 +6,8 @@
 #     commit enfileira o `pagamento_confirmado`. Se o `pago_em` ou o `voucher_enviado_em` já existem (a pessoa perguntou
 #     e a ferramenta já cuidou), para. Se enfileirar falha, as duas chaves saem: a próxima varredura tenta de novo.
 #   - "Cancelado": grava `situacao: cancelado`, sem evento. A varredura não confere mais.
-#   - "Aguardando": o LEMBRETE, uma vez (`lembrete_em`), entre 12 h e 23 h depois da proposta (o link vence em 24 h, e a
-#     proposta é reaproveitada até 23 h), com a hora da conta entre 8 h e 21 h, e só na proposta mais nova da conversa.
+#   - "Aguardando": o LEMBRETE, uma vez (`lembrete_em`), na hora certa (`SeguroViagem::HoraDoLembrete`: entre 12 h e
+#     23 h depois da proposta, com a hora da conta entre 8 h e 21 h, e só na proposta mais nova da conversa).
 #
 # AS PORTAS VÊM ANTES DA UNIVERSAL: a cotação existe e a proposta é a mesma da reserva; a conta está ligada; o agente
 # atende; a ferramenta `situacao_do_pagamento` está disponível para ele (a porta do contratado: modelo disponível na conta
@@ -21,10 +21,7 @@ class Autonomia::Agents::Contratados::ConferirPagamentoJob < ApplicationJob
 
   EventoDaViagem = ::Autonomia::Agents::Tools::EventoDaViagem
   Pagamento = ::Autonomia::Agents::Tools::Native::SeguroViagem::Pagamento
-  LEMBRETE_A_PARTIR_DE = 12.hours
-  LEMBRETE_ATE = 23.hours
-  # A hora local da conta em que o lembrete pode sair: das 8 h até antes das 21 h.
-  HORARIO_DO_LEMBRETE = (8...21)
+  HoraDoLembrete = ::Autonomia::Agents::Tools::Native::SeguroViagem::HoraDoLembrete
 
   def perform(cotacao_id, gerada_em_i)
     cotacao = ::Autonomia::Agents::CotacaoDeViagem.find_by(id: cotacao_id)
@@ -66,7 +63,7 @@ class Autonomia::Agents::Contratados::ConferirPagamentoJob < ApplicationJob
       end
     end
     anotar(cotacao.id, "conferido situacao=#{situacao} evento=#{tipo || '-'}")
-    enfileirar(cotacao, tipo, gerada_em_i, gravado.keys) if tipo
+    enfileirar(cotacao, tipo, gerada_em_i, gravado) if tipo
   end
 
   # -> [o que gravar na proposta, o tipo do evento ou nil].
@@ -87,36 +84,28 @@ class Autonomia::Agents::Contratados::ConferirPagamentoJob < ApplicationJob
   def lembrete?(cotacao, proposta)
     return false if proposta['lembrete_em'].present?
 
-    idade = Time.current - EventoDaViagem.gerada_em(proposta)
-    return false unless idade >= LEMBRETE_A_PARTIR_DE && idade < LEMBRETE_ATE
-    return false unless HORARIO_DO_LEMBRETE.cover?(Time.current.in_time_zone(fuso(cotacao)).hour)
-
-    mais_nova_com_proposta?(cotacao)
-  end
-
-  # A proposta mais nova da conversa (de qualquer agente): a mais velha não lembra de um link que a pessoa já trocou.
-  def mais_nova_com_proposta?(cotacao)
-    ::Autonomia::Agents::CotacaoDeViagem.where(conversation_id: cotacao.conversation_id)
-                                        .where("proposta->>'codigo_carrinho' IS NOT NULL").maximum(:id) == cotacao.id
+    HoraDoLembrete.motivo(cotacao, EventoDaViagem.gerada_em(proposta)).nil?
   end
 
   # Depois do commit. O que não entrou na fila (o adapter levantou ou recusou) desfaz as chaves desta decisão, sob o
   # lock, para a próxima varredura tentar de novo. O erro sobe (sem nova tentativa do Sidekiq, fica no log).
-  def enfileirar(cotacao, tipo, gerada_em_i, chaves)
+  def enfileirar(cotacao, tipo, gerada_em_i, gravado)
     enfileirado = false
     job = ::Autonomia::Agents::Operate::EventoDaViagemJob.perform_later(cotacao.id, tipo, gerada_em_i.to_i)
     enfileirado = job.respond_to?(:successfully_enqueued?) && job.successfully_enqueued?
   ensure
-    desfazer(cotacao, chaves) unless enfileirado
+    desfazer(cotacao, gravado) unless enfileirado
   end
 
-  def desfazer(cotacao, chaves)
-    cotacao.with_lock { cotacao.update!(proposta: cotacao.proposta.to_h.except(*chaves)) }
+  # Relendo sob o lock, só sai a chave que ainda tem o valor que ESTA execução gravou; com o voucher já enviado (a pessoa
+  # perguntou e a ferramenta mandou nesse meio-tempo), nada sai: o pagamento é fato, e a próxima varredura não o confere.
+  def desfazer(cotacao, gravado)
+    cotacao.with_lock do
+      proposta = cotacao.proposta.to_h
+      chaves = gravado.select { |chave, valor| proposta[chave] == valor }.keys
+      cotacao.update!(proposta: proposta.except(*chaves)) unless chaves.empty? || proposta['voucher_enviado_em'].present?
+    end
     anotar(cotacao.id, 'evento_nao_enfileirado')
-  end
-
-  def fuso(cotacao)
-    Crm::Timezone::Resolver.new(account: cotacao.account).zone_or_default
   end
 
   # Só ids, rótulos e códigos de lista fechada: nada do carrinho nem da resposta da Universal.

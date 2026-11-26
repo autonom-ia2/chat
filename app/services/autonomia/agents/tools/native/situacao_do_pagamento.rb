@@ -72,7 +72,7 @@ class Autonomia::Agents::Tools::Native::SituacaoDoPagamento < Autonomia::Agents:
     end
     return false if enviado
 
-    delivery.marcar_cartao(SeguroViagem::EntregaDoVoucher.cartao(cotacao))
+    SeguroViagem::EntregaDoVoucher.marcar(delivery, cotacao)
     true
   end
 

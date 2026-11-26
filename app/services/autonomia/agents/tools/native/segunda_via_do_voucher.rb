@@ -56,7 +56,7 @@ class Autonomia::Agents::Tools::Native::SegundaViaDoVoucher < Autonomia::Agents:
     return recusar('pagamento_cancelado', TEXTO_CANCELADO) if situacao == Pagamento::CANCELADO
     return recusar('pagamento_pendente', TEXTO_PENDENTE) unless situacao == Pagamento::PAGO
 
-    delivery.marcar_cartao(SeguroViagem::EntregaDoVoucher.cartao(cotacao))
+    SeguroViagem::EntregaDoVoucher.marcar(delivery, cotacao)
     JSON.generate({ voucher_vai_junto: true })
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
     Pagamento.falha(e, acao: self.class.slug, agent: agent, conversation: conversa)
