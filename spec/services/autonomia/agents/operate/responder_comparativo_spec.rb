@@ -191,7 +191,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       responde("Segue a cotação.\n\nNo PDF estão todas as coberturas.", [entrega.cartao(cotacao)])
       perform
       pedacos = pedacos_agendados
-      expect(pedacos.size).to be > 1
+      expect(pedacos.last['marca']['autonomia_cartoes'].sole).to include('tipo' => 'comparativo_viagem')
 
       entregar(pedacos)
       rodar_cartoes
