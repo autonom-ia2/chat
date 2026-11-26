@@ -383,10 +383,18 @@ module Autonomia
           max_rodadas: @max_rodadas,
           **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova) }.compact
         ) { |calls| execute_tool_calls(calls) }
-        parsed = JSON.parse(raw[:text])
-        parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
+        resposta_do_modelo(raw[:text])
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      # O texto do modelo como hash, ou nil se não for objeto JSON (ex.: "[]") -> handoff seguro, nunca 500.
+      # #3237: a busca na web põe `utm_source=openai` nos links; sai aqui, antes de a resposta ir a qualquer caminho.
+      def resposta_do_modelo(texto)
+        parsed = JSON.parse(texto)
+        return nil unless parsed.is_a?(Hash)
+
+        parsed.slice('reply').transform_values { |reply| LinkSemMarca.limpar(reply) }.then { |limpo| parsed.merge(limpo) }
       end
 
       # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.
