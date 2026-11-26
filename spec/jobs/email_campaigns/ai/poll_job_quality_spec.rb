@@ -18,7 +18,7 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
   end
 
   def completed(mjml)
-    { status: 'completed', model: 'gpt-6.1-sol', usage: { 'input_tokens' => 10, 'output_tokens' => 10 },
+    { status: 'completed', model: 'gpt-6.2-sol', usage: { 'input_tokens' => 10, 'output_tokens' => 10 },
       text: { subject: 'Oi', preheader: 'Prévia', subject_variants: %w[a b c], mjml: mjml }.to_json }
   end
 

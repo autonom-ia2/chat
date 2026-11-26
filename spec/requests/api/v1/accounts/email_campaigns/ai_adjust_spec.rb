@@ -49,7 +49,7 @@ RSpec.describe 'E-mail campaign AI adjustment (#1095)', :aggregate_failures, typ
 
     answer = { outcome: 'changed', reason: '', summary: 'Deixei o botão verde e tirei as perguntas.',
                blocks: [{ keep: '', mjml: adjust_hero(button_color: '#15803d') }] }
-    allow(client).to receive(:retrieve).and_return(status: 'completed', model: 'gpt-6.1-sol', text: answer.to_json, usage: {})
+    allow(client).to receive(:retrieve).and_return(status: 'completed', model: 'gpt-6.2-sol', text: answer.to_json, usage: {})
     EmailCampaigns::Ai::PollJob.perform_now(campaign.id, campaign.reload.ai_generation_token, 'resp_1', 0)
 
     body = status

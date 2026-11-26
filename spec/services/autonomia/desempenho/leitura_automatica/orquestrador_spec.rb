@@ -172,7 +172,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       corpo = corpos.first
       expect(corpo['instructions']).to eq("#{ficha.chave_de_leitura}#{Autonomia::Desempenho::LeituraAutomatica::Leitor::CONVERSA_E_DADO}")
-      expect(corpo).to include('model' => 'gpt-6.1-sol', 'store' => false, 'prompt_cache_key' => "painel_leitura:#{account.id}:#{ficha.id}",
+      expect(corpo).to include('model' => 'gpt-6.2-sol', 'store' => false, 'prompt_cache_key' => "painel_leitura:#{account.id}:#{ficha.id}",
                                'reasoning' => { 'effort' => 'high' })
       expect(corpo.dig('input', 0, 'content', 0, 'text')).to start_with("=== CONVERSA #{nova.display_id} |")
       expect(corpo.dig('text', 'format')).to include('type' => 'json_schema', 'strict' => true, 'name' => 'procuras')
@@ -201,7 +201,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
 
     it 'passou do teto diário: para como teto, sem chamada, e a conversa fica pendente' do
-      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.1-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
+      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.2-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
       openai_devolve({ 'procuras' => [procura] })
 
       rodada = rodar
@@ -211,7 +211,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
 
     it 'o teto é o menor entre as fichas da conta: uma ficha com teto alto não libera gasto para a outra' do
-      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.1-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
+      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.2-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
       ficha.update!(configuracao: ficha.configuracao.merge('leitura' => { 'teto_diario_usd' => 5 }))
       outro = create(:agent_bot, account: account)
       ficha_da_loja!(account, sujeito_id: outro.id).update!(chave_de_leitura: 'Leia.')
@@ -222,7 +222,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
 
     it 'o teto da ficha troca o padrão' do
-      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.1-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
+      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.2-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
       ficha.update!(configuracao: ficha.configuracao.merge('leitura' => { 'teto_diario_usd' => 5 }))
       openai_devolve({ 'procuras' => [procura] })
 

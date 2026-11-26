@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ResponsesClient do
   let(:account) { create(:account) }
   let(:url) { 'https://api.openai.com/v1/responses' }
-  let(:payload) { { output_text: 'ok', model: 'gpt-6.1-sol', output: [] }.to_json }
-  let(:params) { { model: 'gpt-6.1-sol', instructions: 'instruction', input: 'input' } }
+  let(:payload) { { output_text: 'ok', model: 'gpt-6.2-sol', output: [] }.to_json }
+  let(:params) { { model: 'gpt-6.2-sol', instructions: 'instruction', input: 'input' } }
 
   before do
     allow(Resolv).to receive(:getaddresses).with('api.openai.com').and_return(['104.18.1.1'])

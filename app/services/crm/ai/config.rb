@@ -19,8 +19,8 @@ module Crm
       MODEL_AUTO_MOVE = 'gpt-6-luna'.freeze
       MODEL_FOLLOWUP = 'gpt-6-luna'.freeze
       # E-mail builder copilot (multimodal generate). Full model — sees images/PDFs and writes MJML.
-      # gpt-6.1-sol: mesma tarifa do 6-sol, mas leitura de cache -50% (pricing OpenAI, 2026-09-30).
-      MODEL_EMAIL = 'gpt-6.1-sol'.freeze
+      # gpt-6.2-sol (#3242): mesma tarifa e mesmas capacidades do 6.1-sol, geração mais nova (2026-11-17).
+      MODEL_EMAIL = 'gpt-6.2-sol'.freeze
 
       # REASONING EFFORT por tarefa (modelos seguem o leve). Todas as features leves usam 'high':
       # corte de custo (xhigh/max faturam muito mais token de raciocínio) sem trocar de modelo.
