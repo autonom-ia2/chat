@@ -105,15 +105,21 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes
   end
 
   def telefone(valor)
-    digitos = valor.to_s.each_char.select { |caractere| caractere.between?('0', '9') }.join
-    digitos = digitos.delete_prefix(DDI_DO_BRASIL) if digitos.length > DIGITOS_DO_TELEFONE.max
-    DIGITOS_DO_TELEFONE.lazy.filter_map { |tamanho| Parametro.digitos(digitos, tamanho) }.first
+    numeros = digitos(valor)
+    numeros = numeros.delete_prefix(DDI_DO_BRASIL) if numeros.length > DIGITOS_DO_TELEFONE.max
+    DIGITOS_DO_TELEFONE.lazy.filter_map { |tamanho| Parametro.digitos(numeros, tamanho) }.first
   end
 
+  # Só quando o modelo não mandou número nenhum ("o WhatsApp desta conversa", vazio). Número com erro de digitação não
+  # é trocado: vira falta, e o agente pede o telefone ao cliente.
   def com_telefone_da_conversa(titular, telefone_da_conversa)
-    return titular if telefone(titular['telefone']) || telefone(telefone_da_conversa).nil?
+    return titular if digitos(titular['telefone']).present? || telefone(telefone_da_conversa).nil?
 
     titular.merge('telefone' => telefone_da_conversa)
+  end
+
+  def digitos(valor)
+    valor.to_s.each_char.select { |caractere| caractere.between?('0', '9') }.join
   end
 
   # Nome e sobrenome com os espaços normalizados.

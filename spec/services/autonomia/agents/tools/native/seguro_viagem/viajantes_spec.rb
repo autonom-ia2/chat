@@ -38,6 +38,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes do
     expect(falta.campo).to eq('titular.telefone')
   end
 
+  it 'DDD 55 (RS) não perde o 55, número com erro não é trocado pelo da conversa', :aggregate_failures do
+    expect(described_class.conferir(titular: titular.merge('telefone' => '55991234567'), demais: []).first.first['telefone'])
+      .to eq('55991234567')
+    expect(described_class.conferir(titular: titular.merge('telefone' => '+55 55 99123-4567'), demais: []).first.first['telefone'])
+      .to eq('55991234567')
+    _, falta = described_class.conferir(titular: titular.merge('telefone' => '987654321'), demais: [],
+                                        telefone_da_conversa: '+5511912345678')
+    expect(falta.campo).to eq('titular.telefone')
+  end
+
   it 'CPF com 10 dígitos é falta do CPF, sem levantar (R17)' do
     viajantes, falta = described_class.conferir(titular: titular.merge('cpf' => '5299822472'), demais: [])
     expect(viajantes).to be_nil
