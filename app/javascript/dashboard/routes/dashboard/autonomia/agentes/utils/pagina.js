@@ -123,7 +123,8 @@ export const MAX_ARQUIVO = 25 * 1024 * 1024;
 export const MAX_FONTES = 30;
 export const MAX_FOTO = 5 * 1024 * 1024;
 export const TIPOS_FOTO = ['image/png', 'image/jpeg'];
-export const MAX_INSTRUCAO = 50000;
+// Bate com Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH.
+export const MAX_INSTRUCAO = 100000;
 
 // Endereço de site digitado pela pessoa: aceita sem "https://", exige um domínio com ponto e nada
 // de espaço. Lido pelo URL do navegador, sem expressão regular.

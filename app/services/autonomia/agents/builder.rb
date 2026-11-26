@@ -25,7 +25,7 @@ module Autonomia
       # RecordInvalid — o dono perdia o ajuste em silêncio. Estes números são o ALVO pedido ao modelo;
       # a ENFORCEMENT (truncamento) usa o teto real de gravação, resolvido em write_limit_for.
       TONE_BUDGET_CHARS = 1_000
-      INSTRUCTION_BUDGET_CHARS = 50_000
+      INSTRUCTION_BUDGET_CHARS = 100_000
 
       # INTENÇÃO DE FECHAR é decisão do MODELO, não de lista de palavras (regra do Rodrigo, 20/09/2026).
       # O Construtor já lê o turno inteiro para responder; este campo só pede que ele DECLARE o que
