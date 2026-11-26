@@ -12,13 +12,16 @@ class Autonomia::Seguradoras::Universal::Cliente
   # um GET que estourou a leitura (Setup e destinos), dobrando a espera; os POST ele já não repete. As outras chamadas
   # rodam no turno do agente, em job.
   ABERTURA = 3
-  LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40 }.freeze
+  LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40, status_do_pagamento: 15, url_do_voucher: 15 }.freeze
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
   FALHAS_DE_REDE = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
                     Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::ETIMEDOUT, EOFError, IOError,
                     OpenSSL::SSL::SSLError, Net::HTTPBadResponse].freeze
+  # O voucher pedido pelo carrinho, em português, no formato que a Universal imprime (`b`) (#3246).
+  CONSULTA_DO_VOUCHER = 'tipoParametro=idCarrinho&tipoImpressao=b&idioma=portugues'.freeze
+  DIGITOS = ('0'..'9')
   # Separação de domínio do resumo do login (`emissor`): a chave do HMAC é derivada só para isto.
   DOMINIO_DO_EMISSOR = 'universal/emissor'.freeze
 
@@ -63,7 +66,29 @@ class Autonomia::Seguradoras::Universal::Cliente
     chamar(:comprar, Net::HTTP::Post, '/v1/Compras', pedido)
   end
 
+  # #3246: a situação do pagamento do carrinho (`statusPagamento`: "Pago", "Aguardando Pagamento", "" ou "Cancelado").
+  # Carrinho inexistente a Universal responde 500 (`indisponivel`).
+  def status_do_pagamento(carrinho)
+    chamar(:status_do_pagamento, Net::HTTP::Get, "/v1/StatusPagamento/#{carrinho!(carrinho)}")
+  end
+
+  # #3246: -> `{ "url" => <endereço do PDF do voucher> }`. O voucher que não existe volta 400 com texto puro
+  # (`pedido_invalido`, sem mensagem). A URL responde PDF só com o pagamento feito; antes, um JSON.
+  def url_do_voucher(carrinho)
+    chamar(:url_do_voucher, Net::HTTP::Get, "/v1/Voucher/imprimir/#{carrinho!(carrinho)}?#{CONSULTA_DO_VOUCHER}")
+  end
+
   private
+
+  # O carrinho vai no caminho: só um inteiro positivo, escrito só com dígitos. Outra coisa é recusada antes da chamada,
+  # como pedido inválido, sem mensagem.
+  def carrinho!(carrinho)
+    texto = carrinho.to_s
+    valido = !texto.empty? && texto.each_char.all? { |caractere| DIGITOS.cover?(caractere) } && texto.to_i.positive?
+    raise Erro, Autonomia::Seguradoras::Universal::Codigos::PEDIDO_INVALIDO unless valido
+
+    texto.to_i
+  end
 
   def chamar(nome, metodo, caminho, corpo = nil)
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)

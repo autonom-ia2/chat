@@ -91,6 +91,18 @@ RSpec.describe Autonomia::Agents::Tools::EntregaDeArquivo do
         expect(blob.metadata).to include('autonomia_tool_run_id' => 42, 'autonomia_finalidade' => 'entrega_de_arquivo')
       end
 
+      # #3246: o voucher do Seguro Viagem é baixado fora de uma execução. Sem execução, a marca leva só a finalidade de
+      # quem grava, e o blob fica fora da varredura dos blobs de execução (`blobs_sem_dono`).
+      it 'sem execução, grava o PDF com a finalidade de quem grava e sem o id de execução' do
+        stub_request(:get, url).to_return(status: 200, body: pdf, headers: cabecalho_pdf)
+
+        blob = entrega.gravar(run_id: nil, finalidade: 'voucher_do_turno')
+
+        expect(blob.download).to eq(pdf)
+        expect(blob.metadata).to include('autonomia_finalidade' => 'voucher_do_turno')
+        expect(blob.metadata).not_to have_key('autonomia_tool_run_id')
+      end
+
       # O blob do portal do AGGER responde `application/octet-stream`: o que decide é a assinatura
       # dos bytes, e o tipo declarado só precisa não desmentir.
       it 'aceita o tipo generico de bytes quando os bytes sao de PDF' do

@@ -228,6 +228,27 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
       expect(ActiveStorage::Blob.where(id: [curinga.id, aninhada.id, sem_execucao.id, execucao_nula.id, nao_json.id]).count).to eq(5)
     end
 
+    # #3246: o voucher do Seguro Viagem (CPF, endereço, nascimento) é gravado antes da mensagem e fora de uma execução.
+    # O varredor apaga o que tem a finalidade dele, está sem anexo e passou da idade; o recente, o anexado e o blob de
+    # execução seguem como antes (o de execução, pela regra dele, de uma hora).
+    it 'apaga o voucher sem mensagem, velho, pela finalidade dele, e só ele' do
+      voucher = Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher::FINALIDADE
+      marca_do_voucher = Autonomia::Agents::Tools::EntregaDeArquivo.marca(run_id: nil, finalidade: voucher)
+      sem_mensagem = blob(criado_ha: 40.minutes, metadata: marca_do_voucher)
+      recente = blob(criado_ha: 5.minutes, metadata: marca_do_voucher)
+      anexado = blob(criado_ha: 40.minutes, metadata: marca_do_voucher)
+      anexar(anexado)
+      aninhada = blob(criado_ha: 40.minutes, metadata: { 'origem' => marca_do_voucher })
+      de_execucao = blob(criado_ha: 40.minutes)
+
+      described_class.new.perform
+
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.once
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
+      expect(ActiveStorage::Blob.where(id: sem_mensagem.id)).not_to exist
+      expect(ActiveStorage::Blob.where(id: [recente.id, anexado.id, aninhada.id, de_execucao.id]).count).to eq(4)
+    end
+
     # A limpeza é cortesia (rodadas 4 e 5): o Redis fora no agendamento fica registrado, com o id do
     # blob, e não derruba o resto da varredura.
     it 'registra o blob que a fila nao aceitou, sem derrubar a varredura' do

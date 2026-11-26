@@ -36,6 +36,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   # A Universal cancela o link de pagamento 24 h depois da compra (e-mail "Pagamento pedido", 26/11). Uma hora de folga
   # para não devolver um link prestes a vencer; passado isso, a mesma proposta gera carrinho e link novos.
   VALIDADE_DO_LINK = 23.hours
+  # `{ "a": 1, "b": 2 }`: cada valor é uma palavra separada por espaço (`resposta`).
+  JSON_COM_ESPACO = { space: ' ', object_nl: ' ', array_nl: ' ' }.freeze
 
   VIAJANTE = [
     { 'name' => 'nome_completo', 'type' => 'string', 'required' => true, 'description' => 'Nome completo.' },
@@ -194,9 +196,12 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
       'link' => link, 'gerada_em' => Time.current.iso8601 }
   end
 
+  # O JSON SAI COM ESPAÇO depois de `:` e `,` (#3246): o botão de link só reconhece o endereço que é uma palavra
+  # separada por espaço (`Interacao::Enderecos.dos_textos`), e no JSON compacto o link grudava no campo seguinte.
   def resposta(plano, proposta)
     JSON.generate({ link_de_pagamento: proposta['link'], numero_do_carrinho: proposta['codigo_carrinho'],
-                    plano: plano['nome'], total: SeguroViagem::Dinheiro.brl(plano['preco_total']) })
+                    plano: plano['nome'], total: SeguroViagem::Dinheiro.brl(plano['preco_total']),
+                    **SeguroViagem::Cancelamento.prazos(plano, hoje: fuso.today) }, JSON_COM_ESPACO)
   end
 
   def guardada?(cotacao, chave)
