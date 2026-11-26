@@ -2248,6 +2248,8 @@ pt_BR:
           indisponivel: "O sistema da seguradora não respondeu e o agente não conseguiu concluir esta etapa. Assuma esta conversa ou tente de novo mais tarde."
           sem_link: "A seguradora aceitou a compra, mas não devolveu o link de pagamento. Pegue o link no portal da seguradora e envie ao cliente."
           voucher_nao_saiu: "O pagamento está confirmado, mas o agente não conseguiu pegar o voucher do seguro viagem na seguradora. Baixe o voucher no portal da seguradora e envie ao cliente."
+          anterior_em_aberto: "A proposta nova do seguro viagem NÃO saiu: o pagamento do carrinho anterior desta conversa ainda está em aberto na seguradora, e pode já ter sido pago. Confira no portal da seguradora."
+          anterior_cancelado_sem_nova: "O link de pagamento anterior desta conversa foi cancelado na seguradora, mas a proposta nova NÃO saiu. O cliente está sem link de pagamento válido agora. Confira no portal da seguradora."
           aviso_de_pagamento:
             pagamento_confirmado:
               cabecalho: "Pagamento do seguro viagem confirmado: %{fatos}"

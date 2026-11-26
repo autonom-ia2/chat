@@ -15,10 +15,13 @@
 # seguradora. Dado corrigido (outro e-mail, por exemplo) é outra chave e outra proposta.
 #
 # O CARRINHO ANTERIOR SAI ANTES DO NOVO (#3263). Proposta nova na cotação que já tem carrinho (dado corrigido, outro
-# plano, link vencido): sob o lock, antes da compra, o anterior não pago é cancelado na Universal, que recusa a compra
-# nova enquanto o voucher dele está "Ativo" (`SeguroViagem::CarrinhoAnterior`). Pago ainda não gravado, ou situação
-# ilegível: recusa `pagamento_do_anterior_em_aberto`, sem cancelar nem comprar. Erro ao ler ou ao cancelar: nada é
-# comprado, e o erro passa por `SeguroViagem::Falhas` como consulta sem dado do cliente.
+# plano, link vencido): sob o lock, antes da compra, o anterior é cancelado na Universal, que recusa a compra nova
+# enquanto o voucher dele está "Ativo" (`SeguroViagem::CarrinhoAnterior`). Só o `statusPagamento` vazio cancela;
+# "Cancelado" segue sem cancelar; qualquer outro valor recusa `pagamento_do_anterior_em_aberto`, com nota à equipe, sem
+# cancelar nem comprar. Erro ao ler ou ao cancelar: nada é comprado, e o erro passa por `SeguroViagem::Falhas` como
+# consulta sem dado do cliente. Cancelou e a compra nova falhou (erro ou sem link): a proposta anterior fica marcada
+# como cancelada, a equipe recebe nota e o modelo sabe que o link anterior morreu. Proposta marcada como cancelada não é
+# devolvida como guardada.
 #
 # SEGURO PAGO NÃO SE REFAZ (#3247). Cotação com `pago_em`, ou outra cotação da mesma viagem (destinos, datas e idades)
 # nesta conversa com `pago_em`, recusa `proposta_ja_paga` antes de qualquer chamada (`SeguroViagem::PropostaPaga`); a
@@ -201,7 +204,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
       proposta = guardada_ou_nova(cotacao, plano, pedido, chave) unless paga
     end
     return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if paga
-    return SeguroViagem::Falhas.sem_link(acao: self.class.slug, agent: agent, conversation: conversa) if proposta.nil?
+    return nao_saiu(cotacao) if proposta.nil?
 
     resposta(plano, proposta)
   rescue *ESPERA_DO_LOCK
@@ -211,7 +214,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   rescue *SeguroViagem::CarrinhoAnterior::NAO_SAIU => e
     SeguroViagem::CarrinhoAnterior.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   rescue Universal::Cliente::Erro => e
-    SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    nao_saiu(cotacao, e)
+  end
+
+  # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas. Se esta
+  # chamada cancelou o carrinho anterior (`@cancelado`), isso vai junto (#3263).
+  def nao_saiu(cotacao, erro = nil)
+    quem = { acao: self.class.slug, agent: agent, conversation: conversa }
+    texto = erro ? SeguroViagem::Falhas.tratar(erro, **quem) : SeguroViagem::Falhas.sem_link(**quem)
+    SeguroViagem::CarrinhoAnterior.compra_nao_saiu(cotacao, @cancelado, texto, conversation: conversa)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê
@@ -220,7 +231,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   def guardada_ou_nova(cotacao, plano, pedido, chave)
     return cotacao.proposta if guardada?(cotacao, chave)
 
-    SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
+    @cancelado = SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
     proposta = SeguroViagem::Compra.proposta(cliente.comprar(pedido), plano: plano, chave: chave)
     cotacao.update!(proposta: proposta) if proposta
     proposta
@@ -236,7 +247,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   def guardada?(cotacao, chave)
     proposta = cotacao.proposta.to_h
-    proposta['chave'] == chave && link_vigente?(proposta['gerada_em'])
+    proposta['chave'] == chave && proposta['situacao'] != SeguroViagem::Pagamento::CANCELADO && link_vigente?(proposta['gerada_em'])
   end
 
   def link_vigente?(gerada_em)
@@ -254,9 +265,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     params['codigo_do_plano'].to_s.strip.upcase
   end
 
-  def conversa
-    delivery.try(:conversation)
-  end
+  def conversa = delivery.try(:conversation)
 
   def acesso
     agent.acesso_da_seguradora

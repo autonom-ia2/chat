@@ -204,19 +204,22 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
   end
 
   # #3263: a Universal recusa a compra nova do mesmo viajante enquanto o voucher do carrinho anterior, mesmo não pago,
-  # está "Ativo". A proposta nova cancela o anterior antes de comprar; o pago (ainda sem `pago_em`) não se cancela.
+  # está "Ativo". A proposta nova cancela o anterior antes de comprar, e só quando o `statusPagamento` dele é vazio.
   describe 'carrinho anterior da cotação' do
     def status_do_anterior = "#{base}/v1/StatusPagamento/987654"
     def cancelamento = "#{base}/v1/Cancelamento/987654"
+    def compras = "#{base}/v1/Compras"
     def link_novo = 'https://pagamento.universal-assistance.com/?IdCarrinho=b3V0cm8tY2FycmluaG8='
     def corrigidos = params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))
     def anterior = Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     def falhas = Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
+    def notas = conversa.messages.where(private: true).pluck(:content)
+    def nota(caso) = I18n.t("autonomia.contratados.universal.notas.#{caso}")
 
     before do
       segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read)
                     .merge('codigoCarrinho' => 987_655, 'urlVoucher' => link_novo)
-      stub_request(:post, "#{base}/v1/Compras")
+      stub_request(:post, compras)
         .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
       ferramenta(params).call
     end
@@ -226,20 +229,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     end
 
     def sem_compra_nova
-      expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.once
+      expect(a_request(:post, compras)).to have_been_made.once
       expect(cotacao.reload.proposta['codigo_carrinho']).to eq(987_654)
     end
 
-    ['', 'Aguardando Pagamento'].each do |pagamento|
-      it "dado corrigido com o anterior não pago (#{pagamento.inspect}): cancela o anterior uma vez, compra e guarda o novo" do
-        anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => pagamento)
+    it 'dado corrigido com o anterior sem pagamento (statusPagamento vazio): cancela uma vez, compra e guarda o novo' do
+      anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => '')
 
-        expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
+      expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
 
-        expect(a_request(:put, cancelamento).with(body: '{}')).to have_been_made.once
-        expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
-        expect(cotacao.reload.proposta).to include('codigo_carrinho' => 987_655, 'link' => link_novo)
-      end
+      expect(a_request(:put, cancelamento).with(body: '{}')).to have_been_made.once
+      expect(a_request(:post, compras)).to have_been_made.twice
+      expect(cotacao.reload.proposta).to include('codigo_carrinho' => 987_655, 'link' => link_novo)
+      expect(cotacao.proposta).not_to include('situacao')
     end
 
     it 'anterior já cancelado: não chama o cancelamento e compra o novo' do
@@ -251,14 +253,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       expect(cotacao.reload.proposta['codigo_carrinho']).to eq(987_655)
     end
 
-    it 'anterior pago, com o pago_em ainda não gravado: nem cancela nem compra, recusa pagamento_do_anterior_em_aberto' do
-      anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => 'Pago', 'dataPagamento' => '2026-11-24T14:00:00')
-      expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('pagamento_do_anterior_em_aberto', anything)
+    # Cancelar é irreversível: só o vazio cancela. Pago ainda sem `pago_em`, em pagamento, valor novo ou ausente: recusa.
+    ['Pago', 'Aguardando Pagamento', 'Em Processamento', nil].each do |pagamento|
+      it "anterior com statusPagamento #{pagamento.inspect}: nem cancela nem compra, recusa com nota à equipe" do
+        anterior_responde('statusVoucher' => 'Ativo', 'statusPagamento' => pagamento, 'dataPagamento' => '2026-11-24T14:00:00')
+        expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('pagamento_do_anterior_em_aberto', anything)
 
-      expect(ferramenta(corrigidos).call).to eq(anterior::TEXTO_EM_ABERTO)
+        expect(ferramenta(corrigidos).call).to eq(anterior::TEXTO_EM_ABERTO)
 
-      expect(a_request(:put, cancelamento)).not_to have_been_made
-      sem_compra_nova
+        expect(a_request(:put, cancelamento)).not_to have_been_made
+        sem_compra_nova
+        expect(notas).to eq([nota('anterior_em_aberto')])
+      end
     end
 
     ['[]', '{}', '{"statusVoucher":"Ativo"}'].each do |corpo|
@@ -279,6 +285,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       expect(ferramenta(corrigidos).call).to eq(falhas::TEXTO_INDISPONIVEL)
 
       sem_compra_nova
+      expect(cotacao.proposta).not_to include('situacao')
     end
 
     it 'cancelamento recusado pela Universal (400): não compra, e não pede dado ao cliente' do
@@ -304,6 +311,68 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
 
       expect(a_request(:put, cancelamento)).not_to have_been_made
       sem_compra_nova
+    end
+
+    # Cancelou o anterior e a compra nova não saiu: o link anterior morreu. A cotação guarda isso (a varredura e o
+    # lembrete largam a proposta), a equipe recebe nota e o modelo sabe, antes do texto da falha.
+    describe 'cancelou o anterior e a compra nova não saiu' do
+      def anterior_marcado_cancelado
+        expect(a_request(:put, cancelamento)).to have_been_made.once
+        expect(a_request(:post, compras)).to have_been_made.twice
+        expect(notas).to include(nota('anterior_cancelado_sem_nova'))
+        cotacao_marcada
+      end
+
+      def cotacao_marcada
+        expect(cotacao.reload.proposta).to include('codigo_carrinho' => 987_654, 'situacao' => 'cancelado')
+        expect(Time.zone.iso8601(cotacao.proposta['cancelado_na_troca_em'])).to eq(Time.current)
+      end
+
+      {
+        'a seguradora recusa (400)' => { status: 400, body: { 'status' => 400, 'message' => 'Recusado' }.to_json },
+        'erro da seguradora (500)' => { status: 500, body: '' }
+      }.each do |caso, resposta|
+        it "#{caso}: texto da falha com o aviso do link anterior, nota e cotação marcada" do
+          stub_request(:post, compras).to_return(resposta)
+
+          texto = ferramenta(corrigidos).call
+
+          expect(texto).to start_with(anterior::TEXTO_CANCELADO_SEM_NOVA)
+          expect(texto).to include(resposta[:status] == 400 ? falhas::TEXTO_INVALIDO : falhas::TEXTO_INDISPONIVEL)
+          anterior_marcado_cancelado
+        end
+      end
+
+      it 'compra sem resposta (timeout): indisponível, com o aviso do link anterior' do
+        stub_request(:post, compras).to_timeout
+
+        expect(ferramenta(corrigidos).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_INDISPONIVEL}")
+
+        anterior_marcado_cancelado
+      end
+
+      it 'compra sem link: sem_link, com o aviso do link anterior' do
+        stub_request(:post, compras).to_return(status: 200, body: { codigoCarrinho: 987_655 }.to_json)
+
+        expect(ferramenta(corrigidos).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_SEM_LINK}")
+
+        anterior_marcado_cancelado
+        expect(notas).to include(nota('sem_link'))
+      end
+
+      it 'a nova tentativa, mesmo com o dado anterior, não devolve o link morto: compra de novo sem cancelar' do
+        stub_request(:post, compras).to_timeout
+        ferramenta(corrigidos).call
+        anterior_responde('statusVoucher' => 'Cancelado', 'statusPagamento' => 'Cancelado')
+        stub_request(:post, compras).to_return(status: 200, body: JSON.parse(file_fixture('../universal/compras_ok.json').read)
+                                                                     .merge('codigoCarrinho' => 987_656, 'urlVoucher' => link_novo).to_json)
+
+        expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+        expect(a_request(:put, cancelamento)).to have_been_made.once
+        expect(cotacao.reload.proposta).to include('codigo_carrinho' => 987_656)
+        expect(cotacao.proposta).not_to include('situacao')
+      end
     end
 
     it 'chamada idêntica: devolve a proposta guardada sem nenhuma chamada à Universal' do
