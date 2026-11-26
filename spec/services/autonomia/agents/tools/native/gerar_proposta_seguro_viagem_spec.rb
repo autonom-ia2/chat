@@ -244,13 +244,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       expect(cotacao.proposta).not_to include('situacao')
     end
 
-    it 'anterior já cancelado: não chama o cancelamento e compra o novo' do
-      anterior_responde('statusVoucher' => 'Cancelado', 'statusPagamento' => 'Cancelado')
+    %w[Cancelado CANCELADO].each do |cancelado|
+      it "anterior já cancelado (#{cancelado}): não chama o cancelamento e compra o novo" do
+        anterior_responde('statusVoucher' => 'Cancelado', 'statusPagamento' => cancelado)
 
-      expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
+        expect(JSON.parse(ferramenta(corrigidos).call)['link_de_pagamento']).to eq(link_novo)
 
-      expect(a_request(:put, cancelamento)).not_to have_been_made
-      expect(cotacao.reload.proposta['codigo_carrinho']).to eq(987_655)
+        expect(a_request(:put, cancelamento)).not_to have_been_made
+        expect(cotacao.reload.proposta['codigo_carrinho']).to eq(987_655)
+      end
     end
 
     # Cancelar é irreversível: só o vazio cancela. Pago ainda sem `pago_em`, em pagamento, valor novo ou ausente: recusa.
@@ -316,10 +318,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     # Cancelou o anterior e a compra nova não saiu: o link anterior morreu. A cotação guarda isso (a varredura e o
     # lembrete largam a proposta), a equipe recebe nota e o modelo sabe, antes do texto da falha.
     describe 'cancelou o anterior e a compra nova não saiu' do
-      def anterior_marcado_cancelado
+      def anterior_marcado_cancelado(aviso = nota('anterior_cancelado_sem_nova'))
         expect(a_request(:put, cancelamento)).to have_been_made.once
         expect(a_request(:post, compras)).to have_been_made.twice
-        expect(notas).to include(nota('anterior_cancelado_sem_nova'))
+        expect(notas).to include(aviso)
         cotacao_marcada
       end
 
@@ -351,13 +353,35 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
         anterior_marcado_cancelado
       end
 
-      it 'compra sem link: sem_link, com o aviso do link anterior' do
+      it 'compra sem link: sem_link, com o aviso do link anterior; a nota e a cotação citam o carrinho sem link' do
         stub_request(:post, compras).to_return(status: 200, body: { codigoCarrinho: 987_655 }.to_json)
 
         expect(ferramenta(corrigidos).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_SEM_LINK}")
 
-        anterior_marcado_cancelado
+        anterior_marcado_cancelado(I18n.t('autonomia.contratados.universal.notas.anterior_cancelado_sem_link', carrinho: 987_655))
         expect(notas).to include(nota('sem_link'))
+        expect(notas.join).to include('987655')
+        expect(cotacao.proposta['carrinho_sem_link']).to eq(987_655)
+      end
+
+      [ActiveRecord::LockWaitTimeout, ActiveRecord::QueryCanceled].each do |estouro|
+        it "espera do lock estourada ao marcar (#{estouro.name.demodulize}): nota e texto saem, nada levanta" do
+          allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_return(cotacao)
+          travas = 0
+          allow(cotacao).to receive(:lock!).and_wrap_original do |original, *argumentos|
+            travas += 1
+            raise estouro if travas == 2
+
+            original.call(*argumentos)
+          end
+          stub_request(:post, compras).to_timeout
+
+          expect(ferramenta(corrigidos).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_INDISPONIVEL}")
+
+          expect(travas).to eq(2)
+          expect(notas).to include(nota('anterior_cancelado_sem_nova'))
+          expect(cotacao.reload.proposta).not_to include('situacao')
+        end
       end
 
       it 'a nova tentativa, mesmo com o dado anterior, não devolve o link morto: compra de novo sem cancelar' do
@@ -371,7 +395,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
 
         expect(a_request(:put, cancelamento)).to have_been_made.once
         expect(cotacao.reload.proposta).to include('codigo_carrinho' => 987_656)
-        expect(cotacao.proposta).not_to include('situacao')
+        expect(cotacao.proposta).not_to include('situacao', 'carrinho_sem_link')
       end
     end
 

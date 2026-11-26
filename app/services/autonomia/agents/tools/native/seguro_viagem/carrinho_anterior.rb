@@ -9,7 +9,7 @@
 # irreversível, e só o vazio é o carrinho que ninguém começou a pagar.
 #   - `""` (checkout aberto, sem forma de pagamento escolhida): cancela (`Universal::Cliente#cancelar`). Só a resposta
 #     com `sucesso: true` libera a compra nova;
-#   - `"Cancelado"`: nada a fazer, a compra nova segue;
+#   - `"Cancelado"` (sem diferença de maiúscula): nada a fazer, a compra nova segue;
 #   - qualquer outro valor ("Pago" ainda sem `pago_em`, "Aguardando Pagamento", um valor novo, a chave ausente, o corpo
 #     que não é objeto): nem cancela nem compra (`EmAberto`).
 # O erro da Universal na leitura ou no cancelamento, e o cancelamento sem `sucesso: true`, também param a compra
@@ -20,10 +20,12 @@
 # dado do cliente (o pedido inválido vira indisponível, como em `situacao_do_pagamento`). Nos dois, nada foi comprado.
 #
 # CANCELOU E A COMPRA NOVA NÃO SAIU (`compra_nao_saiu`): erro da Universal na compra, ou compra sem link. O cancelamento
-# não volta atrás, e o link anterior morreu. Fora do lock da compra (a transação dela pode ter sido desfeita), a cotação
-# guarda `situacao: cancelado` e `cancelado_na_troca_em` na proposta anterior: a varredura não a confere mais, o
-# lembrete se cala e a ferramenta não a devolve como guardada. A equipe recebe uma nota e o modelo sabe que o link
-# anterior não vale mais, antes do texto da falha.
+# não volta atrás, e o link anterior morreu. A equipe recebe uma nota primeiro (`NotaNaHora` nunca levanta); na compra
+# sem link, a nota cita o carrinho novo que ficou sem link. Depois, fora do lock da compra (a transação dela pode ter
+# sido desfeita), a cotação guarda na proposta anterior `situacao: cancelado`, `cancelado_na_troca_em` e, sem link,
+# `carrinho_sem_link`: a varredura não a confere mais, o lembrete se cala e a ferramenta não a devolve como guardada. A
+# espera pelo lock estourada nessa gravação só vai ao log: quem tem o lock relê "Cancelado" e grava outra proposta. O
+# modelo sabe que o link anterior não vale mais, antes do texto da falha.
 #
 # Roda sob o lock da cotação, como a compra. Sem a falha acima, não grava nada: a proposta nova sobrescreve a anterior,
 # como sempre, e a conferência automática do pagamento larga o carrinho anterior (`proposta_trocada`). Log e nota só
@@ -67,11 +69,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     carrinho = Pagamento.carrinho(cotacao)
     return if carrinho.blank?
 
-    case pagamento_do(cliente.status_do_pagamento(carrinho))
-    when CANCELADO_NA_UNIVERSAL then nil
-    when SEM_PAGAMENTO then cancelar!(cotacao, cliente, carrinho)
-    else raise EmAberto
-    end
+    pagamento = pagamento_do(cliente.status_do_pagamento(carrinho))
+    return if pagamento.is_a?(String) && pagamento.casecmp?(CANCELADO_NA_UNIVERSAL)
+    raise EmAberto unless pagamento == SEM_PAGAMENTO
+
+    cancelar!(cotacao, cliente, carrinho)
   rescue Erro => e
     raise NaoLiberado, e
   end
@@ -87,13 +89,15 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     TEXTO_EM_ABERTO
   end
 
-  # A compra nova não saiu (`texto` é o que as falhas já devolveram). Sem carrinho cancelado nesta chamada, o texto como
-  # veio. Com ele: marca a proposta anterior como cancelada, avisa a equipe e diz ao modelo que o link anterior morreu.
-  def compra_nao_saiu(cotacao, carrinho, texto, conversation:)
+  # A compra nova não saiu (`texto` é o que as falhas já devolveram; `compra`, a resposta da compra sem link, ou nil no
+  # erro). Sem carrinho cancelado nesta chamada, o texto como veio. Com ele: avisa a equipe, marca a proposta anterior
+  # como cancelada e diz ao modelo que o link anterior morreu.
+  def compra_nao_saiu(cotacao, carrinho, texto, conversation:, compra: nil)
     return texto if carrinho.nil?
 
-    marcar_cancelado(cotacao, carrinho)
-    nota(conversation, 'anterior_cancelado_sem_nova')
+    sem_link = compra.is_a?(Hash) ? compra['codigoCarrinho'].presence : nil
+    nota_do_cancelado(conversation, sem_link)
+    marcar_cancelado(cotacao, carrinho, sem_link)
     "#{TEXTO_CANCELADO_SEM_NOVA} #{texto}"
   end
 
@@ -110,15 +114,28 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     carrinho
   end
 
-  # Relendo sob o lock: só marca a proposta que ainda é a do carrinho cancelado.
-  def marcar_cancelado(cotacao, carrinho)
+  # Relendo sob o lock: só marca a proposta que ainda é a do carrinho cancelado. A espera pelo lock estourada (a mesma
+  # lista da ferramenta) vai ao log e segue: o texto ao modelo e a nota já valem sem a marca.
+  def marcar_cancelado(cotacao, carrinho, sem_link)
     cotacao.with_lock do
       proposta = cotacao.proposta.to_h
       if proposta['codigo_carrinho'] == carrinho
-        cotacao.update!(proposta: proposta.merge('situacao' => Pagamento::CANCELADO,
-                                                 'cancelado_na_troca_em' => Time.current.iso8601))
+        marca = { 'situacao' => Pagamento::CANCELADO, 'cancelado_na_troca_em' => Time.current.iso8601 }
+        cotacao.update!(proposta: proposta.merge(marca, sem_link ? { 'carrinho_sem_link' => sem_link } : {}))
       end
     end
+  rescue *Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem::ESPERA_DO_LOCK
+    Rails.logger.warn("[autonomia][seguro_viagem] carrinho_anterior_sem_marca cotacao=#{cotacao.id}")
+  end
+
+  # Na compra sem link, a nota cita o carrinho novo que ficou sem link (número da Universal, não é dado pessoal).
+  def nota_do_cancelado(conversation, sem_link)
+    texto = if sem_link
+              I18n.t("#{Falhas::NOTAS}.anterior_cancelado_sem_link", carrinho: sem_link)
+            else
+              I18n.t("#{Falhas::NOTAS}.anterior_cancelado_sem_nova")
+            end
+    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:anterior_cancelado_sem_nova:#{conversation&.id}")
   end
 
   # Uma nota por conversa e caso, como as das falhas.
@@ -127,5 +144,5 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
                                             chave: "universal:#{caso}:#{conversation&.id}")
   end
 
-  private_class_method :pagamento_do, :cancelar!, :marcar_cancelado, :nota
+  private_class_method :pagamento_do, :cancelar!, :marcar_cancelado, :nota_do_cancelado, :nota
 end

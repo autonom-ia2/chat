@@ -218,11 +218,12 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   end
 
   # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas. Se esta
-  # chamada cancelou o carrinho anterior (`@cancelado`), isso vai junto (#3263).
+  # chamada cancelou o carrinho anterior (`@cancelado`), isso vai junto, com a resposta da compra sem link (`@compra`,
+  # nil no erro) (#3263).
   def nao_saiu(cotacao, erro = nil)
     quem = { acao: self.class.slug, agent: agent, conversation: conversa }
     texto = erro ? SeguroViagem::Falhas.tratar(erro, **quem) : SeguroViagem::Falhas.sem_link(**quem)
-    SeguroViagem::CarrinhoAnterior.compra_nao_saiu(cotacao, @cancelado, texto, conversation: conversa)
+    SeguroViagem::CarrinhoAnterior.compra_nao_saiu(cotacao, @cancelado, texto, conversation: conversa, compra: @compra)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê
@@ -232,7 +233,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     return cotacao.proposta if guardada?(cotacao, chave)
 
     @cancelado = SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
-    proposta = SeguroViagem::Compra.proposta(cliente.comprar(pedido), plano: plano, chave: chave)
+    proposta = SeguroViagem::Compra.proposta(@compra = cliente.comprar(pedido), plano: plano, chave: chave)
     cotacao.update!(proposta: proposta) if proposta
     proposta
   end
