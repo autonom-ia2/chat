@@ -116,6 +116,12 @@ class Autonomia::Agents::Tools::EventoDaViagem
     mensagem(conversa).present?
   end
 
+  # A `ancora` grava o cartão do voucher desta cotação (`CartoesDoTurno.da_ancora`)?
+  def voucher_na_ancora?(ancora)
+    ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora)
+                                                .any? { |cartao| VOUCHER.cartao?(cartao) && cartao['chave'].to_s == cotacao.id.to_s }
+  end
+
   # O que o modelo recebe no lugar da mensagem do cliente.
   def nota_do_sistema
     [
@@ -158,8 +164,7 @@ class Autonomia::Agents::Tools::EventoDaViagem
     ancora = ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(conversation, mensagem_id)
     return false unless ancora_a_enviar?(ancora)
 
-    ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora)
-                                                .any? { |cartao| VOUCHER.cartao?(cartao) && cartao['chave'].to_s == cotacao.id.to_s }
+    voucher_na_ancora?(ancora)
   end
 
   # Pública e sem a desistência gravada (`CartoesDoTurno#encerrar!`): a âncora encerrada não manda mais o cartão.
