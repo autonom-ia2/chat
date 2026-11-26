@@ -59,6 +59,13 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
       .to be <= Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH
   end
 
+  it 'anual entra na cotação, banco de dias vai para a equipe e o nome do país vai na chamada (#3223)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('Não cota multiviagens', 'multiviagens, plano anual')
+    expect(texto).to include('Não cota "banco de dias"', '`nomes_dos_destinos`', '`ja_cotada: true`',
+                             'Se você viaja mais vezes no ano:', 'nunca do folheto nem de memória')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end
