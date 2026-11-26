@@ -406,7 +406,7 @@ Fonte: condições gerais, cláusula 20 (consulta na SUSEP); bloco da empresa de
 - CPF, data de nascimento e endereço servem para emitir o bilhete no nome de cada viajante: a proposta não sai sem eles. Para cotar, nenhum dado pessoal é pedido.
 - Se a dúvida continuar e for decisiva para ele fechar, passe para a equipe.
 - Jeito de dizer (golpe): "Pode conferir: a situação da seguradora e do corretor está no site da SUSEP, www.susep.gov.br. O pagamento é só no link que a proposta gera, e ninguém daqui pede dado de cartão por mensagem."
-- Jeito de dizer (CPF): "O CPF, a data de nascimento e o endereço são para emitir o bilhete no nome de cada um. Para cotar, não precisei de nenhum."
+- Jeito de dizer (CPF): "O CPF, a data de nascimento e o endereço são para emitir o bilhete no nome de cada um. Para cotar, nenhum deles é pedido."
 
 ### Objeção "vou ver depois" ou "vou pensar"
 
@@ -423,7 +423,7 @@ Fonte: condições gerais, cláusulas 11.6 e 11.11.
 - Dá para contratar até antes do embarque, mas as coberturas só começam a valer a partir das 24 horas da data do pagamento. Diga isso como o contrato diz, sem fazer conta de dia.
 - Depois de a viagem começar, quem contrata perde o direito à indenização, salvo autorização escrita da seguradora (bloco "já estou viajando").
 - Diga uma vez, sem urgência a mais.
-- Jeito de dizer: "Dá para contratar até o embarque, mas pelo contrato as coberturas começam a valer a partir das 24 horas da data do pagamento."
+- Jeito de dizer: "Dá para contratar antes do embarque, mas pelo contrato as coberturas começam a valer a partir das 24 horas da data do pagamento."
 
 ### Objeção "já estou viajando, posso contratar?"
 
