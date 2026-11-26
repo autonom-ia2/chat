@@ -180,15 +180,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     proposta
   end
 
-  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link, o valor que a seguradora devolveu e a
-  # hora. Compra sem `codigoCarrinho` (sem link): nil.
+  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link e a hora. Compra sem `urlVoucher` de
+  # pagamento válido (sem link): nil. O `valorBrutoBrl` da resposta volta 0 (#3244) e não é guardado.
   def proposta_da(compra, plano, chave)
     dados = compra.is_a?(Hash) ? compra : {}
-    link = SeguroViagem::Compra.link(dados['codigoCarrinho'])
+    link = SeguroViagem::Compra.link(dados['urlVoucher'])
     return nil if link.nil?
 
     { 'chave' => chave, 'codigo_do_plano' => plano['codigo'], 'codigo_carrinho' => dados['codigoCarrinho'],
-      'link' => link, 'valor_bruto_brl' => dados['valorBrutoBrl'], 'gerada_em' => Time.current.iso8601 }
+      'link' => link, 'gerada_em' => Time.current.iso8601 }
   end
 
   def resposta(plano, proposta)

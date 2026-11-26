@@ -10,7 +10,9 @@
 module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
   Faixas = Autonomia::Agents::Tools::Native::SeguroViagem::Faixas
 
-  FORMA_DE_PAGAMENTO_LINK = 8
+  # 7 é o "Link" do portal da Universal: abre o checkout, onde o cliente escolhe cartão de crédito (com parcelas) ou Pix.
+  # A 8 gera um Pix na hora, sem escolha (#3244, compra real de 26/11).
+  FORMA_DE_PAGAMENTO_LINK = 7
   TIPO_VIAGEM_UNICA = 1
   TIPO_DOCUMENTO_CPF = 1
   CODIGO_DO_TITULAR = 1
@@ -42,12 +44,14 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
     valor if valor&.finite? && valor.positive?
   end
 
-  # O link de pagamento do carrinho. Sem código: nil.
-  def link(codigo_carrinho)
-    codigo = codigo_carrinho.to_s.strip
-    return nil if codigo.empty?
-
-    URI::HTTPS.build(host: HOST_DO_PAGAMENTO, path: '/', query: URI.encode_www_form('IdCarrinho' => codigo)).to_s
+  # O link de pagamento é o `urlVoucher` que a compra devolve, com o número do carrinho cifrado. Montar o link com o
+  # `codigoCarrinho` cru abre "Carrinho não encontrado" (#3244). Só vale `https` no host de pagamento da Universal, com
+  # o carrinho na query; qualquer outra coisa: nil.
+  def link(url_voucher)
+    uri = URI.parse(url_voucher.to_s.strip)
+    uri.to_s if uri.is_a?(URI::HTTPS) && uri.host == HOST_DO_PAGAMENTO && uri.query.present?
+  rescue URI::InvalidURIError
+    nil
   end
 
   def basicos(cotacao, plano, contato)
