@@ -86,6 +86,14 @@ RSpec.describe Autonomia::Agents::CotacaoDeViagem do
         expect(mesma(viagem)).to eq(nova)
       end
     end
+
+    it 'só a última da conversa: A, B e de novo A não devolve a 1ª A (a proposta lê a última)' do
+      travel_to(Time.utc(2026, 11, 26, 12, 0)) do
+        criar_cotacao(pedido: viagem)
+        criar_cotacao(pedido: viagem.merge('idades' => [40]))
+        expect(mesma(viagem)).to be_nil
+      end
+    end
   end
 
   it 'idades vêm dos nossos parâmetros, não do pedido da Universal' do

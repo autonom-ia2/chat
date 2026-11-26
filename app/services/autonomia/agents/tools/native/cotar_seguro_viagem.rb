@@ -17,6 +17,8 @@
 class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::Tools::Native::Base
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   Universal = Autonomia::Seguradoras::Universal
+  # O nome de um país que o modelo escreve: mais que isso não é nome de país, e o selo da capa não comporta.
+  TETO_DO_NOME_DO_PAIS = 60
 
   class << self
     include SeguroViagem::PortaDoContratado
@@ -126,13 +128,17 @@ class Autonomia::Agents::Tools::Native::CotarSeguroViagem < Autonomia::Agents::T
       'data_retorno' => pedido_da_universal['dataRetorno'], 'idades' => idades, 'motivo' => params['motivo'].presence }
   end
 
-  # O nome de cada país como o cliente lê, escrito pelo modelo no idioma da conversa. Sem ele, com outro tamanho ou com
-  # algum nome em branco, o nome da Universal (ou a sigla, com a lista de países fora).
+  # O nome de cada país como o cliente lê, escrito pelo modelo no idioma da conversa. Sem ele, com outro tamanho, ou
+  # com algum nome em branco ou acima de `TETO_DO_NOME_DO_PAIS`, o nome da Universal (ou a sigla, com a lista de países
+  # fora).
   def nomes_dos_destinos(destinos)
     nomes = params['nomes_dos_destinos']
-    validos = nomes.is_a?(Array) && nomes.size == destinos.size &&
-              nomes.all? { |nome| nome.is_a?(String) && nome.strip.present? }
+    validos = nomes.is_a?(Array) && nomes.size == destinos.size && nomes.all? { |nome| nome_do_pais?(nome) }
     validos ? nomes.map(&:strip) : Universal::Destinos.nomes_em(destinos, paises)
+  end
+
+  def nome_do_pais?(nome)
+    nome.is_a?(String) && nome.strip.present? && nome.strip.length <= TETO_DO_NOME_DO_PAIS
   end
 
   def conversa

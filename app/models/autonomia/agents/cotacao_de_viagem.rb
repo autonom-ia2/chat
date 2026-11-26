@@ -41,11 +41,15 @@ class Autonomia::Agents::CotacaoDeViagem < ApplicationRecord
     where(conversation_id: conversation_id, autonomia_agent_id: agent_id).order(:id).last
   end
 
-  # A cotação de HOJE (no fuso da conta) deste agente na conversa com a mesma viagem de `pedido`, ou nil (#3223): a
-  # mesma viagem pedida de novo no dia não chama a seguradora nem manda outro PDF. A mais nova, se houver mais de uma.
+  # A ÚLTIMA cotação deste agente na conversa, quando é de HOJE (no fuso da conta) e da mesma viagem de `pedido`; senão
+  # nil (#3223): a mesma viagem pedida de novo no dia não chama a seguradora nem manda outro PDF. Só a última, porque a
+  # proposta e os detalhes leem a última (`ultima_da_conversa`): numa sequência A, B, A, devolver a 1ª A deixaria a
+  # proposta sair da B.
   def self.da_mesma_viagem(conversation_id, agent_id, pedido, fuso:)
-    where(conversation_id: conversation_id, autonomia_agent_id: agent_id, created_at: fuso.now.beginning_of_day..)
-      .order(id: :desc).find { |cotacao| viagem(cotacao.pedido) == viagem(pedido) }
+    ultima = ultima_da_conversa(conversation_id, agent_id)
+    return nil if ultima.nil? || !ultima.do_dia?(fuso) || viagem(ultima.pedido) != viagem(pedido)
+
+    ultima
   end
 
   # O que identifica a viagem: os destinos em ordem alfabética, a ida, a volta, as idades na ordem e o motivo.

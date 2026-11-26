@@ -114,11 +114,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       expect(cotacoes.count).to eq(2)
     end
 
-    it 'no dia seguinte, no fuso da conta: cota de novo' do
+    it 'no dia seguinte no fuso da conta, mesmo que no UTC seja o mesmo dia: cota de novo' do
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      travel_to Time.utc(2026, 11, 25, 2, 0, 0) # 24/11 23h em São Paulo
       ferramenta(params).call
-      travel_to Time.utc(2026, 11, 25, 15, 0, 0)
+      travel_to Time.utc(2026, 11, 25, 4, 0, 0) # 25/11 1h em São Paulo
       expect(JSON.parse(ferramenta(params).call)['ja_cotada']).to be(false)
       expect(cotacoes.count).to eq(2)
+    end
+
+    it 'A, B e de novo A: cota a 3ª, e a proposta lê a viagem certa' do
+      viagem_a = params
+      viagem_b = params.merge('idades' => [46])
+      [viagem_a, viagem_b, viagem_a].each { |argumentos| ferramenta(argumentos).call }
+
+      expect(a_request(:post, "#{base}/v1/Cotacao")).to have_been_made.times(3)
+      ultima = cotacoes.ultima_da_conversa(conversa.id, contratado.id)
+      expect(ultima).to eq(cotacoes.order(:id).last)
+      expect(ultima.idades).to eq([45])
     end
 
     it 'a cotação de outro agente na mesma conversa não vale' do
@@ -150,6 +163,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       expect(nomes_guardados('destinos' => ['fr'])).to eq(['FRANCA'])
       expect(nomes_guardados('destinos' => ['fr'], 'idades' => [46], 'nomes_dos_destinos' => %w[França Itália])).to eq(['FRANCA'])
       expect(nomes_guardados('destinos' => ['fr'], 'idades' => [47], 'nomes_dos_destinos' => [' '])).to eq(['FRANCA'])
+    end
+
+    it 'nome acima do teto: o nome da Universal; no teto, o do modelo' do
+      teto = described_class::TETO_DO_NOME_DO_PAIS
+      expect(nomes_guardados('destinos' => ['fr'], 'nomes_dos_destinos' => ['F' * (teto + 1)])).to eq(['FRANCA'])
+      expect(nomes_guardados('destinos' => ['fr'], 'idades' => [46], 'nomes_dos_destinos' => ['F' * teto])).to eq(['F' * teto])
     end
   end
 
