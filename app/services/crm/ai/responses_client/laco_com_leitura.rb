@@ -27,16 +27,20 @@ module Crm::Ai::ResponsesClient::LacoComLeitura
 
   # Os mesmos argumentos e padrões do laço de sempre (`ResponsesClient#laco_de_ferramentas`), mais a leitura.
   OBRIGATORIOS = %i[model instructions schema leitura].freeze
-  PADROES = { reasoning_effort: 'low', tools: nil, timeout: Crm::Ai::ResponsesClient::REQUEST_TIMEOUT,
-              max_segundos: Crm::Ai::ResponsesClient::MAX_SEGUNDOS_DE_FERRAMENTA }.freeze
 
   def novo_laco(input:, max_rodadas: 1, **pedido)
     faltam = OBRIGATORIOS - pedido.keys
     raise ArgumentError, "missing keywords: #{faltam.join(', ')}" if faltam.any?
 
-    Laco.new(**PADROES, **pedido, conversa: normalize_input(input), usadas: [],
-                                  restantes: max_rodadas.to_i.clamp(1, Crm::Ai::ResponsesClient::MAX_RODADAS_DE_FERRAMENTA),
-                                  comeco: Process.clock_gettime(Process::CLOCK_MONOTONIC))
+    Laco.new(**padroes_do_laco, **pedido, conversa: normalize_input(input), usadas: [],
+                                          restantes: max_rodadas.to_i.clamp(1, Crm::Ai::ResponsesClient::MAX_RODADAS_DE_FERRAMENTA),
+                                          comeco: Process.clock_gettime(Process::CLOCK_MONOTONIC))
+  end
+
+  # Lidos na chamada, não na carga: o módulo é incluído no topo da classe, antes de ela definir as constantes.
+  def padroes_do_laco
+    { reasoning_effort: 'low', tools: nil, timeout: Crm::Ai::ResponsesClient::REQUEST_TIMEOUT,
+      max_segundos: Crm::Ai::ResponsesClient::MAX_SEGUNDOS_DE_FERRAMENTA }
   end
 
   def laco_com_leitura(laco, &)
