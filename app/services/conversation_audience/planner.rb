@@ -6,7 +6,7 @@
 # The instructions are the ones measured in the quality eval (27/10/2026, account 3, Opus 5.5 as control). They are
 # concepts, valid for any business: the rule was the lever, not the reader model nor the batch size.
 class ConversationAudience::Planner
-  MODEL = 'gpt-6.1-sol'.freeze
+  MODEL = 'gpt-6.2-sol'.freeze
   EFFORT = 'medium'.freeze
   FEATURE = 'campaign_conversation_audience_plan'.freeze
   SAMPLE = 12

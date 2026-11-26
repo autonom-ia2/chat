@@ -63,7 +63,7 @@ RSpec.describe Captain::Onboarding::WebsiteAnalyzerService do
 
       context 'when a model without temperature support is configured' do
         before do
-          InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_MODEL').update!(value: 'gpt-6.1-sol')
+          InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_MODEL').update!(value: 'gpt-6.2-sol')
         end
 
         it 'omits temperature' do
