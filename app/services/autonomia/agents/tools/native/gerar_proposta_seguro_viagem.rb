@@ -14,6 +14,10 @@
 # e cai no mesmo caso; se a espera passar do tempo do banco, ela recusa (`proposta_em_andamento`) sem chamar a
 # seguradora. Dado corrigido (outro e-mail, por exemplo) é outra chave e outra proposta.
 #
+# SEGURO PAGO NÃO SE REFAZ (#3247). Cotação com `pago_em`, ou outra cotação da mesma viagem (destinos, datas e idades)
+# nesta conversa com `pago_em`, recusa `proposta_ja_paga` antes de qualquer chamada (`SeguroViagem::PropostaPaga`); a
+# conferência se repete sob o lock da cotação.
+#
 # DADO PESSOAL. CPF, nome, e-mail, telefone e endereço vão só no corpo da compra. A proposta guardada não leva dado
 # pessoal (a chave é um HMAC com uma chave derivada do segredo da aplicação, não um hash que se reverte pelos CPFs
 # possíveis), e o texto ao modelo leva só o link, o número do carrinho, o nome do plano e o total da cotação.
@@ -32,6 +36,11 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   # #3246b: o turno acionado pelo aviso de pagamento (`Operate::ResponderAoEventoDaViagem`) não vira compra.
   TEXTO_TURNO_DE_EVENTO = 'Este turno é um aviso do sistema, não um pedido do cliente: não gere proposta agora. Se o ' \
                           'cliente quiser uma proposta nova, ele vai pedir na próxima mensagem.'.freeze
+  # #3247: o seguro já pago não vira proposta nova. Sem molde: o texto diz o que é verdade e o que cabe a cada caso.
+  TEXTO_JA_PAGO = 'O seguro desta viagem já está pago, então não gero outra proposta: ela apagaria o rastro do que foi ' \
+                  'pago e o cliente pagaria de novo. Se ele quer o voucher, use segunda_via_do_voucher. Se é outra viagem ' \
+                  '(outros destinos, outras datas ou outros viajantes), cote essa viagem de novo. Troca de plano, de data ' \
+                  'ou de viajante num seguro já pago, e cancelamento, são com a equipe: passe a conversa para ela.'.freeze
   # O `SELECT … FOR UPDATE` do lock que passou do `statement_timeout` (ou do `lock_timeout`) do banco.
   ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout].freeze
   # A Universal cancela o link de pagamento 24 h depois da compra (e-mail "Pagamento pedido", 26/11). Uma hora de folga
@@ -99,8 +108,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     return no_evento if no_evento
 
     cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id, agent.id)
-    return recusar('sem_cotacao', 'Esta conversa ainda não tem cotação. Cote primeiro.') if cotacao.nil?
-    return recusar('recotar', 'A cotação desta conversa é de outro dia e o preço pode ter mudado. Cote de novo.') unless cotacao.do_dia?(fuso)
+    recusa = recusa_da_cotacao(cotacao)
+    return recusa if recusa
 
     plano = cotacao.plano(codigo)
     # Plano sem preço guardado não vira compra: o preço da compra é sempre o da cotação (R3).
@@ -119,6 +128,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     recusar('proposta_turno_de_evento', TEXTO_TURNO_DE_EVENTO) if delivery.try(:turno_de_evento?)
   end
 
+  # O que a cotação sozinha já recusa, na ordem. O pago vem antes de tudo (do dia da cotação, do CEP, da seguradora): o
+  # que já foi pago não se refaz (#3247). nil quando nada recusa.
+  def recusa_da_cotacao(cotacao)
+    return recusar('sem_cotacao', 'Esta conversa ainda não tem cotação. Cote primeiro.') if cotacao.nil?
+    return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if SeguroViagem::PropostaPaga.impedindo(cotacao, agent)
+
+    recusar('recotar', 'A cotação desta conversa é de outro dia e o preço pode ter mudado. Cote de novo.') unless cotacao.do_dia?(fuso)
+  end
+
   def conferir_e_propor(cotacao, plano)
     viajantes, contato, falta = conferidos
     return recusar('pedido_invalido', falta.texto, faltando: [falta.campo]) if falta
@@ -129,7 +147,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
                      faltando: ['demais_viajantes'])
     end
 
-    reais = idades_reais(viajantes, cotacao)
+    reais = SeguroViagem::Faixas.idades_na_saida(viajantes, cotacao.pedido['data_saida'])
     unless SeguroViagem::Faixas.mesma_faixa?(plano, cotacao.idades, reais)
       return recusar('recotar', 'A idade real pela data de nascimento muda a faixa de preço. Cote de novo com as ' \
                                 "idades: [#{reais.join(', ')}]", faltando: ['idades'])
@@ -168,10 +186,15 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   def propor(cotacao, plano, pedido, chave)
     proposta = nil
     travada = false
+    paga = false
     cotacao.with_lock do
       travada = true
-      proposta = guardada_ou_nova(cotacao, plano, pedido, chave)
+      # `with_lock` relê a cotação: a varredura do pagamento pode ter gravado `pago_em` desde a primeira conferência. As
+      # outras cotações (mesma viagem) não são travadas: conferir antes basta, porque só a varredura as altera (#3247).
+      paga = SeguroViagem::PropostaPaga.paga?(cotacao)
+      proposta = guardada_ou_nova(cotacao, plano, pedido, chave) unless paga
     end
+    return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if paga
     return SeguroViagem::Falhas.sem_link(acao: self.class.slug, agent: agent, conversation: conversa) if proposta.nil?
 
     resposta(plano, proposta)
@@ -227,11 +250,6 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   def chave(cotacao, viajantes, contato)
     SeguroViagem::ChaveDaProposta.de(cotacao: cotacao, codigo: codigo, viajantes: viajantes, contato: contato)
-  end
-
-  def idades_reais(viajantes, cotacao)
-    saida = Date.iso8601(cotacao.pedido['data_saida'])
-    viajantes.map { |pessoa| SeguroViagem::Faixas.idade_em(pessoa['nascimento'], saida) }
   end
 
   def codigo

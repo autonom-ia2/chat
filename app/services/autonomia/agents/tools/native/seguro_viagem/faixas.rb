@@ -39,4 +39,10 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Faixas
 
     cotadas.tally == reais.tally
   end
+
+  # As idades de cada viajante pela data de nascimento, na data de saída da cotação (ISO).
+  def idades_na_saida(viajantes, saida)
+    data = Date.iso8601(saida)
+    viajantes.map { |pessoa| idade_em(pessoa['nascimento'], data) }
+  end
 end
