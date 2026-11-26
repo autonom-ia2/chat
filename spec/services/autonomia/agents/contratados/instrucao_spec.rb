@@ -61,8 +61,8 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
 
   it 'anual entra na cotação, banco de dias vai para a equipe e o nome do país vai na chamada (#3223)' do
     texto = described_class.renderizar(agente(marca), hoje: hoje)
-    expect(texto).not_to include('Não cota multiviagens', 'multiviagens, plano anual')
-    expect(texto).to include('Não cota "banco de dias"', '`nomes_dos_destinos`', '`ja_cotada: true`',
+    expect(texto).not_to include('Não cota multiviagens', 'multiviagens, plano anual', 'pdf_enviado', 'Não cote de novo')
+    expect(texto).to include('Não cota "banco de dias"', '`nomes_dos_destinos`', '`pdf_vai_junto: true`',
                              'Se você viaja mais vezes no ano:', 'nunca do folheto nem de memória')
   end
 
