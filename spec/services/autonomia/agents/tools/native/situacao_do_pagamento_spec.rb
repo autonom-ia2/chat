@@ -109,8 +109,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::SituacaoDoPagamento do
     expect(delivery.cartoes).to be_empty
   end
 
-  it 'só lê (a conferência pode vir mais de uma vez no turno) e não tem parâmetro' do
-    expect(described_class.escreve?).to be(false)
+  it 'pedido inválido da Universal vira indisponível (não há dado do cliente a corrigir)' do
+    stub_request(:get, "#{base}/v1/StatusPagamento/987654").to_return(status: 400, body: '{"message":"curta"}')
+    texto = described_class.new(agent: contratado, params: {}, delivery: delivery).call
+    expect(texto).to eq(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas::TEXTO_INDISPONIVEL)
+  end
+
+  it 'proposta guardada sem carrinho não conta: confere a anterior, que tem' do
+    cotacao_com({ 'link' => 'https://pagamento.exemplo.test/' })
+    stub = universal('Aguardando Pagamento')
+    conferir
+    expect(stub).to have_been_requested.once
+  end
+
+  it 'escreve (marca o cartão do voucher) e não tem parâmetro' do
+    expect(described_class.escreve?).to be(true)
     expect(described_class.openai_schema[:parameters][:properties]).to eq({})
   end
 end

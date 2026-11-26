@@ -3,7 +3,7 @@ require 'rails_helper'
 # #3246: o voucher em PDF baixado da Universal e anexado na conversa. Respostas e PDF fictícios: nenhum voucher real.
 RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher do
   let(:base) { 'https://api-br.universal-assistance.com' }
-  let(:url_do_pdf) { 'https://voucher.exemplo.test/PrintVoucher/?numeroCarrinho=dGV4dG8tZmljdGljaW8=&idioma=portugues' }
+  let(:url_do_pdf) { 'https://intravel.universal-assistance.com/PrintVoucher/?numeroCarrinho=dGV4dG8tZmljdGljaW8=&idioma=portugues' }
   let(:pdf) { "%PDF-1.6\n1 0 obj\n<<>>\nendobj\n%%EOF\n" }
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
@@ -27,7 +27,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher 
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: contratado, login: 'corretor.teste',
                                                   senha: 's3nha-teste', estado: 'ok')
     allow(Resolv).to receive(:getaddresses).and_call_original
-    allow(Resolv).to receive(:getaddresses).with('voucher.exemplo.test').and_return(['93.184.216.34'])
+    allow(Resolv).to receive(:getaddresses).with('intravel.universal-assistance.com').and_return(['93.184.216.34'])
   end
 
   def universal_devolve(url)
@@ -66,11 +66,26 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher 
     expect(cotacao.reload.proposta).to include('voucher_enviado_em', 'pago_em' => '2026-11-26T11:47:40', 'codigo_carrinho' => 987_654)
   end
 
-  it 'com responsável na conversa vira nota privada' do
+  it 'com responsável na conversa vira nota privada, e não conta como enviado ao cliente' do
     conversa.update!(assignee: atendente)
     universal_devolve(url_do_pdf)
     pdf_responde(pdf)
     expect(entrega.criar(entrega.baixar).private).to be(true)
+    expect(cotacao.reload.proposta).not_to have_key('voucher_enviado_em')
+  end
+
+  it 'o blob leva a finalidade do voucher, para o varredor achar o que ficar sem mensagem' do
+    universal_devolve(url_do_pdf)
+    pdf_responde(pdf)
+    expect(entrega.baixar.metadata).to include('autonomia_finalidade' => described_class::FINALIDADE)
+  end
+
+  it 'URL de outro host que não o da Universal: não baixa, nota privada' do
+    allow(Resolv).to receive(:getaddresses).with('universal-assistance.com.exemplo.test').and_return(['93.184.216.34'])
+    universal_devolve('https://universal-assistance.com.exemplo.test/PrintVoucher/')
+    expect(entrega.baixar).to be_nil
+    expect(a_request(:get, 'https://universal-assistance.com.exemplo.test/PrintVoucher/')).not_to have_been_made
+    expect(notas.count).to eq(1)
   end
 
   it 'a URL responde JSON no lugar do PDF (pagamento não realizado): nota privada à equipe, nada ao cliente' do
@@ -98,9 +113,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher 
   end
 
   it 'URL sem https: não baixa, nota privada' do
-    universal_devolve('http://voucher.exemplo.test/PrintVoucher/')
+    universal_devolve('http://intravel.universal-assistance.com/PrintVoucher/')
     expect(entrega.baixar).to be_nil
-    expect(a_request(:get, 'http://voucher.exemplo.test/PrintVoucher/')).not_to have_been_made
+    expect(a_request(:get, 'http://intravel.universal-assistance.com/PrintVoucher/')).not_to have_been_made
     expect(notas.count).to eq(1)
   end
 
@@ -125,6 +140,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher 
     pdf_responde('{}', tipo: 'application/json')
     entrega.baixar
     expect(saida.string).to include("voucher_nao_saiu conv=#{conversa.id} cotacao=#{cotacao.id} falha=tipo_invalido")
-    expect(saida.string).not_to include('dGV4dG8tZmljdGljaW8', 'voucher.exemplo.test')
+    expect(saida.string).not_to include('dGV4dG8tZmljdGljaW8', 'PrintVoucher')
   end
 end

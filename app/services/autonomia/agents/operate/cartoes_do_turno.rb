@@ -195,30 +195,12 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   private
 
-  # O VOUCHER (#3246) é baixado FORA do lock da conversa: a Universal (até 15 s) e o download (até 20 s) não seguram a
-  # conversa. As guardas são conferidas antes, sem lock (para não baixar à toa), e de novo sob ele (`anexar_voucher`),
-  # como nos outros cartões. Falha da Universal ou do download: a nota da equipe já saiu, e o motivo é `voucher_nao_saiu`.
+  # O VOUCHER (#3246) é baixado fora do lock da conversa (`EntregaDoVoucher#postar_com_guarda`), com as guardas de
+  # sempre conferidas antes e de novo sob o lock, mais uma: o voucher desta cotação que outro turno já mandou.
   def voucher!(cartao)
-    impedimento = motivo_para_nao_postar(cartao)
-    return impedimento if impedimento || postado?(cartao)
-
-    entrega = VOUCHER.new(conversation: @conversation, cotacao: VOUCHER.cotacao_do(cartao, @conversation),
-                          sender_id: @ancora.sender_id, atributos: atributos_do(cartao))
-    blob = entrega.baixar
-    blob.nil? ? VOUCHER::NAO_SAIU : anexar_voucher(entrega, blob, cartao)
-  end
-
-  # Sob o lock da conversa: confere as guardas de novo e cria a mensagem. O PDF que não virou mensagem (a guarda mudou
-  # durante o download, erro ao criar) vai para a limpeza.
-  def anexar_voucher(entrega, blob, cartao)
-    anexado = nil
-    @conversation.with_lock do
-      impedimento = motivo_para_nao_postar(cartao)
-      anexado = entrega.criar(blob) unless impedimento || postado?(cartao)
-      impedimento
-    end
-  ensure
-    ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: 'voucher') if anexado.nil?
+    VOUCHER.new(conversation: @conversation, cotacao: VOUCHER.cotacao_do(cartao, @conversation), sender_id: @ancora.sender_id,
+                atributos: atributos_do(cartao))
+           .postar_com_guarda { motivo_para_nao_postar(cartao) || (VOUCHER::POSTADO if postado?(cartao)) }
   end
 
   def motivo_para_nao_postar(cartao)
@@ -231,11 +213,17 @@ class Autonomia::Agents::Operate::CartoesDoTurno
   end
 
   # O comparativo e o voucher não dependem da flag do mapa e do contato: só dos agentes ligados na conta e da cotação na
-  # conversa (apagada com ela, não sai).
+  # conversa (apagada com ela, não sai). O voucher também não sai quando outro turno já mandou o desta cotação depois
+  # desta âncora (`EntregaDoVoucher.saiu_depois?`).
   def motivo_do_seguro_viagem(entrega, cartao)
     return 'desligado' unless ::Autonomia::Agents::Config.enabled?(@conversation.account)
 
-    'cotacao_sumiu' if entrega.cotacao_do(cartao, @conversation).nil?
+    cotacao = entrega.cotacao_do(cartao, @conversation)
+    return 'cotacao_sumiu' if cotacao.nil?
+
+    return unless entrega == VOUCHER
+
+    VOUCHER::JA_SAIU if VOUCHER.saiu_depois?(@conversation, cotacao_id: cotacao.id, ancora_id: @ancora.id, token: cartao['token'])
   end
 
   # O que o cartão do Seguro Viagem grava na mensagem: o agente e o token do turno.

@@ -83,6 +83,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::SegundaViaDoVoucher do
     expect(delivery.cartoes).to be_empty
   end
 
+  it 'pedido inválido da Universal vira indisponível' do
+    stub_request(:get, "#{base}/v1/StatusPagamento/987654").to_return(status: 404, body: '')
+    expect(pedir).to eq(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas::TEXTO_INDISPONIVEL)
+  end
+
   it 'escreve (manda arquivo ao cliente)' do
     expect(described_class.escreve?).to be(true)
   end

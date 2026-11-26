@@ -201,8 +201,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   def resposta(plano, proposta)
     JSON.generate({ link_de_pagamento: proposta['link'], numero_do_carrinho: proposta['codigo_carrinho'],
                     plano: plano['nome'], total: SeguroViagem::Dinheiro.brl(plano['preco_total']),
-                    cancelamento_sem_custo_ate: SeguroViagem::Cancelamento.sem_custo_ate(plano) },
-                  JSON_COM_ESPACO)
+                    **SeguroViagem::Cancelamento.prazos(plano, hoje: fuso.today) }, JSON_COM_ESPACO)
   end
 
   def guardada?(cotacao, chave)

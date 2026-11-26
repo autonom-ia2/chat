@@ -7,7 +7,8 @@
 #
 # ESCREVE (`escreve?` true): manda um arquivo ao cliente.
 #
-# NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas`.
+# NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas` (`Pagamento.falha`: o
+# pedido inválido vira indisponível, porque não há dado do cliente a corrigir).
 class Autonomia::Agents::Tools::Native::SegundaViaDoVoucher < Autonomia::Agents::Tools::Native::Base
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   Pagamento = SeguroViagem::Pagamento
@@ -58,7 +59,7 @@ class Autonomia::Agents::Tools::Native::SegundaViaDoVoucher < Autonomia::Agents:
     delivery.marcar_cartao(SeguroViagem::EntregaDoVoucher.cartao(cotacao))
     JSON.generate({ voucher_vai_junto: true })
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
-    SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    Pagamento.falha(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
 
   def conversa

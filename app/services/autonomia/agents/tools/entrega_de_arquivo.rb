@@ -123,9 +123,11 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
     Rails.logger.warn("[autonomia][tool][async] blob sem dono nao agendado #{contexto} blob=#{blob.id} causa=#{e.class}")
   end
 
-  # O `metadata` que marca o blob de uma execução (ver `EXECUCAO_CHAVE`).
-  def self.marca(run_id:)
-    { EXECUCAO_CHAVE => run_id, FINALIDADE_CHAVE => FINALIDADE }
+  # O `metadata` que marca o blob de uma execução (ver `EXECUCAO_CHAVE`). Sem execução (`run_id` nil, #3246), só a
+  # finalidade de quem grava: o voucher do Seguro Viagem leva a dele (`EntregaDoVoucher::FINALIDADE`), e é por ela que
+  # o varredor o acha (`EntregaDoVoucher.blobs_sem_mensagem`), sem passar pelos blobs de execução (`blobs_sem_dono`).
+  def self.marca(run_id:, finalidade: FINALIDADE)
+    { EXECUCAO_CHAVE => run_id, FINALIDADE_CHAVE => finalidade }.compact
   end
 
   # O `metadata` do blob lido COMO JSON — e só quando ele É um objeto JSON. A coluna é `text` (escrita
@@ -191,11 +193,10 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # `causa`). O arquivo temporário do download vive só dentro do bloco e é fechado sempre — gravado
   # ou não.
   #
-  # SEM EXECUÇÃO (`run_id` nil, #3246): o voucher do Seguro Viagem é baixado na hora de postar o cartão do turno, fora
-  # de um `ToolRun`. O blob sai SEM a marca: a marca diz "desta execução", e não há execução para o varredor conferir.
-  # Quem grava assim apaga o blob quando a mensagem não nasce (`CartoesDoTurno#voucher!`), como o comparativo do turno.
-  def gravar(run_id: nil)
-    baixar { |pdf| gravar_blob(pdf, run_id) }
+  # SEM EXECUÇÃO (#3246): o voucher do Seguro Viagem é baixado na hora de postar o cartão do turno, fora de um
+  # `ToolRun`, e passa `run_id: nil` com a finalidade própria (`marca`).
+  def gravar(run_id:, finalidade: FINALIDADE)
+    baixar { |pdf| gravar_blob(pdf, self.class.marca(run_id: run_id, finalidade: finalidade)) }
   end
 
   private
@@ -256,9 +257,9 @@ class Autonomia::Agents::Tools::EntregaDeArquivo
   # linha e o anexo, a MARCA (`metadata`) é o que permite ao varredor apagá-la depois (rodada 7).
   # `identify: false` porque o tipo já foi conferido pelos bytes. `build_after_unfurling`/
   # `upload_without_unfurling` são as duas metades de `create_and_upload!` (activestorage 7.2.3.1).
-  def gravar_blob(pdf, run_id)
+  def gravar_blob(pdf, marca)
     blob = ActiveStorage::Blob.build_after_unfurling(io: pdf, filename: nome, content_type: TIPO_PDF, identify: false,
-                                                     metadata: run_id.nil? ? {} : self.class.marca(run_id: run_id))
+                                                     metadata: marca)
     blob.save!
     blob.upload_without_unfurling(pdf)
     blob

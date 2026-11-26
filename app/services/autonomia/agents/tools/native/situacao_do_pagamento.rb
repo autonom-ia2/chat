@@ -10,10 +10,11 @@
 # ferramenta. O primeiro "pago" visto grava `pago_em` na proposta (a data da Universal, ou a hora em que foi visto), sob
 # o lock da cotação, como a proposta.
 #
-# LÊ (`escreve?` false): a pergunta "caiu?" pode vir mais de uma vez no turno. O cartão é idempotente pelo tipo e pela
-# chave no turno, e `pago_em` é registro nosso, não escrita num sistema de fora.
+# ESCREVE (`escreve?` true): marca o cartão que manda o voucher ao cliente e grava `pago_em`. Nas rodadas das prontas,
+# roda uma vez por turno (`UmaEscritaPorTurno`); a conferência que a Universal recusou não conta como feita.
 #
-# NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas`.
+# NUNCA LEVANTA com a seguradora fora: o erro do cliente HTTP passa por `SeguroViagem::Falhas` (`Pagamento.falha`: o
+# pedido inválido vira indisponível, porque não há dado do cliente a corrigir).
 class Autonomia::Agents::Tools::Native::SituacaoDoPagamento < Autonomia::Agents::Tools::Native::Base
   SeguroViagem = Autonomia::Agents::Tools::Native::SeguroViagem
   Pagamento = SeguroViagem::Pagamento
@@ -24,7 +25,7 @@ class Autonomia::Agents::Tools::Native::SituacaoDoPagamento < Autonomia::Agents:
   class << self
     include SeguroViagem::PortaDoContratado
 
-    def escreve? = false
+    def escreve? = true
 
     def slug
       'situacao_do_pagamento'
@@ -58,7 +59,7 @@ class Autonomia::Agents::Tools::Native::SituacaoDoPagamento < Autonomia::Agents:
     voucher = situacao == Pagamento::PAGO && voucher_do_pago(cotacao, status)
     JSON.generate({ situacao: situacao, data_do_pagamento: Pagamento.data(status), voucher_vai_junto: voucher })
   rescue Autonomia::Seguradoras::Universal::Cliente::Erro => e
-    SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    Pagamento.falha(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
 
   # Grava `pago_em` (só a primeira vez) e marca o cartão quando o voucher ainda não saiu. -> o voucher vai junto?

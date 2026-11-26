@@ -26,6 +26,10 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # protege um upload em andamento (a linha existe antes do anexo) — a transferência inteira cabe em
   # segundos, e uma hora é folga, não medida.
   BLOB_SEM_DONO_IDADE = 1.hour
+  # O VOUCHER DO SEGURO VIAGEM SEM MENSAGEM (#3246): o PDF leva CPF, endereço e nascimento, e é gravado antes da
+  # mensagem, fora de uma execução (`EntregaDoVoucher::FINALIDADE`). A Universal e o download somam até ~35 s; meia hora
+  # é folga para nunca apagar um voucher que ainda vai ser anexado.
+  VOUCHER_SEM_MENSAGEM_IDADE = 30.minutes
   # A pendência de envio (rodada 9) é procurada nas mensagens dos últimos dois dias: a marca nasce
   # segundos depois da mensagem, e o varredor passa a cada 10 min — dois dias é folga para um Redis
   # que ficou fora um fim de semana, e é o que mantém a leitura pelo índice de `created_at` curta.
@@ -36,6 +40,7 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
     reap_running
     reap_pending
     recolher_blobs_sem_dono
+    recolher_vouchers_sem_mensagem
     retomar_envios_pendentes
   end
 
@@ -74,6 +79,14 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
     ::Autonomia::Agents::Tools::EntregaDeArquivo
       .blobs_sem_dono(antes_de: BLOB_SEM_DONO_IDADE.ago, limite: BATCH_LIMIT)
       .each { |blob| ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: 'varredor') }
+  end
+
+  # Só os blobs com a finalidade do voucher (`EntregaDoVoucher.blobs_sem_mensagem`); os de execução seguem por
+  # `recolher_blobs_sem_dono`, e nada sem marca é tocado.
+  def recolher_vouchers_sem_mensagem
+    ::Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoVoucher
+      .blobs_sem_mensagem(antes_de: VOUCHER_SEM_MENSAGEM_IDADE.ago, limite: BATCH_LIMIT)
+      .each { |blob| ::Autonomia::Agents::Tools::EntregaDeArquivo.agendar_limpeza(blob, contexto: 'varredor_voucher') }
   end
 
   def reap_running

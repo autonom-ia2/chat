@@ -4,7 +4,7 @@ require 'rails_helper'
 # e é baixado fora do lock da conversa. PDF e respostas fictícios.
 RSpec.describe Autonomia::Agents::Operate::CartoesDoTurno do
   let(:base) { 'https://api-br.universal-assistance.com' }
-  let(:url_do_pdf) { 'https://voucher.exemplo.test/PrintVoucher/?numeroCarrinho=dGV4dG8tZmljdGljaW8=&idioma=portugues' }
+  let(:url_do_pdf) { 'https://intravel.universal-assistance.com/PrintVoucher/?numeroCarrinho=dGV4dG8tZmljdGljaW8=&idioma=portugues' }
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversa) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
@@ -33,7 +33,7 @@ RSpec.describe Autonomia::Agents::Operate::CartoesDoTurno do
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: contratado, login: 'corretor.teste',
                                                   senha: 's3nha-teste', estado: 'ok')
     allow(Resolv).to receive(:getaddresses).and_call_original
-    allow(Resolv).to receive(:getaddresses).with('voucher.exemplo.test').and_return(['93.184.216.34'])
+    allow(Resolv).to receive(:getaddresses).with('intravel.universal-assistance.com').and_return(['93.184.216.34'])
     stub_request(:get, "#{base}/v1/Voucher/imprimir/987654").with(query: hash_including({}))
                                                             .to_return(status: 200, body: { 'url' => url_do_pdf }.to_json)
   end
@@ -69,11 +69,41 @@ RSpec.describe Autonomia::Agents::Operate::CartoesDoTurno do
     expect(cotacao.reload.proposta).not_to have_key('voucher_enviado_em')
   end
 
-  it 'com responsável humano na conversa, o voucher vira nota privada' do
+  it 'com responsável humano na conversa, o voucher vira nota privada e não conta como enviado' do
     conversa.update!(assignee: create(:user, account: account))
     pdf_responde("%PDF-1.6\n%%EOF\n")
     cartoes.postar!(cartao)
     expect(conversa.messages.reload.where(private: true).sole.attachments.size).to eq(1)
+    expect(cotacao.reload.proposta).not_to have_key('voucher_enviado_em')
+  end
+
+  # Dois turnos viram "pago" antes de o primeiro voucher sair: cada âncora tem o seu cartão da mesma cotação. Só um
+  # voucher sai, e o segundo cartão não baixa nada.
+  it 'duas âncoras com o voucher da mesma cotação: sai um só' do
+    pdf_responde("%PDF-1.6\n%%EOF\n")
+    ancora # o primeiro turno
+    outro = entrega.cartao(cotacao).merge('token' => described_class.token('mensagem:2', entrega.cartao(cotacao)))
+    segunda = create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :outgoing, sender: agent_bot,
+                               content: 'Caiu, sim! O voucher vai aqui.',
+                               content_attributes: { 'autonomia_agent_id' => contratado.id, described_class::NA_ANCORA => [outro] })
+
+    expect(described_class.new(segunda).postar!(outro)).to be_nil
+    expect(cartoes.postar!(cartao)).to eq('voucher_ja_saiu')
+
+    expect(publicas.where.not(id: segunda.id).count).to eq(1)
+    expect(a_request(:get, url_do_pdf)).to have_been_made.once
+  end
+
+  it 'segunda via num turno seguinte (âncora mais nova que o voucher anterior) sai de novo' do
+    pdf_responde("%PDF-1.6\n%%EOF\n")
+    cartoes.postar!(cartao)
+    seguinte = entrega.cartao(cotacao).merge('token' => described_class.token('mensagem:3', entrega.cartao(cotacao)))
+    nova = create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :outgoing, sender: agent_bot,
+                            content: 'Mando de novo.',
+                            content_attributes: { 'autonomia_agent_id' => contratado.id, described_class::NA_ANCORA => [seguinte] })
+
+    expect(described_class.new(nova).postar!(seguinte)).to be_nil
+    expect(a_request(:get, url_do_pdf)).to have_been_made.twice
   end
 
   it 'pessoa da equipe respondeu depois da âncora: não baixa nem posta' do
