@@ -3,11 +3,16 @@
 # não lê banco nem chama a seguradora. A4 em pé:
 # 1. capa: faixa da marca, o plano mais recomendado em destaque com o porquê, os dados da viagem e o resumo com os
 #    rótulos;
-# 2. "Compare as opções": um cartão por plano (`Comparacao`), 6 por folha, sem cartão partido entre páginas;
+# 2. "Compare as opções": um cartão por plano (`Comparacao`), 6 por folha, sem cartão partido entre páginas; depois
+#    deles, numa seção própria, os planos anuais (#3223);
 # 3. "Antes de contratar": logo abaixo dos cartões quando cabe; senão, na folha seguinte.
 # O PDF só informa: o próximo passo quem conduz é a conversa com o agente (sem chamada para responder, 25/11).
 # Os planos vão do mais barato ao mais caro (`Ordem`); os rótulos (mais econômica, mais recomendada, maior cobertura)
 # seguem a regra fixa de `Rotulos`.
+#
+# PLANOS ANUAIS (#3223): valem para todas as viagens do ano e não se comparam com o preço de uma viagem só. Com algum
+# plano de viagem única, a capa, os rótulos e a comparação com o mais barato olham só os de viagem única (`planos`), e
+# os anuais (`anuais`) vão na seção deles, sem rótulo. Só com anuais, eles são os `planos` e a capa os trata como hoje.
 #
 # O QUE NUNCA ENTRA (R2): comissão, markup, ranking, `id_produto`, o código interno do plano (`P1`) e dado pessoal.
 # `Planos.de` já não traz comissão nem ranking; aqui só se leem as chaves que os blocos citam. Do cliente só as idades.
@@ -16,6 +21,7 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
   include Capa
   include Resumo
   include Comparacao
+  include Anuais
   include CartaoDoPlano
   include AntesDeContratar
 
@@ -43,9 +49,19 @@ class Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf
 
   private
 
-  # Do mais barato ao mais caro.
+  # Do mais barato ao mais caro, todos os planos da cotação.
+  def todos
+    @todos ||= Ordem.por_preco(@cotacao.planos.to_a)
+  end
+
+  # Os planos que a capa e os rótulos olham: os de viagem única; sem nenhum, os anuais.
   def planos
-    @planos ||= Ordem.por_preco(@cotacao.planos.to_a)
+    @planos ||= todos.reject { |plano| SeguroViagem::Planos.anual?(plano) }.presence || todos
+  end
+
+  # Os anuais que vão na seção própria, depois dos de viagem única (vazio quando eles já são os `planos`).
+  def anuais
+    @anuais ||= todos - planos
   end
 
   def rotulos

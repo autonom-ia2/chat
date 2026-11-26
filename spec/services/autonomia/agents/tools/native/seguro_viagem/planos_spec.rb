@@ -83,6 +83,51 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Planos do
     expect(described_class.para_idades(candidatos, [99]).pluck('codigo', 'nome')).to eq([['P1', 'Produto Teste Sem DMH']])
   end
 
+  describe 'destino internacional e planos anuais (#3223)' do
+    # A Universal usa 2899 para despesas médicas fora do Brasil; o catálogo e os produtos trocam o 2898 por ele.
+    let(:internacional) do
+      troca = ->(beneficio) { beneficio['idBeneficio'] == 2898 ? beneficio.merge('idBeneficio' => 2899, 'valor' => '$80.000') : beneficio }
+      produtos = resposta['produtos'].map { |produto| produto.merge('beneficios' => produto['beneficios'].map(&troca)) }
+      resposta.merge('beneficios' => resposta['beneficios'].map(&troca), 'produtos' => produtos)
+    end
+    let(:com_anual) do
+      anual = resposta['produtos'][0].merge('descricao' => 'Anual Multiviagens UA 100 (30 Dias)', 'multiviagem' => true,
+                                            'diasMultiviagem' => 30, 'quantidadeDiasMultiviagem' => nil)
+      resposta.merge('produtos' => resposta['produtos'] + [anual])
+    end
+
+    it '2899 é despesas médicas: o plano entra, com o valor, e sem aviso de catálogo desconhecido' do
+      allow(Rails.logger).to receive(:warn)
+      planos = described_class.de(internacional, idades: [45])
+      expect(planos.pluck('nome')).to eq(['Especial UA 100K BRL', 'Especial UA 30K BRL'])
+      expect(planos.map { |plano| plano.dig('principais', 'despesas_medicas') }).to eq(%w[$80.000 $80.000])
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+
+    it 'o anual entra, marcado, com os dias de cada viagem; o de viagem única fica sem' do
+      planos = described_class.de(com_anual, idades: [45])
+      expect(planos.pluck('codigo', 'multiviagem', 'dias_por_viagem'))
+        .to eq([['P1', false, nil], ['P2', false, nil], ['P3', true, 30]])
+    end
+
+    it 'os dias do anual vêm do campo que estiver preenchido' do
+      com_anual['produtos'].last.merge!('diasMultiviagem' => 0, 'quantidadeDiasMultiviagem' => 60)
+      expect(described_class.de(com_anual, idades: [45]).last['dias_por_viagem']).to eq(60)
+    end
+
+    it 'o resumo diz ao modelo se o plano é anual e os dias de cada viagem' do
+      resumo = described_class.resumo(described_class.de(com_anual, idades: [45]))
+      expect(resumo.pluck('nome', 'anual', 'dias_por_viagem'))
+        .to eq([['Especial UA 100K BRL', false, nil], ['Especial UA 30K BRL', false, nil],
+                ['Anual Multiviagens UA 100 (30 Dias)', true, 30]])
+    end
+
+    it 'cotação guardada antes do #3223, sem a chave: de viagem única' do
+      expect(described_class.resumo([{ 'codigo' => 'P1', 'nome' => 'Antigo' }]).first.slice('anual', 'dias_por_viagem'))
+        .to eq('anual' => false, 'dias_por_viagem' => nil)
+    end
+  end
+
   it 'resumo em reais com duas casas' do
     expect(described_class.resumo(described_class.de(resposta, idades: [45])).pluck('preco_total'))
       .to eq(['R$ 360,00', 'R$ 210,00'])

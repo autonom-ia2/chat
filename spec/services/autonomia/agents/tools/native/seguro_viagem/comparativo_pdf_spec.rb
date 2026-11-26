@@ -150,6 +150,50 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::ComparativoPdf do
     expect(texto.scan('SUSEP').size).to eq(1)
   end
 
+  describe 'planos anuais e destino internacional (#3223)' do
+    # O anual mais barato e com a maior cobertura: se entrasse na comparação, seria a econômica e a de maior cobertura.
+    # Nome curto: no cartão de 3 colunas o nome longo quebra, e o leitor mistura as linhas dos cartões lado a lado.
+    def anual(nome, preco)
+      { 'codigo' => 'P9', 'nome' => nome, 'preco_total' => preco, 'max_parcelas' => 12, 'idade_minima' => 0,
+        'idade_maxima' => 65, 'multiviagem' => true, 'dias_por_viagem' => 30,
+        'faixas' => [{ 'de' => 0, 'ate' => 65, 'valor' => (BigDecimal(preco) / 3).to_s('F') }],
+        'coberturas' => [dmh.merge('id_beneficio' => 2899, 'valor' => '$300.000')] }
+    end
+
+    let(:comparacao) { normalizar(leitor.pages.drop(1).map(&:text).join("\n")) }
+
+    it 'os anuais vão depois dos de viagem única, numa seção com a linha de leigo' do
+      planos.push(anual('Anual UA 150', '150.0'), anual('Anual UA 300', '600.0'))
+      expect(comparacao).to include('Se você viaja mais vezes no ano',
+                                    'Planos anuais: valem para todas as viagens do ano, cada uma com até 30 dias.')
+      titulo = comparacao.index('Se você viaja mais vezes no ano')
+      expect(comparacao.index('Especial UA 100K BRL')).to be < titulo
+      expect(comparacao.index('Anual UA 150')).to be > titulo
+      expect(comparacao.index('Anual UA 300')).to be > titulo
+    end
+
+    it 'anual nunca é a econômica, a recomendada nem a de maior cobertura, e fica fora do porquê da capa' do
+      planos.push(anual('Anual UA 150', '150.0'))
+      expect(texto).to include('Opção mais recomendada para esta viagem', 'Mais econômica',
+                               'Por R$ 150,00 a mais que a opção mais barata, a proteção para médico e hospital sobe de ' \
+                               'R$ 30.000 para R$ 100.000.')
+      expect(texto).not_to include('Maior cobertura')
+      expect(normalizar(leitor.pages[0].text)).not_to include('Anual UA')
+    end
+
+    it 'só anuais: a capa trata como hoje, sem a seção à parte' do
+      planos.replace([anual('Anual UA 150', '150.0'), anual('Anual UA 300', '600.0')])
+      expect(texto).to include('Opção mais recomendada para esta viagem', 'Anual UA 150')
+      expect(texto).not_to include('Se você viaja mais vezes no ano')
+    end
+
+    it 'despesas médicas do destino internacional (2899) saem com o valor, nunca "não informado"' do
+      planos.replace([anual('Anual UA 300', '600.0')])
+      expect(texto).to include('$300.000 para médico e hospital por R$ 600,00 no total.')
+      expect(texto).not_to include('não informado')
+    end
+  end
+
   it 'não traz comissão, id de produto nem o código interno do plano' do
     expect(texto).not_to include('comissao', '99,9', '5382451', 'P1', 'P2')
   end
