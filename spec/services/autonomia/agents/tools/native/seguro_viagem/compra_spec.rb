@@ -29,7 +29,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
   it 'preço, produto, tarifa e datas saem da cotação guardada' do
     basicos = compra['DadosBasicos']
     expect(basicos.slice('FormaPagamento', 'ValorCompra', 'TipoTarifa', 'DataSaida', 'DataRetorno', 'Destinos', 'TipoViagem'))
-      .to eq('FormaPagamento' => 8, 'ValorCompra' => 360.0, 'TipoTarifa' => 2, 'DataSaida' => '2027-02-02',
+      .to eq('FormaPagamento' => 7, 'ValorCompra' => 360.0, 'TipoTarifa' => 2, 'DataSaida' => '2027-02-02',
              'DataRetorno' => '2027-02-06', 'Destinos' => ['PT'], 'TipoViagem' => 1)
     expect(compra['DadosProdutos'])
       .to eq('CodigoProduto' => 5_382_451, 'ValorProduto' => 360.0, 'CodigoPeriodoMultiViagem' => 0,
@@ -78,9 +78,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
     end
   end
 
-  it 'link de pagamento pelo código do carrinho' do
-    expect(described_class.link(987_654)).to eq('https://pagamento.universal-assistance.com/?IdCarrinho=987654')
-    expect(described_class.link(nil)).to be_nil
-    expect(described_class.link('')).to be_nil
+  # #3244: o link com o número cru do carrinho abre "Carrinho não encontrado"; vale o `urlVoucher` da compra.
+  it 'link de pagamento é o urlVoucher da compra, no host de pagamento' do
+    url = 'https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA=='
+    expect(described_class.link(" #{url} ")).to eq(url)
+  end
+
+  it 'recusa urlVoucher fora do host de pagamento, sem https, sem carrinho ou inválido' do
+    ['https://pagamento.exemplo.com/?IdCarrinho=abc', 'http://pagamento.universal-assistance.com/?IdCarrinho=abc',
+     'https://pagamento.universal-assistance.com/', 'https://[/?IdCarrinho=abc',
+     'https://x@pagamento.universal-assistance.com/?IdCarrinho=abc',
+     'https://pagamento.universal-assistance.com:8443/?IdCarrinho=abc',
+     987_654, nil, ''].each { |url| expect(described_class.link(url)).to be_nil }
   end
 end

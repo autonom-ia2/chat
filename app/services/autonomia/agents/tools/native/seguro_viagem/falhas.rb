@@ -32,7 +32,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     end
   end
 
-  # A compra voltou sem `codigoCarrinho`.
+  # A compra voltou sem link de pagamento válido (`urlVoucher`).
   def sem_link(acao:, agent:, conversation:)
     nota(conversation, 'sem_link', acao)
     Autonomia::Agents::Tools::Recusa.registrar('sem_link', slug: acao, agente: agent, conversa: conversation&.id)

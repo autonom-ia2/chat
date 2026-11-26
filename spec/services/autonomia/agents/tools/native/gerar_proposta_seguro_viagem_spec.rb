@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     da_cotacao = lambda do |requisicao|
       corpo = JSON.parse(requisicao.body)
       corpo['DadosBasicos']['ValorCompra'].to_d == BigDecimal(plano['preco_total']) &&
-        corpo['DadosProdutos']['CodigoProduto'] == plano['id_produto'] && corpo['DadosBasicos']['FormaPagamento'] == 8
+        corpo['DadosProdutos']['CodigoProduto'] == plano['id_produto'] && corpo['DadosBasicos']['FormaPagamento'] == 7
     end
     expect(a_request(:post, "#{base}/v1/Compras").with(&da_cotacao)).to have_been_made.once
   end
@@ -77,14 +77,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras").with(&da_cotacao)).to have_been_made.once
   end
 
-  it 'devolve o link montado do codigoCarrinho' do
+  it 'devolve o urlVoucher da compra como link (#3244)' do
     expect(JSON.parse(ferramenta(params).call)['link_de_pagamento'])
-      .to eq('https://pagamento.universal-assistance.com/?IdCarrinho=987654')
+      .to eq('https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==')
   end
 
   it 'devolve ao modelo só o link, o carrinho, o plano e o total' do
     expect(JSON.parse(ferramenta(params).call))
-      .to eq('link_de_pagamento' => 'https://pagamento.universal-assistance.com/?IdCarrinho=987654',
+      .to eq('link_de_pagamento' => 'https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==',
              'numero_do_carrinho' => 987_654, 'plano' => 'Especial UA 100K BRL', 'total' => 'R$ 360,00')
   end
 
@@ -100,12 +100,28 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
   end
 
   it 'dado corrigido é outra proposta: o segundo POST devolve o link novo' do
-    segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read).merge('codigoCarrinho' => 987_655)
+    link_novo = 'https://pagamento.universal-assistance.com/?IdCarrinho=b3V0cm8tY2FycmluaG8='
+    segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read)
+                  .merge('codigoCarrinho' => 987_655, 'urlVoucher' => link_novo)
     stub_request(:post, "#{base}/v1/Compras")
       .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
     ferramenta(params).call
     corrigida = ferramenta(params.merge('titular' => titular.merge('email' => 'fulano.novo@exemplo.test'))).call
-    expect(JSON.parse(corrigida)['link_de_pagamento']).to eq('https://pagamento.universal-assistance.com/?IdCarrinho=987655')
+    expect(JSON.parse(corrigida)['link_de_pagamento']).to eq(link_novo)
+    expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
+  end
+
+  it 'repetição idêntica depois de vencer o link (24 h na Universal) gera carrinho e link novos' do
+    link_novo = 'https://pagamento.universal-assistance.com/?IdCarrinho=bm92by1saW5r'
+    segunda = JSON.parse(file_fixture('../universal/compras_ok.json').read)
+                  .merge('codigoCarrinho' => 987_655, 'urlVoucher' => link_novo)
+    stub_request(:post, "#{base}/v1/Compras")
+      .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
+    ferramenta(params).call
+    # A cotação só vale no dia (`do_dia?`): quem envelhece aqui é só a proposta guardada.
+    vencida = cotacao.reload.proposta.merge('gerada_em' => (23.hours + 1.minute).ago.iso8601)
+    cotacao.update!(proposta: vencida)
+    expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
     expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
   end
 
@@ -224,8 +240,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras").with(&sem_rua)).to have_been_made.once
   end
 
-  it 'compra sem codigoCarrinho: passa pelas falhas (sem link)' do
-    stub_request(:post, "#{base}/v1/Compras").to_return(status: 200, body: { codigoCarrinho: nil }.to_json)
+  it 'compra com carrinho e sem urlVoucher: passa pelas falhas (sem link), não monta link pelo número (#3244)' do
+    stub_request(:post, "#{base}/v1/Compras").to_return(status: 200, body: { codigoCarrinho: 987_654 }.to_json)
     expect(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas).to receive(:sem_link)
       .with(acao: 'gerar_proposta_seguro_viagem', agent: contratado, conversation: conversa).and_call_original
     ferramenta(params).call
