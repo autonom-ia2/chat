@@ -202,8 +202,9 @@ RSpec.describe Autonomia::Agents::Operate::LeituraNoTurno do
     end
 
     it 'não lida: não cobre, sem consultar o banco' do
+      pendente = nova.id
       allow(conversation).to receive(:messages).and_call_original
-      expect(described_class.cobre?(conversation, nova.id, [])).to be(false)
+      expect(described_class.cobre?(conversation, pendente, [])).to be(false)
       expect(conversation).not_to have_received(:messages)
     end
 

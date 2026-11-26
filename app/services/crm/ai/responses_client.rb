@@ -350,7 +350,7 @@ module Crm
         unless response.success?
           log_http_error(response, operation: operation, model: model, response_id: response_id, started_at: started_at)
           raise Error.new(extract_error_message(response), status: response.code.to_i, code: extract_error_code(response),
-                          error_type: extract_error_type(response))
+                                                           error_type: extract_error_type(response))
         end
 
         response.parsed_response
@@ -397,7 +397,7 @@ module Crm
         unless response.success?
           log_http_error(response, operation: 'responses.create', model: model, started_at: started_at)
           raise Error.new(extract_error_message(response), status: response.code.to_i, code: extract_error_code(response),
-                          error_type: extract_error_type(response))
+                                                           error_type: extract_error_type(response))
         end
 
         parse_response_payload(response.parsed_response, model: model, requested_tools: requested_tools,

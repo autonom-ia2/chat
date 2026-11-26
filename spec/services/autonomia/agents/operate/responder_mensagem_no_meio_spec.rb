@@ -35,7 +35,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-da-conta-teste' })
     allow(Crm::Ai::CredentialResolver).to receive(:new)
-      .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste' }))
+      .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste', source: :hook }))
     allow(Resolv).to receive(:getaddresses).and_call_original
     allow(Resolv).to receive(:getaddresses).with('api.openai.com').and_return(['104.18.6.192'])
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste', senha: 's3nha-teste',

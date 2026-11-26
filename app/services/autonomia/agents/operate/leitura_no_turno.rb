@@ -147,7 +147,7 @@ class Autonomia::Agents::Operate::LeituraNoTurno
 
   def contar_volta!(etapa)
     @voltas += 1
-    registrar(:volta_do_turno, volta: @voltas, etapa: etapa)
+    rastrear(:volta_do_turno, volta: @voltas, etapa: etapa)
   end
 
   # Para o evento `replied` e o meta dos pedaços.
@@ -159,7 +159,7 @@ class Autonomia::Agents::Operate::LeituraNoTurno
   # depois da última leitura ela chegou (negativo: chegou antes e não foi lida).
   def no_silencio(motivo)
     campos = { motivo: motivo, lidas: lidas.size, voltas: @voltas }
-    registrar(:leitura_no_silencio, **campos, **(motivo.to_s == 'turno_superado' ? quem_superou : {}))
+    rastrear(:leitura_no_silencio, **campos, **(motivo.to_s == 'turno_superado' ? quem_superou : {}))
   end
 
   private
@@ -206,13 +206,13 @@ class Autonomia::Agents::Operate::LeituraNoTurno
   def marcar_lida(recebida, etapa)
     @piso = recebida.id
     @delivery.ler_no_turno([recebida.id])
-    registrar(:mensagem_lida_no_turno, lida: recebida.id, etapa: etapa)
+    rastrear(:mensagem_lida_no_turno, lida: recebida.id, etapa: etapa)
   end
 
   # A leitura para de vez neste turno. -> []
   def parar(motivo, recebida)
     @parada = true
-    registrar(:leitura_parou, lida: recebida.id, motivo: motivo)
+    rastrear(:leitura_parou, lida: recebida.id, motivo: motivo)
     []
   end
 
@@ -231,7 +231,7 @@ class Autonomia::Agents::Operate::LeituraNoTurno
 
   def mensagem(role, texto) = ::Autonomia::Agents::PromptParts::Mensagem.montar(role, texto)
 
-  def registrar(evento, **campos)
+  def rastrear(evento, **campos)
     ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(evento, conversation_id: @conversation.id, agent: @agent.id,
                                                                       msg: @ancora, **campos)
   end
