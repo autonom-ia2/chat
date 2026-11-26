@@ -7,7 +7,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Organizar cards' => %w[avaliacao_card raio_x_etapa],
     'Lembretes de retorno' => %w[follow_up follow_up_saida],
     'Criação de e-mail' => %w[email], 'Resumos' => %w[resumo resumo_reuniao],
-    'Assistente de respostas' => %w[copilot agente_resposta agente_teste agente_prova_do_ajuste],
+    'Assistente de respostas' => %w[copilot agente_resposta agente_teste agente_prova_do_ajuste agente_resposta_volta],
     'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
     'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out], 'Contato pelo e-mail' => %w[contato_pelo_email],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
