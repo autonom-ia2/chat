@@ -33,6 +33,10 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
   before do
     Autonomia::Agents::AgentInbox.create!(agent: bia, inbox: inbox, account: account, agent_bot: agent_bot)
     lia_responde('Pagamento confirmado! Seu voucher vai aqui embaixo.')
+    enable_test_encryption!
+    Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: bia, login: 'corretor.teste',
+                                                  senha: 's3nha-teste', estado: 'ok')
+    universal_responde('Pago')
   end
 
   after do
@@ -57,7 +61,28 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
 
   def nota(tipo, motivo) = I18n.t("#{Autonomia::Agents::Operate::AvisoDaViagem::NOTAS}.#{tipo}.#{motivo}")
 
+  def universal_responde(status)
+    stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
+      .to_return(status: 200, body: { 'statusPagamento' => status, 'dataPagamento' => '2026-11-26T11:53:08.773' }.to_json)
+  end
+
+  def situacao_do_pagamento(entrega)
+    Autonomia::Agents::Tools::Native::SituacaoDoPagamento.new(agent: bia, params: {}, delivery: entrega).call
+  end
+
+  # A Bia do aviso faz o que a instrução manda: confere com `situacao_do_pagamento` (`vezes` vezes) e fala. Só a
+  # ferramenta marca o cartão do voucher. As perguntas vão para a mesma lista do `lia_responde` (`queries_da_lia`).
+  def bia_confere_e_responde(fala, vezes: 1)
+    allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
+      queries_da_lia << kwargs[:query]
+      vezes.times { situacao_do_pagamento(kwargs[:delivery]) }
+      instance_double(Autonomia::Agents::Answerer, answer: resposta_da_lia(fala))
+    end
+  end
+
   describe 'pagamento confirmado' do
+    before { bia_confere_e_responde('Pagamento confirmado! Seu voucher vai aqui embaixo.') }
+
     it 'fala uma vez, com a marca do evento e o cartão do voucher na âncora, e enfileira o envio do PDF' do
       rodar
 
@@ -101,23 +126,26 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
       expect(jobs_de_cartoes.map { |job| job[:args] }).to eq([[fala.id]])
     end
 
-    # O modelo também chama `situacao_do_pagamento` no turno do aviso: o cartão é o mesmo (tipo e cotação), um voucher só.
-    it 'o cartão do evento e o da situacao_do_pagamento no mesmo turno viram um voucher só' do
-      enable_test_encryption!
-      Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: bia, login: 'corretor.teste',
-                                                    senha: 's3nha-teste', estado: 'ok')
-      stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
-        .to_return(status: 200, body: { 'statusPagamento' => 'Pago', 'dataPagamento' => '2026-11-26T11:53:08.773' }.to_json)
-      allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
-        Autonomia::Agents::Tools::Native::SituacaoDoPagamento.new(agent: bia, params: {}, delivery: kwargs[:delivery]).call
-        instance_double(Autonomia::Agents::Answerer, answer: resposta_da_lia('Confirmado!'))
-      end
+    # O modelo chama `situacao_do_pagamento` duas vezes no turno do aviso: o cartão é o mesmo (tipo e cotação), um só.
+    it 'a ferramenta chamada duas vezes no turno do aviso marca um voucher só' do
+      bia_confere_e_responde('Confirmado!', vezes: 2)
 
       rodar
 
       expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(publicas.sole).map { |cartao| cartao['tipo'] }).to eq([voucher::TIPO_DO_CARTAO])
       # A marca que a ferramenta gravou é a do próprio aviso: ela não o calou.
       expect(cotacao.reload.proposta[voucher::MARCADO_NO_TURNO]).to eq(marca)
+    end
+
+    # A nota do sistema não basta: sem "pago" da ferramenta, nenhum cartão de voucher é marcado.
+    it 'a ferramenta sem "pago" no turno do aviso: a fala sai sem cartão de voucher' do
+      universal_responde('Aguardando Pagamento')
+      bia_confere_e_responde('Ainda não aparece aqui.')
+
+      rodar
+
+      expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(publicas.sole)).to be_empty
+      expect(jobs_de_cartoes).to be_empty
     end
 
     it 'com o voucher já enviado (a pessoa perguntou antes), não fala' do
@@ -152,26 +180,21 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
   end
 
   # O cliente perguntou "caiu?" enquanto o aviso esperava a IA: o turno dele conferiu, marcou o voucher (a marca do turno
-  # fica na proposta) e respondeu. O aviso confere de novo na hora de postar, sob o lock da conversa, e cala: um
-  # "confirmado" e um PDF só.
+  # e a mensagem que o abriu ficam na proposta) e postou a âncora com o cartão. O aviso confere de novo na hora de
+  # postar, sob o lock da conversa, e cala: um "confirmado" e um PDF só. A marca sem âncora (o turno do cliente não
+  # postou) não cala: o aviso fala e manda o voucher.
   describe 'o turno do cliente que confere o pagamento enquanto o aviso espera a IA' do
     let(:turno_do_cliente) do
       Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: Autonomia::Agents::AgentInbox.find_by!(inbox: inbox),
                                              origin_message_id: 4242)
     end
 
-    before do
-      enable_test_encryption!
-      Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: bia, login: 'corretor.teste',
-                                                    senha: 's3nha-teste', estado: 'ok')
-      stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
-        .to_return(status: 200, body: { 'statusPagamento' => 'Pago', 'dataPagamento' => '2026-11-26T11:53:08.773' }.to_json)
-    end
-
-    # O modelo do aviso demora; nesse meio-tempo, o turno do cliente roda a ferramenta e o que vier em `depois`.
-    def cliente_confere_durante_o_aviso(&depois)
-      allow(Autonomia::Agents::Answerer).to receive(:new) do
-        Autonomia::Agents::Tools::Native::SituacaoDoPagamento.new(agent: bia, params: {}, delivery: turno_do_cliente).call
+    # O modelo do aviso demora; nesse meio-tempo, o turno do cliente roda a ferramenta e o que vier em `depois`. `aviso`:
+    # a Bia do aviso também confere antes (a ferramenta do turno dela roda primeiro).
+    def cliente_confere_durante_o_aviso(aviso: false, &depois)
+      allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
+        situacao_do_pagamento(kwargs[:delivery]) if aviso
+        situacao_do_pagamento(turno_do_cliente)
         depois&.call
         instance_double(Autonomia::Agents::Answerer, answer: resposta_da_lia('Confirmado pelo aviso!'))
       end
@@ -182,22 +205,27 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
                        content: content, content_attributes: atributos)
     end
 
+    # A âncora pública do turno do cliente: a resposta à mensagem 4242, com o cartão do voucher marcado nele.
+    def ancora_do_cliente
+      mensagem_do_bot('Caiu sim!', Autonomia::Agents::Operate::CartoesDoTurno.marca(turno_do_cliente)
+                                                                             .merge('autonomia_reply_to_message_id' => 4242))
+    end
+
     def vouchers = publicas.select { |message| message.content_attributes.to_h.key?(voucher::CHAVE) }
 
-    it 'o voucher marcado pelo cliente e ainda não enviado: o aviso cala na hora de postar e não enfileira cartão' do
-      cliente_confere_durante_o_aviso
+    it 'o cliente marcou o voucher e postou a âncora, o PDF ainda não saiu: o aviso cala na hora de postar' do
+      cliente_confere_durante_o_aviso { ancora_do_cliente }
 
       rodar
 
-      expect(cotacao.reload.proposta[voucher::MARCADO_NO_TURNO]).to eq('mensagem:4242')
-      expect(mensagens).to be_empty
+      expect(cotacao.reload.proposta).to include(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242)
+      expect(publicas.map(&:content)).to eq(['Caiu sim!'])
       expect(jobs_de_cartoes).to be_empty
     end
 
     it 'âncora do cliente, depois o voucher do cliente, e a fala do aviso calada: um PDF só' do
       cliente_confere_durante_o_aviso do
-        ancora = mensagem_do_bot('Caiu sim!', Autonomia::Agents::Operate::CartoesDoTurno.marca(turno_do_cliente))
-        token = Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).sole['token']
+        token = Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora_do_cliente).sole['token']
         mensagem_do_bot(nil, { voucher::CHAVE => cotacao.id, Autonomia::Agents::Operate::CartoesDoTurno::TOKEN => token })
         cotacao.update!(proposta: cotacao.reload.proposta.merge('voucher_enviado_em' => Time.current.iso8601))
       end
@@ -211,13 +239,36 @@ RSpec.describe Autonomia::Agents::Operate::EventoDaViagemJob, type: :job do
       expect(jobs_de_cartoes).to be_empty
     end
 
-    it 'com o voucher já marcado pelo cliente antes de o aviso começar, o modelo nem roda' do
-      cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242'))
+    # A IA do cliente falhou, o turno foi superado ou o cartão foi descartado: a marca ficou, a âncora não existe.
+    it 'marca sem âncora: o aviso fala, e sai um voucher' do
+      cliente_confere_durante_o_aviso(aviso: true)
+
+      rodar
+
+      expect(cotacao.reload.proposta[voucher::MARCADO_NO_TURNO]).to eq('mensagem:4242')
+      fala = publicas.sole
+      expect(fala.content).to eq('Confirmado pelo aviso!')
+      expect(Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(fala).map { |cartao| cartao['tipo'] }).to eq([voucher::TIPO_DO_CARTAO])
+      expect(jobs_de_cartoes.map { |job| job[:args] }).to eq([[fala.id]])
+    end
+
+    it 'com o voucher marcado pelo cliente e a âncora postada antes de o aviso começar, o modelo nem roda' do
+      cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242))
+      ancora_do_cliente
       sem_modelo
 
       rodar
 
-      expect(mensagens).to be_empty
+      expect(publicas.map(&:content)).to eq(['Caiu sim!'])
+    end
+
+    it 'com a marca do cliente sem âncora antes de o aviso começar, o aviso fala' do
+      cotacao.update!(proposta: proposta.merge(voucher::MARCADO_NO_TURNO => 'mensagem:4242', voucher::MARCADO_NA_MENSAGEM => 4242))
+      bia_confere_e_responde('Confirmado!')
+
+      rodar
+
+      expect(publicas.sole.content).to eq('Confirmado!')
     end
   end
 

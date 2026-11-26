@@ -214,7 +214,7 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
   # O comparativo e o voucher não dependem da flag do mapa e do contato: só dos agentes ligados na conta e da cotação na
   # conversa (apagada com ela, não sai). O voucher também não sai quando outro turno já mandou o desta cotação depois
-  # desta âncora (`EntregaDoVoucher.saiu_depois?`).
+  # do piso do turno desta âncora (`EntregaDoVoucher.saiu_depois?`: a mensagem do cliente que o abriu, ou a âncora).
   def motivo_do_seguro_viagem(entrega, cartao)
     return 'desligado' unless ::Autonomia::Agents::Config.enabled?(@conversation.account)
 
@@ -223,7 +223,7 @@ class Autonomia::Agents::Operate::CartoesDoTurno
 
     return unless entrega == VOUCHER
 
-    VOUCHER::JA_SAIU if VOUCHER.saiu_depois?(@conversation, cotacao_id: cotacao.id, ancora_id: @ancora.id, token: cartao['token'])
+    VOUCHER::JA_SAIU if VOUCHER.saiu_depois?(@conversation, cotacao_id: cotacao.id, ancora: @ancora, token: cartao['token'])
   end
 
   # O que o cartão do Seguro Viagem grava na mensagem: o agente e o token do turno.
