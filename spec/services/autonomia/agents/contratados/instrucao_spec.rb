@@ -66,6 +66,13 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              'Se você viaja mais vezes no ano:', 'nunca do folheto nem de memória')
   end
 
+  it 'vende pela base: sem canal de venda da Universal, Schengen pelo bloco do destino e preço por dia pronto (#3226)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('exigem seguro viagem na entrada', 'o seguro é exigido na entrada')
+    expect(texto).to include('Em conflito entre trechos, valem as condições gerais', 'Nunca mande canal de venda da Universal',
+                             '`por_dia_por_pessoa`', 'destino com sanção', 'Busque na base o bloco da objeção')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end
