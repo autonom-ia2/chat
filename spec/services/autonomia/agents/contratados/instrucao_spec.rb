@@ -81,6 +81,14 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              'pediu anual depois de uma cotação sem eles', '(salvo a 3.5)')
   end
 
+  # Decisão do Rodrigo (26/11): o formulário do site manda o destino por região; o agente pergunta os países antes de cotar.
+  it 'região sem país vira uma pergunta pelos países, nunca cotação presumida (formulário do site)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).not_to include('"Europa" sem país: pergunte quais países')
+    expect(texto).to include('Região sem país ("Europa", "América do Norte"', 'Nunca escolha o país pelo cliente nem cote a região.',
+                             'Se o destino veio como região', '"Brasil" é país: `["BR"]`.')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end
