@@ -20,15 +20,28 @@ module Autonomia::Agents::Answerer::LinkSemMarca
     saida = texto.dup
     desde = 0
     while (meio = saida.index('](http', desde))
-      abre = saida.rindex('[', meio)
-      fecha = saida.index(')', meio)
-      break unless abre && fecha
+      abre, fecha = link_em(saida, meio)
+      unless abre
+        desde = meio + 1
+        next
+      end
 
       url = saida[(meio + 2)...fecha]
       saida[abre..fecha] = url
       desde = abre + url.length
     end
     saida
+  end
+
+  # Onde começa (`[`) e termina (`)`) o link em markdown cujo `](` está em `meio`, ou nil. O `[` fica na mesma linha e
+  # o endereço não tem espaço nem quebra: um `[` solto lá atrás não engole o texto até o link.
+  def link_em(saida, meio)
+    abre = saida.rindex('[', meio)
+    fecha = saida.index(')', meio)
+    return unless abre && fecha
+    return if saida[abre...meio].include?("\n") || saida[(meio + 2)...fecha].split.size != 1
+
+    [abre, fecha]
   end
 
   def limpar_url(achado)

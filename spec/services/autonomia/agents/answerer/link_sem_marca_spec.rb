@@ -22,6 +22,12 @@ RSpec.describe Autonomia::Agents::Answerer::LinkSemMarca do
     expect(limpar(texto)).to eq('Fonte: https://exemplo.com/clima e https://outro.com/x?a=1.')
   end
 
+  it 'pula o link em markdown incompleto e o colchete solto de outra linha, sem engolir texto', :aggregate_failures do
+    expect(limpar('veja a](https://a.com/x) e [b](https://b.com/y?utm_source=openai)'))
+      .to eq('veja a](https://a.com/x) e https://b.com/y')
+    expect(limpar("[nota] texto\nFonte](https://b.com/y?utm_source=openai)")).to eq("[nota] texto\nFonte](https://b.com/y)")
+  end
+
   it 'não leva a pontuação do texto para dentro da URL', :aggregate_failures do
     expect(limpar('(https://exemplo.com/a?utm_source=openai)')).to eq('(https://exemplo.com/a)')
     expect(limpar('Acesse https://exemplo.com/a?utm_source=openai.')).to eq('Acesse https://exemplo.com/a.')
