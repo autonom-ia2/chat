@@ -41,6 +41,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::DetalhesDaCotacao do
     expect(p2['preco_por_pessoa']).to eq(['R$ 70,00', 'R$ 70,00', 'R$ 70,00'])
   end
 
+  it 'preço por dia e por pessoa: total ÷ dias da viagem (ida e volta inclusive) ÷ viajantes, para baixo (#3226)' do
+    cotacao = Autonomia::Agents::CotacaoDeViagem.last
+    cotacao.update!(pedido: cotacao.pedido.merge('data_saida' => '2027-02-02', 'data_retorno' => '2027-02-12'))
+    p1, p2 = JSON.parse(ferramenta({ 'codigos_dos_planos' => [] }).call)['planos']
+    # 11 dias e 3 viajantes: 360 ÷ 33 = 10,909... e 210 ÷ 33 = 6,363...
+    expect([p1['por_dia_por_pessoa'], p2['por_dia_por_pessoa']]).to eq(['R$ 10,90', 'R$ 6,36'])
+  end
+
+  it 'cotação sem as datas da viagem: sem preço por dia' do
+    expect(JSON.parse(ferramenta({ 'codigos_dos_planos' => ['P1'] }).call)['planos'].first['por_dia_por_pessoa']).to be_nil
+  end
+
   it 'idade sem faixa fica nil no lugar' do
     cotacao = Autonomia::Agents::CotacaoDeViagem.last
     cotacao.update!(pedido: cotacao.pedido.merge('idades' => [47, 70]))

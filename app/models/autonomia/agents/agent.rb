@@ -136,9 +136,10 @@ module Autonomia
       # quando o model declara a sua própria validação de tamanho. Declarar aqui evita mexer na
       # constante global, que protege a aplicação inteira.
       # O `instruction` é o PLAYBOOK do agente e cresce a cada ajuste do dono; 20.000 apertava um
-      # agente com cenários de verdade (o primeiro caso real chegou a 77% do teto antigo).
+      # agente com cenários de verdade (o primeiro caso real chegou a 77% do teto antigo). 50.000 apertou o agente
+      # contratado de seguro viagem (#3211, ~48.000): o teto passou a 100.000 (decisão do Rodrigo, 26/11/2026).
       MAX_TONE_LENGTH = 1_000
-      MAX_INSTRUCTION_LENGTH = 50_000
+      MAX_INSTRUCTION_LENGTH = 100_000
 
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }

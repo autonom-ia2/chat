@@ -35,10 +35,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
   it 'cota, guarda e devolve só o resumo' do
     saida = JSON.parse(ferramenta(params).call)
     esperado = [
-      { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'preco_total' => 'R$ 360,00', 'max_parcelas' => 12,
+      { 'codigo' => 'P1', 'nome' => 'Especial UA 100K BRL', 'destaque' => 'mais_recomendada', 'preco_total' => 'R$ 360,00',
+        'por_dia_por_pessoa' => 'R$ 72,00', 'max_parcelas' => 12,
         'principais' => { 'despesas_medicas' => 'R$ 100.000', 'bagagem' => 'R$ 2.000', 'cancelamento' => 'R$ 2.500' },
         'anual' => false, 'dias_por_viagem' => nil },
-      { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'preco_total' => 'R$ 210,00', 'max_parcelas' => 12,
+      { 'codigo' => 'P2', 'nome' => 'Especial UA 30K BRL', 'destaque' => 'mais_economica', 'preco_total' => 'R$ 210,00',
+        'por_dia_por_pessoa' => 'R$ 42,00', 'max_parcelas' => 12,
         'principais' => { 'despesas_medicas' => 'R$ 30.000', 'bagagem' => 'R$ 1.000', 'cancelamento' => nil },
         'anual' => false, 'dias_por_viagem' => nil }
     ]
@@ -123,6 +125,45 @@ RSpec.describe Autonomia::Agents::Tools::Native::CotarSeguroViagem do
       marca_do_debounce(79)
       delivery.ler_no_turno([78])
       expect(ferramenta(params).call).to eq(described_class::TURNO_SUPERADO)
+    end
+  end
+
+  describe 'planos anuais só quando pedidos (#3226)' do
+    let(:resposta) { JSON.parse(file_fixture('../universal/cotacao.json').read) }
+    let(:anual) do
+      resposta['produtos'][0].merge('descricao' => 'Anual Multiviagens UA 100 (30 Dias)', 'multiviagem' => true,
+                                    'diasMultiviagem' => 30)
+    end
+
+    def cotar_com(produtos, argumentos = params)
+      stub_request(:post, "#{base}/v1/Cotacao").to_return(status: 200, body: resposta.merge('produtos' => produtos).to_json)
+      JSON.parse(ferramenta(argumentos).call)
+    end
+
+    it 'sem incluir_anuais: o anual fica fora da cotação guardada, do resumo e do PDF, e os códigos são só dos únicos' do
+      saida = cotar_com(resposta['produtos'] + [anual])
+      expect(saida['planos'].pluck('codigo', 'anual')).to eq([['P1', false], ['P2', false]])
+      expect(saida).not_to have_key('aviso')
+      expect(Autonomia::Agents::CotacaoDeViagem.last.planos.pluck('multiviagem')).to eq([false, false])
+    end
+
+    it 'com incluir_anuais: true, o anual entra, sem destaque' do
+      saida = cotar_com(resposta['produtos'] + [anual], params.merge('incluir_anuais' => true))
+      expect(saida['planos'].pluck('codigo', 'anual', 'destaque'))
+        .to eq([['P1', false, 'mais_recomendada'], ['P2', false, 'mais_economica'], ['P3', true, nil]])
+    end
+
+    it 'incluir_anuais em texto ("true"), como a ferramenta nativa recebe sem conversão: inclui; "false" não' do
+      expect(cotar_com(resposta['produtos'] + [anual], params.merge('incluir_anuais' => 'true'))['planos'].pluck('anual'))
+        .to eq([false, false, true])
+      expect(cotar_com(resposta['produtos'] + [anual], params.merge('incluir_anuais' => 'false'))['planos'].pluck('anual'))
+        .to eq([false, false])
+    end
+
+    it 'só anuais e o cliente não pediu: devolve os anuais e avisa que só há anuais' do
+      saida = cotar_com([anual])
+      expect(saida['planos'].pluck('anual')).to eq([true])
+      expect(saida['aviso']).to eq(described_class::SO_ANUAIS)
     end
   end
 

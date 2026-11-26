@@ -23,9 +23,10 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
 
   module_function
 
-  # -> Array<Hash> com chaves em texto, `codigo` "P1", "P2"... na ordem da Universal depois do filtro.
-  def de(resposta, idades:)
-    para_idades(candidatos(resposta), idades)
+  # -> Array<Hash> com chaves em texto, `codigo` "P1", "P2"... na ordem da Universal depois do filtro. Anual só com
+  # `incluir_anuais: true` (#3226).
+  def de(resposta, idades:, incluir_anuais: false)
+    para_idades(candidatos(resposta), idades, incluir_anuais: incluir_anuais)
   end
 
   # Os planos com despesas médicas, ainda sem o filtro de idade e sem código. Quem precisa saber se o vazio é da idade
@@ -37,18 +38,34 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
   end
 
   # Os candidatos que aceitam a idade de todos os viajantes (`Faixas.dentro_do_limite?`), com o código "P1", "P2"...
-  # na ordem depois do filtro.
-  def para_idades(candidatos, idades)
-    candidatos.select { |plano| idades.all? { |idade| SeguroViagem::Faixas.dentro_do_limite?(plano, idade) } }
-              .each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
+  # na ordem depois do filtro. Sem `incluir_anuais` (#3226), os anuais ficam de fora quando há plano de viagem única;
+  # só com anuais, eles ficam (a cotação não volta vazia por isso).
+  def para_idades(candidatos, idades, incluir_anuais:)
+    aceitos = candidatos.select { |plano| idades.all? { |idade| SeguroViagem::Faixas.dentro_do_limite?(plano, idade) } }
+    aceitos = sem_anuais_se_ha_unicos(aceitos) unless incluir_anuais
+    aceitos.each_with_index.map { |plano, indice| { 'codigo' => "P#{indice + 1}" }.merge(plano) }
   end
 
-  # O que o modelo lê: o código, o nome, o preço em reais, as parcelas, as três coberturas principais e se o plano é
-  # anual (com os dias de cada viagem).
-  def resumo(planos)
+  # Os planos de viagem única; sem nenhum, todos (só anuais: a cotação não volta vazia por isso).
+  def sem_anuais_se_ha_unicos(planos)
+    unicos = planos.reject { |plano| anual?(plano) }
+    unicos.empty? ? planos : unicos
+  end
+
+  # Todos os planos são anuais (a seguradora não devolveu plano de viagem única para esta viagem).
+  def so_anuais?(planos)
+    planos.any? && planos.all? { |plano| anual?(plano) }
+  end
+
+  # O que o modelo lê: o código, o nome, o destaque (`Destaques`, o mesmo do PDF), o preço em reais, o preço por dia e
+  # por pessoa (`PorDia`, nil no anual), as parcelas, as três coberturas principais e se o plano é anual (com os dias de
+  # cada viagem). O `pedido` é o da cotação guardada: as datas e as idades.
+  def resumo(planos, pedido)
+    destaques = SeguroViagem::Destaques.por_codigo(planos)
     planos.map do |plano|
-      { 'codigo' => plano['codigo'], 'nome' => plano['nome'],
+      { 'codigo' => plano['codigo'], 'nome' => plano['nome'], 'destaque' => destaques[plano['codigo']],
         'preco_total' => plano['preco_total'].nil? ? nil : SeguroViagem::Dinheiro.brl(plano['preco_total']),
+        'por_dia_por_pessoa' => SeguroViagem::PorDia.por_pessoa(plano, pedido),
         'max_parcelas' => plano['max_parcelas'], 'principais' => plano['principais'], 'anual' => anual?(plano),
         'dias_por_viagem' => plano['dias_por_viagem'] }
     end
@@ -144,6 +161,6 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Planos
     valor.nil? ? nil : BigDecimal(valor.to_s).to_s('F')
   end
 
-  private_class_method :catalogo_de, :com_despesas_medicas, :plano, :dias_por_viagem, :regra_cancelamento, :faixas,
-                       :coberturas, :principais, :principal, :beneficios, :id_de, :decimal
+  private_class_method :sem_anuais_se_ha_unicos, :catalogo_de, :com_despesas_medicas, :plano, :dias_por_viagem,
+                       :regra_cancelamento, :faixas, :coberturas, :principais, :principal, :beneficios, :id_de, :decimal
 end
