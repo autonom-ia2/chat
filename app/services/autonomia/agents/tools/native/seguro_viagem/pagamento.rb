@@ -55,6 +55,14 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Pagamento
     nil
   end
 
+  # O que vai em `pago_em` na primeira vez que o pago é visto: a `dataPagamento` da Universal como veio (sem fuso), ou a
+  # hora em que o pago foi visto. Quem grava é a `situacao_do_pagamento` e a conferência automática
+  # (`Contratados::ConferirPagamentoJob`, #3246b).
+  def pago_em(status)
+    data = corpo(status)['dataPagamento'].to_s
+    data.empty? ? Time.current.iso8601 : data
+  end
+
   def corpo(status)
     status.is_a?(Hash) ? status : {}
   end

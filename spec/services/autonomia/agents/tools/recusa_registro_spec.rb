@@ -923,6 +923,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'proposta_sem_conversa', slug: 'gerar_proposta_seguro_viagem', conversa: '-' },
         dispara: -> { propor_viagem(proposta_de_viagem, entrega: nil) }
       },
+      # #3246b: o turno do aviso de pagamento não gera proposta (nada vai à Universal).
+      'gerar_proposta_seguro_viagem.rb#recusa_no_turno_de_evento#1' => {
+        espera: { motivo: 'proposta_turno_de_evento', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          evento = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, evento: 'pagamento_confirmado',
+                                                          marca_do_evento: 'viagem:1:1764158000:pagamento_confirmado')
+          propor_viagem(proposta_de_viagem, entrega: evento)
+        }
+      },
       'gerar_proposta_seguro_viagem.rb#call#2' => {
         espera: { motivo: 'sem_cotacao', slug: 'gerar_proposta_seguro_viagem' },
         dispara: -> { propor_viagem(proposta_de_viagem, cotacao: nil) }

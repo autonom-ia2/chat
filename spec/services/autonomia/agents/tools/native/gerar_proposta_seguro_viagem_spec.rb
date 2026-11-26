@@ -56,6 +56,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     params.merge('titular' => titular.merge('data_nascimento' => data))
   end
 
+  # #3246b: o turno acionado pelo aviso de pagamento não vira compra.
+  it 'no turno de evento recusa, sem chamar a Universal nem gravar proposta' do
+    evento = Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: nil, evento: 'pagamento_confirmado',
+                                                    marca_do_evento: "viagem:#{cotacao.id}:1764000000:pagamento_confirmado")
+
+    texto = ferramenta(params, entrega: evento).call
+
+    expect(texto).to eq(described_class::TEXTO_TURNO_DE_EVENTO)
+    expect(a_request(:post, "#{base}/v1/Compras")).not_to have_been_made
+    expect(cotacao.reload.proposta).to be_nil
+  end
+
   it 'preço e produto saem da cotação guardada' do
     ferramenta(params).call
     da_cotacao = lambda do |requisicao|

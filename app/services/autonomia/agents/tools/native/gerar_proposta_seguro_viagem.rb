@@ -29,10 +29,11 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   TEXTO_SEM_ENDERECO = 'Não consegui o endereço pelo CEP do titular. Confirme o CEP com o cliente; se estiver certo, ' \
                        'passe a conversa para a equipe.'.freeze
   TEXTO_EM_ANDAMENTO = 'Já tem uma proposta sendo gerada para esta cotação. Espere um pouco e confira de novo.'.freeze
+  # #3246b: o turno acionado pelo aviso de pagamento (`Operate::ResponderAoEventoDaViagem`) não vira compra.
+  TEXTO_TURNO_DE_EVENTO = 'Este turno é um aviso do sistema, não um pedido do cliente: não gere proposta agora. Se o ' \
+                          'cliente quiser uma proposta nova, ele vai pedir na próxima mensagem.'.freeze
   # O `SELECT … FOR UPDATE` do lock que passou do `statement_timeout` (ou do `lock_timeout`) do banco.
   ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout].freeze
-  # Separação de domínio: a chave do HMAC é derivada só para isto, nunca o `secret_key_base` cru.
-  DOMINIO_DA_CHAVE = 'seguro_viagem/proposta'.freeze
   # A Universal cancela o link de pagamento 24 h depois da compra (e-mail "Pagamento pedido", 26/11). Uma hora de folga
   # para não devolver um link prestes a vencer; passado isso, a mesma proposta gera carrinho e link novos.
   VALIDADE_DO_LINK = 23.hours
@@ -94,6 +95,9 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   def call
     return error('proposta_sem_conversa') if conversa.nil?
 
+    no_evento = recusa_no_turno_de_evento
+    return no_evento if no_evento
+
     cotacao = Autonomia::Agents::CotacaoDeViagem.ultima_da_conversa(conversa.id, agent.id)
     return recusar('sem_cotacao', 'Esta conversa ainda não tem cotação. Cote primeiro.') if cotacao.nil?
     return recusar('recotar', 'A cotação desta conversa é de outro dia e o preço pode ter mudado. Cote de novo.') unless cotacao.do_dia?(fuso)
@@ -109,6 +113,11 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   end
 
   private
+
+  # Aviso do sistema nunca vira compra (#3246b), como a agenda (`agendar_reuniao`): nada vai à seguradora. nil fora dele.
+  def recusa_no_turno_de_evento
+    recusar('proposta_turno_de_evento', TEXTO_TURNO_DE_EVENTO) if delivery.try(:turno_de_evento?)
+  end
 
   def conferir_e_propor(cotacao, plano)
     viajantes, contato, falta = conferidos
@@ -216,23 +225,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     false
   end
 
-  # A mesma cotação, o mesmo plano e o mesmo dado inteiro (viajantes já normalizados por `Viajantes`, com o contato e
-  # o endereço do titular como vieram, e o contato de emergência) são a mesma proposta. Os demais viajantes entram
-  # ordenados pelo CPF: a mesma gente em outra ordem é a mesma proposta. JSON canônico, chaves ordenadas.
   def chave(cotacao, viajantes, contato)
-    titular, *demais = viajantes.map { |pessoa| pessoa.merge('nascimento' => pessoa['nascimento'].iso8601) }
-    dado = { 'cotacao' => cotacao.id, 'plano' => codigo, 'titular' => titular,
-             'demais_viajantes' => demais.sort_by { |pessoa| pessoa['cpf'] }, 'contato_de_emergencia' => contato }
-    OpenSSL::HMAC.hexdigest('SHA256', Rails.application.key_generator.generate_key(DOMINIO_DA_CHAVE),
-                            JSON.generate(canonico(dado)))
-  end
-
-  def canonico(valor)
-    case valor
-    when Hash then valor.sort_by { |nome, _| nome.to_s }.to_h { |nome, item| [nome.to_s, canonico(item)] }
-    when Array then valor.map { |item| canonico(item) }
-    else valor
-    end
+    SeguroViagem::ChaveDaProposta.de(cotacao: cotacao, codigo: codigo, viajantes: viajantes, contato: contato)
   end
 
   def idades_reais(viajantes, cotacao)
