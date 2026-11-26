@@ -1,5 +1,5 @@
-# A COMPRA do Seguro Viagem (#3211): monta o corpo do `POST /v1/Compras` da Universal e o link de pagamento. Não chama
-# nada e não grava nada.
+# A COMPRA do Seguro Viagem (#3211): monta o corpo do `POST /v1/Compras` da Universal, o link de pagamento e a proposta
+# que a ferramenta guarda da resposta. Não chama nada e não grava nada.
 #
 # PREÇO E PLANO SÓ DA COTAÇÃO GUARDADA (R3). `ValorCompra`, `ValorProduto`, `CodigoProduto`, `CodigoTarifaAcordo` e
 # `Cambio` saem do plano guardado; datas, destinos e tarifa saem do `pedido` guardado (R4). Do modelo vêm só os dados
@@ -52,6 +52,18 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
     uri.to_s if pagamento?(uri) && uri.query.present?
   rescue URI::InvalidURIError
     nil
+  end
+
+  # A proposta que fica guardada na cotação, da resposta da compra, sem dado pessoal: a chave, o plano, o carrinho, o link
+  # e a hora. Compra sem `urlVoucher` de pagamento válido (sem link): nil. O `valorBrutoBrl` da resposta volta 0 (#3244)
+  # e não é guardado.
+  def proposta(compra, plano:, chave:)
+    dados = compra.is_a?(Hash) ? compra : {}
+    de_pagamento = link(dados['urlVoucher'])
+    return nil if de_pagamento.nil?
+
+    { 'chave' => chave, 'codigo_do_plano' => plano['codigo'], 'codigo_carrinho' => dados['codigoCarrinho'],
+      'link' => de_pagamento, 'gerada_em' => Time.current.iso8601 }
   end
 
   def pagamento?(uri)

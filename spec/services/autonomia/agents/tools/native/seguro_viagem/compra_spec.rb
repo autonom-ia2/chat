@@ -91,4 +91,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
      'https://pagamento.universal-assistance.com:8443/?IdCarrinho=abc',
      987_654, nil, ''].each { |url| expect(described_class.link(url)).to be_nil }
   end
+
+  # A proposta guardada na cotação, da resposta da compra (era `GerarPropostaSeguroViagem#proposta_da`; saiu dela no
+  # #3263, só pelo tamanho da ferramenta).
+  it 'proposta guardada: a chave, o plano, o carrinho, o link e a hora, sem o valor da resposta' do
+    travel_to Time.utc(2026, 11, 24, 15, 0, 0) do
+      resposta = JSON.parse(file_fixture('../universal/compras_ok.json').read)
+      expect(described_class.proposta(resposta, plano: plano, chave: 'k'))
+        .to eq('chave' => 'k', 'codigo_do_plano' => 'P1', 'codigo_carrinho' => 987_654,
+               'link' => 'https://pagamento.universal-assistance.com/?IdCarrinho=c2VtLWRhZG8tcmVhbA==',
+               'gerada_em' => '2026-11-24T15:00:00Z')
+    end
+  end
+
+  it 'proposta guardada: nil sem link de pagamento válido ou com resposta que não é objeto' do
+    [{ 'codigoCarrinho' => 987_654 }, { 'urlVoucher' => 'https://pagamento.exemplo.com/?IdCarrinho=abc' }, [], nil]
+      .each { |resposta| expect(described_class.proposta(resposta, plano: plano, chave: 'k')).to be_nil }
+  end
 end

@@ -1,7 +1,7 @@
 # O PAGAMENTO DA PROPOSTA do Seguro Viagem (#3246): o que `situacao_do_pagamento` e `segunda_via_do_voucher` dividem.
 #
 # O CARRINHO É SEMPRE O NOSSO. A cotação é a última DESTE agente na conversa que tem proposta guardada, e o carrinho é o
-# `codigo_carrinho` que a compra devolveu (`GerarPropostaSeguroViagem#proposta_da`). Nunca um número vindo do modelo ou
+# `codigo_carrinho` que a compra devolveu (`SeguroViagem::Compra.proposta`). Nunca um número vindo do modelo ou
 # do cliente: as duas ferramentas não têm parâmetro. A última COM proposta, e não a última de todas: o cliente que pagou
 # e depois pediu outra cotação (outra viagem, outra data) continua perguntando do pagamento que fez.
 #

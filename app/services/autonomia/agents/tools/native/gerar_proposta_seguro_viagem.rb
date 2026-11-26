@@ -14,6 +14,12 @@
 # e cai no mesmo caso; se a espera passar do tempo do banco, ela recusa (`proposta_em_andamento`) sem chamar a
 # seguradora. Dado corrigido (outro e-mail, por exemplo) é outra chave e outra proposta.
 #
+# O CARRINHO ANTERIOR SAI ANTES DO NOVO (#3263). Proposta nova na cotação que já tem carrinho (dado corrigido, outro
+# plano, link vencido): sob o lock, antes da compra, o anterior não pago é cancelado na Universal, que recusa a compra
+# nova enquanto o voucher dele está "Ativo" (`SeguroViagem::CarrinhoAnterior`). Pago ainda não gravado, ou situação
+# ilegível: recusa `pagamento_do_anterior_em_aberto`, sem cancelar nem comprar. Erro ao ler ou ao cancelar: nada é
+# comprado, e o erro passa por `SeguroViagem::Falhas` como consulta sem dado do cliente.
+#
 # SEGURO PAGO NÃO SE REFAZ (#3247). Cotação com `pago_em`, ou outra cotação da mesma viagem (destinos, datas e idades)
 # nesta conversa com `pago_em`, recusa `proposta_ja_paga` antes de qualquer chamada (`SeguroViagem::PropostaPaga`); a
 # conferência se repete sob o lock da cotação.
@@ -202,30 +208,22 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     raise if travada
 
     recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO)
+  rescue *SeguroViagem::CarrinhoAnterior::NAO_SAIU => e
+    SeguroViagem::CarrinhoAnterior.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   rescue Universal::Cliente::Erro => e
     SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê
   # a cotação: a proposta comparada é a que está no banco agora, e a chamada que correr junto espera e cai no primeiro
-  # caso.
+  # caso. Antes da compra nova, o carrinho anterior desta cotação sai (#3263); quando não sai, levanta e nada é comprado.
   def guardada_ou_nova(cotacao, plano, pedido, chave)
     return cotacao.proposta if guardada?(cotacao, chave)
 
-    proposta = proposta_da(cliente.comprar(pedido), plano, chave)
+    SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
+    proposta = SeguroViagem::Compra.proposta(cliente.comprar(pedido), plano: plano, chave: chave)
     cotacao.update!(proposta: proposta) if proposta
     proposta
-  end
-
-  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link e a hora. Compra sem `urlVoucher` de
-  # pagamento válido (sem link): nil. O `valorBrutoBrl` da resposta volta 0 (#3244) e não é guardado.
-  def proposta_da(compra, plano, chave)
-    dados = compra.is_a?(Hash) ? compra : {}
-    link = SeguroViagem::Compra.link(dados['urlVoucher'])
-    return nil if link.nil?
-
-    { 'chave' => chave, 'codigo_do_plano' => plano['codigo'], 'codigo_carrinho' => dados['codigoCarrinho'],
-      'link' => link, 'gerada_em' => Time.current.iso8601 }
   end
 
   # O JSON SAI COM ESPAÇO depois de `:` e `,` (#3246): o botão de link só reconhece o endereço que é uma palavra
