@@ -14,7 +14,10 @@ const api = vi.hoisted(() => ({
 vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({ default: api }));
 
 const LISTA = {
-  fontes: [{ chave: 'cep', consultas: 2 }, { chave: 'cnpj', consultas: 1 }],
+  fontes: [
+    { chave: 'cep', consultas: 2 },
+    { chave: 'cnpj', consultas: 1 },
+  ],
   incluidas: [
     {
       id: 31,
@@ -164,6 +167,7 @@ describe('useVitrine · mudanças', () => {
   it.each([
     ['nome_em_uso', 'NOME_EM_USO'],
     ['agente_de_cotacao', 'COTACAO'],
+    ['agente_contratado', 'CONTRATADO'],
     ['desligada', 'DESLIGADA'],
     ['fora_da_vitrine', 'DESLIGADA'],
     ['pessoa_de_outra_conta', 'GERAL'],

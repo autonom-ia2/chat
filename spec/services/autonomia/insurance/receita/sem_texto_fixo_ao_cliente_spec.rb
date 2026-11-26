@@ -48,6 +48,9 @@ module TextoAoCliente
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno acionado por um evento da cotação' },
     'app/services/autonomia/agents/tools/async_publisher.rb::Autonomia::Agents::Tools::AsyncPublisher#build_message!' =>
       { tipo: :anexo_sem_texto, motivo: 'o arquivo da ferramenta (comparativo, proposta), sem legenda; privado com humano atribuído' },
+    'app/services/autonomia/agents/tools/native/seguro_viagem/entrega_do_comparativo.rb::' \
+    'Autonomia::Agents::Tools::Native::SeguroViagem::EntregaDoComparativo#criar' =>
+      { tipo: :anexo_sem_texto, motivo: 'o comparativo da cotação de seguro viagem, em PDF, sem legenda (#3211)' },
     'app/services/autonomia/agents/tools/nota_interna.rb::Autonomia::Agents::Tools::NotaInterna#criar' =>
       { tipo: :nota_privada, motivo: 'a nota da equipe no fecho da cotação' },
     'app/services/autonomia/automacao/nota.rb::Autonomia::Automacao::Nota#criar' =>

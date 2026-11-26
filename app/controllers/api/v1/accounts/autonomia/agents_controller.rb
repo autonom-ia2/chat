@@ -32,7 +32,9 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   SCAFFOLD
 
   def index
-    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes, vinculos_de_ajudante: :agent).order(created_at: :desc)
+    # #3211: o acesso à seguradora entra junto (o `contratado` do jbuilder o lê em cada agente contratado).
+    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes, :acesso_da_seguradora, vinculos_de_ajudante: :agent)
+                          .order(created_at: :desc)
   end
 
   def show; end
@@ -167,7 +169,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     agente = params[:agent]
     return unless agente.respond_to?(:key?)
 
-    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
+    raise @agent.erro_da_instrucao_mantida if @agent.instrucao_mantida? && edita_o_que_e_mantido?(agente)
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if !@agent.instrucao_mantida? && pede_o_tipo_mantido?(agente)
   end
 
@@ -200,7 +202,11 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # `base` (#1429): a marca do segmento com que o agente nasceu; o sistema grava no nascimento, nunca a API.
   # `modelo_pronto` (#2881): a marca do modelo pronto de ramo (as listas que entram nas instruções do agente); só o
   # Construtor e a edição conferida do rascunho (`ModelosDeRamo::Edicao`) a escrevem, nunca o PATCH do agente.
-  RESERVED_CONFIG_KEYS = (%w[system_key hidden_from_hub papel base modelo_pronto] + ::Autonomia::Agents::ConfigDoMaterial::CHAVES).freeze
+  # #3211: a marca do agente contratado e a versão da base semeada só nascem e mudam pelo "Contratar"; a API genérica
+  # as tira do que chega (no PATCH o que já está gravado fica, pelo `merge_config!`).
+  RESERVED_CONFIG_KEYS = (%w[system_key hidden_from_hub papel base modelo_pronto] +
+                          ::Autonomia::Agents::ConfigDoMaterial::CHAVES +
+                          [::Autonomia::Agents::Contratados::MARCA, ::Autonomia::Agents::Contratados::BASE_VERSAO]).freeze
 
   def agent_params
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card

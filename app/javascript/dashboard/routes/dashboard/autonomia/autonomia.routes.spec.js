@@ -1,6 +1,7 @@
 // Guardas das rotas da Autonomia (#675): com link direto ou F5, o guarda roda
 // antes de a conta estar na store. Sem esperar a conta, a pessoa caía em
 // Conversas mesmo com o recurso ligado.
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { routes } from './autonomia.routes';
 
 const store = vi.hoisted(() => ({ getters: {}, dispatch: vi.fn() }));
@@ -246,5 +247,98 @@ describe('painel de desempenho (#2226)', () => {
       name: 'home',
       params: { accountId: '9' },
     });
+  });
+});
+
+// #3211 (Tarefa 29a) — a página do agente pronto que a pessoa contrata. Tem de vir antes da página do agente, para
+// `prontos` não casar como `:agentId`, e só abre com a flag da conta.
+describe('página do modelo contratado (#3211)', () => {
+  const FLAG = 'agente_seguro_viagem_universal';
+  const contaCom = features => ({
+    id: 9,
+    autonomia_agents_enabled: true,
+    features,
+  });
+  const ligadaNa = (_contaId, flag) => store.getters.flags.includes(flag);
+  // Roda os guardas da rota em fila, como o vue-router, parando no primeiro que desvia.
+  const entrarEmFila = async name => {
+    const guardas = [].concat(rota(name).beforeEnter);
+    const chamadas = [];
+    let desviou = false;
+    for (let i = 0; i < guardas.length && !desviou; i += 1) {
+      const next = vi.fn();
+      // eslint-disable-next-line no-await-in-loop
+      await guardas[i]({ params: { accountId: '9' } }, {}, next);
+      chamadas.push(next.mock.calls[0]);
+      desviou = next.mock.calls[0].length > 0;
+    }
+    return chamadas;
+  };
+
+  beforeEach(() => {
+    store.dispatch.mockReset();
+    window.globalConfig = { AUTONOMIA_AGENTS_ENABLED: 'true' };
+    store.getters.flags = [FLAG];
+    store.getters['accounts/isFeatureEnabledonAccount'] = ligadaNa;
+    store.getters['accounts/getAccount'] = () => contaCom({ [FLAG]: true });
+  });
+
+  it('tem o caminho, o id do modelo pelo props e a chave de gerenciar com a flag', () => {
+    const contratado = rota('autonomia_contratado_modelo');
+    expect(contratado.path).toBe(
+      '/app/accounts/:accountId/agents/prontos/:modelo'
+    );
+    expect(contratado.meta).toEqual({
+      permissions: ['administrator', 'autonomia_manage'],
+      featureFlag: FLAG,
+    });
+    expect(
+      contratado.props({ params: { modelo: 'seguro_viagem_universal' } })
+    ).toEqual({ modelo: 'seguro_viagem_universal' });
+  });
+
+  it('vem antes da página do agente na lista de rotas', () => {
+    const nomes = routes.map(route => route.name);
+    expect(nomes.indexOf('autonomia_contratado_modelo')).toBeGreaterThan(-1);
+    expect(nomes.indexOf('autonomia_contratado_modelo')).toBeLessThan(
+      nomes.indexOf('autonomia_agent_panel')
+    );
+  });
+
+  it('o roteador resolve prontos/:modelo para a rota do modelo, e não para um agente', () => {
+    const roteador = createRouter({
+      history: createMemoryHistory(),
+      routes,
+    });
+    const resolvida = roteador.resolve(
+      '/app/accounts/9/agents/prontos/seguro_viagem_universal'
+    );
+    expect(resolvida.name).toBe('autonomia_contratado_modelo');
+    expect(resolvida.params.modelo).toBe('seguro_viagem_universal');
+    expect(roteador.resolve('/app/accounts/9/agents/7').name).toBe(
+      'autonomia_agent_panel'
+    );
+  });
+
+  it('entra com Agentes ligado e a flag ligada na conta', async () => {
+    const chamadas = await entrarEmFila('autonomia_contratado_modelo');
+    expect(chamadas).toEqual([[], []]);
+  });
+
+  it('com a flag desligada vai para home', async () => {
+    store.getters.flags = [];
+    const chamadas = await entrarEmFila('autonomia_contratado_modelo');
+    expect(chamadas.at(-1)).toEqual([
+      { name: 'home', params: { accountId: '9' } },
+    ]);
+  });
+
+  it('com Agentes desligado na conta vai para home, antes de olhar a flag', async () => {
+    store.getters['accounts/getAccount'] = () => ({
+      id: 9,
+      autonomia_agents_enabled: false,
+    });
+    const chamadas = await entrarEmFila('autonomia_contratado_modelo');
+    expect(chamadas).toEqual([[{ name: 'home', params: { accountId: '9' } }]]);
   });
 });

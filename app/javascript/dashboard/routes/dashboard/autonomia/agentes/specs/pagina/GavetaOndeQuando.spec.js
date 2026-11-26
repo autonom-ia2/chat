@@ -413,4 +413,104 @@ describe('GavetaOndeQuando', () => {
     expect(document.body.textContent).toContain('ONDE_QUANDO.SEM_LEITURA');
     wrapper.unmount();
   });
+
+  // #3211 (nota 5 do mockup) — o passo 3 do agente contratado: o texto do passo no topo e, com uma caixa livre só,
+  // ela já vem marcada para o contratado que começa a atender sem canal nenhum (só para ele).
+  describe('step text and the single free inbox', () => {
+    const NOVO = {
+      ...AGENTE,
+      status: 'draft',
+      enabled: false,
+      channels_count: 0,
+      contratado: { modelo: 'seguro_viagem_universal' },
+    };
+    const UMA_LIVRE = [
+      { inbox_id: 2, name: 'Instagram', occupied_by: null },
+      {
+        inbox_id: 3,
+        name: 'WhatsApp dos Jardins',
+        occupied_by: { kind: 'agent', agent_id: 9, agent_name: 'Duda' },
+      },
+    ];
+
+    it('shows the step text at the top', () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: NOVO,
+        canais: UMA_LIVRE,
+        textoDoPasso: 'Passo 3 de 3',
+      });
+      expect(no('[data-texto-do-passo]').textContent.trim()).toBe(
+        'Passo 3 de 3'
+      );
+      wrapper.unmount();
+    });
+
+    it('has no step text by default', () => {
+      const wrapper = montar();
+      expect(no('[data-texto-do-passo]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('marks the only free inbox for an agent with no channel', async () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: NOVO,
+        canais: UMA_LIVRE,
+      });
+      expect(radio('Instagram').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-confirmar]').disabled).toBe(false);
+      await clicar('[data-confirmar]');
+      expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { ativar: true });
+      wrapper.unmount();
+    });
+
+    it('marks the free inbox when the inboxes arrive after opening', async () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: NOVO,
+        canais: [],
+        estadoCanais: 'carregando',
+      });
+      await wrapper.setProps({ canais: UMA_LIVRE, estadoCanais: 'pronto' });
+      expect(radio('Instagram').getAttribute('aria-checked')).toBe('true');
+      wrapper.unmount();
+    });
+
+    it('marks nothing for an agent that is not hired, even with one free inbox', () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: { ...NOVO, contratado: null },
+        canais: UMA_LIVRE,
+      });
+      expect(radio('Instagram').getAttribute('aria-checked')).not.toBe('true');
+      expect(no('[data-confirmar]').disabled).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('marks nothing when two inboxes are free', () => {
+      const wrapper = montar({
+        modo: 'voltar',
+        atendendo: false,
+        atuais: [],
+        agente: NOVO,
+        canais: [
+          ...UMA_LIVRE,
+          { inbox_id: 5, name: 'Site novo', occupied_by: null },
+        ],
+      });
+      expect(radio('Instagram').getAttribute('aria-checked')).not.toBe('true');
+      expect(radio('Site novo').getAttribute('aria-checked')).not.toBe('true');
+      expect(no('[data-confirmar]').disabled).toBe(true);
+      wrapper.unmount();
+    });
+  });
 });

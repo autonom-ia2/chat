@@ -13,6 +13,8 @@ export const GAVETA = {
   INSTRUCOES: 'instrucoes',
   AGENDA: 'agenda',
   FERRAMENTAS: 'ferramentas',
+  // #3211 — os dados da corretora e o acesso à seguradora do agente contratado.
+  CONTRATADO: 'contratado',
 };
 
 // O `:tab` da página antiga (links do Guia, da Central e de favoritos) abre a gaveta equivalente.
@@ -39,6 +41,8 @@ const TIPO_COTACAO = 'insurance_quote';
 export const ehCotacao = agente => agente?.agent_type === TIPO_COTACAO;
 export const ehManual = agente => agente?.mode === 'manual';
 export const ehInterno = agente => agente?.actuation === 'internal';
+// #3211 — o agente pronto que a corretora contratou: o servidor manda o bloco `contratado` (nulo nos outros).
+export const ehContratado = agente => Boolean(agente?.contratado);
 
 // Estado de operação na página: o agente de cotação também atende ou está parado (o cartão da lista
 // mostra "Cotação", mas a página precisa do interruptor certo). A mesma regra da lista
@@ -46,9 +50,9 @@ export const ehInterno = agente => agente?.actuation === 'internal';
 export const estadoDeOperacao = agente => estadoDeAtendimento(agente);
 
 // Mudar conversando usa o Construtor: não serve a quem escreve à mão (o Construtor sobrescreveria a
-// instrução) nem à cotação (instrução mantida pelo módulo, o backend responde 422).
+// instrução) nem à cotação nem ao contratado (instrução mantida pela Autonom.ia, o backend responde 422).
 export const podeMudarConversando = agente =>
-  !ehManual(agente) && !ehCotacao(agente);
+  !ehManual(agente) && !ehCotacao(agente) && !ehContratado(agente);
 
 // O agente recebe a agenda da IA (#1196): o servidor manda `booking_available: false` quando não.
 export const recebeAgenda = agente => agente?.booking_available !== false;
@@ -63,11 +67,26 @@ export const ehSuperAdmin = usuario => usuario?.type === 'SuperAdmin';
 // só nome, foto, horário, estado e números; o interno não tem canal. A agenda (#1253) só abre para
 // quem gerencia, com a agenda nova na conta e para o agente que recebe a agenda. Ferramentas, só
 // para o SuperAdmin que gerencia e, com a flag da conta, para quem tem a chave de ferramentas.
+// #3211 — o contratado tem a gaveta própria (dados da corretora e acesso), o canal, o teste, a base só para ler e
+// foto e nome; nada de Instruções, Versões, Conversas, Agenda nem Ferramentas (a API recusa para ele).
+const DO_CONTRATADO = [
+  GAVETA.CONTRATADO,
+  GAVETA.ONDE,
+  GAVETA.TESTAR,
+  GAVETA.SABE,
+  GAVETA.FOTO,
+  GAVETA.VOLTAR,
+];
+const DO_CONTRATADO_SO_LEITURA = [GAVETA.TESTAR, GAVETA.SABE];
+
 export const gavetasPermitidas = (
   agente,
   podeGerenciar,
   { agendaNova = false, superAdmin = false, ferramentas: chave = false } = {}
 ) => {
+  if (ehContratado(agente)) {
+    return podeGerenciar ? [...DO_CONTRATADO] : [...DO_CONTRATADO_SO_LEITURA];
+  }
   if (ehCotacao(agente)) {
     const daCotacao = podeGerenciar && superAdmin ? [GAVETA.FERRAMENTAS] : [];
     return podeGerenciar

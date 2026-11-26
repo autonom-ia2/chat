@@ -543,12 +543,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       end
     end
 
-    # UMA ferramenta de cotação no catálogo. Duas competindo pelo mesmo pedido fariam o modelo
+    # UMA ferramenta de cotação por agente. Duas competindo pelo mesmo pedido fariam o modelo
     # escolher por descrição, e a diferença entre elas não é do vocabulário do cliente.
-    it 'e a unica ferramenta de cotacao do catalogo' do
-      slugs = Autonomia::Agents::Tools::Registry.slugs
-      expect(slugs).to include('cotar_seguro')
-      expect(slugs.grep(/cotar/)).to eq(['cotar_seguro'])
+    # #3211: o catálogo passou a ter a cotação do agente contratado (`cotar_seguro_viagem`), que fica
+    # em `DO_CONTRATADO` (só o contratado a recebe) e nunca ao lado desta: a lista de ferramentas do
+    # contratado vem do modelo dele, sem `cotar_seguro`.
+    it 'e a unica ferramenta de cotacao de um agente que nao e o contratado' do
+      registro = Autonomia::Agents::Tools::Registry
+      cotam = ->(slugs) { slugs.select { |slug| slug.include?('cotar') } }
+
+      expect(cotam.call(registro.slugs)).to contain_exactly('cotar_seguro', 'cotar_seguro_viagem')
+      expect(cotam.call(registro::DE_ATENDIMENTO.map(&:slug))).to eq(['cotar_seguro'])
+      expect(cotam.call(registro::DO_CONTRATADO.map(&:slug))).to eq(['cotar_seguro_viagem'])
+      Autonomia::Agents::Contratados::MODELOS.each_value do |modelo|
+        expect(cotam.call(modelo[:ferramentas_nativas])).not_to include('cotar_seguro')
+      end
     end
 
     it 'so aparece para conta com conexao pronta' do

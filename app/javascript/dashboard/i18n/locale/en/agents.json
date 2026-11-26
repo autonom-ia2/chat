@@ -3378,6 +3378,7 @@
         "DESLIGADA": "Ready-made tools are not available for this account right now.",
         "NAO_ENCONTRADO": "I could not find this agent or this tool. Reload the page and try again.",
         "COTACAO": "The quote agent comes with its own tools and does not take ready-made tools.",
+        "CONTRATADO": "This agent comes ready-made with its own tools and does not take ready-made tools.",
         "NOME_EM_USO": "This agent already has another tool with the same name. Talk to whoever manages the account's tools.",
         "REDE": "No connection right now. Check the internet and try again.",
         "GERAL": "That did not work right now. Try again in a moment."
@@ -4051,6 +4052,167 @@
           "FAIXA": "The price depends on what the agent looks up.",
           "FATURA": "The amount goes on your monthly bill."
         }
+      }
+    },
+    "CONTRATADOS": {
+      "AREA": {
+        "TITULO": "They sell on their own",
+        "TEXTO": "They quote, write the proposal and send the payment link. You only fill in your brokerage's details."
+      },
+      "CARTAO": {
+        "TITULO": "Universal Travel Insurance",
+        "TEXTO": "Sells Universal travel insurance from start to finish: quotes, writes the proposal and sends the payment link.",
+        "PRECISA": "Needs the login for the Universal portal.",
+        "VER": "See how it works",
+        "VER_ARIA": "See how it works: {nome}"
+      },
+      "MODELO": {
+        "TITULO": "Universal Travel Insurance",
+        "TEXTO": "An agent that sells Universal travel insurance to travelers, from the first hello to the payment link.",
+        "VOLTAR": "Back to Create agent",
+        "CONTRATAR": "Hire",
+        "SEM_CHAVE_DE_IA": {
+          "TITULO": "Your account's artificial intelligence is not turned on yet.",
+          "TEXTO": "It is what lets the agent talk to customers. Turn it on in Settings, under Integrations. If you need help, Autonom.ia support can help.",
+          "TEXTO_SEM_ADMIN": "It is what lets the agent talk to customers. Whoever manages the account turns it on in Settings, under Integrations. Let that person know.",
+          "ACAO": "Open Integrations"
+        },
+        "FAZ_TITULO": "What it does",
+        "FAZ": {
+          "DUVIDAS": "Answers the traveler's questions with Universal's official rules",
+          "COTA": "Quotes on the spot, with the destination, the dates and everyone's age",
+          "ESCOLHE": "Helps pick the plan and explains what each one covers",
+          "PROPOSTA": "Writes the proposal and sends the payment link"
+        },
+        "PRECISA_TITULO": "What you will need",
+        "PRECISA": {
+          "DADOS": "A name for the agent and a sentence about your brokerage",
+          "LOGIN": "The login and password for the Universal portal",
+          "LOGIN_DETALHE": "It is the same one you use on the Universal website.",
+          "CANAL": "A channel to answer on, such as WhatsApp"
+        },
+        "PRONTO": "You don't write anything: the way it answers comes ready and improves by itself.",
+        "EXEMPLO_TITULO": "Example conversation",
+        "EXEMPLO_SR": "Example conversation, not a real agent",
+        "EXEMPLO_NOME": "Bia",
+        "EXEMPLO_CORRETORA": "Example Brokerage",
+        "CONVERSA": {
+          "CLIENTE_1": "Hi! I want insurance for Portugal, from January 10 to 24. There are 2 of us.",
+          "AGENTE_1": "Hi! This is {nome}, from {corretora}. How old is each of you?",
+          "CLIENTE_2": "45 and 43",
+          "AGENTE_2": "For the two of you, the most chosen plan for Europe is R$ 189.90 per person. Want that one?",
+          "CLIENTE_3": "Yes",
+          "AGENTE_3": "For the proposal, send me the full name, tax ID and date of birth of each of you.",
+          "CLIENTE_4": "Ana Lima, 000.000.000-00, 02/03/1980\nJoão Lima, 000.000.000-00, 15/07/1982",
+          "AGENTE_4": "Done! Here is the link to pay: pagamento.exemplo.com.br/a1b2"
+        }
+      },
+      "CONTRATAR": {
+        "TITULO": "Hire the agent",
+        "PASSO": "Step 1 of 3: about your brokerage.",
+        "ENVIAR": "Hire",
+        "ENVIANDO": "Hiring…",
+        "NOME": {
+          "ROTULO": "Agent name",
+          "AJUDA": "It is the name the traveler sees in the conversation.",
+          "ERRO": "Write the agent's name."
+        },
+        "CORRETORA": {
+          "ROTULO": "Brokerage name",
+          "ERRO": "Write the brokerage's name."
+        },
+        "SOBRE": {
+          "ROTULO": "About the brokerage (you can leave it for later)",
+          "EXEMPLO": "E.g.: Brokerage in Campinas since 2010. We serve families and companies.",
+          "AJUDA": "The agent uses it to introduce itself.",
+          "CONTADOR": "{atual} of {maximo}"
+        }
+      },
+      "ERRO": {
+        "MARCADOR": "This text has a reserved code (a piece of text with $). Remove that part and try again.",
+        "INDISPONIVEL": "This ready-made agent is not available for this account right now. Contact Autonom.ia support.",
+        "SEM_CHAVE_DE_IA": "Your account's artificial intelligence is not turned on yet. Nothing was created. Whoever manages the account turns it on in Settings, under Integrations.",
+        "NOME_AGENTE": "Write the agent's name, up to {maximo} characters.",
+        "NOME_CORRETORA": "Write the brokerage's name, up to {maximo} characters.",
+        "SOBRE_CORRETORA": "The brokerage's introduction can have up to {maximo} characters.",
+        "ACESSO_INCOMPLETO": "Fill in the insurer's login and password.",
+        "GENERICO": "That didn't work right now. Try again in a few minutes."
+      },
+      "ACESSO": {
+        "TITULO": "Access to the Universal portal",
+        "CRIADA": "The agent {nome} was created. It starts paused. It still needs the Universal access and the channel.",
+        "PASSO": "Step 2 of 3: Universal access.",
+        "EXPLICA": "{nome} signs in to the Universal portal with your brokerage's login to quote and write the proposal.",
+        "SO_ADMIN": "Only the account administrators register the Universal login and password.",
+        "CONFERIDO": {
+          "TITULO": "Access checked",
+          "TEXTO": "{nome} can now quote and send the payment link."
+        },
+        "LOGIN": {
+          "ROTULO": "Portal login",
+          "AJUDA": "It is the same login as the Universal website. Don't have one? Ask your Universal sales contact.",
+          "ERRO": "Write the portal login."
+        },
+        "SENHA": {
+          "ROTULO": "Portal password",
+          "AJUDA": "Once checked, the password is stored and never shown again.",
+          "ESQUECEU": "Forgot the password? Change it on the Universal website.",
+          "ERRO": "Write the portal password.",
+          "GUARDADA": "Password stored securely",
+          "MOSTRAR": "Show password",
+          "ESCONDER": "Hide password"
+        },
+        "RECUSADO": {
+          "TITULO": "Universal did not accept this login and password.",
+          "GARANTIA": "Check both and type them again. Nothing was stored."
+        },
+        "INDISPONIVEL": {
+          "TITULO": "Universal did not answer right now.",
+          "GARANTIA": "Nothing was stored. Wait a few minutes, type the password again and press Check access."
+        },
+        "PEDIDO_INVALIDO": {
+          "TITULO": "Universal did not accept the check right now.",
+          "GARANTIA": "Nothing was stored. Wait a few minutes, type the password again and press Check access. If it keeps happening, contact Autonom.ia support."
+        },
+        "CONFERIR": "Check access",
+        "CONFERINDO": "Checking with Universal…",
+        "ESCOLHER_CANAL": "Choose the channel",
+        "ULTIMO_PASSO": "Last step: where {nome} answers travelers.",
+        "ALTERAR": "Change",
+        "ALTERAR_ARIA": "Change the login and password"
+      },
+      "PAGINA": {
+        "ATENDENDO": "{nome} is answering on {canal}.",
+        "FAZ_TITULO": "What {nome} does",
+        "CORRETORA_E_ACESSO": "Brokerage and access",
+        "CORRETORA": "Brokerage",
+        "PORTAL": "Universal portal",
+        "RECUSADO": "Refused",
+        "CONFERIDO": "Checked",
+        "NAO_CONFERIDO": "Not registered yet",
+        "ALTERAR": "Change",
+        "CADASTRAR": "Add",
+        "CADASTRAR_ACESSO_ARIA": "Add the access to the Universal portal",
+        "CONTINUAR": "Continue: step {passo} of 3",
+        "ALTERAR_CORRETORA_ARIA": "Change the brokerage",
+        "ALTERAR_ACESSO_ARIA": "Change the access to the Universal portal",
+        "AVISO_RECUSADO": {
+          "TITULO": "Universal refused the access of {nome}.",
+          "GARANTIA": "The password may have changed. Meanwhile, anyone who wants a quote is handed to your team.",
+          "ACAO": "Register the new password"
+        }
+      },
+      "ONDE": {
+        "PASSO": "Step 3 of 3: where {nome} answers."
+      },
+      "CORRETORA": {
+        "TITULO": "Brokerage",
+        "NOME": "Brokerage name",
+        "SOBRE": "About the brokerage",
+        "SOBRE_AJUDA": "{nome} uses it to introduce itself.",
+        "CANCELAR": "Cancel",
+        "SALVAR": "Save",
+        "FEITO": "Done. {nome} already uses the brokerage's new details."
       }
     }
   }

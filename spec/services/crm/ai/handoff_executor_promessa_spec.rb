@@ -38,7 +38,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
   end
 
   it 'o agente protegido segue com a conversa mesmo com a promessa' do
-    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:instrucao_mantida?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
 
     expect(entregar(prometida)).to have_attributes(status: :skipped, error: 'owned_by_our_agent')
     expect(conversation.reload.assignee_id).to be_nil
@@ -65,7 +65,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
   end
 
   it 'o agente protegido: a promessa sozinha não vira pedido' do
-    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:instrucao_mantida?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
 
     expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
   end

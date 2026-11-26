@@ -61,6 +61,8 @@ module Autonomia
       include Autonomia::Agents::DadosDoAtendimento
       # #2881 — a marca do modelo pronto de ramo (listas do dono e ferramentas), protegida do save com cópia velha.
       include Autonomia::Agents::MarcaDoModeloPronto
+      # #3211 — o agente contratado do catálogo: marca, acesso à seguradora e tipo fixo.
+      include Autonomia::Agents::Contratado
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
@@ -120,6 +122,9 @@ module Autonomia
       # Levantado por qualquer caminho que tente escrever a instrução de um agente cuja instrução é
       # mantida pela Autonom.ia. A API devolve 422 com `autonomia.agents.instrucao_mantida`.
       class InstrucaoMantida < StandardError; end
+      # #3211 — a mesma recusa no agente contratado do catálogo, que a API responde com o texto dele (o da
+      # `InstrucaoMantida` nomeia o Agente de Cotação). Quem resgata `InstrucaoMantida` pega as duas.
+      InstrucaoDoContratado = Class.new(InstrucaoMantida)
 
       # #1514 (decisão do Rodrigo, 17/10/2026) — o Construtor ("Mudar conversando") não aplica em agente MANUAL: a
       # instrução dele é a que o dono escreveu, e a gerada pelo Construtor ficaria visível no GET e no histórico.
@@ -214,7 +219,14 @@ module Autonomia
       # hub, rollback G2, refresh de conhecimento, "Ajustar com IA" — passaria a gravar um texto que o
       # agente não lê, e o cartão mentiria "salvo". A regra mora aqui, num predicado só; quem escreve
       # a coluna (abaixo e nos controllers) consulta este predicado, nunca o tipo direto.
+      # Ou o agente contratado do catálogo (#3211).
       def instrucao_mantida?
+        agent_type == 'insurance_quote' || contratado?
+      end
+
+      # A IA do CRM deixa de fora só a Lia; o agente pronto contratado é tratado como qualquer agente — Rodrigo, 24/11.
+      # Lido pela F1 (`Crm::Ai::FatosDaConversa.agente_protegido?`) e pela promessa do robô (`Crm::Ai::HandoffExecutor`).
+      def protegido_no_crm?
         agent_type == 'insurance_quote'
       end
 
@@ -222,7 +234,7 @@ module Autonomia
       # `refresh_instruction!`, `restore_instruction!`). Um lugar só: quem ganhar um escritor novo
       # chama isto, e a mutação que a remove de um deles reprova a spec daquele caminho.
       def recusar_se_instrucao_mantida!
-        raise InstrucaoMantida if instrucao_mantida?
+        raise erro_da_instrucao_mantida if instrucao_mantida?
       end
 
       # A guarda do Construtor contra agente manual (#1514): na porta (build_threads), no fechamento e de novo
@@ -237,8 +249,10 @@ module Autonomia
       # entrega 3 (`Specialist#instrucao_do_sistema`). Para os demais — e para o de cotação criado
       # antes de as escolhas serem guardadas — a coluna, como sempre. Quem monta o prompt
       # (`PromptBuilder#instructions`) lê daqui, nunca de `instruction` direto.
+      # O contratado do catálogo (#3211): o arquivo do modelo com a marca, montado a cada turno (`Contratados::Instrucao`).
       def instrucao_do_sistema
-        ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
+        ::Autonomia::Agents::Contratados::Instrucao.renderizar(self) ||
+          ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
       end
 
       # AS FERRAMENTAS NATIVAS QUE VALEM PARA ESTE AGENTE (fatia 2 do #420). Para o Agente de Cotação, a
@@ -246,8 +260,10 @@ module Autonomia
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
       # O mapa e o contato da página (#1479 F3) ligam do mesmo jeito, com a flag da conta (`CartaoDaPagina.com_cartoes`).
+      # O contratado do catálogo (#3211): as do modelo, fixas (`Contratados.ferramentas`), nunca `native_tool_slugs`.
       def ferramentas_nativas
-        ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
+        ::Autonomia::Agents::Contratados.ferramentas(self) ||
+          ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
           ::Autonomia::Agents::Tools::Native::CartaoDaPagina.com_cartoes(
             self, ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
           )
@@ -365,7 +381,7 @@ module Autonomia
       def instrucao_mantida_fica_guiada
         return unless instrucao_mantida? && manual?
 
-        errors.add(:mode, I18n.t('autonomia.agents.instrucao_mantida'))
+        errors.add(:mode, I18n.t(contratado? ? 'autonomia.contratados.instrucao_mantida' : 'autonomia.agents.instrucao_mantida'))
       end
 
       # Defesa na gravação; a ferramenta confere de novo ao rodar (a página pode ser apagada depois).

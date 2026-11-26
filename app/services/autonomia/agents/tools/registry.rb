@@ -64,7 +64,16 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaRelatorioAtendimento
   ].freeze
 
-  TOOLS = (DE_ATENDIMENTO + DO_GUIA).freeze
+  DO_CONTRATADO = [
+    # #3211 — o agente contratado Seguro Viagem Universal. Fora de `DE_ATENDIMENTO` de propósito: aquela lista é o
+    # catálogo que a API aceita gravar em `native_tool_slugs`, e estas nunca aparecem para agente comum. Quem as recebe
+    # é só o contratado com acesso conferido (`available_for?`, `Tools::Native::SeguroViagem::PortaDoContratado`).
+    Autonomia::Agents::Tools::Native::CotarSeguroViagem,
+    Autonomia::Agents::Tools::Native::DetalhesDaCotacao,
+    Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem
+  ].freeze
+
+  TOOLS = (DE_ATENDIMENTO + DO_GUIA + DO_CONTRATADO).freeze
 
   module_function
 
@@ -88,6 +97,10 @@ module Autonomia::Agents::Tools::Registry
     do_guia?(agent) ? DO_GUIA : DE_ATENDIMENTO
   end
 
+  def do_contratado?(agent)
+    agent.respond_to?(:contratado?) && agent.contratado?
+  end
+
   def do_guia?(agent)
     agent.config.to_h['system_key'] == ::Autonomia::Guide::Seed::SYSTEM_KEY
   end
@@ -100,7 +113,8 @@ module Autonomia::Agents::Tools::Registry
     enabled = Array(agent.ferramentas_nativas).map(&:to_s)
     return [] if enabled.empty?
 
-    permitidas = permitidas_para(agent)
+    # As do contratado não entram em `permitidas_para` (a API grava `native_tool_slugs` por ela): vêm do modelo do catálogo.
+    permitidas = do_contratado?(agent) ? permitidas_para(agent) + DO_CONTRATADO : permitidas_para(agent)
     enabled.filter_map { |slug| find(slug) }.uniq.select { |tool| permitidas.include?(tool) && tool.available_for?(agent) }
   end
 end

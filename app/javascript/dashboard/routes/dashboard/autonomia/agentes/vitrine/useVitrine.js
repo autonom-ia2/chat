@@ -9,7 +9,8 @@ import FerramentasProntasAPI from 'dashboard/api/autonomia/ferramentasProntas';
 //
 // Erros em categorias que a tela sabe dizer (AGENTS.VITRINE.MOTIVOS.<MOTIVO>):
 //   SEM_PERMISSAO (401/403), DESLIGADA (404 com o motivo "desligada": a vitrine saiu da conta; ou 422 "desligada"),
-//   NAO_ENCONTRADO (outro 404: o agente ou a ferramenta não existe mais), COTACAO (a Lia),
+//   NAO_ENCONTRADO (outro 404: o agente ou a ferramenta não existe mais), COTACAO (a Lia), CONTRATADO (o agente pronto
+//   contratado, #3211, que já vem com as ferramentas dele),
 //   NOME_EM_USO (o agente já tem uma ferramenta feita à mão com o mesmo nome), REDE (sem resposta) e GERAL.
 
 const STATUS_SEM_PERMISSAO = [401, 403];
@@ -19,6 +20,7 @@ const MOTIVOS_DO_INCLUIR = {
   // A fonte que saiu da vitrine (Produtos das seguradoras): para quem está na tela, é o mesmo que desligada.
   fora_da_vitrine: 'DESLIGADA',
   agente_de_cotacao: 'COTACAO',
+  agente_contratado: 'CONTRATADO',
   nome_em_uso: 'NOME_EM_USO',
 };
 

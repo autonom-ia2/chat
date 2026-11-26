@@ -3,12 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue';
 import { I18nT, useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import ContratadosAPI from 'dashboard/api/autonomia/contratados';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import AgenteAvatar from '../AgenteAvatar.vue';
 import { MAX_FOTO, TIPOS_FOTO } from '../../utils/pagina';
 import { usaFotoDoCanal } from '../../utils/fotoDoCanal';
+import { erroDoContratado } from '../../utils/contratado';
 
 // #1181 PR3 (protótipo T12) — Foto e nome. Grava só o que mudou: o nome com {id, name}; a foto pelas
 // ações de avatar que já existem (updateAvatar/deleteAvatar). Foto JPG ou PNG de até 5 MB. Vindo do
@@ -16,6 +18,9 @@ import { usaFotoDoCanal } from '../../utils/fotoDoCanal';
 // Agente externo: o cliente vê a foto do canal, então a gaveta vira só "Nome" — mostra a foto do
 // canal sem poder trocar e grava só o nome. `canal`: { nome, foto } da caixa que dá a foto, ou null;
 // `temCanal`: o agente responde em alguma caixa (mesmo sem a leitura do nome dela).
+// #3211: no agente contratado, o nome vive também nos dados da corretora (é com ele que o agente se apresenta). Ele
+// grava pelo PATCH do contratado, com as três chaves (o servidor confere as três juntas e troca o `name` junto), e
+// a recusa do servidor aparece embaixo do campo. Sem a nota do "Mudar conversando", que ele não tem.
 const props = defineProps({
   agente: { type: Object, required: true },
   nomeSugerido: { type: String, default: '' },
@@ -39,6 +44,9 @@ const previa = ref(props.agente.avatar_url || '');
 const erroNome = ref('');
 const erroFoto = ref('');
 const falhou = ref(false);
+// #3211: a recusa do servidor (422) no contratado que não é do nome (`indisponivel`, outro campo): o texto dela, no
+// lugar do título geral do erro.
+const textoDaFalha = ref('');
 const salvando = ref(false);
 const seletor = ref(null);
 const campoNome = ref(null);
@@ -52,6 +60,7 @@ onBeforeUnmount(soltarPrevia);
 
 const nomeAtual = computed(() => props.agente.name || '');
 const externo = computed(() => usaFotoDoCanal(props.agente));
+const contratado = computed(() => props.agente.contratado || null);
 const fotoExibida = computed(() =>
   externo.value
     ? props.canal?.foto || props.agente.avatar_url || ''
@@ -90,11 +99,25 @@ const tirarFoto = () => {
   previa.value = '';
 };
 
+const gravarNomeDoContratado = async (id, novoNome) => {
+  await ContratadosAPI.salvarDados(id, {
+    nomeAgente: novoNome,
+    nomeCorretora: contratado.value.nome_corretora,
+    sobreCorretora: contratado.value.sobre_corretora,
+  });
+  try {
+    await store.dispatch('autonomiaAgents/show', id);
+  } catch {
+    // O nome já foi gravado; a página relê o agente ao abrir de novo.
+  }
+};
+
 const gravar = async () => {
   const id = props.agente.id;
   const novoNome = nome.value.trim();
   if (novoNome !== nomeAtual.value) {
-    await store.dispatch('autonomiaAgents/update', { id, name: novoNome });
+    if (contratado.value) await gravarNomeDoContratado(id, novoNome);
+    else await store.dispatch('autonomiaAgents/update', { id, name: novoNome });
   }
   if (externo.value) return;
   if (arquivo.value) {
@@ -116,13 +139,22 @@ const salvar = async () => {
   }
   erroNome.value = '';
   falhou.value = false;
+  textoDaFalha.value = '';
   salvando.value = true;
   try {
     await gravar();
     useAlert(t(`${NS}.PRONTO`));
     emit('fechar');
-  } catch {
-    falhou.value = true;
+  } catch (erro) {
+    const recusa = contratado.value ? erroDoContratado(t, erro) : null;
+    if (recusa?.campo === 'nome_agente') {
+      erroNome.value = recusa.texto;
+      campoNome.value?.focus();
+    } else {
+      const doServidor = recusa && erro?.response?.status === 422;
+      textoDaFalha.value = doServidor ? recusa.texto : '';
+      falhou.value = true;
+    }
   } finally {
     salvando.value = false;
   }
@@ -138,7 +170,7 @@ const salvar = async () => {
       <AgenteErro
         v-if="falhou"
         data-erro
-        :titulo="t(`${NS}.ERRO`)"
+        :titulo="textoDaFalha || t(`${NS}.ERRO`)"
         :garantia="t(`${NS}.ERRO_GARANTIA`)"
         :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
         :carregando="salvando"
@@ -222,6 +254,7 @@ const salvar = async () => {
         </p>
       </div>
       <I18nT
+        v-if="!contratado"
         data-nota
         :keypath="`${NS}.NOTA`"
         tag="p"

@@ -597,6 +597,21 @@ describe('GavetaOQueSabe', () => {
     wrapper.unmount();
   });
 
+  // #3211 — o agente contratado: a base é a oficial da seguradora, mantida pela Autonom.ia. Quem gerencia lê a lista,
+  // sem mandar, tirar, ler de novo nem conferir perguntas (a API recusa; a tela não oferece).
+  it('lists the base without any writing button when it is read-only', async () => {
+    preparar([fonte(3, { status: 'failed' }), fonte(4)]);
+    const wrapper = montar({ somenteLeitura: true, perguntas: [{ id: 1 }] });
+    await nextTick();
+    expect(todos('[data-fonte]')).toHaveLength(2);
+    expect(no('[data-mandar]')).toBeNull();
+    expect(no('[data-adicionar]')).toBeNull();
+    expect(no('[data-mandar-outro]')).toBeNull();
+    expect(no('[data-fonte] [aria-haspopup="menu"]')).toBeNull();
+    expect(no('[data-perguntas]')).toBeNull();
+    wrapper.unmount();
+  });
+
   it('shows the read error with a retry', async () => {
     const wrapper = montar({ erroLer: true });
     await clicar('[data-erro-ler] button');

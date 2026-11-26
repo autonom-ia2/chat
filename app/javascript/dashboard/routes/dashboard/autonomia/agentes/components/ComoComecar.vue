@@ -6,6 +6,7 @@ import RamosProntos from './RamosProntos.vue';
 import OpcaoDeComeco from './OpcaoDeComeco.vue';
 import AgenteErro from './AgenteErro.vue';
 import AvisoSemCanal from './AvisoSemCanal.vue';
+import ProntosParaContratar from './ProntosParaContratar.vue';
 import { MODELOS } from '../constants/modelos';
 import { OPCOES_DE_COMECO, PAPEL } from '../constants/papeis';
 
@@ -17,6 +18,9 @@ import { OPCOES_DE_COMECO, PAPEL } from '../constants/papeis';
 // `semCanal`: a conta ainda não tem canal; o aviso fica embaixo dos prontos (só atender clientes precisa de canal).
 // `comecando`: a chave (ramo, modelo ou jeito) que a pessoa acabou de escolher, ou null; trava os outros.
 // `falhou`: true quando a última escolha não abriu; o aviso fica no topo, com "Tentar de novo".
+// #3211 — `contratados`: os agentes prontos que a conta pode contratar ("Vendem sozinhos", mockup aprovado, estado
+// 01). Só em atender clientes, antes dos ramos e dos modelos; o bloco seguinte começa com a linha divisória. O cartão
+// leva à página do modelo (`abrirContratado`), e não à criação: contratar pede os dados da corretora lá.
 const props = defineProps({
   papel: { type: String, required: true },
   ramos: { type: Array, default: () => [] },
@@ -24,6 +28,7 @@ const props = defineProps({
   comecando: { type: String, default: null },
   falhou: { type: Boolean, default: false },
   semCanal: { type: Boolean, default: false },
+  contratados: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits([
@@ -31,12 +36,17 @@ const emit = defineEmits([
   'usarModelo',
   'usarOpcao',
   'tentarDeNovo',
+  'abrirContratado',
 ]);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR_EM_PASSOS.COMO';
 const atender = computed(() => props.papel === PAPEL.ATENDER);
 const comRamos = computed(() => atender.value && props.ramos.length > 0);
+const comContratados = computed(
+  () => atender.value && props.contratados.length > 0
+);
+const DIVISAO = 'pt-6 border-t border-white/15';
 const bloqueado = chave => !!props.comecando && props.comecando !== chave;
 const MODELOS_EM_LINHA = MODELOS.map(modelo => ({
   chave: modelo.chave,
@@ -56,13 +66,22 @@ const MODELOS_EM_LINHA = MODELOS.map(modelo => ({
       @acao="emit('tentarDeNovo')"
     />
 
+    <ProntosParaContratar
+      v-if="comContratados"
+      :modelos="contratados"
+      :pode-usar="podeUsar"
+      @abrir="chave => emit('abrirContratado', chave)"
+    />
+
     <template v-if="comRamos">
-      <RamosProntos
-        :ramos="ramos"
-        :pode-usar="podeUsar"
-        :comecando="comecando"
-        @usar="chave => emit('usarRamo', chave)"
-      />
+      <div :class="comContratados ? DIVISAO : ''">
+        <RamosProntos
+          :ramos="ramos"
+          :pode-usar="podeUsar"
+          :comecando="comecando"
+          @usar="chave => emit('usarRamo', chave)"
+        />
+      </div>
       <AvisoSemCanal v-if="semCanal" />
       <section
         v-if="podeUsar"
@@ -109,6 +128,7 @@ const MODELOS_EM_LINHA = MODELOS.map(modelo => ({
       <ul
         :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
         class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"
+        :class="comContratados ? DIVISAO : ''"
       >
         <ModeloCartao
           v-for="modelo in MODELOS"

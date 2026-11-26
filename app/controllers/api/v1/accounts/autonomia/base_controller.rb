@@ -23,15 +23,18 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
     render_unprocessable(I18n.t('autonomia.agents.modo_manual'))
   end
 
-  def render_instrucao_mantida
-    render_unprocessable(I18n.t('autonomia.agents.instrucao_mantida'))
+  # #3211: o agente contratado recebe o texto dele; o da Lia nomeia o Agente de Cotação.
+  def render_instrucao_mantida(error)
+    contratado = error.is_a?(::Autonomia::Agents::Agent::InstrucaoDoContratado)
+    render_unprocessable(I18n.t(contratado ? 'autonomia.contratados.instrucao_mantida' : 'autonomia.agents.instrucao_mantida'))
   end
 
   # `current_account`, não `Current.account`: o `ensure` de `handle_with_exception` (around_action do
   # core) já fez `Current.reset` quando o `rescue_from` roda; o ivar memoizado continua lá.
   def render_escolhas_incompletas(error)
     Rails.logger.warn("[autonomia][api] escolhas_incompletas account=#{current_account.id} campo=#{error.message}")
-    render json: { error: I18n.t('autonomia.agents.escolhas_incompletas', campo: error.message),
+    chave = error.is_a?(::Autonomia::Agents::Contratados::DadosIncompletos) ? 'contratados.dados_incompletos' : 'agents.escolhas_incompletas'
+    render json: { error: I18n.t("autonomia.#{chave}", campo: error.message),
                    code: 'escolhas_incompletas', campo: error.message },
            status: :unprocessable_entity
   end

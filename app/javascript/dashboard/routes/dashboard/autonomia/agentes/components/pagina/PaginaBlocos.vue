@@ -51,6 +51,9 @@ const props = defineProps({
   fase2: { type: Boolean, default: false },
   // Tema 14: { principais: [{ id, name }], quando } quando o agente é ajudante, ou null.
   ajuda: { type: Object, default: null },
+  // #3211 — o agente contratado já vem pronto: sem "Nome e jeito de falar", "Endereço e telefone" nem a agenda (o
+  // bloco "Corretora e acesso" fica na página, ContratadoNaPagina).
+  contratado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -79,7 +82,9 @@ const pergunta = ref('');
 const comAtendimento = useDadosDoAtendimentoLigado();
 const atendimento = computed(() => {
   if (!comAtendimento.value || !props.fase2) return null;
-  if (props.cotacao || props.interno || props.ajuda) return null;
+  if (props.cotacao || props.interno || props.ajuda || props.contratado) {
+    return null;
+  }
   const { endereco, telefone } = lerAtendimento(props.agente);
   const separado = telefone ? separarTelefone(telefone) : null;
   const formatado = separado
@@ -121,8 +126,11 @@ const textoSabe = computed(() => {
 // a API de páginas responde erro (inclusive para quem não vê Agendamento).
 const agendaNaConta = useAgendaNovaNaConta();
 const agenda = useAgendaDoAgente(() => props.agente);
+const comAgenda = computed(
+  () => agendaNaConta.value && !props.cotacao && !props.contratado
+);
 const mostrarAgenda = computed(
-  () => agendaNaConta.value && !props.cotacao && agenda.disponivel.value
+  () => comAgenda.value && agenda.disponivel.value
 );
 // #1181 (item A) — a frase diz o estado real da página salva (AgendaEstado).
 const estadoAgenda = computed(() => agenda.estadoDe(agenda.paginaSalva.value));
@@ -137,7 +145,7 @@ const linkPaginas = computed(() =>
 );
 
 onMounted(() => {
-  if (agendaNaConta.value && !props.cotacao) agenda.carregar();
+  if (comAgenda.value) agenda.carregar();
 });
 </script>
 
@@ -495,7 +503,7 @@ onMounted(() => {
       </div>
 
       <div
-        v-if="!cotacao"
+        v-if="!cotacao && !contratado"
         data-linha="jeito"
         role="group"
         :aria-labelledby="`${base}-jeito`"

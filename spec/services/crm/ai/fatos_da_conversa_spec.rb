@@ -98,8 +98,8 @@ RSpec.describe Crm::Ai::FatosDaConversa do
       expect(described_class.fala_do_nosso_robo?(saida(sender: porta, status: :failed))).to be(false)
     end
 
-    it 'recusa o agente protegido (instrução mantida pela Autonom.ia)' do
-      allow_any_instance_of(Autonomia::Agents::Agent).to receive(:instrucao_mantida?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    it 'recusa o agente protegido (só a Lia, `protegido_no_crm?`)' do
+      allow_any_instance_of(Autonomia::Agents::Agent).to receive(:protegido_no_crm?).and_return(true) # rubocop:disable RSpec/AnyInstance
 
       expect(described_class.fala_do_nosso_robo?(saida(sender: porta))).to be(false)
     end

@@ -1,0 +1,26 @@
+[
+  {
+    "idRegiao": 1,
+    "regiao": "América do Sul",
+    "siglaRegiao": "AS",
+    "idPais": 1,
+    "pais": "Brasil",
+    "siglaPais": "BR"
+  },
+  {
+    "idRegiao": 2,
+    "regiao": "Europa",
+    "siglaRegiao": "EU",
+    "idPais": 2,
+    "pais": "Portugal",
+    "siglaPais": "PT"
+  },
+  {
+    "idRegiao": 2,
+    "regiao": "Europa",
+    "siglaRegiao": "EU",
+    "idPais": 3,
+    "pais": "Espanha",
+    "siglaPais": "ES"
+  }
+]

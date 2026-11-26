@@ -136,6 +136,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     # #2942: o IP próprio da conta nas consultas grátis (o IP volta para a fatia).
     ['Autonomia::FerramentasProntas::ProxyDaConta', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
+    # Seguro Viagem Universal (#3211): cotação e acesso apontam para o agente; ninguém aponta para eles.
+    ['Autonomia::Agents::CotacaoDeViagem', :por_conta],
+    ['Autonomia::Agents::AcessoDaSeguradora', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
     # Painel de desempenho (#2251): a leitura guardada das conversas.

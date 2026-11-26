@@ -30,6 +30,9 @@ const DesempenhoPage = () => import('./agentes/pages/DesempenhoPage.vue');
 const VitrinePage = () => import('./agentes/vitrine/pages/VitrinePage.vue');
 // #2469 (PR 3a do #2436) — a página do cartão de um post ou anúncio com o cuidado dos comentários.
 const AgenteDoPostPage = () => import('./agentes/pages/AgenteDoPostPage.vue');
+// #3211 — a página do agente pronto que a pessoa contrata (Seguro Viagem Universal).
+const ContratadoModeloPage = () =>
+  import('./agentes/pages/ContratadoModeloPage.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -164,6 +167,22 @@ export const routes = [
     ],
     component: AgenteDoPostPage,
     props: route => ({ careId: route.params.careId }),
+  },
+  {
+    // #3211 — atrás da flag agente_seguro_viagem_universal. Vem ANTES da página do agente: `prontos` não pode casar
+    // como `:agentId`. Contratar é escrever: quem pode é quem gerencia os agentes (o servidor confere de novo).
+    path: frontendURL('accounts/:accountId/agents/prontos/:modelo'),
+    name: 'autonomia_contratado_modelo',
+    meta: {
+      ...agentsManageMeta,
+      featureFlag: FEATURE_FLAGS.AGENTE_SEGURO_VIAGEM_UNIVERSAL,
+    },
+    beforeEnter: [
+      ensureAutonomiaEnabled,
+      comFlags(FEATURE_FLAGS.AGENTE_SEGURO_VIAGEM_UNIVERSAL),
+    ],
+    component: ContratadoModeloPage,
+    props: route => ({ modelo: route.params.modelo }),
   },
   {
     path: frontendURL(

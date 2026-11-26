@@ -1,4 +1,5 @@
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { ehContratado } from './pagina';
 
 // #1181 — leitura das caixas da L2 para a escolha de onde atender.
 // Uma caixa pode estar livre (occupied_by null), com um agente nativo ({kind:'agent'}) ou com outro
@@ -29,6 +30,21 @@ export const trocaNoCanal = (canais, inboxId, agenteId) => {
     atendia: canal.occupied_by.operating === true,
     ultimaCaixa: canal.occupied_by.caixas === 1,
   };
+};
+
+// #3211 (nota 5 do mockup) — a caixa que já vem marcada para o agente contratado que começa a atender sem canal
+// nenhum (o passo 3 dele): a única livre da conta, com a leitura das caixas pronta e completa (sem a L2, as ocupadas
+// não aparecem e toda caixa parece livre). Com nenhuma ou mais de uma livre, a pessoa escolhe. Os outros agentes
+// seguem como sempre: nada vem marcado. O primeiro argumento são as props da gaveta de onde e quando.
+export const unicaCaixaLivre = (
+  { canais, atuais, agente, estadoCanais, semLeitura },
+  { comecando = false } = {}
+) => {
+  if (!ehContratado(agente)) return null;
+  if (!comecando || estadoCanais !== 'pronto' || semLeitura) return null;
+  if ((atuais || []).length || agente?.channels_count) return null;
+  const livres = (canais || []).filter(canal => !canal.occupied_by);
+  return livres.length === 1 ? livres[0].inbox_id : null;
 };
 
 // #1369 — o tipo de cada caixa na lista de onde atende ("HUBBER COMUNIDADE · WhatsApp"), pelo

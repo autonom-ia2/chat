@@ -105,6 +105,7 @@ export const FEATURE_FLAGS = {
   AGENTE_FERRAMENTAS_PRONTAS_VITRINE: 'agente_ferramentas_prontas_vitrine',
   AGENTE_FERRAMENTAS_PRONTAS_CONSTRUTOR:
     'agente_ferramentas_prontas_construtor',
+  AGENTE_SEGURO_VIAGEM_UNIVERSAL: 'agente_seguro_viagem_universal',
   AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',

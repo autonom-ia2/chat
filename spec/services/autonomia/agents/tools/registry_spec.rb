@@ -59,8 +59,13 @@ RSpec.describe Autonomia::Agents::Tools::Registry do
     before { described_class.all.each { |tool| allow(tool).to receive(:available_for?).and_return(true) } }
 
     it 'puts every catalogued tool in exactly one flow' do
-      expect(described_class::DE_ATENDIMENTO + described_class::DO_GUIA).to match_array(described_class.all)
-      expect(described_class::DE_ATENDIMENTO & described_class::DO_GUIA).to be_empty
+      fluxos = [described_class::DE_ATENDIMENTO, described_class::DO_GUIA, described_class::DO_CONTRATADO]
+      expect(fluxos.sum([])).to match_array(described_class.all)
+      expect(fluxos.sum([]).uniq.size).to eq(fluxos.sum([]).size)
+    end
+
+    it 'keeps the hired agent tools out of the catalog the API accepts for any agent' do
+      expect(described_class.permitidas_para(agent) & described_class::DO_CONTRATADO).to be_empty
     end
 
     it 'does not offer a Platform Guide tool stored in an account agent' do

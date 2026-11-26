@@ -1,0 +1,8 @@
+{
+  "soCotacao": false,
+  "emiteFaturado": false,
+  "emiteBoleto": false,
+  "tarifaAcordo": true,
+  "fkEmpresa": 1,
+  "idEmissor": 1
+}

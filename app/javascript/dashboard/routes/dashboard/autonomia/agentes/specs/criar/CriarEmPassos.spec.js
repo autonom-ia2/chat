@@ -31,6 +31,10 @@ vi.mock('../../composables/usePermissoesDaJornada', async () => {
 
 const api = vi.hoisted(() => ({ modelosDeRamo: vi.fn() }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
+// #3211: os agentes prontos para contratar vêm do servidor (passo 2 de atender clientes). Aqui, nenhum.
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: { lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })) },
+}));
 
 const FALHA = { falhaDeNavegacao: true };
 const rota = vi.hoisted(() => ({ atual: null }));

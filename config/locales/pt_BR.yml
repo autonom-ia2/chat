@@ -1782,6 +1782,7 @@ pt_BR:
         seguro_de_fora: 'O seguro de outra corretora só se lê, guarda ou apaga na tela: abra a pessoa (ou o painel da conversa) › Seguros › Guardar seguro de outra corretora.'
         seguro_palavras: 'O seguro em palavras simples só se escreve e se manda ao cliente na tela: Relacionamentos › Seguros › abra o seguro › Seu seguro em palavras simples.'
         seguro_proposta: 'A proposta de renovação só se manda ao cliente na tela, no botão Enviar da renovação do seguro.'
+        acesso_da_seguradora: 'O login da seguradora de um agente pronto só se cadastra na tela, para a senha não passar por esta conversa: Agentes › abra o agente › login da seguradora.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       not_permitted: 'O seu perfil não tem permissão para isso. Quem administra a conta pode fazer ou liberar para você.'
       card_funnel_required: 'Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Canais de cada funil.'
@@ -1898,6 +1899,8 @@ pt_BR:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
       conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
       ferramenta_na_cotacao: 'O Agente de Cotação usa as ferramentas dele. Adicione a ferramenta em outro agente.'
+      ferramenta_no_contratado: 'Este agente já vem pronto, com as ferramentas dele. Não dá para mudá-las por aqui.'
+      base_do_contratado: 'Este agente já vem com a base pronta. Não dá para enviar nem apagar material por aqui.'
       # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
       botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
@@ -1975,6 +1978,7 @@ pt_BR:
           fora_do_alcance: "Você não faz parte deste canal. Peça a um administrador para mudar o agente nele."
           agent_internal_not_connectable: "Este é um agente interno (copiloto da equipe) e não pode ser conectado a uma caixa de entrada de clientes."
           agent_not_active: "Ative o agente antes de conectar uma caixa de entrada."
+          acesso_da_seguradora_pendente: "Confira primeiro o acesso à seguradora: este agente só começa a atender depois de conferido."
           inbox_has_webhook_bot: "Um agente externo já atende nesta caixa de entrada. Pare o agente externo primeiro."
           inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
           not_connected: "Esta caixa de entrada não está conectada ao agente."
@@ -2224,6 +2228,25 @@ pt_BR:
     teste:
       foto_animada: "Mande uma foto parada. Foto animada não dá para ler."
       foto_muitas: "Mande até %{max} fotos por pergunta."
+    # #3211 — o agente pronto contratado do catálogo.
+    contratados:
+      acesso_pendente: "Este agente só atende depois que o login da seguradora for conferido. Cadastre o login da seguradora na página do agente e espere a conferência."
+      # #3211: as recusas da API do agente pronto contratado (nomeiam este agente, não o Agente de Cotação).
+      instrucao_mantida: "Este agente já vem pronto: a instrução dele é mantida pela Autonom.ia e não se edita por aqui. Só o nome do agente e os dados da corretora podem ser trocados."
+      dados_incompletos: "Este agente não conseguiu montar a instrução: falta '%{campo}' nos dados da corretora. Preencha os dados da corretora do agente."
+      acesso_incompleto: "Preencha o login e a senha da seguradora."
+      recusa:
+        indisponivel: "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia."
+        sem_chave_de_ia: "Falta ligar a inteligência artificial da sua conta. Nada foi criado. Quem administra a conta liga em Configurações, na parte Integrações."
+        nome_agente: "Escreva o nome do agente, com até %{maximo} caracteres."
+        nome_corretora: "Escreva o nome da corretora, com até %{maximo} caracteres."
+        sobre_corretora: "A apresentação da corretora pode ter até %{maximo} caracteres."
+        marcador: "Este texto tem um código reservado (uma palavra que começa com $). Tire esse trecho e tente de novo."
+      universal:
+        notas:
+          acesso_recusado: "A seguradora recusou o login da corretora, então o agente não consegue cotar nem emitir. Confira o login da seguradora na página do agente e assuma esta conversa."
+          indisponivel: "O sistema da seguradora não respondeu e o agente não conseguiu concluir esta etapa. Assuma esta conversa ou tente de novo mais tarde."
+          sem_link: "A seguradora aceitou a compra, mas não devolveu o link de pagamento. Pegue o link no portal da seguradora e envie ao cliente."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

@@ -737,6 +737,9 @@ Rails.application.routes.draw do
               # #2881 — as listas do modelo pronto de ramo pelo agente: o rascunho reaberto sem a conversa e, depois do
               # "Começar" (#2976), a página do agente (só perguntas e documentos).
               patch 'modelo_pronto', to: 'agents/modelo_pronto#update'
+              # #3211 — o agente contratado do catálogo: os dados da corretora e o login do corretor na seguradora.
+              patch 'contratado', to: 'agents/contratado#update'
+              resource :acesso_da_seguradora, only: [:show, :create], controller: 'agents/acesso_da_seguradora'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
@@ -775,6 +778,9 @@ Rails.application.routes.draw do
             end
             # #2881 — os modelos prontos de ramo que a conta pode usar (pacote `seguros` e a flag agente_modelos_seguro).
             get 'modelos_de_ramo', to: 'agents/modelos_de_ramo#index'
+            # #3211 — os agentes prontos que a conta pode contratar (só as chaves) e o "Contratar".
+            get 'contratados', to: 'contratados#index'
+            post 'contratados/:modelo', to: 'contratados#create'
             # MULTIMODAL (Construtor/Ajustar): upload de imagem do builder (image-only, retorna signed_id;
             # não cria conhecimento). O turno referencia o signed_id; o Builder a lê inline no job.
             post 'builder_images', to: 'agents/builder_images#create'

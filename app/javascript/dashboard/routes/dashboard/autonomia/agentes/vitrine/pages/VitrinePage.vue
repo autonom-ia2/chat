@@ -11,7 +11,7 @@ import VitrineCartao from '../components/VitrineCartao.vue';
 import VitrineDetalhe from '../components/VitrineDetalhe.vue';
 import VitrineEscolherAgente from '../components/VitrineEscolherAgente.vue';
 import VitrineSeloPremium from '../components/VitrineSeloPremium.vue';
-import { ehCotacao } from '../../utils/pagina';
+import { ehContratado, ehCotacao } from '../../utils/pagina';
 import { useCadastroManual } from '../../composables/useFerramentasDelegadas';
 import {
   GRUPOS,
@@ -46,7 +46,9 @@ const cadastroManual = useCadastroManual();
 const registros = useMapGetter('autonomiaAgents/getRecords');
 const carregandoAgentes = ref(true);
 const agentes = computed(() =>
-  (registros.value || []).filter(agente => !ehCotacao(agente))
+  (registros.value || []).filter(
+    agente => !ehCotacao(agente) && !ehContratado(agente)
+  )
 );
 const erroAgentes = ref(false);
 const carregando = computed(

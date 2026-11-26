@@ -52,7 +52,10 @@ Rails.application.config.filter_parameters += [
   # nascimento, sexo, CEP, placa e classe de bônus são dados do cliente e não vão para o log. O filtro casa qualquer chave
   # que contenha "nascimento", "sexo", "placa" ou "bonus": em outro endpoint, só o log perde o valor. O CEP vai pela
   # chave exata (abaixo): "cep" está dentro de "accepted", "exception" e outras que não são dado do cliente.
-  :nascimento, :sexo, :placa, :bonus
+  :nascimento, :sexo, :placa, :bonus,
+  # #3211 — o login e a senha do corretor na seguradora do agente contratado (POST agents/:agent_id/acesso_da_seguradora).
+  # O filtro casa qualquer chave que contenha "login" ou "senha": em outro endpoint, só o log perde o valor.
+  :login, :senha
 ]
 
 # #3043 — o CEP do segurado, só pela chave exata `cep`.

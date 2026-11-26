@@ -49,6 +49,9 @@ module Autonomia::Guide::SaiDaPlataforma
   #   consulta a URL externa no teste da automação, robô externo que atende a caixa (webhook).
   # - Conexão com o provedor: sessão do WhatsApp (híbrida, convite, manual, Embedded Signup), webhook e chamadas na
   #   Meta, token da página, conector de seguros, apagar modelo na Meta, chamadas ao vivo e conferência.
+  # - #3211: contratar o agente pronto do catálogo, que enfileira a semeadura da base com a chamada paga de embedding da
+  #   própria conta (o desfazer apaga o agente, não devolve o que foi pago). O login dele na seguradora é só na tela
+  #   (`AcessoDaSeguradora::SO_NA_TELA_DO_GUIA`).
   # Fica de fora, de propósito: o evento que toda escrita manda aos webhooks que a própria conta configurou, a IA da
   # plataforma, os jobs internos e quem da conta enxerga o quê (membros de caixa, time e conversa).
   FALA_COM_FORA = [
@@ -70,6 +73,7 @@ module Autonomia::Guide::SaiDaPlataforma
     'POST inboxes/:id/register_webhook', 'POST inboxes/:id/enable_whatsapp_calling',
     'POST inboxes/:id/disable_whatsapp_calling', 'POST callbacks/reauthorize_page',
     'POST autonomia/insurance/connection', 'POST autonomia/insurance/connection/reconnect',
+    'POST autonomia/contratados/:modelo',
     'DELETE inboxes/:inbox_id/whatsapp_templates/:id', 'POST whatsapp_calls/:id/accept',
     'POST whatsapp_calls/:id/reject', 'POST whatsapp_calls/:id/terminate', 'POST inboxes/:inbox_id/conference'
   ].freeze

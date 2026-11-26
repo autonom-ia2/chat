@@ -113,9 +113,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/sources#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:32",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:173",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:177"
     ],
     "sem_corpo": true
   },
@@ -124,8 +124,8 @@
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97"
     ],
     "sem_corpo": true
   },
@@ -133,8 +133,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:95",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:135"
     ],
     "sem_corpo": true
   },
@@ -148,10 +148,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:98",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:112",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:110",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:108",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:135"
     ],
     "sem_corpo": false
   },
@@ -3594,6 +3594,21 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/agents/:agent_id/contratado": {
+    "campos": {
+      "nome_agente": {},
+      "nome_corretora": {},
+      "sobre_corretora": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/contratado#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/contratado_controller.rb:12",
+      "app/controllers/concerns/autonomia/dados_do_contratado.rb:24",
+      "app/controllers/concerns/autonomia/dados_do_contratado.rb:18"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/agents/:agent_id/modelo_pronto": {
     "campos": {
       "documentos": {
@@ -3701,9 +3716,9 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:106",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97"
     ],
     "sem_corpo": false
   },
@@ -3791,13 +3806,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:216",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:167",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:300",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:252",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:169",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:135"
     ],
     "sem_corpo": false
   },
@@ -3811,10 +3826,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:98",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:112",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:110",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:108",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:135"
     ],
     "sem_corpo": false
   },
@@ -11473,12 +11488,12 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:216",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:300",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:252",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -11656,16 +11671,16 @@
       "leitura crua sem tipo: descriptor.kind"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:9",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:175",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:80",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:137",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:135",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:124",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:95",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:94",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:10",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:181",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:86",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:143",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:141",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:130",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:101",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:99",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:173"
     ],
     "sem_corpo": false
   },
@@ -11674,9 +11689,9 @@
     "controller": "api/v1/accounts/autonomia/agents/sources#resync",
     "modelo": "Autonomia::Agents::Source",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:173",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:177"
     ],
     "sem_corpo": true
   },
@@ -11718,8 +11733,8 @@
     "envelope": "tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:106",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:93"
     ],
     "sem_corpo": false
   },
@@ -11734,9 +11749,9 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:50",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:136",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97"
     ],
     "sem_corpo": false
   },
@@ -12180,6 +12195,21 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/builder_images_controller.rb:7",
       "app/controllers/api/v1/accounts/autonomia/agents/builder_images_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/contratados/:modelo": {
+    "campos": {
+      "nome_agente": {},
+      "nome_corretora": {},
+      "sobre_corretora": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/contratados#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:20",
+      "app/controllers/concerns/autonomia/dados_do_contratado.rb:24",
+      "app/controllers/api/v1/accounts/autonomia/contratados_controller.rb:22"
     ],
     "sem_corpo": false
   },
@@ -24707,9 +24737,9 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:106",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97"
     ],
     "sem_corpo": false
   },
@@ -24797,13 +24827,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:216",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:167",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:300",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:252",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:169",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:135"
     ],
     "sem_corpo": false
   },

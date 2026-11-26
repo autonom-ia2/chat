@@ -12,7 +12,9 @@ import PapelEscolhido from './PapelEscolhido.vue';
 import { useFase2 } from '../composables/useFase2';
 import { useAgenteIaPorCaixa } from '../composables/useAgenteIaPorCaixa';
 import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
+import { useContratados } from '../composables/useContratados';
 import { MODELOS } from '../constants/modelos';
+import { MODELOS_CONTRATADOS } from '../constants/contratados';
 import { principaisPossiveis } from '../utils/ajudante';
 import {
   JEITO,
@@ -40,6 +42,8 @@ import {
 // até ela chegar, o passo 1 mostra um esqueleto, para os cartões não pularem. Se a lista não vier, o cartão fica como
 // era antes desta tela (só com a Fase 2) e a criação decide.
 // Conta sem canal: o aviso fica no passo 2 de atender clientes, o único papel que precisa de canal.
+// #3211 — os agentes prontos para contratar ("Vendem sozinhos") vêm do servidor (useContratados) e aparecem no passo
+// 2 de atender clientes; a tela só mostra os modelos que conhece (MODELOS_CONTRATADOS).
 const props = defineProps({
   inicio: { type: Boolean, default: false },
 });
@@ -58,6 +62,10 @@ const porCaixa = useAgenteIaPorCaixa();
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 const { ramos } = useRamosDeSeguro();
+const { modelos: liberados } = useContratados();
+const contratados = computed(() =>
+  liberados.value.filter(modelo => MODELOS_CONTRATADOS.includes(modelo))
+);
 
 const comecando = ref(null);
 const falhou = ref(null);
@@ -163,6 +171,11 @@ const trocar = () => {
   if (!comecando.value) router.push({ name: ROTA, query: {} });
 };
 
+const abrirContratado = modelo => {
+  if (!comecando.value) {
+    router.push({ name: 'autonomia_contratado_modelo', params: { modelo } });
+  }
+};
 const usarRamo = chave => abrir(chave, { ramo: chave });
 const usarModelo = chave => abrir(chave, { modelo: chave });
 const usarOpcao = chave =>
@@ -203,10 +216,12 @@ const tentarDeNovo = () => {
       :comecando="comecando"
       :falhou="!!falhou"
       :sem-canal="semCanal"
+      :contratados="contratados"
       @usar-ramo="usarRamo"
       @usar-modelo="usarModelo"
       @usar-opcao="usarOpcao"
       @tentar-de-novo="tentarDeNovo"
+      @abrir-contratado="abrirContratado"
     />
     <div
       v-else-if="!agentesLidos"

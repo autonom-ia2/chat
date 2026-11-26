@@ -60,6 +60,9 @@ module Autonomia
           # V2.1 — agente INTERNO (copiloto da equipe) NUNCA atende cliente: bloqueia o vínculo de caixa
           # (não cria AgentBot/AgentBotInbox/AgentInbox). Autoridade no backend; a UI esconde como 2ª defesa.
           return :agent_internal_not_connectable if @agent.actuation_internal?
+          # #3211 — o contratado só vai para uma caixa com o acesso à seguradora conferido (`ok`); sem isso o ativar não
+          # tira o rascunho (a mesma regra do model, Agent#atender_exige_acesso_conferido, dita antes com a mensagem da tela).
+          return :acesso_da_seguradora_pendente if acesso_da_seguradora_pendente?
           return :agent_not_active unless agent_operable? || @ativar
           return :inbox_has_webhook_bot if webhook_bot_present?
 
@@ -112,6 +115,10 @@ module Autonomia
         def disconnect_area!
           ::Autonomia::Agents::Areas.desvincular!(agent: @agent, inbox: @inbox)
           Result.new(status: :ok)
+        end
+
+        def acesso_da_seguradora_pendente?
+          @agent.contratado? && !@agent.acesso_da_seguradora&.ok?
         end
 
         def agent_operable?

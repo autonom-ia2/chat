@@ -988,6 +988,7 @@ en:
         seguro_de_fora: 'A policy from another broker is only read, saved or deleted on screen: open the person (or the conversation panel) › Insurance › Save a policy from another broker.'
         seguro_palavras: 'The policy in plain words is only written and sent to the client on screen: Relationships › Insurance › open the policy › Your policy in plain words.'
         seguro_proposta: 'The renewal proposal is only sent to the client on screen, with the Send button of the policy renewal.'
+        acesso_da_seguradora: "The insurer login of a ready-made agent is only saved on screen, so the password never goes through this chat: Agents › open the agent › insurer login."
       admin_only: 'Only an account admin can do this.'
       not_permitted: 'Your profile does not have permission for this. An account admin can do it or give you access.'
       card_funnel_required: 'You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Channels per pipeline.'
@@ -1132,10 +1133,31 @@ en:
     teste:
       foto_animada: 'Send a still photo. An animated photo cannot be read.'
       foto_muitas: 'Send up to %{max} photos per question.'
+    # #3211 — the ready-made agent hired from the catalog.
+    contratados:
+      acesso_pendente: 'This agent can only answer after its insurer login is checked. Save the insurer login on the agent page and wait for the check.'
+      # #3211: the API refusals of the ready-made hired agent (they name this agent, not the Quote Agent).
+      instrucao_mantida: "This agent comes ready-made: its instruction is maintained by Autonom.ia and cannot be edited here. Only the agent's name and the brokerage details can be changed."
+      dados_incompletos: "This agent could not build its instruction: '%{campo}' is missing from the brokerage details. Fill in the agent's brokerage details."
+      acesso_incompleto: 'Fill in the insurer login and password.'
+      recusa:
+        indisponivel: 'This ready-made agent is not available for this account right now. Contact Autonom.ia support.'
+        sem_chave_de_ia: "Your account's artificial intelligence is not turned on yet. Nothing was created. Whoever manages the account turns it on in Settings, under Integrations."
+        nome_agente: "Write the agent's name, up to %{maximo} characters."
+        nome_corretora: "Write the brokerage's name, up to %{maximo} characters."
+        sobre_corretora: 'The brokerage introduction can have up to %{maximo} characters.'
+        marcador: 'This text has a reserved code (a word starting with $). Remove it and try again.'
+      universal:
+        notas:
+          acesso_recusado: 'The insurer refused the brokerage login, so the agent cannot quote or issue. Check the insurer login on the agent page and take over this conversation.'
+          indisponivel: 'The insurer system did not answer. The agent could not finish this step. Take over this conversation or try again later.'
+          sem_link: 'The insurer accepted the purchase but did not return the payment link. Get the link from the insurer portal and send it to the customer.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'
       ferramenta_na_cotacao: 'The quote agent keeps its own tools. Add the tool to another agent.'
+      ferramenta_no_contratado: 'This agent comes ready-made with its tools, so they cannot be changed here.'
+      base_do_contratado: 'This agent comes with its knowledge base ready, so material cannot be added or removed here.'
       # #1479: text of the button that opens the list of options the AI sends, when the AI does not choose one.
       botao_das_opcoes: 'See options'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
@@ -1209,6 +1231,7 @@ en:
           fora_do_alcance: 'You are not a member of this channel. Ask an administrator to change the agent there.'
           agent_internal_not_connectable: 'This is an internal agent (team copilot) and cannot be connected to a customer inbox.'
           agent_not_active: 'Enable and activate the agent before connecting an inbox.'
+          acesso_da_seguradora_pendente: "Check the insurer access first: this agent only starts answering once it is verified."
           inbox_has_webhook_bot: "An external agent already answers on this inbox. Stop the external agent first."
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'

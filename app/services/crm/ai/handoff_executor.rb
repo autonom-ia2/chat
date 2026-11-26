@@ -27,7 +27,7 @@ module Crm
       # (`handoff.promised_by_our_assistant`, lido pelo modelo). A promessa é um fato à parte da intenção (`intent`), e
       # só vale com um agente nosso dono da conversa (o caso do #1673): aí a IA do CRM cumpre a promessa pela Entrega de
       # sempre, com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Sem dono nosso, ou com o agente
-      # protegido (`instrucao_mantida?`) dono, a promessa não muda nada. A espera vai com o motivo do pedido do robô
+      # protegido (só a Lia: `protegido_no_crm?`) dono, a promessa não muda nada. A espera vai com o motivo do pedido do robô
       # (MOTIVO_DA_PROMESSA): foi o robô que prometeu, e a fila (HandoffDrainJob) não larga a espera de volta para ele.
       OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
@@ -107,7 +107,7 @@ module Crm
         return @promessa_a_cumprir if defined?(@promessa_a_cumprir)
 
         @promessa_a_cumprir = FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) &&
-                              dono_ativo.present? && !dono_ativo.agent&.instrucao_mantida?
+                              dono_ativo.present? && !dono_ativo.agent&.protegido_no_crm?
       end
 
       # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): o agente nosso não passa mais a conversa; avisou o

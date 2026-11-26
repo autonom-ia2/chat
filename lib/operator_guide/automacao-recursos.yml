@@ -609,6 +609,8 @@ fora:
       - autonomia/agents/instruction_versions
       - autonomia/agents/material
       - autonomia/agents/modelo_pronto
+      - autonomia/agents/contratado
+      - autonomia/contratados
       - autonomia/agents/onde_atende
       - autonomia/agents/playground
       - autonomia/agents/sources

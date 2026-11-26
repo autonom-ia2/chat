@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent
+  before_action :recusar_base_do_contratado, only: %i[create destroy resync]
   before_action :fetch_source, only: [:destroy, :resync]
 
   def index
@@ -54,6 +55,11 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   end
 
   private
+
+  # #3211: a base do agente contratado é a semeada ao contratar; a conta não envia, apaga nem relê material.
+  def recusar_base_do_contratado
+    render_unprocessable(I18n.t('autonomia.agents.base_do_contratado')) if @agent.contratado?
+  end
 
   # A Lia (instrução mantida) fica como na main: relê a qualquer momento.
   def lendo_na_fase2?

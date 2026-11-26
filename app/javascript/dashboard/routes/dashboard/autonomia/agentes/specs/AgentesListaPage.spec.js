@@ -59,6 +59,10 @@ const api = vi.hoisted(() => ({
   modelosDeRamo: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
+// #3211: os agentes prontos para contratar vêm do servidor (passo 2 de atender clientes). Aqui, nenhum.
+vi.mock('dashboard/api/autonomia/contratados', () => ({
+  default: { lista: vi.fn(() => Promise.resolve({ data: { modelos: [] } })) },
+}));
 // #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
 const doPost = vi.hoisted(() => ({
   list: vi.fn(),

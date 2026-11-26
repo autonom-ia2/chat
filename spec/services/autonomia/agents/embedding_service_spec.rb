@@ -12,6 +12,27 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
     end
   end
 
+  describe 'credencial passada por quem chama (#3211)' do
+    it 'usa a passada e nunca resolve outra (não cai na chave da instalação)' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_call_original
+      com_credencial = described_class.new(account: account, credencial: { api_key: 'chave-da-conta-teste', source: :hook })
+
+      configurado = nil
+      allow(RubyLLM).to receive(:context).and_wrap_original do |original, &bloco|
+        original.call(&bloco).tap do |ctx|
+          configurado = ctx.config
+          allow(ctx).to receive(:embed).and_return(instance_double(RubyLLM::Embedding, vectors: [1.0]))
+        end
+      end
+
+      com_credencial.embed('texto')
+
+      expect(configurado.openai_api_key).to eq('chave-da-conta-teste')
+      expect(Crm::Ai::CredentialResolver).not_to have_received(:new)
+    end
+  end
+
   describe '#embed_batch (B1 — real batching)' do
     let(:ctx) { instance_double(RubyLLM::Context) }
 
@@ -72,15 +93,28 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
 
     before { allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(credencial) }
 
+    # Faz um `embed` de verdade e devolve a configuração com que o RubyLLM foi montado (o comportamento público).
+    def configuracao_da_chamada(servico)
+      configurada = nil
+      allow(RubyLLM).to receive(:context).and_wrap_original do |original, &bloco|
+        original.call(&bloco).tap do |ctx|
+          configurada = ctx.config
+          allow(ctx).to receive(:embed).and_return(instance_double(RubyLLM::Embedding, vectors: [1.0]))
+        end
+      end
+      servico.embed('pergunta')
+      configurada
+    end
+
     it 'sets the deadline per attempt and turns off the retries of RubyLLM', :aggregate_failures do
-      config = described_class.new(account: account, prazo: 2.0).send(:context).config
+      config = configuracao_da_chamada(described_class.new(account: account, prazo: 2.0))
 
       expect(config.request_timeout).to eq(2.0)
       expect(config.max_retries).to eq(0)
     end
 
     it 'keeps the defaults of RubyLLM without a deadline (the ingestion in background)' do
-      expect(described_class.new(account: account).send(:context).config.request_timeout).to eq(RubyLLM.config.request_timeout)
+      expect(configuracao_da_chamada(described_class.new(account: account)).request_timeout).to eq(RubyLLM.config.request_timeout)
     end
 
     # A credencial fica fora do prazo: relê-la no log da falha somaria outra consulta ao banco depois do prazo estourado.
