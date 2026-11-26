@@ -14,6 +14,8 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes
   DIGITOS_DO_CPF = 11
   DIGITOS_DO_CEP = 8
   DIGITOS_DO_TELEFONE = [10, 11].freeze
+  # O número do WhatsApp vem com o DDI do Brasil (55 + DDD + número): sai o DDI antes de contar os dígitos.
+  DDI_DO_BRASIL = '55'.freeze
   PALAVRAS_DO_NOME = 2
   TITULAR = 'titular'.freeze
   DEMAIS = 'demais_viajantes'.freeze
@@ -22,8 +24,10 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes
   module_function
 
   # -> [viajantes, nil] ou [nil, Falta]. O titular vem primeiro, com e-mail, telefone, CEP, número e complemento.
-  def conferir(titular:, demais:)
-    titular = objeto(titular)
+  # `telefone_da_conversa`: o número do WhatsApp do cliente. Vale para o titular quando o modelo não mandou um telefone
+  # aceito (o cliente não precisa digitar o número com que já está falando).
+  def conferir(titular:, demais:, telefone_da_conversa: nil)
+    titular = com_telefone_da_conversa(objeto(titular), telefone_da_conversa)
     demais = lista(demais)
     falta = falta_na_pessoa(titular, TITULAR, 'do titular') || falta_no_contato_do_titular(titular) ||
             falta_nos_demais(demais) || falta_de_cpf_repetido([titular] + demais)
@@ -101,7 +105,15 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Viajantes
   end
 
   def telefone(valor)
-    DIGITOS_DO_TELEFONE.lazy.filter_map { |tamanho| Parametro.digitos(valor, tamanho) }.first
+    digitos = valor.to_s.each_char.select { |caractere| caractere.between?('0', '9') }.join
+    digitos = digitos.delete_prefix(DDI_DO_BRASIL) if digitos.length > DIGITOS_DO_TELEFONE.max
+    DIGITOS_DO_TELEFONE.lazy.filter_map { |tamanho| Parametro.digitos(digitos, tamanho) }.first
+  end
+
+  def com_telefone_da_conversa(titular, telefone_da_conversa)
+    return titular if telefone(titular['telefone']) || telefone(telefone_da_conversa).nil?
+
+    titular.merge('telefone' => telefone_da_conversa)
   end
 
   # Nome e sobrenome com os espaços normalizados.
