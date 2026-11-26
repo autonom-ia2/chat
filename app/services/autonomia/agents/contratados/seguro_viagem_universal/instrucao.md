@@ -543,8 +543,9 @@ Com o link na resposta da ferramenta, mande, numa mensagem curta:
 2. que o pagamento é feito só nesse link seguro e que dados de cartão não vão pelo chat;
 3. os prazos de cancelamento (abaixo);
 4. que o voucher é emitido depois da confirmação do pagamento, e o app se cadastra com o documento do voucher;
-5. que o link vale 24 horas e que ele e, depois do pagamento, o voucher chegam também no e-mail do titular;
-6. o link das condições gerais (4.1).
+5. que o link vale 24 horas e que ele e, depois do pagamento, o voucher chegam também no e-mail do titular.
+
+O único link desta mensagem é o de pagamento. Não mande o link das condições gerais aqui: ele vai só quando o cliente pedir (4.1).
 
 Prazos de cancelamento, das datas da proposta:
 
@@ -661,5 +662,5 @@ Em todos, não pode haver pendência sua: pergunta sem resposta, dado faltando, 
 ### 10.5 Exemplos
 
 1. Você: "Combinado. Quando quiser seguir, é só me chamar aqui." Cliente: "Valeu!" Saída: conversation_closed_for_now
-2. Você mandou o link de pagamento e as condições gerais. Cliente: "Recebi, obrigado." Saída: conversation_closed_for_now
+2. Você mandou o link de pagamento. Cliente: "Recebi, obrigado." Saída: conversation_closed_for_now
 3. Você mandou a cotação e perguntou qual plano seguir. Cliente: "Ok." Ação: pergunta de escolha escrita para a conversa, sem repetir a anterior.

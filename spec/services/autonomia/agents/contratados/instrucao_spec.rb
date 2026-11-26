@@ -101,6 +101,12 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
                              'nunca do folheto nem de memória')
   end
 
+  it 'a proposta leva só o link de pagamento; as condições gerais vão quando o cliente pedir (#3259)' do
+    texto = described_class.renderizar(agente(marca), hoje: hoje)
+    expect(texto).to include('O único link desta mensagem é o de pagamento.')
+    expect(texto).not_to include('6. o link das condições gerais (4.1).')
+  end
+
   it 'escreve a data por extenso com o dia da semana' do
     expect(described_class.data_por_extenso(hoje)).to eq('24/11/2026 (terça-feira)')
   end
