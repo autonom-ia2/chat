@@ -13,7 +13,8 @@
 #   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
 #   - `feature_flags_ext_1` has no free slot either: positions 1-61 are in use (61 = meta_ads_gestao, #2164) and
 #     62/63 are provisionally reserved for #2182/#2183 (Orquestração, 25/10). Do NOT add to it (#2186).
-#   - New flags MUST set `column: feature_flags_ext_2` and be appended at the end.
+#   - New flags MUST set `column: feature_flags_ext_2` and be appended at the end. Positions 1-62 are in use
+#     (62 = agente_le_no_meio_do_turno, #3225): only 63 is left; after it, use `feature_flags_ext_3`.
 #   - Bit positions are persisted per column; never reorder or remove existing
 #     entries, and never change an existing feature's `column` after release.
 - name: inbound_emails
@@ -1524,5 +1525,14 @@
 # do fork que não couber vai para a feature_flags_ext_3. spec/models/account_spec.rb confere o bit.
 - name: agente_seguro_viagem_universal
   display_name: Agentes › pronto Seguro Viagem Universal
+  enabled: true
+  column: feature_flags_ext_2
+# O agente lê a mensagem que chega no meio do turno (#3225): o turno que já estava respondendo lê o que o cliente mandou
+# depois e dá uma resposta só para tudo. Nasce ligada para conta nova; nas contas que já existem a Orquestração liga
+# depois do deploy (sem migration). Posição 62 da feature_flags_ext_2 (1 << 61 = 2305843009213693952), logo depois da
+# agente_seguro_viagem_universal (61); sobra 1 posição na ext_2 (63) e a próxima flag do fork que não couber vai para a
+# feature_flags_ext_3. spec/models/account_spec.rb confere o bit.
+- name: agente_le_no_meio_do_turno
+  display_name: Agentes › lê a mensagem que chega no meio do turno
   enabled: true
   column: feature_flags_ext_2
