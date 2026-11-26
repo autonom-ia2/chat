@@ -7,7 +7,8 @@
 #   último pedaço, na entrega em pedaços, Operate::ChunkedDeliveryJob), pede a avaliação da IA de Atribuição
 #   (ContratoDoFunil.avaliar_depois_da_fala -> Crm::Ai::AvaliacaoDepoisDaFala).
 # - CRM (Crm::Ai::HandoffExecutor): a avaliação com o gatilho da fala do agente não esbarra no bloqueio
-#   `owned_by_our_agent` (#1673) e entrega pelo Crm::Entrega, com as regras de sempre.
+#   `owned_by_our_agent` (#1673) e entrega pelo Crm::Entrega, com as regras de sempre. A promessa que o modelo lê
+#   (`promised_by_our_assistant`) só vale com este registro do turno na conversa (`avisou?`, #3256).
 #
 # Vale também no turno do evento da cotação (ResponderAoEvento, #3221, regra do Rodrigo de 25/11): a Lia, e qualquer
 # agente que passe por ele, avisa e deixa a Atribuição decidir, como no turno do cliente.
@@ -29,6 +30,15 @@ module Autonomia::Agents::AgenteSoInforma
   def fala_comecou!(agent:, conversation:, reason:, message:)
     ::Autonomia::Agents::Operate::EventLogger.avisou_que_chama_alguem(agent: agent, conversation: conversation, reason: reason,
                                                                       message: message)
+  end
+
+  # #3256: o FATO de que o agente avisou o cliente, nesta conversa, que vai chamar alguém (o registro do turno acima),
+  # depois de `desde` (nil: em qualquer momento). A IA do CRM só cumpre a promessa que o agente fez de verdade
+  # (Crm::Ai::HandoffExecutor#promessa_a_cumprir?): a leitura do modelo sozinha não passa a conversa.
+  def avisou?(conversation, agent, desde:)
+    avisos = ::Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.where(conversation_id: conversation.id, agent: agent)
+    avisos = avisos.where(created_at: desde..) if desde
+    avisos.exists?
   end
 
   # A fala que avisou terminou de sair: a IA de Atribuição avalia (pelo ContratoDoFunil). Nunca derruba a entrega: a
