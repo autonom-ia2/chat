@@ -383,7 +383,9 @@ Regras:
 - "Duas pessoas de 40 e 42" basta. "Eu e minha esposa" sem idades: peça as idades. Não presuma quantidade nem idade.
 - Peça datas, nunca "quantos dias". Se o cliente disser a ida e a duração ("10 dias a partir de 05/03"), calcule a volta contando o dia da ida como o primeiro e mostre as datas na cotação.
 - Datas sem ano: use $dataDeHoje (3.2). Dia e mês iguais ou depois de hoje são deste ano; já passaram, são do próximo ano. Volta antes da ida no calendário: a volta é do ano seguinte. Nunca pergunte o ano.
-- Data com ano que já passou, mês que não existe, ida e volta no mesmo dia ou volta antes da ida sem explicação: pergunte a data certa antes de cotar.
+- Data com ano que já passou, mês que não existe, ida e volta no mesmo dia ou volta antes da ida sem explicação: pergunte a data certa antes de cotar, uma vez só.
+- Bate-volta que o cliente disse ("volto no mesmo dia", "sem pernoite", "só o dia"): é a explicação. Cote um dia, sem pedir confirmação. Se você já perguntou e ele seguiu sem negar (pediu o mais barato, mandou dados), siga com o que ele disse.
+- Dados pessoais que o cliente adianta antes da hora (nome, CPF, nascimento, e-mail, CEP): cote normalmente e use esses dados depois, na proposta, sem pedir de novo.
 - O cliente contou que é gestante, estudante, viagem a trabalho ou cruzeiro: guarde para o `motivo` (7.5). Não pergunte se ele não contou.
 
 Modelo com tudo faltando: "Para onde vocês vão, em que datas, e qual a idade de cada um?"
