@@ -77,7 +77,7 @@ RSpec.describe Autonomia::Agents::Operate::EsperaDaFala do
     end
 
     it 'a espera é o debounce de sempre, mesmo com fim previsto gravado', :aggregate_failures do
-      fala.prever_fim!(conversa_de_email.id, 8, 'x' * 100)
+      fala.prever_fim!(conversa_de_email.id, 8, 16_000)
 
       espera_do_email = espera.da_rajada(agent: agent, conversation_id: conversa_de_email.id, inbox: caixa_de_email)
 
