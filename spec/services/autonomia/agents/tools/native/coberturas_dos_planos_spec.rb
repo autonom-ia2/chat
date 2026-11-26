@@ -96,6 +96,109 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
       .with('plano_fora_do_catalogo', hash_including(slug: 'coberturas_dos_planos', faltando: ['planos']))
   end
 
+  # Sem `nacional`, o internacional é lido primeiro; o nacional só quando falta nome nele (leitura tardia).
+  context 'without nacional (o nome do plano diz o catálogo)' do
+    it '"Master" acha no internacional e o nacional nem é chamado (leitura tardia)' do
+      internacional = catalogo
+      nacional = catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Master'], 'nacional' => nil }))
+      expect(saida['catalogo']).to eq('internacional')
+      expect(saida['planos'].pluck('plano')).to eq(['Master USA +'])
+      expect(saida['aviso']).to include('dólar')
+      expect(internacional).to have_been_requested
+      expect(nacional).not_to have_been_requested
+    end
+
+    it '"Nacional +" acha no nacional, depois de ler os dois; o campo ausente vale o mesmo que nil' do
+      internacional = catalogo
+      nacional = catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
+      expect(internacional).to have_been_requested
+      expect(nacional).to have_been_requested
+      expect(saida['catalogo']).to eq('nacional')
+      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      expect(saida['aviso']).not_to include('dólar')
+    end
+
+    it 'um nome em cada catálogo: devolve os dois, cada plano com o seu catálogo' do
+      catalogo
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Master', 'Nacional +'] }))
+      expect(saida['catalogo']).to eq('internacional e nacional')
+      expect(saida['planos'].map { |plano| plano.values_at('plano', 'catalogo') })
+        .to eq([['Master USA +', 'internacional'], ['Nacional +', 'nacional']])
+    end
+
+    it 'nome que nenhum dos dois tem: recusa com os nomes de ambos' do
+      catalogo
+      catalogo(nacional: true)
+      texto = consultar({ 'planos' => ['Platinum'] })
+      expect(texto).to include('Platinum', 'Master USA +', 'Nacional +')
+    end
+
+    it 'um catálogo fora e o outro acha tudo: devolve, sem aviso de catálogo fora' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Nacional +'] }))
+      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      expect(saida['aviso']).not_to include('fora do ar')
+    end
+
+    it 'um catálogo fora e um nome sem achar: devolve o que achou e o aviso diz qual nome ficou sem procurar' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => ['Nacional +', 'Platinum'] }))
+      expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
+      expect(saida['aviso']).to include('internacional fora do ar', 'Platinum')
+    end
+
+    it 'acesso recusado no internacional: o nacional nem é tentado (mesma credencial), passa e marca o acesso' do
+      catalogo(status: 401, corpo: '')
+      nacional = catalogo(nacional: true)
+      expect(consultar({ 'planos' => ['Nacional +'] })).to eq(falhas::TEXTO_PASSAR)
+      expect(nacional).not_to have_been_requested
+      expect(contratado.acesso_da_seguradora.reload.estado).to eq('recusado')
+    end
+
+    it 'um catálogo recusado e outro indisponível, nada achado: vale o acesso recusado' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true, status: 401, corpo: '')
+      expect(consultar({ 'planos' => ['Master'] })).to eq(falhas::TEXTO_PASSAR)
+    end
+
+    it 'um catálogo fora e nada achado no outro: trata a falha, sem dizer que o plano não existe' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true)
+      expect(consultar({ 'planos' => ['Master'] })).to eq(falhas::TEXTO_INDISPONIVEL)
+    end
+
+    it 'os dois fora: texto de indisponível, sem levantar' do
+      catalogo(status: 500, corpo: '')
+      catalogo(nacional: true, status: 500, corpo: '')
+      expect(consultar({ 'planos' => ['Master'] })).to eq(falhas::TEXTO_INDISPONIVEL)
+    end
+
+    it 'lista vazia: os planos dos dois catálogos' do
+      catalogo
+      catalogo(nacional: true)
+      saida = JSON.parse(consultar({ 'planos' => [] }))
+      expect(saida['planos'].pluck('catalogo').uniq).to eq(%w[internacional nacional])
+    end
+
+    it 'nacional explícito lê só aquele catálogo' do
+      catalogo
+      nacional = catalogo(nacional: true)
+      consultar({ 'planos' => ['Master'], 'nacional' => false })
+      expect(nacional).not_to have_been_requested
+    end
+  end
+
+  it 'schema: nacional é opcional (tipo aceita null) e continua listado em required' do
+    esquema = described_class.openai_schema[:parameters]
+    expect(esquema[:properties]['nacional']['type']).to eq(%w[boolean null])
+    expect(esquema[:required]).to include('nacional')
+  end
+
   it 'Universal fora: devolve o texto de indisponível, sem levantar' do
     catalogo(status: 500, corpo: '')
     expect(consultar({ 'planos' => ['Master'], 'nacional' => false })).to eq(falhas::TEXTO_INDISPONIVEL)
