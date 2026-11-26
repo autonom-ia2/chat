@@ -86,7 +86,9 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Compra do
 
   it 'recusa urlVoucher fora do host de pagamento, sem https, sem carrinho ou inválido' do
     ['https://pagamento.exemplo.com/?IdCarrinho=abc', 'http://pagamento.universal-assistance.com/?IdCarrinho=abc',
-     'https://pagamento.universal-assistance.com/', 'https://pagamento.universal-assistance.com/?IdCarrinho=a b',
+     'https://pagamento.universal-assistance.com/', 'https://[/?IdCarrinho=abc',
+     'https://x@pagamento.universal-assistance.com/?IdCarrinho=abc',
+     'https://pagamento.universal-assistance.com:8443/?IdCarrinho=abc',
      987_654, nil, ''].each { |url| expect(described_class.link(url)).to be_nil }
   end
 end

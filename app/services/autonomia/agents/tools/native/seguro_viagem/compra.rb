@@ -45,13 +45,17 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
   end
 
   # O link de pagamento é o `urlVoucher` que a compra devolve, com o número do carrinho cifrado. Montar o link com o
-  # `codigoCarrinho` cru abre "Carrinho não encontrado" (#3244). Só vale `https` no host de pagamento da Universal, com
-  # o carrinho na query; qualquer outra coisa: nil.
+  # `codigoCarrinho` cru abre "Carrinho não encontrado" (#3244). Só vale `https` no host de pagamento da Universal, na
+  # porta padrão, sem usuário no endereço e com o carrinho na query; qualquer outra coisa: nil.
   def link(url_voucher)
     uri = URI.parse(url_voucher.to_s.strip)
-    uri.to_s if uri.is_a?(URI::HTTPS) && uri.host == HOST_DO_PAGAMENTO && uri.query.present?
+    uri.to_s if pagamento?(uri) && uri.query.present?
   rescue URI::InvalidURIError
     nil
+  end
+
+  def pagamento?(uri)
+    uri.is_a?(URI::HTTPS) && uri.host == HOST_DO_PAGAMENTO && uri.port == URI::HTTPS::DEFAULT_PORT && uri.userinfo.nil?
   end
 
   def basicos(cotacao, plano, contato)
@@ -90,5 +94,5 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Compra
       'Cambio' => plano['cambio'] }
   end
 
-  private_class_method :basicos, :dados_do_titular, :pessoa, :produtos
+  private_class_method :pagamento?, :basicos, :dados_do_titular, :pessoa, :produtos
 end

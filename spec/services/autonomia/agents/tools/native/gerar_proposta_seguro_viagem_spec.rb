@@ -226,8 +226,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(a_request(:post, "#{base}/v1/Compras").with(&sem_rua)).to have_been_made.once
   end
 
-  it 'compra sem urlVoucher: passa pelas falhas (sem link)' do
-    stub_request(:post, "#{base}/v1/Compras").to_return(status: 200, body: { codigoCarrinho: nil }.to_json)
+  it 'compra com carrinho e sem urlVoucher: passa pelas falhas (sem link), não monta link pelo número (#3244)' do
+    stub_request(:post, "#{base}/v1/Compras").to_return(status: 200, body: { codigoCarrinho: 987_654 }.to_json)
     expect(Autonomia::Agents::Tools::Native::SeguroViagem::Falhas).to receive(:sem_link)
       .with(acao: 'gerar_proposta_seguro_viagem', agent: contratado, conversation: conversa).and_call_original
     ferramenta(params).call
