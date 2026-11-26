@@ -118,9 +118,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     stub_request(:post, "#{base}/v1/Compras")
       .to_return({ status: 200, body: file_fixture('../universal/compras_ok.json').read }, { status: 200, body: segunda.to_json })
     ferramenta(params).call
-    travel 23.hours + 1.minute do
-      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
-    end
+    # A cotação só vale no dia (`do_dia?`): quem envelhece aqui é só a proposta guardada.
+    vencida = cotacao.reload.proposta.merge('gerada_em' => (23.hours + 1.minute).ago.iso8601)
+    cotacao.update!(proposta: vencida)
+    expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
     expect(a_request(:post, "#{base}/v1/Compras")).to have_been_made.twice
   end
 
