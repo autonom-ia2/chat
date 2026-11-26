@@ -602,6 +602,7 @@ module Autonomia
             refazer_pelo_dono_novo
           end
           dispatch_async(replied: false)
+          fim_do_turno_com_segurado if motivo == 'sinal' # #3258: calar é a resposta deste turno
           Result.silenced
         end
 
@@ -667,6 +668,7 @@ module Autonomia
           prever_o_fim_da_fala(outcome)
           handoff_if_signaled(result) unless @calou_pela_pessoa
           evento_da_pessoa
+          fim_do_turno_com_segurado if outcome.message.present? # #3258: a resposta inteira saiu agora (pedaços: a cadeia)
         end
 
         # #3211 (P1): grava quando a fala deve terminar, para a rajada seguinte esperar por ela. Só quando houve fala: a
