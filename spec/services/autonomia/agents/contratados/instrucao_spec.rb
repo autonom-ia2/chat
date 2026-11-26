@@ -77,7 +77,8 @@ RSpec.describe Autonomia::Agents::Contratados::Instrucao do
     texto = described_class.renderizar(agente(marca), hoje: hoje)
     expect(texto).not_to include('No PDF estão todas as coberturas', 'o resto está no PDF')
     expect(texto).to include('só dos planos com `destaque`', 'No PDF estão também as outras', '`incluir_anuais: true`',
-                             'Nunca diga que as demais estão no PDF', 'é só me dizer.')
+                             'Nunca diga que as demais estão no PDF', 'é só me dizer.', 'Com `aviso` (só anuais)',
+                             'pediu anual depois de uma cotação sem eles', '(salvo a 3.5)')
   end
 
   it 'escreve a data por extenso com o dia da semana' do
