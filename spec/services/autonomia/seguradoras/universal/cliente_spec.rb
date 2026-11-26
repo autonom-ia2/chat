@@ -190,10 +190,10 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
       end
     end
 
-    def stub_beneficios(nacional, status: 200, corpo: catalogo)
+    def stub_beneficios(nacional, status: 200, corpo: catalogo, login: 'corretor.teste')
       stub_request(:get, "#{base}/v1/beneficios")
         .with(query: { 'idioma' => 'portugues', 'tipoTarifa' => '1', 'nacional' => nacional.to_s },
-              headers: { 'Login' => 'corretor.teste', 'Senha' => 's3nha-teste' })
+              headers: { 'Login' => login, 'Senha' => 's3nha-teste' })
         .to_return(status: status, body: corpo)
     end
 
@@ -222,12 +222,14 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
 
     it 'o cache é por emissor, e a chave não leva login nem senha' do
       stub = stub_beneficios(false)
+      stub_do_outro = stub_beneficios(false, login: 'outro.corretor.teste')
       outro = described_class.new(login: 'outro.corretor.teste', senha: 's3nha-teste')
       allow(Rails.cache).to receive(:fetch).and_call_original
 
       [cliente, outro, cliente].each { |quem| quem.beneficios(nacional: false) }
 
-      expect(stub).to have_been_requested.twice
+      expect(stub).to have_been_requested.once
+      expect(stub_do_outro).to have_been_requested.once
       expect(Rails.cache).to have_received(:fetch).with(a_string_including(cliente.emissor), anything).twice
       expect(Rails.cache).not_to have_received(:fetch).with(a_string_including('corretor.teste'), anything)
       expect(Rails.cache).not_to have_received(:fetch).with(a_string_including('s3nha-teste'), anything)
@@ -239,7 +241,8 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
         .to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
       stub = stub_beneficios(false)
       expect(cliente.beneficios(nacional: false)).to eq(JSON.parse(catalogo))
-      expect(stub).to have_been_requested.once
+      # O padrão do WebMock conta as duas idas (a do 500 e a nova): a segunda não veio do cache.
+      expect(stub).to have_been_requested.twice
     end
 
     it 'catálogo sem plano conta como falha (indisponivel) e não fica no cache' do

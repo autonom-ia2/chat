@@ -41,7 +41,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
 
   it '"Master" casa "Master USA +" e devolve as coberturas com o valor como veio, sem preço' do
     catalogo
-    saida = JSON.parse(consultar('planos' => ['Master'], 'nacional' => false))
+    saida = JSON.parse(consultar({ 'planos' => ['Master'], 'nacional' => false }))
     expect(saida['catalogo']).to eq('internacional')
     expect(saida['planos']).to eq([{ 'plano' => 'Master USA +', 'coberturas' => [
                                     { 'nome' => 'Despesas Médicas e Hospitalares (por evento)', 'valor' => '$40.000' },
@@ -67,7 +67,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
 
   it 'nacional: lê o catálogo nacional; igualdade vale antes do prefixo ("Nacional" não traz o Premium)' do
     catalogo(nacional: true)
-    saida = JSON.parse(consultar('planos' => ['Nacional'], 'nacional' => true))
+    saida = JSON.parse(consultar({ 'planos' => ['Nacional'], 'nacional' => true }))
     expect(saida['catalogo']).to eq('nacional')
     expect(saida['planos'].pluck('plano')).to eq(['Nacional +'])
     expect(saida['planos'].first['coberturas'].first)
@@ -77,7 +77,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
 
   it 'nacional como o texto "true" também vale' do
     stub = catalogo(nacional: true)
-    consultar('planos' => ['Nacional Premium'], 'nacional' => 'true')
+    consultar({ 'planos' => ['Nacional Premium'], 'nacional' => 'true' })
     expect(stub).to have_been_requested
   end
 
@@ -89,7 +89,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
   it 'nome que o catálogo não tem: recusa com os nomes que existem, e registra' do
     catalogo
     allow(Autonomia::Agents::Tools::Recusa).to receive(:registrar).and_call_original
-    texto = consultar('planos' => %w[Master Platinum], 'nacional' => false)
+    texto = consultar({ 'planos' => %w[Master Platinum], 'nacional' => false })
     expect(texto).to include('Platinum', 'Master USA +', 'Value USA +', 'Exclusive USA +')
     expect(texto).not_to include("\t")
     expect(Autonomia::Agents::Tools::Recusa).to have_received(:registrar)
@@ -98,17 +98,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::CoberturasDosPlanos do
 
   it 'Universal fora: devolve o texto de indisponível, sem levantar' do
     catalogo(status: 500, corpo: '')
-    expect(consultar('planos' => ['Master'], 'nacional' => false)).to eq(falhas::TEXTO_INDISPONIVEL)
+    expect(consultar({ 'planos' => ['Master'], 'nacional' => false })).to eq(falhas::TEXTO_INDISPONIVEL)
   end
 
   it 'pedido inválido da Universal vira indisponível: não há dado do cliente a corrigir' do
     catalogo(status: 400, corpo: { 'message' => 'Parâmetro inválido' }.to_json)
-    expect(consultar('planos' => ['Master'], 'nacional' => false)).to eq(falhas::TEXTO_INDISPONIVEL)
+    expect(consultar({ 'planos' => ['Master'], 'nacional' => false })).to eq(falhas::TEXTO_INDISPONIVEL)
   end
 
   it 'login recusado: manda passar para a equipe, como nas outras ferramentas' do
     catalogo(status: 401, corpo: '')
-    expect(consultar('planos' => ['Master'], 'nacional' => false)).to eq(falhas::TEXTO_PASSAR)
+    expect(consultar({ 'planos' => ['Master'], 'nacional' => false })).to eq(falhas::TEXTO_PASSAR)
     expect(contratado.acesso_da_seguradora.reload.estado).to eq('recusado')
   end
 
