@@ -7,8 +7,11 @@
 # chamam `Falhas.tratar`, e tudo chega por argumento.
 #
 # NUNCA LEVANTA. A nota (`NotaNaHora`) e o registro (`Recusa`) já não levantam; a gravação do acesso fica num
-# `rescue`. A mensagem curta da seguradora (`pedido_invalido`) vai só ao modelo: nunca a log nem à nota. O texto ao
-# modelo não traz status HTTP, login nem senha.
+# `rescue`. A mensagem curta da seguradora (`pedido_invalido`, `compra_recusada`) vai só ao modelo: nunca a log nem à
+# nota. O texto ao modelo não traz status HTTP, login nem senha.
+#
+# O 400 DA COMPRA (#3265, `tratar_compra`) é outro caso: o cliente já confirmou o resumo, então ele deixa nota à equipe
+# e o texto não manda corrigir dado; o 400 das outras chamadas (cotar) segue no `tratar`.
 module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
   Codigos = Autonomia::Seguradoras::Universal::Codigos
   NOTAS = 'autonomia.contratados.universal.notas'.freeze
@@ -20,6 +23,19 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
   TEXTO_SEM_LINK = 'A seguradora não devolveu o link de pagamento. Não tente de novo. Passe a conversa para a equipe ' \
                    'agora, sem mostrar o erro.'.freeze
   TEXTO_INVALIDO = 'A seguradora não aceitou o pedido. Corrija com o cliente só o dado em questão.'.freeze
+  # #3265: o 400 da COMPRA vem depois do resumo confirmado. Não é "corrija o dado" por padrão (ex.: "já consta um voucher
+  # para essa viagem" não tem dado a corrigir): quem decide se a resposta da seguradora aponta um dado do cliente é o
+  # modelo, pela instrução, nunca uma lista de palavras sobre o texto dela.
+  TEXTO_COMPRA_RECUSADA = 'A seguradora recusou a compra, e a proposta não saiu. O cliente já confirmou o resumo: não ' \
+                          'peça para ele corrigir dados e não tente de novo. Passe a conversa para a equipe agora, sem ' \
+                          'mostrar o erro.'.freeze
+  TEXTO_COMPRA_RECUSADA_COM_RESPOSTA = 'A seguradora recusou a compra, e a proposta não saiu. O cliente já confirmou o ' \
+                                       'resumo, então não peça para ele revisar os dados. Só se a resposta da ' \
+                                       'seguradora abaixo apontar claramente um dado que o cliente informou (o CPF ou a ' \
+                                       'data de nascimento de um viajante, por exemplo), peça só esse dado, troque e ' \
+                                       'confirme o resumo de novo; se a seguradora recusar de novo, passe a conversa ' \
+                                       'para a equipe. Senão, não tente de novo: passe a conversa para a equipe agora, ' \
+                                       'sem mostrar o erro.'.freeze
 
   module_function
 
@@ -30,6 +46,17 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     when Codigos::PEDIDO_INVALIDO then invalido(erro, acao, agent, conversation)
     else indisponivel(acao, agent, conversation)
     end
+  end
+
+  # A falha da COMPRA (#3265): o pedido inválido vira `compra_recusada`; as outras, como em `tratar`. `da_compra`:
+  # `{ cotacao_id:, carrinhos: }`, a cotação da compra (a chave da nota) e os números dos carrinhos anteriores desta
+  # conversa, que a nota cita (lista vazia sem nenhum).
+  def tratar_compra(erro, da_compra:, acao:, agent:, conversation:)
+    return tratar(erro, acao: acao, agent: agent, conversation: conversation) unless erro.codigo == Codigos::PEDIDO_INVALIDO
+
+    cotacao_id, carrinhos = da_compra.values_at(:cotacao_id, :carrinhos)
+    nota_da_compra_recusada(conversation, carrinhos, "#{acao}:#{conversation&.id}:#{cotacao_id}")
+    compra_recusada(erro, acao, agent, conversation)
   end
 
   # A falha de uma consulta em que não há dado do cliente a corrigir (o pagamento pelo carrinho guardado, o catálogo de
@@ -70,6 +97,28 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     "#{TEXTO_INVALIDO} Resposta da seguradora (#{Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}): \"#{mensagem}\""
   end
 
+  # A mensagem da seguradora vai só ao modelo, rotulada como dado externo, como no `invalido`; nunca à nota.
+  def compra_recusada(erro, acao, agent, conversation)
+    Autonomia::Agents::Tools::Recusa.registrar('compra_recusada', slug: acao, agente: agent, conversa: conversation&.id)
+    mensagem = erro.mensagem_da_seguradora.to_s.strip.presence
+    return TEXTO_COMPRA_RECUSADA if mensagem.nil?
+
+    "#{TEXTO_COMPRA_RECUSADA_COM_RESPOSTA} Resposta da seguradora (#{Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}): " \
+      "\"#{mensagem}\""
+  end
+
+  # A nota leva só o número dos carrinhos anteriores (da Universal, não é dado pessoal), nunca o texto da seguradora.
+  # Uma por cotação (`onde`: ação, conversa e cotação): a mesma recusa repetida na mesma cotação não duplica; a cotação
+  # nova (o cliente cotou de novo) tem nota nova.
+  def nota_da_compra_recusada(conversation, carrinhos, onde)
+    texto = if carrinhos.empty?
+              I18n.t("#{NOTAS}.compra_recusada")
+            else
+              I18n.t("#{NOTAS}.compra_recusada_com_anterior", carrinhos: carrinhos.join(', '))
+            end
+    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:compra_recusada:#{onde}")
+  end
+
   # Como na conferência recusada (`ConferirAcesso`): o login recusado não guarda o que ele podia antes.
   def marcar_recusado(agent, conversation)
     agent.acesso_da_seguradora.update!(estado: 'recusado', motivo: Codigos::ACESSO_RECUSADO, capacidades: {})
@@ -83,5 +132,5 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
                                             chave: "universal:#{falha}:#{acao}:#{conversation&.id}")
   end
 
-  private_class_method :recusado, :indisponivel, :invalido, :marcar_recusado, :nota
+  private_class_method :recusado, :indisponivel, :invalido, :compra_recusada, :nota_da_compra_recusada, :marcar_recusado, :nota
 end

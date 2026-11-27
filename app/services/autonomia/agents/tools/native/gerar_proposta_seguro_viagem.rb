@@ -23,6 +23,18 @@
 # como cancelada, a equipe recebe nota e o modelo sabe que o link anterior morreu. Proposta marcada como cancelada não é
 # devolvida como guardada.
 #
+# E O CARRINHO DE OUTRA COTAÇÃO DA MESMA VIAGEM (#3266). O cliente que volta outro dia e cota de novo a mesma viagem
+# deixou um carrinho não pago na cotação antiga, e a Universal recusa a compra nova pelo mesmo motivo. Sob o mesmo lock,
+# os carrinhos das outras cotações deste agente nesta conversa que são a mesma viagem (`SeguroViagem::OutrasDaMesmaViagem`)
+# passam pela mesma regra, lidos todos antes de qualquer cancelamento (`SeguroViagem::CarrinhosAnteriores`). A proposta
+# de cada outra cotação cancelada é marcada como cancelada depois da compra, saindo ou não. Um cancelamento que falha
+# depois de outro já feito é tratado como a compra que não saiu: o modelo sabe que o link anterior morreu e a equipe
+# recebe nota.
+#
+# O 400 DA COMPRA (#3265). O cliente já confirmou o resumo: a recusa da seguradora deixa nota à equipe e o texto não
+# manda corrigir dado (`SeguroViagem::Falhas.tratar_compra`); o modelo pede um dado só se a resposta da seguradora o
+# apontar claramente.
+#
 # SEGURO PAGO NÃO SE REFAZ (#3247). Cotação com `pago_em`, ou outra cotação da mesma viagem (destinos, datas e idades)
 # nesta conversa com `pago_em`, recusa `proposta_ja_paga` antes de qualquer chamada (`SeguroViagem::PropostaPaga`); a
 # conferência se repete sob o lock da cotação.
@@ -191,8 +203,11 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   # A compra roda sob o lock da cotação; as falhas são tratadas fora dele (a nota e o acesso não entram na transação).
   # Só a espera pelo lock vira `proposta_em_andamento`: o tempo do banco estourado depois de travar (já dentro da
-  # compra) sobe como erro, porque aí a seguradora pode ter criado o carrinho.
+  # compra) sobe como erro, porque aí a seguradora pode ter criado o carrinho. As outras cotações canceladas (#3266) são
+  # marcadas fora da transação, em cada caminho em que algo pode ter sido cancelado: a compra que saiu, a que não saiu
+  # (`nao_saiu`, `CarrinhosAnteriores#compra_nao_saiu`) e o erro que sobe.
   def propor(cotacao, plano, pedido, chave)
+    @anteriores = SeguroViagem::CarrinhosAnteriores.new(cotacao, agent)
     proposta = nil
     travada = false
     paga = false
@@ -204,35 +219,44 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
       proposta = guardada_ou_nova(cotacao, plano, pedido, chave) unless paga
     end
     return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if paga
-    return nao_saiu(cotacao) if proposta.nil?
+    return nao_saiu if proposta.nil?
 
+    @anteriores.marcar_outras
     resposta(plano, proposta)
-  rescue *ESPERA_DO_LOCK
-    raise if travada
-
-    recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO)
+  rescue *ESPERA_DO_LOCK => e
+    espera_do_lock(e, travada)
   rescue *SeguroViagem::CarrinhoAnterior::NAO_SAIU => e
-    SeguroViagem::CarrinhoAnterior.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    @anteriores.nao_liberado(e, acao: self.class.slug, agent: agent, conversation: conversa)
   rescue Universal::Cliente::Erro => e
-    nao_saiu(cotacao, e)
+    nao_saiu(e)
   end
 
-  # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas. Se esta
-  # chamada cancelou o carrinho anterior (`@cancelado`), isso vai junto, com a resposta da compra sem link (`@compra`,
-  # nil no erro) (#3263).
-  def nao_saiu(cotacao, erro = nil)
+  # Só a espera pelo lock vira `proposta_em_andamento`. O tempo do banco estourado depois de travar sobe, com as outras
+  # cotações já canceladas marcadas antes.
+  def espera_do_lock(erro, travada)
+    return recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO) unless travada
+
+    @anteriores.marcar_outras
+    raise erro
+  end
+
+  # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas; o 400
+  # da compra cita na nota os carrinhos anteriores (#3265). Se esta chamada cancelou algum carrinho anterior
+  # (`@anteriores`), isso vai junto, com a resposta da compra sem link (`@compra`, nil no erro) (#3263, #3266).
+  def nao_saiu(erro = nil)
     quem = { acao: self.class.slug, agent: agent, conversation: conversa }
-    texto = erro ? SeguroViagem::Falhas.tratar(erro, **quem) : SeguroViagem::Falhas.sem_link(**quem)
-    SeguroViagem::CarrinhoAnterior.compra_nao_saiu(cotacao, @cancelado, texto, conversation: conversa, compra: @compra)
+    texto = erro ? SeguroViagem::Falhas.tratar_compra(erro, da_compra: @anteriores.da_compra, **quem) : SeguroViagem::Falhas.sem_link(**quem)
+    @anteriores.compra_nao_saiu(texto, compra: @compra)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê
   # a cotação: a proposta comparada é a que está no banco agora, e a chamada que correr junto espera e cai no primeiro
-  # caso. Antes da compra nova, o carrinho anterior desta cotação sai (#3263); quando não sai, levanta e nada é comprado.
+  # caso. Antes da compra nova, o carrinho anterior desta cotação e os das outras cotações da mesma viagem saem (#3263,
+  # #3266); quando não saem, levanta e nada é comprado.
   def guardada_ou_nova(cotacao, plano, pedido, chave)
     return cotacao.proposta if guardada?(cotacao, chave)
 
-    @cancelado = SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
+    @anteriores.liberar!(cliente)
     proposta = SeguroViagem::Compra.proposta(@compra = cliente.comprar(pedido), plano: plano, chave: chave)
     cotacao.update!(proposta: proposta) if proposta
     proposta
@@ -268,13 +292,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   def conversa = delivery.try(:conversation)
 
-  def acesso
-    agent.acesso_da_seguradora
-  end
-
-  def cliente
-    Universal::Cliente.new(login: acesso.login, senha: acesso.senha)
-  end
+  def cliente = SeguroViagem::Pagamento.cliente(agent)
 
   # O dia de hoje no fuso da conta, como na cotação.
   def fuso

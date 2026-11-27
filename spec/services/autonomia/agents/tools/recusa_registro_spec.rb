@@ -875,6 +875,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
                                                                           conversation: conversation)
         }
       },
+      # #3265: o 400 da compra, depois do resumo confirmado, pelo caminho real (a compra recusada pela Universal).
+      'falhas.rb#compra_recusada#1' => {
+        espera: { motivo: 'compra_recusada', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          stub_request(:post, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/Compras")
+            .to_return(status: 400, body: { 'status' => 400, 'message' => 'Recusado' }.to_json)
+          propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
+        }
+      },
       # #3211: as recusas da cotação do Seguro Viagem, antes e depois da chamada à Universal.
       'cotar_seguro_viagem.rb#call#1' => {
         espera: { motivo: 'cotacao_sem_conversa', slug: 'cotar_seguro_viagem', conversa: '-' },
@@ -979,8 +988,9 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
         }
       },
-      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST.
-      'gerar_proposta_seguro_viagem.rb#propor#2' => {
+      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST. Saiu do `propor` para o
+      # `espera_do_lock` na correção 1 do #3268 (a marca das outras cotações canceladas antes do erro que sobe).
+      'gerar_proposta_seguro_viagem.rb#espera_do_lock#1' => {
         espera: { motivo: 'proposta_em_andamento', slug: 'gerar_proposta_seguro_viagem' },
         dispara: lambda {
           allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_wrap_original do |original, *args|

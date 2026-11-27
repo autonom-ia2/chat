@@ -7,6 +7,8 @@ module Autonomia::Agents::Tools::MotivosDoSeguroViagem
     'indisponivel' => 'o sistema da seguradora não respondeu; o agente tenta uma vez e passa a conversa para a equipe',
     'pedido_invalido' => 'a seguradora não aceitou o pedido; o modelo corrige com o cliente o dado em questão',
     'sem_link' => 'a compra voltou da seguradora sem o link de pagamento; o agente passa a conversa para a equipe',
+    # #3265: o 400 da compra, depois do resumo confirmado (`Falhas.tratar_compra`); nota à equipe.
+    'compra_recusada' => 'a seguradora recusou a compra depois do resumo confirmado; nada foi comprado e a equipe confere no portal',
     # #3211: as recusas próprias de `cotar_seguro_viagem`.
     'cotacao_sem_conversa' => 'não há conversa para receber a cotação de viagem (Testar, Copiloto, playground)',
     'destino_invalido' => 'a seguradora não atende algum destino pedido; nada foi cotado',

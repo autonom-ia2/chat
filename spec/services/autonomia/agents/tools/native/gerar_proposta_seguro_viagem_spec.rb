@@ -340,9 +340,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
           texto = ferramenta(corrigidos).call
 
           expect(texto).to start_with(anterior::TEXTO_CANCELADO_SEM_NOVA)
-          expect(texto).to include(resposta[:status] == 400 ? falhas::TEXTO_INVALIDO : falhas::TEXTO_INDISPONIVEL)
+          expect(texto).to include(resposta[:status] == 400 ? falhas::TEXTO_COMPRA_RECUSADA_COM_RESPOSTA : falhas::TEXTO_INDISPONIVEL)
+          expect(texto).not_to include(falhas::TEXTO_INVALIDO)
           anterior_marcado_cancelado
         end
+      end
+
+      # #3265: o 400 da compra depois do cancelamento cita o carrinho anterior na nota.
+      it 'a seguradora recusa (400): a nota da compra recusada cita o carrinho anterior' do
+        stub_request(:post, compras).to_return(status: 400, body: { 'status' => 400, 'message' => 'Recusado' }.to_json)
+
+        ferramenta(corrigidos).call
+
+        expect(notas).to include(I18n.t('autonomia.contratados.universal.notas.compra_recusada_com_anterior', carrinhos: '987654'))
+        expect(notas.join).not_to include('Recusado')
       end
 
       it 'compra sem resposta (timeout): indisponível, com o aviso do link anterior' do
@@ -413,6 +424,273 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
       expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
 
       expect(a_request(:put, cancelamento)).to have_been_made.once
+    end
+  end
+
+  # #3266: o cliente volta outro dia e a Bia cota de novo a mesma viagem. O carrinho não pago da cotação antiga deixa o
+  # voucher "Ativo" na Universal, que recusaria a compra nova: ele sai antes, com a mesma regra do carrinho anterior.
+  describe 'carrinho de outra cotação da mesma viagem' do
+    def status_da_antiga = "#{base}/v1/StatusPagamento/987654"
+    def cancelamento_da_antiga = "#{base}/v1/Cancelamento/987654"
+    def compras = "#{base}/v1/Compras"
+    def link_novo = 'https://pagamento.universal-assistance.com/?IdCarrinho=b3V0cm8tY2FycmluaG8='
+    def anterior = Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
+    def falhas = Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
+    def notas = conversa.messages.where(private: true).pluck(:content)
+    def nota(caso) = I18n.t("autonomia.contratados.universal.notas.#{caso}")
+    # A ordem das chamadas que mudam algo na Universal: o cancelamento vem antes da compra.
+    def ordem = (@ordem ||= [])
+
+    let(:da_antiga) do
+      { 'chave' => 'antiga', 'codigo_do_plano' => 'P1', 'codigo_carrinho' => 987_654, 'gerada_em' => 2.hours.ago.iso8601,
+        'link' => 'https://pagamento.universal-assistance.com/?IdCarrinho=YW50aWdh' }
+    end
+
+    def cotacao_nova(pedido_mudado = {}, proposta: nil)
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: contratado,
+                                                 id_cotacao: 'COT-TESTE-2', planos: cotacao.planos, proposta: proposta,
+                                                 pedido: cotacao.pedido.merge(pedido_mudado))
+    end
+
+    def antiga_responde(corpo)
+      stub_request(:get, status_da_antiga).to_return(status: 200, body: corpo.is_a?(String) ? corpo : corpo.to_json)
+    end
+
+    def antiga_intacta
+      expect(cotacao.reload.proposta).to eq(da_antiga)
+    end
+
+    # A cotação nova que já tem carrinho (987656) de uma proposta com outro dado.
+    def nova_com_carrinho
+      cotacao_nova(proposta: { 'chave' => 'outra', 'codigo_carrinho' => 987_656, 'gerada_em' => Time.current.iso8601,
+                               'link' => 'https://pagamento.universal-assistance.com/?IdCarrinho=bm92YQ==' })
+    end
+
+    def carrinho_da_nova_responde(corpo)
+      stub_request(:get, "#{base}/v1/StatusPagamento/987656").to_return(status: 200, body: corpo.to_json)
+    end
+
+    # Uma segunda cotação antiga da mesma viagem (987653), as duas sem pagamento; o cancelamento dela entra na ordem.
+    # -> [a segunda antiga, a cotação nova]
+    def duas_antigas_sem_pagamento
+      segunda = Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: contratado,
+                                                           id_cotacao: 'COT-TESTE-3', planos: cotacao.planos,
+                                                           pedido: cotacao.pedido,
+                                                           proposta: da_antiga.merge({ 'codigo_carrinho' => 987_653 }))
+      antiga_responde({ 'statusPagamento' => '' })
+      stub_request(:get, "#{base}/v1/StatusPagamento/987653").to_return(status: 200, body: { 'statusPagamento' => '' }.to_json)
+      stub_request(:put, "#{base}/v1/Cancelamento/987653").to_return(lambda { |_pedido|
+        ordem << :cancelamento
+        { status: 200, body: { 'msg' => 'Carrinho cancelado com sucesso!', 'sucesso' => true }.to_json }
+      })
+      [segunda, cotacao_nova]
+    end
+
+    before do
+      cotacao.update!(proposta: da_antiga)
+      nova_compra = JSON.parse(file_fixture('../universal/compras_ok.json').read)
+                        .merge({ 'codigoCarrinho' => 987_655, 'urlVoucher' => link_novo }).to_json
+      stub_request(:post, compras).to_return(lambda { |_pedido|
+        ordem << :compra
+        { status: 200, body: nova_compra }
+      })
+      stub_request(:put, cancelamento_da_antiga).to_return(lambda { |_pedido|
+        ordem << :cancelamento
+        { status: 200, body: { 'msg' => 'Carrinho cancelado com sucesso!', 'sucesso' => true }.to_json }
+      })
+    end
+
+    it 'antiga sem pagamento (statusPagamento vazio): cancela a antiga antes, compra a nova e marca a antiga' do
+      nova = cotacao_nova
+      antiga_responde({ 'statusVoucher' => 'Ativo', 'statusPagamento' => '' })
+
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+      expect(ordem).to eq(%i[cancelamento compra])
+      expect(a_request(:put, cancelamento_da_antiga).with(body: '{}')).to have_been_made.once
+      expect(nova.reload.proposta.slice('codigo_carrinho', 'link', 'situacao')).to eq({ 'codigo_carrinho' => 987_655, 'link' => link_novo })
+      expect(cotacao.reload.proposta).to include({ 'codigo_carrinho' => 987_654, 'situacao' => 'cancelado' })
+      expect(Time.zone.iso8601(cotacao.proposta['cancelado_na_troca_em'])).to eq(Time.current)
+      expect(notas).to be_empty
+    end
+
+    %w[Cancelado CANCELADO].each do |cancelado|
+      it "antiga já cancelada na Universal (#{cancelado}): só compra a nova" do
+        nova = cotacao_nova
+        antiga_responde({ 'statusVoucher' => 'Cancelado', 'statusPagamento' => cancelado })
+
+        expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+        expect(ordem).to eq([:compra])
+        expect(nova.reload.proposta['codigo_carrinho']).to eq(987_655)
+        antiga_intacta
+      end
+    end
+
+    [{ 'statusPagamento' => 'Pago' }, { 'statusPagamento' => 'Aguardando Pagamento' }, { 'statusPagamento' => nil }, '[]'].each do |corpo|
+      it "antiga paga, em pagamento ou ilegível (#{corpo.inspect}): recusa com nota, sem cancelar nem comprar" do
+        nova = cotacao_nova
+        antiga_responde(corpo)
+        expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('pagamento_do_anterior_em_aberto', anything)
+
+        expect(ferramenta(params).call).to eq(anterior::TEXTO_EM_ABERTO)
+
+        expect(a_request(:put, cancelamento_da_antiga)).not_to have_been_made
+        expect(a_request(:post, compras)).not_to have_been_made
+        expect(notas).to eq([nota('anterior_em_aberto')])
+        expect(nova.reload.proposta).to be_nil
+        antiga_intacta
+      end
+    end
+
+    it 'viagem diferente (outra data): não lê nem cancela a antiga, e compra a nova' do
+      nova = cotacao_nova({ 'data_saida' => '2027-03-02', 'data_retorno' => '2027-03-06' })
+
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+      expect(a_request(:get, status_da_antiga)).not_to have_been_made
+      expect(ordem).to eq([:compra])
+      expect(nova.reload.proposta['codigo_carrinho']).to eq(987_655)
+      antiga_intacta
+    end
+
+    it 'antiga já marcada como cancelada, ou de outro agente: não é lida' do
+      cotacao.update!(proposta: da_antiga.merge({ 'situacao' => 'cancelado' }))
+      outro = Autonomia::Agents::Agent.create!(account: account, name: 'Outra', agent_type: 'sdr', instruction: 'retrato',
+                                               config: { 'contratado' => { 'modelo' => 'seguro_viagem_universal' } })
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: outro, id_cotacao: 'o-1',
+                                                 planos: [], pedido: cotacao.pedido,
+                                                 proposta: da_antiga.merge({ 'codigo_carrinho' => 987_657 }))
+      cotacao_nova
+
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+      expect(a_request(:get, ->(uri) { uri.path.start_with?('/v1/StatusPagamento') })).not_to have_been_made
+      expect(ordem).to eq([:compra])
+    end
+
+    # Todos os status são lidos antes de qualquer cancelamento. A antiga é lida primeiro e pode ser cancelada; o carrinho
+    # desta cotação, lido por último, está em pagamento: se o cancelamento viesse junto com a leitura, a antiga já teria
+    # caído. Nenhum PUT prova que tudo é lido antes.
+    it 'a antiga está sem pagamento e o carrinho da nova está em pagamento: nenhum cancelamento, nenhuma compra' do
+      nova = nova_com_carrinho
+      antiga_responde({ 'statusPagamento' => '' })
+      carrinho_da_nova_responde({ 'statusPagamento' => 'Aguardando Pagamento' })
+
+      expect(ferramenta(params).call).to eq(anterior::TEXTO_EM_ABERTO)
+
+      expect(a_request(:get, status_da_antiga)).to have_been_made.once
+      expect(a_request(:put, cancelamento_da_antiga)).not_to have_been_made
+      expect(a_request(:put, ->(uri) { uri.path.start_with?('/v1/Cancelamento') })).not_to have_been_made
+      expect(ordem).to be_empty
+      expect(nova.reload.proposta['codigo_carrinho']).to eq(987_656)
+      antiga_intacta
+    end
+
+    # Correção 1 do #3268: a antiga já foi cancelada quando o cancelamento do carrinho desta cotação falha. O link da
+    # antiga morreu: o modelo sabe, a equipe recebe nota e a antiga fica marcada, sem compra.
+    it 'cancelou a antiga e o cancelamento do carrinho da nova falhou: aviso do link anterior, nota e antiga marcada' do
+      nova = nova_com_carrinho
+      antiga_responde({ 'statusPagamento' => '' })
+      carrinho_da_nova_responde({ 'statusPagamento' => '' })
+      stub_request(:put, "#{base}/v1/Cancelamento/987656")
+        .to_return(status: 200, body: { 'msg' => 'Não foi possível', 'sucesso' => false }.to_json)
+
+      expect(ferramenta(params).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_INDISPONIVEL}")
+
+      expect(ordem).to eq([:cancelamento])
+      expect(a_request(:put, "#{base}/v1/Cancelamento/987656")).to have_been_made.once
+      expect(a_request(:post, compras)).not_to have_been_made
+      expect(notas).to include(nota('anterior_cancelado_sem_nova'))
+      expect(cotacao.reload.proposta).to include({ 'codigo_carrinho' => 987_654, 'situacao' => 'cancelado' })
+      expect(nova.reload.proposta.slice('codigo_carrinho', 'situacao')).to eq({ 'codigo_carrinho' => 987_656 })
+    end
+
+    it 'duas antigas da mesma viagem sem pagamento: cancela as duas antes da compra e marca as duas' do
+      segunda, nova = duas_antigas_sem_pagamento
+
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+      expect(ordem).to eq(%i[cancelamento cancelamento compra])
+      expect(a_request(:put, cancelamento_da_antiga)).to have_been_made.once
+      expect(a_request(:put, "#{base}/v1/Cancelamento/987653")).to have_been_made.once
+      expect([cotacao, segunda].map { |antiga| antiga.reload.proposta['situacao'] }).to eq(%w[cancelado cancelado])
+      expect(nova.reload.proposta['codigo_carrinho']).to eq(987_655)
+    end
+
+    it 'duas antigas canceladas e a seguradora recusou a compra (400): a nota cita os dois carrinhos' do
+      segunda, nova = duas_antigas_sem_pagamento
+      stub_request(:post, compras).to_return(status: 400, body: { 'status' => 400, 'message' => 'Recusado' }.to_json)
+
+      ferramenta(params).call
+
+      expect(a_request(:put, ->(uri) { uri.path.start_with?('/v1/Cancelamento') })).to have_been_made.twice
+      expect(a_request(:post, compras)).to have_been_made.once
+      expect(notas).to include(I18n.t('autonomia.contratados.universal.notas.compra_recusada_com_anterior', carrinhos: '987654, 987653'))
+      expect([cotacao, segunda].map { |antiga| antiga.reload.proposta['situacao'] }).to eq(%w[cancelado cancelado])
+      expect(nova.reload.proposta).to be_nil
+    end
+
+    it 'cotação de outra conversa, mesma viagem: não é lida' do
+      cotacao.update!(proposta: da_antiga.merge({ 'situacao' => 'cancelado' }))
+      outra_conversa = create(:conversation, account: account, inbox: inbox)
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: outra_conversa, agent: contratado,
+                                                 id_cotacao: 'o-2', planos: [], pedido: cotacao.pedido,
+                                                 proposta: da_antiga.merge({ 'codigo_carrinho' => 987_658 }))
+      cotacao_nova
+
+      expect(JSON.parse(ferramenta(params).call)['link_de_pagamento']).to eq(link_novo)
+
+      expect(a_request(:get, ->(uri) { uri.path.start_with?('/v1/StatusPagamento') })).not_to have_been_made
+      expect(ordem).to eq([:compra])
+    end
+
+    # Correção 1 do #3268: a chave da nota vale a cotação e os carrinhos cancelados, não a conversa inteira.
+    it 'a nota do link anterior cancelado é uma por cotação e carrinhos: a repetição não duplica, carrinho novo sim' do
+      2.times { anterior.compra_nao_saiu(cotacao, nil, 'x', cancelados: [987_654]) }
+      anterior.compra_nao_saiu(cotacao, nil, 'x', cancelados: [987_653])
+
+      expect(notas.count(nota('anterior_cancelado_sem_nova'))).to eq(2)
+    end
+
+    it 'cancelamento da antiga sem sucesso: não compra, e a antiga não é marcada' do
+      cotacao_nova
+      antiga_responde({ 'statusPagamento' => '' })
+      stub_request(:put, cancelamento_da_antiga)
+        .to_return(status: 200, body: { 'msg' => 'Não foi possível', 'sucesso' => false }.to_json)
+
+      expect(ferramenta(params).call).to eq(falhas::TEXTO_INDISPONIVEL)
+
+      expect(a_request(:post, compras)).not_to have_been_made
+      antiga_intacta
+    end
+
+    # O cancelamento não volta atrás: a compra que falha desfaz a transação dela, mas a antiga fica marcada.
+    it 'cancelou a antiga e a compra não saiu (timeout): aviso do link anterior, nota e antiga marcada' do
+      nova = cotacao_nova
+      antiga_responde({ 'statusPagamento' => '' })
+      stub_request(:post, compras).to_timeout
+
+      expect(ferramenta(params).call).to eq("#{anterior::TEXTO_CANCELADO_SEM_NOVA} #{falhas::TEXTO_INDISPONIVEL}")
+
+      expect(notas).to include(nota('anterior_cancelado_sem_nova'))
+      expect(cotacao.reload.proposta).to include({ 'codigo_carrinho' => 987_654, 'situacao' => 'cancelado' })
+      expect(nova.reload.proposta).to be_nil
+    end
+
+    it 'cancelou a antiga e a seguradora recusou a compra (400): a nota da compra recusada cita o carrinho da antiga' do
+      nova = cotacao_nova
+      antiga_responde({ 'statusPagamento' => '' })
+      stub_request(:post, compras).to_return(status: 400, body: { 'status' => 400, 'message' => 'Recusado' }.to_json)
+
+      texto = ferramenta(params).call
+
+      expect(texto).to start_with(anterior::TEXTO_CANCELADO_SEM_NOVA)
+      expect(texto).to include(falhas::TEXTO_COMPRA_RECUSADA_COM_RESPOSTA)
+      expect(notas).to include(nota('anterior_cancelado_sem_nova'),
+                               I18n.t('autonomia.contratados.universal.notas.compra_recusada_com_anterior', carrinhos: '987654'))
+      expect(cotacao.reload.proposta['situacao']).to eq('cancelado')
+      expect(nova.reload.proposta).to be_nil
     end
   end
 
@@ -636,10 +914,20 @@ RSpec.describe Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem do
     expect(cotacao.reload.proposta).to be_nil
   end
 
-  it 'a seguradora recusa o pedido: passa pelas falhas e nada fica guardado' do
+  # #3265: o 400 da compra vem depois do resumo confirmado: não é "corrija o dado" por padrão, e a equipe fica sabendo.
+  it 'a seguradora recusa a compra (400): nota à equipe, texto sem mandar corrigir dado, nada guardado' do
+    falhas = Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     stub_request(:post, "#{base}/v1/Compras").to_return(status: 400, body: file_fixture('../universal/compras_400.json').read)
-    expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('pedido_invalido', anything)
-    expect(ferramenta(params).call).to include('A seguradora não aceitou o pedido')
+    expect(Autonomia::Agents::Tools::Recusa).to receive(:registrar).with('compra_recusada', anything)
+
+    texto = ferramenta(params).call
+
+    expect(texto).to start_with(falhas::TEXTO_COMPRA_RECUSADA_COM_RESPOSTA)
+    expect(texto).to include(Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO, 'incompatível com a tarifa do produto')
+    expect(texto).not_to include(falhas::TEXTO_INVALIDO, 'Corrija')
+    notas = conversa.messages.where(private: true).pluck(:content)
+    expect(notas).to eq([I18n.t('autonomia.contratados.universal.notas.compra_recusada')])
+    expect(notas.join).not_to include('tarifa', 'Fulano', '52998224725')
     expect(cotacao.reload.proposta).to be_nil
   end
 
