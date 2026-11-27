@@ -2251,6 +2251,8 @@ pt_BR:
           anterior_em_aberto: "A proposta nova do seguro viagem NÃO saiu: o pagamento do carrinho anterior desta conversa ainda está em aberto na seguradora, e pode já ter sido pago. Confira no portal da seguradora."
           anterior_cancelado_sem_nova: "O link de pagamento anterior desta conversa foi cancelado na seguradora, mas a proposta nova NÃO saiu. O cliente está sem link de pagamento válido agora. Confira no portal da seguradora."
           anterior_cancelado_sem_link: "O link de pagamento anterior desta conversa foi cancelado na seguradora, e a compra nova (carrinho %{carrinho}) voltou sem link de pagamento. O cliente está sem link de pagamento válido agora. Pegue o link do carrinho %{carrinho} no portal da seguradora."
+          compra_recusada: "A seguradora recusou a compra do seguro viagem, e nenhum link de pagamento saiu. Confira no portal da seguradora."
+          compra_recusada_com_anterior: "A seguradora recusou a compra do seguro viagem, e nenhum link de pagamento saiu. Confira no portal da seguradora, junto com o carrinho anterior desta conversa (%{carrinhos})."
           aviso_de_pagamento:
             pagamento_confirmado:
               cabecalho: "Pagamento do seguro viagem confirmado: %{fatos}"

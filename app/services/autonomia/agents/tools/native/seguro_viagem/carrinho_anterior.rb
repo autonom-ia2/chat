@@ -1,5 +1,6 @@
 # O CARRINHO ANTERIOR NÃO PAGO (#3263): o que `gerar_proposta_seguro_viagem` faz com o carrinho da proposta guardada
-# antes de comprar outro na mesma cotação (dado corrigido, outro plano ou link vencido).
+# antes de comprar outro na mesma cotação (dado corrigido, outro plano ou link vencido). Vale também para o carrinho de
+# outra cotação da mesma viagem nesta conversa (#3266, `SeguroViagem::OutrasDaMesmaViagem`), com a mesma regra.
 #
 # POR QUÊ. O carrinho não pago já tem voucher "Ativo" na Universal, e ela recusa a compra nova do mesmo viajante para a
 # mesma viagem ("já consta um voucher para essa viagem", produção, 26/11). O anterior precisa sair antes.
@@ -63,17 +64,18 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
 
   module_function
 
-  # -> o carrinho que acabou de ser cancelado, ou nil (sem carrinho guardado, ou já cancelado na Universal). Levanta
-  # `EmAberto` ou `NaoLiberado` quando a compra nova não pode sair.
-  def liberar!(cotacao, cliente)
-    carrinho = Pagamento.carrinho(cotacao)
-    return if carrinho.blank?
-
-    pagamento = pagamento_do(cliente.status_do_pagamento(carrinho))
-    return if pagamento.is_a?(String) && pagamento.casecmp?(CANCELADO_NA_UNIVERSAL)
-    raise EmAberto unless pagamento == SEM_PAGAMENTO
-
-    cancelar!(cotacao, cliente, carrinho)
+  # -> o carrinho DESTA cotação que acabou de ser cancelado, ou nil (sem carrinho guardado, ou já cancelado na
+  # Universal). Levanta `EmAberto` ou `NaoLiberado` quando a compra nova não pode sair.
+  #
+  # `outras` (#3266): as outras cotações da mesma viagem com carrinho em aberto (`OutrasDaMesmaViagem.com_carrinho`), com
+  # a mesma regra. TODOS os status são lidos antes de qualquer cancelamento: um carrinho em aberto (ou a leitura que
+  # falha) para tudo sem cancelar nenhum. Depois, as outras são canceladas primeiro e a desta cotação por último, e cada
+  # outra cancelada vai a `cancelada` (um proc) como [cotação, carrinho], na hora: se um cancelamento seguinte falhar,
+  # quem chamou ainda sabe o que já foi cancelado.
+  def liberar!(cotacao, cliente, outras = [], cancelada = nil)
+    pendentes = [*outras, cotacao].filter_map { |dona| pendente(dona, cliente) }
+    cancelar_pendentes!(cotacao, cliente, pendentes, cancelada)
+    pendentes.find { |dona, _carrinho| dona == cotacao }&.last
   rescue Erro => e
     raise NaoLiberado, e
   end
@@ -89,16 +91,37 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     TEXTO_EM_ABERTO
   end
 
-  # A compra nova não saiu (`texto` é o que as falhas já devolveram; `compra`, a resposta da compra sem link, ou nil no
-  # erro). Sem carrinho cancelado nesta chamada, o texto como veio. Com ele: avisa a equipe, marca a proposta anterior
-  # como cancelada e diz ao modelo que o link anterior morreu.
+  # A compra nova não saiu depois de algum cancelamento nesta chamada (`SeguroViagem::CarrinhosAnteriores`): `texto` é o
+  # que as falhas já devolveram; `compra`, a resposta da compra sem link, ou nil no erro; `carrinho`, o desta cotação que
+  # foi cancelado, ou nil quando só o de outra cotação da mesma viagem foi (#3266; essa é marcada por
+  # `OutrasDaMesmaViagem`). Avisa a equipe, marca a proposta desta cotação como cancelada e diz ao modelo que o link
+  # anterior morreu.
   def compra_nao_saiu(cotacao, carrinho, texto, conversation:, compra: nil)
-    return texto if carrinho.nil?
-
     sem_link = compra.is_a?(Hash) ? compra['codigoCarrinho'].presence : nil
     nota_do_cancelado(conversation, sem_link)
-    marcar_cancelado(cotacao, carrinho, sem_link)
+    marcar_cancelado(cotacao, carrinho, sem_link) if carrinho
     "#{TEXTO_CANCELADO_SEM_NOVA} #{texto}"
+  end
+
+  # -> [dona, carrinho] quando o carrinho da cotação `dona` precisa ser cancelado; nil sem carrinho ou já cancelado.
+  # Levanta `EmAberto` quando ele não pode ser cancelado.
+  def pendente(dona, cliente)
+    carrinho = Pagamento.carrinho(dona)
+    return if carrinho.blank?
+
+    pagamento = pagamento_do(cliente.status_do_pagamento(carrinho))
+    return if pagamento.is_a?(String) && pagamento.casecmp?(CANCELADO_NA_UNIVERSAL)
+    raise EmAberto unless pagamento == SEM_PAGAMENTO
+
+    [dona, carrinho]
+  end
+
+  # As outras primeiro, a desta cotação por último (é a última da lista).
+  def cancelar_pendentes!(cotacao, cliente, pendentes, cancelada)
+    pendentes.each do |dona, carrinho|
+      cancelar!(dona, cliente, carrinho)
+      cancelada&.call([dona, carrinho]) unless dona == cotacao
+    end
   end
 
   # O `statusPagamento` como veio, ou nil quando o corpo não é objeto.
@@ -106,12 +129,11 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     status.is_a?(Hash) ? status['statusPagamento'] : nil
   end
 
-  def cancelar!(cotacao, cliente, carrinho)
+  def cancelar!(dona, cliente, carrinho)
     resposta = cliente.cancelar(carrinho)
     raise NaoLiberado, Erro.new(Codigos::INDISPONIVEL) unless resposta.is_a?(Hash) && resposta['sucesso'] == true
 
-    Rails.logger.info("[autonomia][seguro_viagem] carrinho_anterior_cancelado cotacao=#{cotacao.id}")
-    carrinho
+    Rails.logger.info("[autonomia][seguro_viagem] carrinho_anterior_cancelado cotacao=#{dona.id}")
   end
 
   # Relendo sob o lock: só marca a proposta que ainda é a do carrinho cancelado. A espera pelo lock estourada (a mesma
@@ -144,5 +166,5 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
                                             chave: "universal:#{caso}:#{conversation&.id}")
   end
 
-  private_class_method :pagamento_do, :cancelar!, :marcar_cancelado, :nota_do_cancelado, :nota
+  private_class_method :pendente, :cancelar_pendentes!, :pagamento_do, :cancelar!, :marcar_cancelado, :nota_do_cancelado, :nota
 end

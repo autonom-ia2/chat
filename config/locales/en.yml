@@ -1156,6 +1156,8 @@ en:
           anterior_em_aberto: 'The new travel insurance proposal was NOT created: the payment of the previous cart in this conversation is still open at the insurer, and it may already be paid. Check it in the insurer portal.'
           anterior_cancelado_sem_nova: 'The previous payment link of this conversation was cancelled at the insurer, but the new proposal was NOT created. The customer has no valid payment link now. Check it in the insurer portal.'
           anterior_cancelado_sem_link: 'The previous payment link of this conversation was cancelled at the insurer, and the new purchase (cart %{carrinho}) came back without a payment link. The customer has no valid payment link now. Get the link for cart %{carrinho} in the insurer portal.'
+          compra_recusada: 'The insurer refused the travel insurance purchase, so no payment link was created. Check it in the insurer portal.'
+          compra_recusada_com_anterior: 'The insurer refused the travel insurance purchase, so no payment link was created. Check it in the insurer portal, together with the previous cart of this conversation (%{carrinhos}).'
           aviso_de_pagamento:
             pagamento_confirmado:
               cabecalho: 'Travel insurance payment confirmed: %{fatos}'
