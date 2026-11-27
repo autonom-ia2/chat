@@ -33,8 +33,9 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
                                        'resumo, então não peça para ele revisar os dados. Só se a resposta da ' \
                                        'seguradora abaixo apontar claramente um dado que o cliente informou (o CPF ou a ' \
                                        'data de nascimento de um viajante, por exemplo), peça só esse dado, troque e ' \
-                                       'confirme o resumo de novo. Senão, não tente de novo: passe a conversa para a ' \
-                                       'equipe agora, sem mostrar o erro.'.freeze
+                                       'confirme o resumo de novo; se a seguradora recusar de novo, passe a conversa ' \
+                                       'para a equipe. Senão, não tente de novo: passe a conversa para a equipe agora, ' \
+                                       'sem mostrar o erro.'.freeze
 
   module_function
 
@@ -47,12 +48,15 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     end
   end
 
-  # A falha da COMPRA (#3265): o pedido inválido vira `compra_recusada`; as outras, como em `tratar`. `carrinhos`: os
-  # números dos carrinhos anteriores desta conversa, para a nota (lista vazia sem nenhum).
-  def tratar_compra(erro, carrinhos:, acao:, agent:, conversation:)
+  # A falha da COMPRA (#3265): o pedido inválido vira `compra_recusada`; as outras, como em `tratar`. `da_compra`:
+  # `{ cotacao_id:, carrinhos: }`, a cotação da compra (a chave da nota) e os números dos carrinhos anteriores desta
+  # conversa, que a nota cita (lista vazia sem nenhum).
+  def tratar_compra(erro, da_compra:, acao:, agent:, conversation:)
     return tratar(erro, acao: acao, agent: agent, conversation: conversation) unless erro.codigo == Codigos::PEDIDO_INVALIDO
 
-    compra_recusada(erro, carrinhos, acao, agent, conversation)
+    cotacao_id, carrinhos = da_compra.values_at(:cotacao_id, :carrinhos)
+    nota_da_compra_recusada(conversation, carrinhos, "#{acao}:#{conversation&.id}:#{cotacao_id}")
+    compra_recusada(erro, acao, agent, conversation)
   end
 
   # A falha de uma consulta em que não há dado do cliente a corrigir (o pagamento pelo carrinho guardado, o catálogo de
@@ -93,11 +97,9 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
     "#{TEXTO_INVALIDO} Resposta da seguradora (#{Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}): \"#{mensagem}\""
   end
 
-  # A nota leva só o número dos carrinhos anteriores (da Universal, não é dado pessoal), nunca o texto da seguradora. A
-  # mensagem dela vai só ao modelo, rotulada como dado externo, como no `invalido`.
-  def compra_recusada(erro, carrinhos, acao, agent, conversation)
+  # A mensagem da seguradora vai só ao modelo, rotulada como dado externo, como no `invalido`; nunca à nota.
+  def compra_recusada(erro, acao, agent, conversation)
     Autonomia::Agents::Tools::Recusa.registrar('compra_recusada', slug: acao, agente: agent, conversa: conversation&.id)
-    nota_da_compra_recusada(conversation, carrinhos, acao)
     mensagem = erro.mensagem_da_seguradora.to_s.strip.presence
     return TEXTO_COMPRA_RECUSADA if mensagem.nil?
 
@@ -105,13 +107,16 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::Falhas
       "\"#{mensagem}\""
   end
 
-  def nota_da_compra_recusada(conversation, carrinhos, acao)
+  # A nota leva só o número dos carrinhos anteriores (da Universal, não é dado pessoal), nunca o texto da seguradora.
+  # Uma por cotação (`onde`: ação, conversa e cotação): a mesma recusa repetida na mesma cotação não duplica; a cotação
+  # nova (o cliente cotou de novo) tem nota nova.
+  def nota_da_compra_recusada(conversation, carrinhos, onde)
     texto = if carrinhos.empty?
               I18n.t("#{NOTAS}.compra_recusada")
             else
               I18n.t("#{NOTAS}.compra_recusada_com_anterior", carrinhos: carrinhos.join(', '))
             end
-    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:compra_recusada:#{acao}:#{conversation&.id}")
+    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:compra_recusada:#{onde}")
   end
 
   # Como na conferência recusada (`ConferirAcesso`): o login recusado não guarda o que ele podia antes.

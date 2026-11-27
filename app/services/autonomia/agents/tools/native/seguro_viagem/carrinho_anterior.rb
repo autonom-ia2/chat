@@ -20,9 +20,10 @@
 # nota privada para a equipe e manda o modelo conferir o pagamento; o `NaoLiberado` passa pelas falhas como consulta sem
 # dado do cliente (o pedido inválido vira indisponível, como em `situacao_do_pagamento`). Nos dois, nada foi comprado.
 #
-# CANCELOU E A COMPRA NOVA NÃO SAIU (`compra_nao_saiu`): erro da Universal na compra, ou compra sem link. O cancelamento
-# não volta atrás, e o link anterior morreu. A equipe recebe uma nota primeiro (`NotaNaHora` nunca levanta); na compra
-# sem link, a nota cita o carrinho novo que ficou sem link. Depois, fora do lock da compra (a transação dela pode ter
+# CANCELOU E A COMPRA NOVA NÃO SAIU (`compra_nao_saiu`): erro da Universal na compra, compra sem link, ou um
+# cancelamento seguinte que falhou depois de outro já feito (#3266). O cancelamento não volta atrás, e o link anterior
+# morreu. A equipe recebe uma nota primeiro (`NotaNaHora` nunca levanta); na compra sem link, a nota cita o carrinho
+# novo que ficou sem link. Depois, fora do lock da compra (a transação dela pode ter
 # sido desfeita), a cotação guarda na proposta anterior `situacao: cancelado`, `cancelado_na_troca_em` e, sem link,
 # `carrinho_sem_link`: a varredura não a confere mais, o lembrete se cala e a ferramenta não a devolve como guardada. A
 # espera pelo lock estourada nessa gravação só vai ao log: quem tem o lock relê "Cancelado" e grava outra proposta. O
@@ -94,11 +95,12 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
   # A compra nova não saiu depois de algum cancelamento nesta chamada (`SeguroViagem::CarrinhosAnteriores`): `texto` é o
   # que as falhas já devolveram; `compra`, a resposta da compra sem link, ou nil no erro; `carrinho`, o desta cotação que
   # foi cancelado, ou nil quando só o de outra cotação da mesma viagem foi (#3266; essa é marcada por
-  # `OutrasDaMesmaViagem`). Avisa a equipe, marca a proposta desta cotação como cancelada e diz ao modelo que o link
+  # `OutrasDaMesmaViagem`); `cancelados`, os números de todos os carrinhos cancelados nesta chamada (a chave da nota).
+  # Avisa a equipe na conversa da cotação, marca a proposta desta cotação como cancelada e diz ao modelo que o link
   # anterior morreu.
-  def compra_nao_saiu(cotacao, carrinho, texto, conversation:, compra: nil)
+  def compra_nao_saiu(cotacao, carrinho, texto, cancelados:, compra: nil)
     sem_link = compra.is_a?(Hash) ? compra['codigoCarrinho'].presence : nil
-    nota_do_cancelado(conversation, sem_link)
+    nota_do_cancelado(cotacao.conversation, sem_link, "#{cotacao.conversation_id}:#{cotacao.id}:#{cancelados.join(',')}")
     marcar_cancelado(cotacao, carrinho, sem_link) if carrinho
     "#{TEXTO_CANCELADO_SEM_NOVA} #{texto}"
   end
@@ -150,14 +152,15 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::CarrinhoAnterior
     Rails.logger.warn("[autonomia][seguro_viagem] carrinho_anterior_sem_marca cotacao=#{cotacao.id}")
   end
 
-  # Na compra sem link, a nota cita o carrinho novo que ficou sem link (número da Universal, não é dado pessoal).
-  def nota_do_cancelado(conversation, sem_link)
+  # Na compra sem link, a nota cita o carrinho novo que ficou sem link (número da Universal, não é dado pessoal). Uma
+  # por cotação e carrinhos cancelados (`onde`): a mesma falha repetida não duplica; cotação ou carrinho novos, sim.
+  def nota_do_cancelado(conversation, sem_link, onde)
     texto = if sem_link
               I18n.t("#{Falhas::NOTAS}.anterior_cancelado_sem_link", carrinho: sem_link)
             else
               I18n.t("#{Falhas::NOTAS}.anterior_cancelado_sem_nova")
             end
-    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:anterior_cancelado_sem_nova:#{conversation&.id}")
+    Autonomia::Insurance::NotaNaHora.postar(conversation, texto, chave: "universal:anterior_cancelado_sem_nova:#{onde}")
   end
 
   # Uma nota por conversa e caso, como as das falhas.

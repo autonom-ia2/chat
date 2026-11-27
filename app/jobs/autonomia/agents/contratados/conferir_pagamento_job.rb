@@ -7,7 +7,9 @@
 #     e a ferramenta já cuidou), para. Se enfileirar falha, as duas chaves saem: a próxima varredura tenta de novo.
 #   - "Cancelado": grava `situacao: cancelado`, sem evento. A varredura não confere mais.
 #   - "Aguardando": o LEMBRETE, uma vez (`lembrete_em`), na hora certa (`SeguroViagem::HoraDoLembrete`: entre 12 h e
-#     23 h depois da proposta, com a hora da conta entre 8 h e 21 h, e só na proposta mais nova da conversa).
+#     23 h depois da proposta, com a hora da conta entre 8 h e 21 h, e só na proposta mais nova da conversa). Cala
+#     também quando o cliente já cotou de novo a mesma viagem com este agente (#3266): a compra nova cancela o carrinho
+#     desta cotação, e o lembrete mandaria um link morto, ainda que a cotação nova não tenha proposta.
 #
 # AS PORTAS VÊM ANTES DA UNIVERSAL: a cotação existe e a proposta é a mesma da reserva; a conta está ligada; o agente
 # atende; a ferramenta `situacao_do_pagamento` está disponível para ele (a porta do contratado: modelo disponível na conta
@@ -22,6 +24,7 @@ class Autonomia::Agents::Contratados::ConferirPagamentoJob < ApplicationJob
   EventoDaViagem = ::Autonomia::Agents::Tools::EventoDaViagem
   Pagamento = ::Autonomia::Agents::Tools::Native::SeguroViagem::Pagamento
   HoraDoLembrete = ::Autonomia::Agents::Tools::Native::SeguroViagem::HoraDoLembrete
+  PropostaPaga = ::Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga
 
   def perform(cotacao_id, gerada_em_i)
     cotacao = ::Autonomia::Agents::CotacaoDeViagem.find_by(id: cotacao_id)
@@ -82,9 +85,15 @@ class Autonomia::Agents::Contratados::ConferirPagamentoJob < ApplicationJob
   end
 
   def lembrete?(cotacao, proposta)
-    return false if proposta['lembrete_em'].present?
+    return false if proposta['lembrete_em'].present? || cotada_de_novo?(cotacao)
 
     HoraDoLembrete.motivo(cotacao, EventoDaViagem.gerada_em(proposta)).nil?
+  end
+
+  # Existe, na mesma conversa e com o mesmo agente, uma cotação mais nova da mesma viagem (`PropostaPaga.mesma_viagem?`).
+  def cotada_de_novo?(cotacao)
+    ::Autonomia::Agents::CotacaoDeViagem.where(conversation_id: cotacao.conversation_id, autonomia_agent_id: cotacao.autonomia_agent_id)
+                                        .where('id > ?', cotacao.id).any? { |nova| PropostaPaga.mesma_viagem?(nova, cotacao) }
   end
 
   # Depois do commit. O que não entrou na fila (o adapter levantou ou recusou) desfaz as chaves desta decisão, sob o

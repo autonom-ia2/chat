@@ -988,8 +988,9 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
         }
       },
-      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST.
-      'gerar_proposta_seguro_viagem.rb#propor#2' => {
+      # A espera pelo lock da cotação passou do tempo do banco: recusa nomeada, sem POST. Saiu do `propor` para o
+      # `espera_do_lock` na correção 1 do #3268 (a marca das outras cotações canceladas antes do erro que sobe).
+      'gerar_proposta_seguro_viagem.rb#espera_do_lock#1' => {
         espera: { motivo: 'proposta_em_andamento', slug: 'gerar_proposta_seguro_viagem' },
         dispara: lambda {
           allow(Autonomia::Agents::CotacaoDeViagem).to receive(:ultima_da_conversa).and_wrap_original do |original, *args|

@@ -90,10 +90,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
 
   # #3265: o 400 da compra vem depois do resumo confirmado.
   describe 'tratar_compra' do
-    def comprar(codigo, mensagem = nil, carrinhos: [])
+    def comprar(codigo, mensagem = nil, carrinhos: [], cotacao_id: 11)
       erro = Autonomia::Seguradoras::Universal::Cliente::Erro.new(codigo, mensagem_da_seguradora: mensagem)
-      described_class.tratar_compra(erro, carrinhos: carrinhos, acao: 'gerar_proposta_seguro_viagem', agent: contratado,
-                                          conversation: conversa)
+      described_class.tratar_compra(erro, da_compra: { cotacao_id: cotacao_id, carrinhos: carrinhos },
+                                          acao: 'gerar_proposta_seguro_viagem', agent: contratado, conversation: conversa)
     end
 
     it 'pedido inválido: registra compra_recusada, nota uma vez sem o texto da seguradora, e não manda corrigir dado' do
@@ -108,6 +108,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::SeguroViagem::Falhas do
       expect(notas.pluck(:content)).to eq([I18n.t('autonomia.contratados.universal.notas.compra_recusada')])
       expect(notas.first.content).not_to include('voucher para essa viagem')
       expect(acesso.reload.estado).to eq('ok')
+    end
+
+    # Correção 1 do #3268: a chave da nota vale a cotação, não a conversa inteira.
+    it 'a mesma recusa em outra cotação da conversa (o cliente cotou de novo) vira outra nota' do
+      comprar('pedido_invalido', 'x')
+      comprar('pedido_invalido', 'x', cotacao_id: 12)
+
+      expect(notas.count).to eq(2)
     end
 
     it 'pedido inválido sem mensagem: passa para a equipe, sem pedir dado' do

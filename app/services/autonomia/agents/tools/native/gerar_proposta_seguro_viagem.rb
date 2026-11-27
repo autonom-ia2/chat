@@ -27,7 +27,9 @@
 # deixou um carrinho não pago na cotação antiga, e a Universal recusa a compra nova pelo mesmo motivo. Sob o mesmo lock,
 # os carrinhos das outras cotações deste agente nesta conversa que são a mesma viagem (`SeguroViagem::OutrasDaMesmaViagem`)
 # passam pela mesma regra, lidos todos antes de qualquer cancelamento (`SeguroViagem::CarrinhosAnteriores`). A proposta
-# de cada outra cotação cancelada é marcada como cancelada depois da compra, saindo ou não.
+# de cada outra cotação cancelada é marcada como cancelada depois da compra, saindo ou não. Um cancelamento que falha
+# depois de outro já feito é tratado como a compra que não saiu: o modelo sabe que o link anterior morreu e a equipe
+# recebe nota.
 #
 # O 400 DA COMPRA (#3265). O cliente já confirmou o resumo: a recusa da seguradora deixa nota à equipe e o texto não
 # manda corrigir dado (`SeguroViagem::Falhas.tratar_compra`); o modelo pede um dado só se a resposta da seguradora o
@@ -186,9 +188,6 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
     propor(cotacao, plano, SeguroViagem::Compra.montar(cotacao: cotacao, plano: plano, viajantes: viajantes,
                                                        endereco: endereco, contato: contato), chave)
-  ensure
-    # #3266: as outras cotações canceladas são marcadas depois da compra, saindo ou não (nil sem chegar à compra).
-    @anteriores&.marcar_outras
   end
 
   # -> [viajantes, contato, nil] ou [nil, nil, Falta]
@@ -204,7 +203,9 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   # A compra roda sob o lock da cotação; as falhas são tratadas fora dele (a nota e o acesso não entram na transação).
   # Só a espera pelo lock vira `proposta_em_andamento`: o tempo do banco estourado depois de travar (já dentro da
-  # compra) sobe como erro, porque aí a seguradora pode ter criado o carrinho.
+  # compra) sobe como erro, porque aí a seguradora pode ter criado o carrinho. As outras cotações canceladas (#3266) são
+  # marcadas fora da transação, em cada caminho em que algo pode ter sido cancelado: a compra que saiu, a que não saiu
+  # (`nao_saiu`, `CarrinhosAnteriores#compra_nao_saiu`) e o erro que sobe.
   def propor(cotacao, plano, pedido, chave)
     @anteriores = SeguroViagem::CarrinhosAnteriores.new(cotacao, agent)
     proposta = nil
@@ -220,15 +221,23 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if paga
     return nao_saiu if proposta.nil?
 
+    @anteriores.marcar_outras
     resposta(plano, proposta)
-  rescue *ESPERA_DO_LOCK
-    raise if travada
-
-    recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO)
+  rescue *ESPERA_DO_LOCK => e
+    espera_do_lock(e, travada)
   rescue *SeguroViagem::CarrinhoAnterior::NAO_SAIU => e
-    SeguroViagem::CarrinhoAnterior.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    @anteriores.nao_liberado(e, acao: self.class.slug, agent: agent, conversation: conversa)
   rescue Universal::Cliente::Erro => e
     nao_saiu(e)
+  end
+
+  # Só a espera pelo lock vira `proposta_em_andamento`. O tempo do banco estourado depois de travar sobe, com as outras
+  # cotações já canceladas marcadas antes.
+  def espera_do_lock(erro, travada)
+    return recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO) unless travada
+
+    @anteriores.marcar_outras
+    raise erro
   end
 
   # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas; o 400
@@ -236,8 +245,8 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
   # (`@anteriores`), isso vai junto, com a resposta da compra sem link (`@compra`, nil no erro) (#3263, #3266).
   def nao_saiu(erro = nil)
     quem = { acao: self.class.slug, agent: agent, conversation: conversa }
-    texto = erro ? SeguroViagem::Falhas.tratar_compra(erro, carrinhos: @anteriores.numeros, **quem) : SeguroViagem::Falhas.sem_link(**quem)
-    @anteriores.compra_nao_saiu(texto, conversation: conversa, compra: @compra)
+    texto = erro ? SeguroViagem::Falhas.tratar_compra(erro, da_compra: @anteriores.da_compra, **quem) : SeguroViagem::Falhas.sem_link(**quem)
+    @anteriores.compra_nao_saiu(texto, compra: @compra)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê

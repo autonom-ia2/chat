@@ -180,6 +180,26 @@ RSpec.describe Autonomia::Agents::Contratados::ConferirPagamentoJob, type: :job 
 
       expect(eventos).to be_empty
     end
+
+    # #3266: o cliente cotou de novo a mesma viagem. A compra nova cancela o carrinho desta, e o lembrete mandaria um link
+    # morto, ainda que a cotação nova não tenha proposta (a compra dela não saiu, ou ainda não foi gerada).
+    it 'com uma cotação mais nova da mesma viagem, mesmo sem proposta, não sai' do
+      cotacao_com(nil)
+
+      conferir
+
+      expect(eventos).to be_empty
+      expect(cotacao.reload.proposta).not_to have_key('lembrete_em')
+    end
+
+    it 'com uma cotação mais nova de outra viagem, sai como sempre' do
+      Autonomia::Agents::CotacaoDeViagem.create!(account: account, conversation: conversa, agent: bia, id_cotacao: 'c-2',
+                                                 planos: [], pedido: { 'idades' => [30] }, proposta: nil)
+
+      conferir
+
+      expect(eventos).to eq([[cotacao.id, evento::LEMBRETE, gerada_em.to_i]])
+    end
   end
 
   describe 'as portas, antes da Universal' do
