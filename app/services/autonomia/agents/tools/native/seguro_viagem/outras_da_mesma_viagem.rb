@@ -15,12 +15,14 @@
 # O LOCK. Essas cotações não ficam travadas durante as chamadas à Universal: quem mais escreve nelas é a conferência
 # automática do pagamento e as ferramentas de pagamento, que travam a linha por pouco tempo, e um lock longo aqui as
 # faria estourar a espera. A marca usa um lock próprio e curto, relendo a proposta: só marca se o carrinho ainda é o
-# cancelado e não há `pago_em`. A marca que não grava (espera do lock estourada ou outro erro do banco) só vai ao log,
+# cancelado e não há `pago_em`. A marca que não grava por espera do lock (estourada ou deadlock) só vai ao log,
 # por cotação, e a próxima segue: quem chamou já tem o texto da compra, que não se perde por isso, e a conferência
 # automática lê "Cancelado" e grava o mesmo `situacao`. Log só com ids.
 module Autonomia::Agents::Tools::Native::SeguroViagem::OutrasDaMesmaViagem
   Pagamento = Autonomia::Agents::Tools::Native::SeguroViagem::Pagamento
   PropostaPaga = Autonomia::Agents::Tools::Native::SeguroViagem::PropostaPaga
+  # Só a espera do lock: `RecordInvalid` e afins são defeito e sobem.
+  ESPERA_DO_LOCK = [ActiveRecord::QueryCanceled, ActiveRecord::LockWaitTimeout, ActiveRecord::Deadlocked].freeze
 
   module_function
 
@@ -47,7 +49,7 @@ module Autonomia::Agents::Tools::Native::SeguroViagem::OutrasDaMesmaViagem
         outra.update!(proposta: proposta.merge(marca))
       end
     end
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue *ESPERA_DO_LOCK => e
     Rails.logger.warn("[autonomia][seguro_viagem] outra_cotacao_sem_marca cotacao=#{outra.id} #{e.class}")
   end
 
