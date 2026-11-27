@@ -176,6 +176,53 @@ RSpec.describe Autonomia::Seguradoras::Universal::Cliente do
     end
   end
 
+  # #3263: o cancelamento do carrinho anterior não pago, antes da proposta nova. Respostas com dados fictícios.
+  describe 'cancelar' do
+    let(:cancelamento) { "#{base}/v1/Cancelamento/987654" }
+
+    it 'PUT com o carrinho no caminho e corpo {}, com o login, e devolve o corpo' do
+      corpo = { 'msg' => 'Carrinho cancelado com sucesso!', 'sucesso' => true }
+      stub = stub_request(:put, cancelamento)
+             .with(body: '{}', headers: { 'Login' => 'corretor.teste', 'Senha' => 's3nha-teste', 'Content-Type' => 'application/json' })
+             .to_return(status: 200, body: corpo.to_json)
+      expect(cliente.cancelar('987654')).to eq(corpo)
+      expect(stub).to have_been_requested.once
+    end
+
+    it 'erro da Universal levanta com o código: 400, 401 e 500' do
+      { 400 => 'pedido_invalido', 401 => 'acesso_recusado', 500 => 'indisponivel' }.each do |status, codigo|
+        stub_request(:put, cancelamento).to_return(status: status, body: '{"message":"curta"}')
+        expect { cliente.cancelar(987_654) }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq(codigo) }
+      end
+    end
+
+    it 'timeout vira indisponivel' do
+      stub_request(:put, cancelamento).to_timeout
+      expect { cliente.cancelar(987_654) }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('indisponivel') }
+    end
+
+    it 'carrinho que não é inteiro positivo só de dígitos é recusado antes de qualquer chamada' do
+      ['', nil, '0', '-5', '12a', '12/../x'].each do |carrinho|
+        expect { cliente.cancelar(carrinho) }.to raise_error(described_class::Erro) { |e| expect(e.codigo).to eq('pedido_invalido') }
+      end
+      expect(a_request(:put, ->(uri) { uri.host == 'api-br.universal-assistance.com' })).not_to have_been_made
+    end
+
+    it 'leitura de até 15 s, sem repetição, e log só com o nome da chamada e o status' do
+      saida = StringIO.new
+      allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(saida))
+      capturado = nil
+      allow(Net::HTTP).to(receive(:new).and_wrap_original { |original, *args| capturado = original.call(*args) })
+      stub_request(:put, cancelamento).to_return(status: 200, body: { 'msg' => 'cancelado', 'sucesso' => true }.to_json)
+
+      cliente.cancelar(987_654)
+
+      expect([capturado.read_timeout, capturado.max_retries]).to eq([15, 0])
+      expect(saida.string).to include('chamada=cancelar status=200')
+      expect(saida.string).not_to include('corretor.teste', 's3nha-teste', '987654')
+    end
+  end
+
   # #3249: o catálogo de coberturas, sem preço, guardado por um dia por emissor e tipo de viagem.
   describe 'beneficios' do
     let(:catalogo) { file_fixture('../universal/beneficios_internacional.json').read }

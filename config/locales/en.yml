@@ -1153,6 +1153,9 @@ en:
           indisponivel: 'The insurer system did not answer. The agent could not finish this step. Take over this conversation or try again later.'
           sem_link: 'The insurer accepted the purchase but did not return the payment link. Get the link from the insurer portal and send it to the customer.'
           voucher_nao_saiu: 'The payment is confirmed, but the agent could not get the travel insurance voucher from the insurer. Download the voucher from the insurer portal and send it to the customer.'
+          anterior_em_aberto: 'The new travel insurance proposal was NOT created: the payment of the previous cart in this conversation is still open at the insurer, and it may already be paid. Check it in the insurer portal.'
+          anterior_cancelado_sem_nova: 'The previous payment link of this conversation was cancelled at the insurer, but the new proposal was NOT created. The customer has no valid payment link now. Check it in the insurer portal.'
+          anterior_cancelado_sem_link: 'The previous payment link of this conversation was cancelled at the insurer, and the new purchase (cart %{carrinho}) came back without a payment link. The customer has no valid payment link now. Get the link for cart %{carrinho} in the insurer portal.'
           aviso_de_pagamento:
             pagamento_confirmado:
               cabecalho: 'Travel insurance payment confirmed: %{fatos}'

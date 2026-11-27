@@ -14,6 +14,15 @@
 # e cai no mesmo caso; se a espera passar do tempo do banco, ela recusa (`proposta_em_andamento`) sem chamar a
 # seguradora. Dado corrigido (outro e-mail, por exemplo) é outra chave e outra proposta.
 #
+# O CARRINHO ANTERIOR SAI ANTES DO NOVO (#3263). Proposta nova na cotação que já tem carrinho (dado corrigido, outro
+# plano, link vencido): sob o lock, antes da compra, o anterior é cancelado na Universal, que recusa a compra nova
+# enquanto o voucher dele está "Ativo" (`SeguroViagem::CarrinhoAnterior`). Só o `statusPagamento` vazio cancela;
+# "Cancelado" segue sem cancelar; qualquer outro valor recusa `pagamento_do_anterior_em_aberto`, com nota à equipe, sem
+# cancelar nem comprar. Erro ao ler ou ao cancelar: nada é comprado, e o erro passa por `SeguroViagem::Falhas` como
+# consulta sem dado do cliente. Cancelou e a compra nova falhou (erro ou sem link): a proposta anterior fica marcada
+# como cancelada, a equipe recebe nota e o modelo sabe que o link anterior morreu. Proposta marcada como cancelada não é
+# devolvida como guardada.
+#
 # SEGURO PAGO NÃO SE REFAZ (#3247). Cotação com `pago_em`, ou outra cotação da mesma viagem (destinos, datas e idades)
 # nesta conversa com `pago_em`, recusa `proposta_ja_paga` antes de qualquer chamada (`SeguroViagem::PropostaPaga`); a
 # conferência se repete sob o lock da cotação.
@@ -195,37 +204,38 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
       proposta = guardada_ou_nova(cotacao, plano, pedido, chave) unless paga
     end
     return recusar('proposta_ja_paga', TEXTO_JA_PAGO) if paga
-    return SeguroViagem::Falhas.sem_link(acao: self.class.slug, agent: agent, conversation: conversa) if proposta.nil?
+    return nao_saiu(cotacao) if proposta.nil?
 
     resposta(plano, proposta)
   rescue *ESPERA_DO_LOCK
     raise if travada
 
     recusar('proposta_em_andamento', TEXTO_EM_ANDAMENTO)
+  rescue *SeguroViagem::CarrinhoAnterior::NAO_SAIU => e
+    SeguroViagem::CarrinhoAnterior.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
   rescue Universal::Cliente::Erro => e
-    SeguroViagem::Falhas.tratar(e, acao: self.class.slug, agent: agent, conversation: conversa)
+    nao_saiu(cotacao, e)
+  end
+
+  # A compra nova não saiu: o erro da Universal (`erro`) ou a compra sem link (sem `erro`) passam pelas falhas. Se esta
+  # chamada cancelou o carrinho anterior (`@cancelado`), isso vai junto, com a resposta da compra sem link (`@compra`,
+  # nil no erro) (#3263).
+  def nao_saiu(cotacao, erro = nil)
+    quem = { acao: self.class.slug, agent: agent, conversation: conversa }
+    texto = erro ? SeguroViagem::Falhas.tratar(erro, **quem) : SeguroViagem::Falhas.sem_link(**quem)
+    SeguroViagem::CarrinhoAnterior.compra_nao_saiu(cotacao, @cancelado, texto, conversation: conversa, compra: @compra)
   end
 
   # -> a proposta da mesma chave já guardada, ou a nova, gravada; nil quando a compra voltou sem link. `with_lock` relê
   # a cotação: a proposta comparada é a que está no banco agora, e a chamada que correr junto espera e cai no primeiro
-  # caso.
+  # caso. Antes da compra nova, o carrinho anterior desta cotação sai (#3263); quando não sai, levanta e nada é comprado.
   def guardada_ou_nova(cotacao, plano, pedido, chave)
     return cotacao.proposta if guardada?(cotacao, chave)
 
-    proposta = proposta_da(cliente.comprar(pedido), plano, chave)
+    @cancelado = SeguroViagem::CarrinhoAnterior.liberar!(cotacao, cliente)
+    proposta = SeguroViagem::Compra.proposta(@compra = cliente.comprar(pedido), plano: plano, chave: chave)
     cotacao.update!(proposta: proposta) if proposta
     proposta
-  end
-
-  # O que fica guardado, sem dado pessoal: a chave, o plano, o carrinho, o link e a hora. Compra sem `urlVoucher` de
-  # pagamento válido (sem link): nil. O `valorBrutoBrl` da resposta volta 0 (#3244) e não é guardado.
-  def proposta_da(compra, plano, chave)
-    dados = compra.is_a?(Hash) ? compra : {}
-    link = SeguroViagem::Compra.link(dados['urlVoucher'])
-    return nil if link.nil?
-
-    { 'chave' => chave, 'codigo_do_plano' => plano['codigo'], 'codigo_carrinho' => dados['codigoCarrinho'],
-      'link' => link, 'gerada_em' => Time.current.iso8601 }
   end
 
   # O JSON SAI COM ESPAÇO depois de `:` e `,` (#3246): o botão de link só reconhece o endereço que é uma palavra
@@ -238,7 +248,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
 
   def guardada?(cotacao, chave)
     proposta = cotacao.proposta.to_h
-    proposta['chave'] == chave && link_vigente?(proposta['gerada_em'])
+    proposta['chave'] == chave && proposta['situacao'] != SeguroViagem::Pagamento::CANCELADO && link_vigente?(proposta['gerada_em'])
   end
 
   def link_vigente?(gerada_em)
@@ -256,9 +266,7 @@ class Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem < Autonomia::A
     params['codigo_do_plano'].to_s.strip.upcase
   end
 
-  def conversa
-    delivery.try(:conversation)
-  end
+  def conversa = delivery.try(:conversation)
 
   def acesso
     agent.acesso_da_seguradora

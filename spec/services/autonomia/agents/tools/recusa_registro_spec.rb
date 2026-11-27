@@ -989,6 +989,19 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' })
         }
       },
+      # #3263: a proposta nova numa cotação com carrinho, e o anterior aparece pago na Universal (o `pago_em` ainda não
+      # gravado): nem cancela nem compra.
+      'carrinho_anterior.rb#tratar#1' => {
+        espera: { motivo: 'pagamento_do_anterior_em_aberto', slug: 'gerar_proposta_seguro_viagem' },
+        dispara: lambda {
+          stub_request(:get, "#{Autonomia::Seguradoras::Universal::Cliente.base_url}/v1/StatusPagamento/987654")
+            .to_return(status: 200, body: { 'statusVoucher' => 'Ativo', 'statusPagamento' => 'Pago' }.to_json)
+          anterior = { 'chave' => 'outra', 'codigo_carrinho' => 987_654, 'gerada_em' => Time.current.iso8601,
+                       'link' => 'https://pagamento.universal-assistance.com/?IdCarrinho=YQ==' }
+          propor_viagem(proposta_de_viagem, endereco: { 'cep' => '01310100', 'cidade' => 'São Paulo', 'uf' => 'SP' },
+                                            proposta: anterior)
+        }
+      },
       # #3246: a situação do pagamento e a segunda via do voucher; o carrinho é sempre o da proposta guardada.
       'situacao_do_pagamento.rb#call#1' => {
         espera: { motivo: 'pagamento_sem_conversa', slug: 'situacao_do_pagamento', conversa: '-' },
@@ -1069,11 +1082,13 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
   end
 
   # #3211: a proposta pelo `Bound`, com o acesso conferido e, quando `cotacao` é um instante, a cotação de um viajante
-  # de 45 anos criada nele. Sem `endereco`, o endereço pelo CEP não sai (`buscar` nil).
-  def propor_viagem(argumentos, entrega: delivery, cotacao: Time.current, endereco: nil)
+  # de 45 anos criada nele. Sem `endereco`, o endereço pelo CEP não sai (`buscar` nil). Com `proposta`, a cotação já tem
+  # essa proposta guardada (#3263).
+  def propor_viagem(argumentos, entrega: delivery, cotacao: Time.current, endereco: nil, proposta: nil)
     Autonomia::Agents::AcessoDaSeguradora.create!(account: account, agent: agent, login: 'corretor.teste',
                                                   senha: 's3nha-teste', estado: 'ok')
-    guardar_cotacao_de_viagem(cotacao) if cotacao
+    guardada = guardar_cotacao_de_viagem(cotacao) if cotacao
+    guardada.update!(proposta: proposta) if guardada && proposta
     allow(Autonomia::Agents::Tools::Native::SeguroViagem::EnderecoDoCep).to receive(:buscar).and_return(endereco)
     bound_para(Autonomia::Agents::Tools::Native::GerarPropostaSeguroViagem)
       .execute({ 'name' => 'gerar_proposta_seguro_viagem', 'arguments' => argumentos.to_json }, delivery: entrega)

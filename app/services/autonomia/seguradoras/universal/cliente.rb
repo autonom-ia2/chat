@@ -14,7 +14,7 @@ class Autonomia::Seguradoras::Universal::Cliente
   # rodam no turno do agente, em job.
   ABERTURA = 3
   LEITURA = { setup: 8, destinos: 15, cotar: 40, comprar: 40, status_do_pagamento: 15, url_do_voucher: 15,
-              beneficios: 15 }.freeze
+              beneficios: 15, cancelar: 15 }.freeze
   MENSAGEM_MAXIMA = 200
   STATUS_RECUSADO = [401, 403].freeze
   STATUS_INVALIDO = [400, 404, 409, 422].freeze
@@ -77,6 +77,13 @@ class Autonomia::Seguradoras::Universal::Cliente
   # Carrinho inexistente a Universal responde 500 (`indisponivel`).
   def status_do_pagamento(carrinho)
     chamar(:status_do_pagamento, Net::HTTP::Get, "/v1/StatusPagamento/#{carrinho!(carrinho)}")
+  end
+
+  # #3263: cancela o carrinho (`PUT /v1/Cancelamento/{carrinho}` com corpo `{}`). -> o corpo, `{ "msg" => …,
+  # "sucesso" => true }` quando cancelou. Quem chama confere o `sucesso`: o 2xx sozinho não diz que cancelou. O PUT é
+  # idempotente para o Net::HTTP, que o repetiria; `max_retries = 0` vale aqui também.
+  def cancelar(carrinho)
+    chamar(:cancelar, Net::HTTP::Put, "/v1/Cancelamento/#{carrinho!(carrinho)}", {})
   end
 
   # #3246: -> `{ "url" => <endereço do PDF do voucher> }`. O voucher que não existe volta 400 com texto puro
