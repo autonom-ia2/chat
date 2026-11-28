@@ -8,8 +8,9 @@ class Crm::Passagem < ApplicationRecord
 
   CLASSES = ['User', 'Autonomia::Agents::Agent', 'AgentBot'].freeze
   # Passagens em que o robô passou a conversa mesmo sem `de` gravado (o robô que pede ou é desligado, o n8n, a IA do
-  # CRM, a recuperação de mensagem). Com `de` gravado, a origem é a própria classe dele.
-  MOTIVOS_DA_IA = %w[robo_pediu robo_desligado n8n ia_crm recuperacao_falhou recuperacao_tarde].freeze
+  # CRM, a recuperação de mensagem, o agente contratado pausado do #3270). Com `de` gravado, a origem é a própria classe
+  # dele.
+  MOTIVOS_DA_IA = %w[robo_pediu robo_desligado n8n ia_crm recuperacao_falhou recuperacao_tarde contratado_pausado].freeze
 
   # Uma ponta já resolvida: tipo (:pessoa | :ia), classe ('User' | 'Autonomia::Agents::Agent' | 'AgentBot'), id (na
   # tabela da classe) e o nome gravado na hora.

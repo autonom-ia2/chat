@@ -14,10 +14,10 @@ module Autonomia::Agents::Contratados::Gratis
   GRATIS = 'gratis'.freeze
   PAUSADO = 'pausado'.freeze
   LIBERADO = 'liberado'.freeze
-  SEGUNDOS_POR_DIA = 1.day.to_i
 
-  # `situacao`: GRATIS, PAUSADO ou LIBERADO. `dias_restantes`: só no GRATIS (os dias inteiros do modelo enquanto a conta
-  # ainda não contratou; depois, os que faltam, arredondados para cima: falta 1 até o último segundo do último dia).
+  # `situacao`: GRATIS, PAUSADO ou LIBERADO. `dias_restantes`: só no GRATIS. Enquanto a conta não contratou, os dias
+  # inteiros do modelo. Depois, os dias do calendário que faltam até o dia em que o grátis acaba, no fuso da conta: 7 no
+  # dia em que contratou, 1 na véspera, 0 no último dia (o grátis acaba na hora em que contratou, 7 dias depois).
   Estado = Data.define(:situacao, :dias_restantes) do
     def pausado?
       situacao == PAUSADO
@@ -34,10 +34,16 @@ module Autonomia::Agents::Contratados::Gratis
     comeco = inicio(account, chave)
     return Estado.new(situacao: GRATIS, dias_restantes: dias) if comeco.nil?
 
-    restante = comeco + dias.days - agora
-    return Estado.new(situacao: PAUSADO, dias_restantes: nil) unless restante.positive?
+    fim = comeco + dias.days
+    return Estado.new(situacao: PAUSADO, dias_restantes: nil) unless agora < fim
 
-    Estado.new(situacao: GRATIS, dias_restantes: (restante / SEGUNDOS_POR_DIA).ceil)
+    Estado.new(situacao: GRATIS, dias_restantes: dias_do_calendario(account, agora, fim))
+  end
+
+  # Quantos dias do calendário vão de `agora` até `fim`, no fuso da conta (o mesmo leitor do CRM).
+  def dias_do_calendario(account, agora, fim)
+    fuso = Crm::Timezone::Resolver.new(account: account).zone_or_default
+    (fim.in_time_zone(fuso).to_date - agora.in_time_zone(fuso).to_date).to_i
   end
 
   # -> quando os dias grátis começaram (o primeiro contratado do modelo na conta, apagados inclusive), ou nil.

@@ -20,9 +20,9 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     return false unless fase2?(conversation.account)
 
     refez = refazer_em_andamento(conversation)
-    return refez if refez || !passagem_para_ia?(conversation, payload)
+    return refez if refez
 
-    ::Autonomia::Agents::Operate::AoReceberPassagem.abrir(conversation)
+    sem_turno_refeito(conversation, payload, refez)
   # Roda depois do commit de quem trocou o dono (o Sync do CRM, o PassarParaIa), dentro do instrument dele: propagar não
   # desfaz a troca já gravada, só derrubaria quem chamou e os outros assinantes do evento. Fica no log e no rastreador.
   rescue StandardError => e
@@ -36,6 +36,24 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     return unless ultima&.incoming?
 
     call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
+  end
+
+  # Nenhum turno em andamento a refazer: o agente contratado pausado passa a conversa para a equipe (#3270); senão, a
+  # passagem para a IA abre o turno dela (#1630). Fora dos dois, devolve o que o refazer devolveu.
+  def self.sem_turno_refeito(conversation, payload, refez)
+    return true if pausado_passou_para_a_equipe?(conversation)
+    return refez unless passagem_para_ia?(conversation, payload)
+
+    ::Autonomia::Agents::Operate::AoReceberPassagem.abrir(conversation)
+  end
+
+  # #3270: a conversa acabou de ir para o agente contratado PAUSADO (a Atribuição, uma pessoa, o Sync por assunto), que
+  # não abre turno nenhum. Com o cliente ativo (a mesma janela do AoReceberPassagem), ela passa para a equipe agora, com
+  # a nota da pausa (Contratados::AvisoDaPausa); cliente parado espera a próxima mensagem dele, que faz o mesmo no
+  # ReplyJob. Mover cards em lote não acorda a equipe em conversa velha.
+  def self.pausado_passou_para_a_equipe?(conversation)
+    ::Autonomia::Agents::Operate::AoReceberPassagem.cliente_ativo?(conversation) &&
+      ::Autonomia::Agents::Contratados::AvisoDaPausa.postar(conversation)
   end
 
   def self.passagem_para_ia?(conversation, payload)

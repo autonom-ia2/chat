@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Contratados::Gratis do
   let(:account) { create(:account) }
   let(:chave) { 'seguro_viagem_universal' }
+  # 10:00 UTC = 07:00 em São Paulo, o fuso da conta (Crm::Timezone::Resolver, sem fuso na conta: o padrão).
   let(:comeco) { Time.zone.local(2026, 11, 2, 10, 0, 0) }
   let(:marca) do
     { 'modelo' => chave, 'nome_agente' => 'Bia', 'nome_corretora' => 'Corretora Exemplo', 'sobre_corretora' => 'Desde 2010.' }
@@ -31,6 +32,17 @@ RSpec.describe Autonomia::Agents::Contratados::Gratis do
     expect(modelo.slice(:dias_gratis, :preco_mensal_centavos, :moeda)).to eq(dias_gratis: 7, preco_mensal_centavos: 19_700, moeda: 'BRL')
   end
 
+  # Um modelo novo sem preço quebraria o turno de todo agente dele (`Gratis.estado` lê os três com fetch): o catálogo
+  # inteiro precisa deles, com valores que fazem sentido.
+  it 'todo modelo do catálogo diz os dias grátis, o preço em centavos e a moeda' do
+    Autonomia::Agents::Contratados::MODELOS.each do |chave_do_modelo, modelo|
+      expect(modelo).to include(:dias_gratis, :preco_mensal_centavos, :moeda), chave_do_modelo
+      expect(modelo[:dias_gratis]).to be_a(Integer).and(be >= 0)
+      expect(modelo[:preco_mensal_centavos]).to be_a(Integer).and(be_positive)
+      expect(modelo[:moeda]).to be_a(String).and(be_present)
+    end
+  end
+
   describe 'a contagem' do
     before { contratar(quando: comeco) }
 
@@ -38,15 +50,17 @@ RSpec.describe Autonomia::Agents::Contratados::Gratis do
       expect(estado_em(comeco)).to have_attributes(situacao: 'gratis', dias_restantes: 7)
     end
 
-    it 'dia 6 completo: falta 1' do
+    it 'dia 6 completo: falta 1 (a véspera do último dia)' do
       expect(estado_em(comeco + 6.days)).to have_attributes(situacao: 'gratis', dias_restantes: 1)
+      expect(estado_em(comeco + 6.days + 12.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 1)
     end
 
-    it 'no último segundo do dia 7 ainda falta 1' do
-      expect(estado_em(comeco + 7.days - 1.second)).to have_attributes(situacao: 'gratis', dias_restantes: 1)
+    it 'no dia em que acaba, até a hora em que contratou: 0, o último dia' do
+      expect(estado_em(comeco + 6.days + 18.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(comeco + 7.days - 1.second)).to have_attributes(situacao: 'gratis', dias_restantes: 0)
     end
 
-    it 'meio dia depois de contratar: faltam 7 (arredonda para cima)' do
+    it 'mais tarde no dia em que contratou: ainda 7 (conta o dia do calendário, no fuso da conta)' do
       expect(estado_em(comeco + 12.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 7)
     end
 

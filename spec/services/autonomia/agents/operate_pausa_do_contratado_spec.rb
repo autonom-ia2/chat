@@ -106,7 +106,59 @@ RSpec.describe Autonomia::Agents::Operate do
     end
 
     it 'sem agente na caixa: nada' do
-      expect(described_class.postar(conversation)).to be_nil
+      expect(described_class.postar(conversation)).to be(false)
+      expect(notas).to be_empty
+    end
+
+    it 'com o espelho no comando, passa para a equipe uma vez, com o motivo contratado_pausado' do
+      agente = contratado
+      ligar(agente)
+      conversation.update!(ai_assignee: agent_bot)
+
+      travel_to(comeco + 8.days) { 2.times { described_class.postar(conversation.reload) } }
+
+      expect(conversation.reload.awaiting_person?).to be(true)
+      expect(agente.events.where(event_type: :handed_off).pluck(:handoff_reason)).to eq(['contratado_pausado'])
+      expect(notas.size).to eq(1)
+    end
+  end
+
+  # A Atribuição (ou uma pessoa) passou a conversa ao agente pausado: nenhum turno abre para ele, então a passagem para a
+  # equipe sai na troca de dono, com o cliente ativo; cliente parado espera a próxima mensagem dele (ReplyJob).
+  describe 'Autonomia::Agents::Operate::ReenfileirarTurno.ao_trocar_dono' do
+    let(:agente) { contratado }
+
+    before do
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+      allow(Autonomia::Agents::Fase2).to receive(:ligada?).and_return(true)
+      ligar(agente)
+      conversation.update!(ai_assignee: agent_bot)
+    end
+
+    def notas = conversation.messages.reload.where(private: true).select { |m| m.content_attributes.to_h['autonomia_contratado_pausado'] }
+
+    it 'cliente ativo: passa para a equipe e deixa a nota' do
+      travel_to(comeco + 8.days) do
+        create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'resposta antiga')
+        create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi', created_at: 2.hours.ago)
+        create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'da equipe')
+
+        expect(Autonomia::Agents::Operate::ReenfileirarTurno.ao_trocar_dono(conversation: conversation.reload, por: :crm)).to be(true)
+      end
+
+      expect(conversation.reload.awaiting_person?).to be(true)
+      expect(notas.size).to eq(1)
+    end
+
+    it 'cliente parado há mais de um dia: nada agora' do
+      travel_to(comeco + 8.days) do
+        create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi', created_at: 3.days.ago)
+        create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'da equipe')
+
+        Autonomia::Agents::Operate::ReenfileirarTurno.ao_trocar_dono(conversation: conversation.reload, por: :crm)
+      end
+
+      expect(conversation.reload.awaiting_person?).to be(false)
       expect(notas).to be_empty
     end
   end

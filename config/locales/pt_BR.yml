@@ -2237,7 +2237,7 @@ pt_BR:
       acesso_incompleto: "Preencha o login e a senha da seguradora."
       # #3270: a nota privada à equipe quando o agente contratado está pausado (dias grátis acabaram, conta sem liberação).
       pausado:
-        nota: "O agente está pausado: o período grátis acabou, e ele não responde aos clientes. Responda esta conversa. Para ligar o agente de novo, fale com a Hub2You."
+        nota: "Os dias grátis acabaram. O agente está pausado e não responde aos clientes. A conversa veio para a equipe: responda por aqui. Para liberar o agente, fale com a Hub2You."
       recusa:
         indisponivel: "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia."
         sem_chave_de_ia: "Falta ligar a inteligência artificial da sua conta. Nada foi criado. Quem administra a conta liga em Configurações, na parte Integrações."

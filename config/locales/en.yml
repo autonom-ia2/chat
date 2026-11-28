@@ -1142,7 +1142,7 @@ en:
       acesso_incompleto: 'Fill in the insurer login and password.'
       # #3270: the private note to the team when the hired agent is paused (free days over, account not released).
       pausado:
-        nota: 'The agent is paused: the free period is over, so it does not answer customers. Answer this conversation. To turn the agent back on, talk to Hub2You.'
+        nota: 'The free days are over. The agent is paused and does not answer customers. The conversation came to the team: answer it here. To release the agent, talk to Hub2You.'
       recusa:
         indisponivel: 'This ready-made agent is not available for this account right now. Contact Autonom.ia support.'
         sem_chave_de_ia: "Your account's artificial intelligence is not turned on yet. Nothing was created. Whoever manages the account turns it on in Settings, under Integrations."

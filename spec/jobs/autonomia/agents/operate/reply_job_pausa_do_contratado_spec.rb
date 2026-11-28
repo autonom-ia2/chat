@@ -1,8 +1,12 @@
 require 'rails_helper'
 
 # #3270 — o agente contratado PAUSADO (os 7 dias grátis acabaram e a conta não tem a liberação) não responde: o turno do
-# ReplyJob não roda (nenhuma chamada ao modelo), a equipe recebe a nota da pausa uma vez por conversa, nada é apagado nem
-# desligado, e a Atribuição fica como está. Ligada a liberação, ele responde na mensagem seguinte.
+# ReplyJob não roda (nenhuma chamada ao modelo), a conversa passa para a equipe pelo caminho do robô que passa
+# (`bot_handoff!`, motivo `contratado_pausado`, à espera de pessoa e com o aviso de passagem), a equipe recebe a nota da
+# pausa uma vez por conversa, e nada é apagado nem desligado. Ligada a liberação, ele responde na mensagem seguinte.
+#
+# Como em produção: o vínculo nasce antes da conversa, e o espelho dele é o `ai_assignee` (a resposta do robô reivindica
+# a conversa, #1377).
 RSpec.describe Autonomia::Agents::Operate::ReplyJob do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
@@ -34,6 +38,7 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
                                                  used_knowledge: [], answered_from_knowledge: false)
     allow(Autonomia::Agents::Answerer).to receive(:new).and_return(instance_double(Autonomia::Agents::Answerer, answer: answer))
     agent_inbox
+    conversation.update!(ai_assignee: agent_bot)
   end
 
   def cliente_escreve(texto = 'oi')
@@ -48,7 +53,8 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
 
   def respostas = conversation.messages.reload.where(message_type: :outgoing, private: false, sender_type: 'AgentBot')
   def notas_da_pausa = conversation.messages.reload.where(private: true).select { |m| m.content_attributes.to_h[nota_da_pausa] }
-  def atribuicao = conversation.reload.slice(:assignee_id, :assignee_agent_bot_id, :status, :team_id)
+  def passagens = agent.events.where(event_type: :handed_off)
+  def aviso_de_passagem = have_received(:dispatch).with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
 
   def liberar!
     Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
@@ -75,6 +81,17 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
       expect(respostas).to be_empty
     end
 
+    it 'a conversa passa para a equipe: à espera de pessoa, evento contratado_pausado e o aviso de passagem' do
+      expect(conversation.reload.awaiting_person?).to be(false)
+
+      turno!
+
+      expect(conversation.reload.awaiting_person?).to be(true)
+      expect(conversation.bot_handoff_waiting?).to be(true)
+      expect(passagens.pluck(:handoff_reason)).to eq(['contratado_pausado'])
+      expect(Rails.configuration.dispatcher).to aviso_de_passagem
+    end
+
     it 'a equipe recebe a nota da pausa, privada, com o texto do catálogo' do
       account.update!(locale: 'pt_BR')
 
@@ -86,30 +103,38 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
       expect(nota.content).not_to include('Bia', 'Corretora Exemplo')
     end
 
-    it 'a nota sai uma vez por conversa, por mais mensagens que o cliente mande' do
+    it 'a nota e a passagem saem uma vez por conversa, por mais mensagens que o cliente mande' do
       3.times { |vez| turno!(cliente_escreve("mensagem #{vez}")) }
 
+      expect(notas_da_pausa.size).to eq(1)
+      expect(passagens.count).to eq(1)
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+    end
+
+    it 'no turno da passagem (sem mensagem nova do cliente), o mesmo: passa, nota, e nenhuma chamada ao modelo' do
+      described_class.perform_now(conversation.id, 987_654, Autonomia::Agents::Operate::AoReceberPassagem::FASE)
+
+      expect(conversation.reload.awaiting_person?).to be(true)
+      expect(passagens.pluck(:handoff_reason)).to eq(['contratado_pausado'])
       expect(notas_da_pausa.size).to eq(1)
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
 
-    it 'nada é apagado nem desligado, e a Atribuição não muda' do
-      antes = atribuicao
-
+    it 'nada é apagado nem desligado no agente' do
       turno!
 
-      expect(atribuicao).to eq(antes)
       expect(agent.reload).to have_attributes(enabled: true, status: 'active', deleted_at: nil)
       expect(agent_inbox.reload.deleted_at).to be_nil
       expect(agent.config['contratado']).to eq(marca)
     end
 
-    it 'com uma pessoa na conversa, nem nota: a conversa já é dela' do
+    it 'com uma pessoa na conversa, nem nota nem passagem: a conversa já é dela' do
       conversation.update!(assignee: create(:user, account: account, role: :agent))
 
       turno!
 
       expect(notas_da_pausa).to be_empty
+      expect(passagens).to be_empty
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
 
@@ -136,5 +161,6 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
     expect(Autonomia::Agents::Answerer).to have_received(:new)
     expect(respostas.count).to eq(1)
     expect(notas_da_pausa).to be_empty
+    expect(passagens).to be_empty
   end
 end
