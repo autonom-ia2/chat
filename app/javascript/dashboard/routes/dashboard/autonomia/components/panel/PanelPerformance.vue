@@ -161,6 +161,7 @@ const REASON_LABEL_KEYS = {
     'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_passagem_falhou',
   recuperada_so_contexto:
     'AGENTS.PERFORMANCE.REASONS.CODES.recuperada_so_contexto',
+  contratado_pausado: 'AGENTS.PERFORMANCE.REASONS.CODES.contratado_pausado',
   other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
 };
 const reasonLabel = reason =>

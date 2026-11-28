@@ -263,17 +263,12 @@ describe('ContratadoModeloPage (#3211)', () => {
     });
   });
 
-  it('shows no warning and lets hire when the account has its key (or the list fails)', async () => {
+  it('shows no warning and lets hire when the account has its key', async () => {
     const wrapper = await montar();
     expect(no('[data-falta-chave-de-ia]')).toBeNull();
     expect(no('[data-contratar]').disabled).toBe(false);
+    expect(no('[data-contratar-celular]').disabled).toBe(false);
     wrapper.unmount();
-
-    api.lista.mockRejectedValue(new Error('Network Error'));
-    const semLista = await montar();
-    expect(no('[data-falta-chave-de-ia]')).toBeNull();
-    expect(no('[data-contratar]').disabled).toBe(false);
-    semLista.unmount();
   });
 
   it('says "try again" at the top when the request does not reach the server', async () => {
@@ -315,15 +310,45 @@ describe('ContratadoModeloPage (#3211)', () => {
     wrapper.unmount();
   });
 
-  it('shows no price line when the catalog has no plan (or the read fails)', async () => {
+  it('shows no price line when the catalog has no plan', async () => {
     const semPlano = await montar();
     expect(semPlano.find('[data-preco]').exists()).toBe(false);
+    expect(semPlano.find('[data-preco-carregando]').exists()).toBe(false);
+    expect(semPlano.find('[data-preco-falhou]').exists()).toBe(false);
     semPlano.unmount();
+  });
 
+  it('shows a one-line skeleton in place of the price while it reads', async () => {
+    api.lista.mockReturnValue(new Promise(() => {}));
+    const wrapper = mount(ContratadoModeloPage, {
+      attachTo: document.body,
+      props: { modelo: UNIVERSAL },
+    });
+    await nextTick();
+
+    const esqueleto = wrapper.get('[data-heroi] [data-preco-carregando]');
+    expect(esqueleto.attributes('role')).toBe('status');
+    expect(esqueleto.text()).toBe('AGENTS.CONTRATADOS.PLANO.PRECO_CARREGANDO');
+    expect(wrapper.find('[data-preco]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('when the read fails, says the price did not show and keeps "Contratar" off', async () => {
     api.lista.mockRejectedValue(new Error('Network Error'));
-    const semLista = await montar();
-    expect(semLista.find('[data-preco]').exists()).toBe(false);
-    semLista.unmount();
+    const wrapper = await montar();
+
+    const falha = wrapper.get('[data-heroi] [data-preco-falhou]');
+    expect(falha.attributes('role')).toBe('alert');
+    expect(falha.text()).toBe('AGENTS.CONTRATADOS.PLANO.PRECO_FALHOU');
+    expect(wrapper.find('[data-preco-carregando]').exists()).toBe(false);
+    expect(wrapper.find('[data-preco]').exists()).toBe(false);
+    expect(no('[data-falta-chave-de-ia]')).toBeNull();
+    expect(no('[data-contratar]').disabled).toBe(true);
+    expect(no('[data-contratar-celular]').disabled).toBe(true);
+
+    await abrirFormulario(wrapper);
+    expect(no('[data-contratar-enviar]')).toBeNull();
+    wrapper.unmount();
   });
 
   it('does not offer "Contratar" for a model the screen does not know', async () => {

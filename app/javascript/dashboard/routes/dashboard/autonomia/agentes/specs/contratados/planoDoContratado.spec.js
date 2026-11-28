@@ -6,6 +6,7 @@ import FaixaDoPlano from '../../components/pagina/FaixaDoPlano.vue';
 import ContratadoNaPagina from '../../components/pagina/ContratadoNaPagina.vue';
 import {
   faixaDoPlano,
+  iconeDoPreco,
   linhaDoPreco,
   mostraFaixa,
   precoDoPlano,
@@ -57,8 +58,14 @@ describe('planoDoContratado (#3270)', () => {
     const pausado = plano({ situacao: 'pausado', dias_restantes: null });
 
     expect(semNbsp(linhaDoPreco(t, pausado, 'pt_BR'))).toBe(
-      'R$ 197,00 por mês'
+      'R$ 197,00 por mês. Os dias grátis já foram usados.'
     );
+  });
+
+  it('price icon: the gift while there are free days, the tag when they were used', () => {
+    expect(iconeDoPreco(plano())).toBe('i-lucide-gift');
+    expect(iconeDoPreco(plano({ situacao: 'liberado' }))).toBe('i-lucide-gift');
+    expect(iconeDoPreco(plano({ situacao: 'pausado' }))).toBe('i-lucide-tag');
   });
 
   it('no plan, no line', () => {
@@ -69,16 +76,26 @@ describe('planoDoContratado (#3270)', () => {
     const faixa = faixaDoPlano(t, plano({ dias_restantes: 3 }), 'pt_BR');
 
     expect(faixa.situacao).toBe('gratis');
+    expect(faixa.papel).toBe('status');
     expect(semNbsp(faixa.texto)).toBe(
-      'Faltam 3 dias do período grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+      'Faltam 3 dias grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
     );
   });
 
-  it('banner on the last free day says one day', () => {
+  it('banner with one free day left says one day', () => {
     const faixa = faixaDoPlano(t, plano({ dias_restantes: 1 }), 'pt_BR');
 
     expect(semNbsp(faixa.texto)).toBe(
-      'Falta 1 dia do período grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+      'Falta 1 dia grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+    );
+  });
+
+  it('banner on the last free day (0 days left) says today is the last one', () => {
+    const faixa = faixaDoPlano(t, plano({ dias_restantes: 0 }), 'pt_BR');
+
+    expect(faixa.situacao).toBe('gratis');
+    expect(semNbsp(faixa.texto)).toBe(
+      'Hoje é o último dia grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
     );
   });
 
@@ -90,8 +107,9 @@ describe('planoDoContratado (#3270)', () => {
     );
 
     expect(faixa.situacao).toBe('pausado');
+    expect(faixa.papel).toBe('alert');
     expect(faixa.texto).toBe(
-      'O período grátis acabou e o agente está pausado: ele não responde aos clientes. Fale com a Hub2You para liberar.'
+      'Os dias grátis acabaram. O agente está pausado e não responde aos clientes. Para liberar, fale com a Hub2You.'
     );
   });
 
@@ -115,17 +133,26 @@ describe('FaixaDoPlano (#3270)', () => {
 
     const faixa = wrapper.get('[data-faixa-plano="gratis"]');
     expect(faixa.attributes('role')).toBe('status');
-    expect(semNbsp(faixa.text())).toContain('Faltam 5 dias do período grátis.');
+    expect(semNbsp(faixa.text())).toContain('Faltam 5 dias grátis.');
   });
 
-  it('shows the paused banner', () => {
+  it('shows the last-day banner', () => {
+    const wrapper = montar(plano({ dias_restantes: 0 }));
+
+    expect(wrapper.get('[data-faixa-plano="gratis"]').text()).toContain(
+      'Hoje é o último dia grátis.'
+    );
+  });
+
+  it('shows the paused banner as an alert, with no button', () => {
     const wrapper = montar(
       plano({ situacao: 'pausado', dias_restantes: null })
     );
 
-    expect(wrapper.get('[data-faixa-plano="pausado"]').text()).toContain(
-      'o agente está pausado'
-    );
+    const faixa = wrapper.get('[data-faixa-plano="pausado"]');
+    expect(faixa.attributes('role')).toBe('alert');
+    expect(faixa.text()).toContain('O agente está pausado');
+    expect(faixa.find('button').exists()).toBe(false);
   });
 
   it('shows only during the free period and the pause', () => {
@@ -156,7 +183,7 @@ describe('ContratadoNaPagina with the plan (#3270)', () => {
     const wrapper = montar(plano({ dias_restantes: 2 }));
 
     const faixa = wrapper.get('[data-faixa-plano="gratis"]');
-    expect(semNbsp(faixa.text())).toContain('Faltam 2 dias');
+    expect(semNbsp(faixa.text())).toContain('Faltam 2 dias grátis');
     const html = wrapper.html();
     expect(html.indexOf('data-faixa-plano')).toBeLessThan(
       html.indexOf('data-corretora-e-acesso')
@@ -177,14 +204,48 @@ describe('ContratadoNaPagina with the plan (#3270)', () => {
 });
 
 describe('ContratadoCartao with the price (#3270)', () => {
-  it('shows the price line from the plan', () => {
+  it('shows the price line from the plan, with the gift icon', () => {
     const wrapper = mount(ContratadoCartao, {
       props: { modelo: UNIVERSAL, plano: plano() },
     });
 
-    expect(semNbsp(wrapper.get('[data-preco]').text())).toBe(
+    const linha = wrapper.get('[data-preco]');
+    expect(semNbsp(linha.text())).toBe(
       '7 dias grátis, depois R$ 197,00 por mês'
     );
+    expect(linha.classes()).toEqual(
+      expect.arrayContaining(['text-base', 'font-semibold'])
+    );
+    expect(linha.find('.i-lucide-gift').exists()).toBe(true);
+  });
+
+  it('puts the price right below the text, before what the agent needs', () => {
+    const wrapper = mount(ContratadoCartao, {
+      props: { modelo: UNIVERSAL, plano: plano() },
+    });
+
+    const html = wrapper.html();
+    const texto = html.indexOf(t('AGENTS.CONTRATADOS.CARTAO.TEXTO'));
+    const preco = html.indexOf('data-preco');
+    const precisa = html.indexOf(t('AGENTS.CONTRATADOS.CARTAO.PRECISA'));
+    expect(texto).toBeGreaterThan(-1);
+    expect(texto).toBeLessThan(preco);
+    expect(preco).toBeLessThan(precisa);
+  });
+
+  it('account that already used the free days: only the price, with the tag icon', () => {
+    const wrapper = mount(ContratadoCartao, {
+      props: {
+        modelo: UNIVERSAL,
+        plano: plano({ situacao: 'pausado', dias_restantes: null }),
+      },
+    });
+
+    const linha = wrapper.get('[data-preco]');
+    expect(semNbsp(linha.text())).toBe(
+      'R$ 197,00 por mês. Os dias grátis já foram usados.'
+    );
+    expect(linha.find('.i-lucide-tag').exists()).toBe(true);
   });
 
   it('without a plan, no price line', () => {
