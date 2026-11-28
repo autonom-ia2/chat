@@ -27,7 +27,7 @@ module Autonomia::Agents::Contratados
       prontas: %w[cep cpf],
       seguradora: 'universal',
       # Para quem o modelo existe (#3269): a conta do nicho seguros com perfil corretora. Cada modelo diz o seu.
-      segmento: { nicho: Autonomia::Agents::Nicho::SEGUROS, perfil: Autonomia::Agents::Nicho::PERFIL_PADRAO }.freeze,
+      segmento: { nicho: Autonomia::Agents::Nicho::SEGUROS, perfil: 'corretora' }.freeze,
       conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true)
     }.freeze
   }.freeze
@@ -53,8 +53,8 @@ module Autonomia::Agents::Contratados
     MODELOS.keys.select { |chave| liberado?(account, chave) }
   end
 
-  # O segmento da conta (nicho e perfil) é o que o modelo pede? Conta sem escolha segue o padrão da instalação, como
-  # em `Carteira::Acesso.liberada?` (app/services/carteira/acesso.rb): o padrão conta como marcado.
+  # O segmento da conta (nicho E perfil) é o que o modelo pede? Conta sem escolha vale o padrão da instalação, que
+  # `Nicho.for` já devolve (o mesmo critério de `Carteira::Acesso.liberada?`, que compara só o nicho).
   def segmento_certo?(account, modelo)
     escolha = Autonomia::Agents::Nicho.for(account)
     escolha.nicho == modelo[:segmento][:nicho] && escolha.perfil == modelo[:segmento][:perfil]
