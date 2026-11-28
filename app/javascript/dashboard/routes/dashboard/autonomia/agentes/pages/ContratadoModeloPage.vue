@@ -12,6 +12,7 @@ import CelularConversa from '../components/CelularConversa.vue';
 import DadosDaCorretoraForm from '../components/DadosDaCorretoraForm.vue';
 import { MODELOS_CONTRATADOS } from '../constants/contratados';
 import { erroDoContratado } from '../utils/contratado';
+import { linhaDoPreco } from '../utils/planoDoContratado';
 import { GAVETA } from '../utils/pagina';
 
 // #3211 (Tarefa 27) — a página de um agente pronto que a corretora contrata (rota autonomia_contratado_modelo;
@@ -22,11 +23,12 @@ import { GAVETA } from '../utils/pagina';
 // ocupado até a navegação: um segundo clique criaria outro agente.
 // A conta sem a chave de IA própria (`falta_chave_de_ia` da lista) vê o aviso antes de "Contratar", que fica
 // desabilitado: o servidor recusaria (`sem_chave_de_ia`). Quem administra ganha o botão para Integrações.
+// #3270: a mesma leitura traz o preço e o período grátis do modelo (`planos`), na linha logo abaixo do texto do herói.
 const props = defineProps({
   modelo: { type: String, required: true },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { isAdmin } = useAdmin();
 
@@ -36,16 +38,21 @@ const enviando = ref(false);
 const erro = ref(null);
 const formulario = ref(null);
 const faltaChaveDeIa = ref(false);
+const plano = ref(null);
 
-// A leitura que falhou não trava: o servidor confere de novo ao contratar.
+// A leitura que falhou não trava: o servidor confere de novo ao contratar. Sem ela, a linha do preço não aparece.
 onMounted(async () => {
   try {
     const { data } = await ContratadosAPI.lista();
     faltaChaveDeIa.value = data?.falta_chave_de_ia === true;
+    plano.value = data?.planos?.[props.modelo] || null;
   } catch {
     faltaChaveDeIa.value = false;
+    plano.value = null;
   }
 });
+
+const preco = computed(() => linhaDoPreco(t, plano.value, locale.value));
 
 // A conta vem da rota atual (o roteador repete o `accountId` na rota pelo nome).
 const abrirIntegracoes = () => router.push({ name: 'settings_applications' });
@@ -205,6 +212,15 @@ const contratar = async campos => {
           :titulo="t('AGENTS.CONTRATADOS.MODELO.TITULO')"
           :texto="t('AGENTS.CONTRATADOS.MODELO.TEXTO')"
         >
+          <template v-if="preco" #detalhe>
+            <p
+              data-preco
+              class="flex items-center gap-2 m-0 text-base font-semibold text-white"
+            >
+              <span class="i-lucide-tag size-5 shrink-0" aria-hidden="true" />
+              {{ preco }}
+            </p>
+          </template>
           <template #acoes>
             <AgenteBotao
               data-contratar

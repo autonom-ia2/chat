@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
+import FaixaDoPlano from './FaixaDoPlano.vue';
+import { mostraFaixa } from '../../utils/planoDoContratado';
 
 // #3211 (Tarefa 28) — o que só o agente contratado tem na página (mockup aprovado, estados 13, 14 e 16):
+// - #3270: a faixa do período grátis (FaixaDoPlano), primeiro: quantos dias faltam, ou que o agente está pausado;
 // - o aviso de que começou a atender, logo depois do último passo (`atendendoNo`: o nome da caixa, ou vazio);
 // - o aviso da Universal que recusou o acesso depois (a senha mudou), com "Cadastrar a senha nova";
 // - "Corretora e acesso": o nome da corretora e o estado do acesso ao portal, cada um com "Alterar";
@@ -43,6 +46,7 @@ const itensFaz = computed(() => [
 </script>
 
 <template>
+  <FaixaDoPlano v-if="mostraFaixa(dados.plano)" :plano="dados.plano" />
   <p
     v-if="atendendoNo"
     data-contratado-atendendo

@@ -62,7 +62,7 @@ const porCaixa = useAgenteIaPorCaixa();
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 const { ramos } = useRamosDeSeguro();
-const { modelos: liberados } = useContratados();
+const { modelos: liberados, planos: planosContratados } = useContratados();
 const contratados = computed(() =>
   liberados.value.filter(modelo => MODELOS_CONTRATADOS.includes(modelo))
 );
@@ -217,6 +217,7 @@ const tentarDeNovo = () => {
       :falhou="!!falhou"
       :sem-canal="semCanal"
       :contratados="contratados"
+      :planos-contratados="planosContratados"
       @usar-ramo="usarRamo"
       @usar-modelo="usarModelo"
       @usar-opcao="usarOpcao"

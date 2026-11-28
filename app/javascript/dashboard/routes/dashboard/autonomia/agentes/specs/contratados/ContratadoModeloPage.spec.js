@@ -290,6 +290,42 @@ describe('ContratadoModeloPage (#3211)', () => {
     wrapper.unmount();
   });
 
+  // #3270: o preço e o período grátis vêm do catálogo (`planos`); a cópia real está em planoDoContratado.spec.js.
+  it('shows the price line from the catalog, below the hero text', async () => {
+    api.lista.mockResolvedValue({
+      data: {
+        modelos: [UNIVERSAL],
+        falta_chave_de_ia: false,
+        planos: {
+          [UNIVERSAL]: {
+            dias_gratis: 7,
+            preco_mensal_centavos: 19700,
+            moeda: 'BRL',
+            situacao: 'gratis',
+            dias_restantes: 7,
+          },
+        },
+      },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.get('[data-heroi] [data-preco]').text()).toBe(
+      'AGENTS.CONTRATADOS.PLANO.PRECO_COM_GRATIS'
+    );
+    wrapper.unmount();
+  });
+
+  it('shows no price line when the catalog has no plan (or the read fails)', async () => {
+    const semPlano = await montar();
+    expect(semPlano.find('[data-preco]').exists()).toBe(false);
+    semPlano.unmount();
+
+    api.lista.mockRejectedValue(new Error('Network Error'));
+    const semLista = await montar();
+    expect(semLista.find('[data-preco]').exists()).toBe(false);
+    semLista.unmount();
+  });
+
   it('does not offer "Contratar" for a model the screen does not know', async () => {
     const wrapper = await montar('outro_modelo');
 

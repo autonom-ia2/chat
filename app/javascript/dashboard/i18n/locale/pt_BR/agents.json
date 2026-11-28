@@ -4059,6 +4059,12 @@
         "TITULO": "Vendem sozinhos",
         "TEXTO": "Cotam, fazem a proposta e mandam o link de pagamento. Você só informa os dados da sua corretora."
       },
+      "PLANO": {
+        "PRECO_COM_GRATIS": "1 dia grátis, depois {preco} por mês | {dias} dias grátis, depois {preco} por mês",
+        "PRECO": "{preco} por mês",
+        "FAIXA_GRATIS": "Falta 1 dia do período grátis. Depois, {preco} por mês na fatura da Hub2You. | Faltam {dias} dias do período grátis. Depois, {preco} por mês na fatura da Hub2You.",
+        "FAIXA_PAUSADO": "O período grátis acabou e o agente está pausado: ele não responde aos clientes. Fale com a Hub2You para liberar."
+      },
       "CARTAO": {
         "TITULO": "Seguro Viagem Universal",
         "TEXTO": "Vende o seguro viagem da Universal do começo ao fim: cota, faz a proposta e manda o link de pagamento.",

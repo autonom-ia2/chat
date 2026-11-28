@@ -21,6 +21,7 @@ import { OPCOES_DE_COMECO, PAPEL } from '../constants/papeis';
 // #3211 — `contratados`: os agentes prontos que a conta pode contratar ("Vendem sozinhos", mockup aprovado, estado
 // 01). Só em atender clientes, antes dos ramos e dos modelos; o bloco seguinte começa com a linha divisória. O cartão
 // leva à página do modelo (`abrirContratado`), e não à criação: contratar pede os dados da corretora lá.
+// #3270: `planosContratados`, o preço de cada um (o `planos` do catálogo), para a linha do cartão.
 const props = defineProps({
   papel: { type: String, required: true },
   ramos: { type: Array, default: () => [] },
@@ -29,6 +30,7 @@ const props = defineProps({
   falhou: { type: Boolean, default: false },
   semCanal: { type: Boolean, default: false },
   contratados: { type: Array, default: () => [] },
+  planosContratados: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits([
@@ -69,6 +71,7 @@ const MODELOS_EM_LINHA = MODELOS.map(modelo => ({
     <ProntosParaContratar
       v-if="comContratados"
       :modelos="contratados"
+      :planos="planosContratados"
       :pode-usar="podeUsar"
       @abrir="chave => emit('abrirContratado', chave)"
     />

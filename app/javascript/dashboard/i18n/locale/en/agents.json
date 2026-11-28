@@ -4059,6 +4059,12 @@
         "TITULO": "They sell on their own",
         "TEXTO": "They quote, write the proposal and send the payment link. You only fill in your brokerage's details."
       },
+      "PLANO": {
+        "PRECO_COM_GRATIS": "1 free day, then {preco} per month | {dias} free days, then {preco} per month",
+        "PRECO": "{preco} per month",
+        "FAIXA_GRATIS": "1 day of the free period left. After that, {preco} per month on the Hub2You invoice. | {dias} days of the free period left. After that, {preco} per month on the Hub2You invoice.",
+        "FAIXA_PAUSADO": "The free period is over and the agent is paused: it does not answer customers. Talk to Hub2You to release it."
+      },
       "CARTAO": {
         "TITULO": "Universal Travel Insurance",
         "TEXTO": "Sells Universal travel insurance from start to finish: quotes, writes the proposal and sends the payment link.",
