@@ -16,6 +16,7 @@ RSpec.describe Autonomia::Agents::Contratados::BaseEmDiaJob do
   end
 
   def ligar(conta, chave: true)
+    marcar_corretora!(conta)
     conta.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                            'agente_ferramentas_prontas_consultas')
     return unless chave

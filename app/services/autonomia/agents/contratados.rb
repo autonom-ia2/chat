@@ -26,6 +26,8 @@ module Autonomia::Agents::Contratados
                               segunda_via_do_voucher coberturas_dos_planos],
       prontas: %w[cep cpf],
       seguradora: 'universal',
+      # Para quem o modelo existe (#3269): a conta do nicho seguros com perfil corretora. Cada modelo diz o seu.
+      segmento: { nicho: Autonomia::Agents::Nicho::SEGUROS, perfil: Autonomia::Agents::Nicho::PERFIL_PADRAO }.freeze,
       conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true)
     }.freeze
   }.freeze
@@ -51,12 +53,20 @@ module Autonomia::Agents::Contratados
     MODELOS.keys.select { |chave| liberado?(account, chave) }
   end
 
-  # A flag do modelo, as duas das prontas e o cofre: o modelo existe para esta conta.
+  # O segmento da conta (nicho e perfil) é o que o modelo pede? Conta sem escolha segue o padrão da instalação, como
+  # em `Carteira::Acesso.liberada?` (app/services/carteira/acesso.rb): o padrão conta como marcado.
+  def segmento_certo?(account, modelo)
+    escolha = Autonomia::Agents::Nicho.for(account)
+    escolha.nicho == modelo[:segmento][:nicho] && escolha.perfil == modelo[:segmento][:perfil]
+  end
+
+  # O segmento do modelo, a flag, as duas das prontas e o cofre: o modelo existe para esta conta.
   def liberado?(account, chave)
     modelo = MODELOS[chave]
     return false if modelo.nil? || account.nil?
 
-    account.feature_enabled?(modelo[:flag]) &&
+    segmento_certo?(account, modelo) &&
+      account.feature_enabled?(modelo[:flag]) &&
       Autonomia::FerramentasProntas.ligada?(account) &&
       account.feature_enabled?(Autonomia::FerramentasProntas::FLAG_CONSULTAS) &&
       Chatwoot.encryption_configured?

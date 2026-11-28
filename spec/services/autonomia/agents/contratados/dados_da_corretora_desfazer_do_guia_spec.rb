@@ -20,6 +20,7 @@ RSpec.describe 'Dados da corretora do agente contratado: o desfazer do Guia' do
 
   before do
     enable_test_encryption!
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas', 'agente_ferramentas_prontas_consultas')
     agente
   end

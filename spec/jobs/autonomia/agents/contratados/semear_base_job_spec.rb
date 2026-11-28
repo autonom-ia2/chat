@@ -13,6 +13,7 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
 
   before do
     enable_test_encryption!
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
     allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!)

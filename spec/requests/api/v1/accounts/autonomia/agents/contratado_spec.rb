@@ -24,6 +24,7 @@ RSpec.describe 'Autonomia agente contratado: dados da corretora', type: :request
   before do
     enable_test_encryption!
     [account, outra_conta].each do |conta|
+      marcar_corretora!(conta)
       conta.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas', 'agente_ferramentas_prontas_consultas')
     end
   end

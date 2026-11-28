@@ -15,6 +15,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
 
   before do
     enable_test_encryption!
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas', 'agente_ferramentas_prontas_consultas')
     # Contratar exige a chave de IA da própria conta; a de mentira não passa pelo provedor.
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
@@ -39,6 +40,16 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
 
     it 'vazio sem a flag do modelo' do
       account.disable_features!('agente_seguro_viagem_universal')
+
+      get catalogo_url, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false)
+    end
+
+    it 'conta que não é corretora de seguros não recebe o modelo (#3269)' do
+      Autonomia::Agents::Nicho.atribuir(account, nicho: Autonomia::Agents::Nicho::GERAL, perfil: nil)
+      account.save!
 
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
@@ -112,6 +123,16 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('code' => 'indisponivel', 'campo' => nil,
                                               'error' => I18n.t('autonomia.contratados.recusa.indisponivel'))
+      expect(Autonomia::Agents::Agent.count).to eq(0)
+    end
+
+    it 'conta que não é corretora de seguros: indisponivel, nada criado (#3269)' do
+      marcar_corretora!(account, perfil: 'seguradora')
+
+      post contratar_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'indisponivel', 'campo' => nil)
       expect(Autonomia::Agents::Agent.count).to eq(0)
     end
 
