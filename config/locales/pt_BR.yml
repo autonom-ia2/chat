@@ -2235,6 +2235,9 @@ pt_BR:
       instrucao_mantida: "Este agente já vem pronto: a instrução dele é mantida pela Autonom.ia e não se edita por aqui. Só o nome do agente e os dados da corretora podem ser trocados."
       dados_incompletos: "Este agente não conseguiu montar a instrução: falta '%{campo}' nos dados da corretora. Preencha os dados da corretora do agente."
       acesso_incompleto: "Preencha o login e a senha da seguradora."
+      # #3270: a nota privada à equipe quando o agente contratado está pausado (dias grátis acabaram, conta sem liberação).
+      pausado:
+        nota: "Os dias grátis acabaram. O agente está pausado e não responde aos clientes. A conversa veio para a equipe: responda por aqui. Para liberar o agente, fale com a Hub2You."
       recusa:
         indisponivel: "Este agente pronto não está disponível para esta conta agora. Fale com o suporte da Autonom.ia."
         sem_chave_de_ia: "Falta ligar a inteligência artificial da sua conta. Nada foi criado. Quem administra a conta liga em Configurações, na parte Integrações."

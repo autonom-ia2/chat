@@ -34,7 +34,21 @@ module Autonomia
       # sumir — mas TAMBÉM não pode fazer o kill-switch da conta, o desligamento do agente ou a
       # allowlist de piloto sumirem junto. Por isso o assíncrono relaxa UM predicado nomeado, em vez
       # de abandonar o contrato.
+      #
+      # #3270: o agente contratado PAUSADO (os dias grátis acabaram e a conta não tem a liberação) não fala com cliente
+      # por nenhum caminho do turno: a mensagem, o evento da cotação, a passagem e a entrega em segundo plano passam todos
+      # por aqui. Nada muda na Atribuição: quem a conversa tem continua igual (`QuemResponde` não olha a pausa), e ela fica
+      # com a equipe como fica quando o agente não responde.
       def self.authorized_agent_inbox(conversation)
+        agent_inbox = vinculo_que_atenderia(conversation)
+        return if agent_inbox && ::Autonomia::Agents::Contratados::Gratis.pausado?(agent_inbox.agent)
+
+        agent_inbox
+      end
+
+      # O contrato inteiro do `authorized_agent_inbox`, menos a pausa do contratado (#3270): o vínculo que falaria se o
+      # agente não estivesse pausado. Só para quem precisa saber POR QUE ninguém respondeu (Contratados::AvisoDaPausa).
+      def self.vinculo_que_atenderia(conversation)
         return if conversation.blank?
         return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 

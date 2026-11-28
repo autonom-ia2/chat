@@ -45,6 +45,18 @@ RSpec.describe Autonomia::Agents::Contratados::BaseEmDiaJob do
     [em_dia, apagado, comum].each { |fora| expect(semear).not_to have_been_enqueued.with(fora.id) }
   end
 
+  # #3270: o embedding é pago; a conta com o agente pausado (7 dias grátis vencidos, sem a liberação) fica de fora.
+  it 'deixa de fora o agente pausado; liberada a conta, enfileira' do
+    pausado = contratado(nil)
+    pausado.update_columns(created_at: 8.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(semear)
+
+    Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
+    account.save!
+    expect { described_class.perform_now }.to have_enqueued_job(semear).with(pausado.id).exactly(:once)
+  end
+
   it 'deixa de fora, em silêncio, a conta sem a própria chave e a conta com o modelo desligado' do
     com_chave = contratado(nil)
     sem_chave = create(:account).tap { |conta| ligar(conta, chave: false) }

@@ -12,6 +12,7 @@ import CelularConversa from '../components/CelularConversa.vue';
 import DadosDaCorretoraForm from '../components/DadosDaCorretoraForm.vue';
 import { MODELOS_CONTRATADOS } from '../constants/contratados';
 import { erroDoContratado } from '../utils/contratado';
+import { iconeDoPreco, linhaDoPreco } from '../utils/planoDoContratado';
 import { GAVETA } from '../utils/pagina';
 
 // #3211 (Tarefa 27) — a página de um agente pronto que a corretora contrata (rota autonomia_contratado_modelo;
@@ -22,11 +23,15 @@ import { GAVETA } from '../utils/pagina';
 // ocupado até a navegação: um segundo clique criaria outro agente.
 // A conta sem a chave de IA própria (`falta_chave_de_ia` da lista) vê o aviso antes de "Contratar", que fica
 // desabilitado: o servidor recusaria (`sem_chave_de_ia`). Quem administra ganha o botão para Integrações.
+// #3270: a mesma leitura traz o preço e o período grátis do modelo (`planos`), na linha logo abaixo do texto do herói.
+// Enquanto lê, uma linha de esqueleto no lugar do preço. Se a leitura falha, ou volta sem o plano deste modelo, a linha
+// diz que o preço não apareceu e "Contratar" fica desabilitado, como sem a chave de IA: ninguém contrata sem ver quanto
+// vai pagar.
 const props = defineProps({
   modelo: { type: String, required: true },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { isAdmin } = useAdmin();
 
@@ -36,16 +41,28 @@ const enviando = ref(false);
 const erro = ref(null);
 const formulario = ref(null);
 const faltaChaveDeIa = ref(false);
+const plano = ref(null);
+const LEITURA = { LENDO: 'lendo', PRONTA: 'pronta', FALHOU: 'falhou' };
+const leitura = ref(LEITURA.LENDO);
 
-// A leitura que falhou não trava: o servidor confere de novo ao contratar.
 onMounted(async () => {
   try {
     const { data } = await ContratadosAPI.lista();
     faltaChaveDeIa.value = data?.falta_chave_de_ia === true;
+    plano.value = data?.planos?.[props.modelo] || null;
+    leitura.value = plano.value ? LEITURA.PRONTA : LEITURA.FALHOU;
   } catch {
-    faltaChaveDeIa.value = false;
+    leitura.value = LEITURA.FALHOU;
   }
 });
+
+const preco = computed(() => linhaDoPreco(t, plano.value, locale.value));
+const iconePreco = computed(() => iconeDoPreco(plano.value));
+const lendo = computed(() => leitura.value === LEITURA.LENDO);
+const precoFalhou = computed(() => leitura.value === LEITURA.FALHOU);
+const naoPodeContratar = computed(
+  () => faltaChaveDeIa.value || precoFalhou.value
+);
 
 // A conta vem da rota atual (o roteador repete o `accountId` na rota pelo nome).
 const abrirIntegracoes = () => router.push({ name: 'settings_applications' });
@@ -125,7 +142,7 @@ const conversa = computed(() => {
 const voltar = () => router.push({ name: 'autonomia_agents_builder' });
 
 const abrir = () => {
-  if (faltaChaveDeIa.value) return;
+  if (naoPodeContratar.value) return;
   erro.value = null;
   aberto.value = true;
 };
@@ -205,13 +222,49 @@ const contratar = async campos => {
           :titulo="t('AGENTS.CONTRATADOS.MODELO.TITULO')"
           :texto="t('AGENTS.CONTRATADOS.MODELO.TEXTO')"
         >
+          <template #detalhe>
+            <span
+              v-if="lendo"
+              data-preco-carregando
+              role="status"
+              class="relative block w-64 h-6 max-w-full rounded-lg bg-white/20 motion-safe:animate-pulse"
+            >
+              <span class="sr-only">
+                {{ t('AGENTS.CONTRATADOS.PLANO.PRECO_CARREGANDO') }}
+              </span>
+            </span>
+            <p
+              v-else-if="precoFalhou"
+              data-preco-falhou
+              role="alert"
+              class="flex items-center gap-2 m-0 text-base font-semibold text-white"
+            >
+              <span
+                class="i-lucide-circle-alert size-5 shrink-0"
+                aria-hidden="true"
+              />
+              {{ t('AGENTS.CONTRATADOS.PLANO.PRECO_FALHOU') }}
+            </p>
+            <p
+              v-else
+              data-preco
+              class="flex items-center gap-2 m-0 text-base font-semibold text-white"
+            >
+              <span
+                class="size-5 shrink-0"
+                :class="iconePreco"
+                aria-hidden="true"
+              />
+              {{ preco }}
+            </p>
+          </template>
           <template #acoes>
             <AgenteBotao
               data-contratar
               variante="branco"
               tamanho="xl"
               class="w-full md:w-auto"
-              :desabilitado="faltaChaveDeIa"
+              :desabilitado="naoPodeContratar"
               @click="abrir"
             >
               {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}
@@ -295,7 +348,7 @@ const contratar = async campos => {
           tamanho="xl"
           bloco
           class="md:hidden"
-          :desabilitado="faltaChaveDeIa"
+          :desabilitado="naoPodeContratar"
           @click="abrir"
         >
           {{ t('AGENTS.CONTRATADOS.MODELO.CONTRATAR') }}

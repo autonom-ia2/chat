@@ -38,6 +38,32 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Porta do
     expect([porta.agente, porta.motivo]).to eq([agente, 'lia'])
   end
 
+  # #3270: o agente contratado com os dias grátis vencidos e sem a liberação não responde comentário.
+  describe 'agente contratado na porta' do
+    let(:agente) do
+      contratado = Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'sdr', status: :active, enabled: true,
+                                                    instruction: 'retrato',
+                                                    config: { 'contratado' => { 'modelo' => 'seguro_viagem_universal' } })
+      Autonomia::Agents::AgentInbox.create!(agent: contratado, inbox: inbox, account: account,
+                                            agent_bot: create(:agent_bot, account: account))
+      contratado
+    end
+
+    it 'no grátis, escreve' do
+      agente
+      expect(described_class.new(care: care, inbox: inbox).motivo).to be_nil
+    end
+
+    it 'pausado: porta parada; liberado, volta a escrever' do
+      agente.update_columns(created_at: 8.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.new(care: care, inbox: inbox).motivo).to eq('porta_parada')
+
+      Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
+      account.save!
+      expect(described_class.new(care: care, inbox: inbox.reload).motivo).to be_nil
+    end
+  end
+
   it 'caixa de outra conta: nenhum agente, nem o que está na porta dela' do
     outra = create(:inbox)
     na_porta(outra)

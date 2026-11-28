@@ -38,8 +38,10 @@
   <div class="space-y-6 pt-6">
     <%= render "card", title: t("super_admin.record.profile") do %>
       <%# Fork (upgrade 4.19.1, #3119): the agents niche (#1429) and, outside Enterprise, the Instagram flag stay on the page. %>
+      <%# #3270: and the hired agents release (contratados_liberados). %>
       <%= render "attributes", page: page, attributes: fields.values_at("id", "name", "locale", "status", "created_at", "updated_at",
-                                                                         "agents_niche", "feature_instagram_assisted_onboarding").compact %>
+                                                                         "agents_niche", "contratados_liberados",
+                                                                         "feature_instagram_assisted_onboarding").compact %>
     <% end %>
 
     <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))]">

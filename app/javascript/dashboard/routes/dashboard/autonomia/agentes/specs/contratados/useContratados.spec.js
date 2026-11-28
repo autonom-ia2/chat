@@ -34,6 +34,27 @@ describe('useContratados (#3211)', () => {
     expect(exposto().modelos.value).toEqual(['seguro_viagem_universal']);
   });
 
+  // #3270: o preço e o período grátis de cada modelo, como o servidor manda.
+  it('returns the plans the server sends, by model', async () => {
+    const plano = {
+      dias_gratis: 7,
+      preco_mensal_centavos: 19700,
+      moeda: 'BRL',
+      situacao: 'gratis',
+      dias_restantes: 7,
+    };
+    api.lista.mockResolvedValue({
+      data: {
+        modelos: ['seguro_viagem_universal'],
+        planos: { seguro_viagem_universal: plano },
+      },
+    });
+    const exposto = montar();
+    await flushPromises();
+
+    expect(exposto().planos.value).toEqual({ seguro_viagem_universal: plano });
+  });
+
   it('returns an empty list when the account has none', async () => {
     api.lista.mockResolvedValue({ data: { modelos: [] } });
     const exposto = montar();
@@ -60,6 +81,7 @@ describe('useContratados (#3211)', () => {
     await flushPromises();
 
     expect(exposto().modelos.value).toEqual([]);
+    expect(exposto().planos.value).toEqual({});
     expect(aviso).toHaveBeenCalledTimes(1);
     expect(aviso.mock.calls[0].join(' ')).toContain('500');
     expect(aviso.mock.calls[0].join(' ')).not.toContain('detalhe');

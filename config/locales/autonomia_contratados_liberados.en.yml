@@ -1,0 +1,13 @@
+en:
+  helpers:
+    label:
+      account:
+        contratados_liberados: Released hired agents
+  autonomia_contratados_liberados:
+    label: Released hired agents
+    help: A released agent never pauses and does not show the free days. Turn it on when the Hub2You invoice is paid, or for an account released without charge. Without it, the agent pauses when the free days end.
+    card_text: Released. The agent keeps answering customers after the free days.
+    none: None
+    modelos:
+      seguro_viagem_universal:
+        title: Universal Travel Insurance

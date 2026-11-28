@@ -45,7 +45,8 @@ class Crm::MetaAds::ComentariosIa::Porta
     return 'sem_porta' if agente.nil?
     return 'outra_conta' unless agente.account_id == @care.account_id
     return 'lia' if agente.agent_type == LIA
-    return 'porta_parada' unless agente.atende_cliente?
+    # #3270: o agente contratado pausado (dias grátis vencidos, sem a liberação) também não escreve ao cliente.
+    return 'porta_parada' unless agente.atende_cliente? && !Autonomia::Agents::Contratados::Gratis.pausado?(agente)
 
     # Agente em piloto, só para os telefones de teste: quem comenta não tem telefone, então nunca está na lista.
     'piloto' unless Autonomia::Agents::Operate.test_allowlist_permits?(nil, agente)

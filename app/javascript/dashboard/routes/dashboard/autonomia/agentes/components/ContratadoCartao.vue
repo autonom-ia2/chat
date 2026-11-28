@@ -3,19 +3,23 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { TOM_DO_RAMO } from '../constants/modelosDeRamo';
 import { MODELO_UNIVERSAL } from '../constants/contratados';
+import { iconeDoPreco, linhaDoPreco } from '../utils/planoDoContratado';
 
 // #3211 — um agente pronto para contratar, na seção "Vendem sozinhos" (mockup aprovado, estado 01). Como o
 // RamoCartao: o cartão inteiro abre a página do modelo, porque o "Ver como funciona" se estica sobre ele
 // (after:absolute) e continua um botão só. Quem só vê lê o cartão, sem o botão. Os textos de cada modelo vêm do
-// i18n por chave fixa; quem usa só monta modelos de MODELOS_CONTRATADOS.
+// i18n por chave fixa; quem usa só monta modelos de MODELOS_CONTRATADOS. #3270: `plano` é o preço e o período grátis
+// que o servidor manda no catálogo (`planos`); sem ele, o cartão fica sem a linha do preço. A linha vem logo abaixo do
+// texto, antes do que o agente precisa, com o presente quando há dias grátis: é a segunda coisa que o dono quer saber.
 const props = defineProps({
   modelo: { type: String, required: true },
   podeUsar: { type: Boolean, default: false },
+  plano: { type: Object, default: null },
 });
 
 const emit = defineEmits(['abrir']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const TEXTOS = {
   [MODELO_UNIVERSAL]: () => ({
@@ -27,6 +31,8 @@ const TEXTOS = {
 };
 
 const textos = computed(() => TEXTOS[props.modelo]());
+const preco = computed(() => linhaDoPreco(t, props.plano, locale.value));
+const iconePreco = computed(() => iconeDoPreco(props.plano));
 </script>
 
 <template>
@@ -49,6 +55,18 @@ const textos = computed(() => TEXTOS[props.modelo]());
         </h3>
         <p class="m-0 text-sm leading-relaxed text-n-slate-11">
           {{ textos.texto }}
+        </p>
+        <p
+          v-if="preco"
+          data-preco
+          class="flex items-center gap-1.5 m-0 text-base font-semibold text-n-slate-12"
+        >
+          <span
+            class="size-4 shrink-0 text-n-blue-11"
+            :class="iconePreco"
+            aria-hidden="true"
+          />
+          {{ preco }}
         </p>
         <p class="flex items-center gap-1.5 m-0 text-sm text-n-slate-12">
           <span

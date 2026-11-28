@@ -483,6 +483,7 @@
           "recuperacao_acordar_falhou": "WhatsApp message recovered, AI not called",
           "recuperacao_passagem_falhou": "WhatsApp message not shown, handoff not done",
           "recuperada_so_contexto": "Recovered message: AI reply was only internal context",
+          "contratado_pausado": "Agent paused: the free days are over",
           "other": "Other / unspecified"
         }
       },
@@ -4058,6 +4059,15 @@
       "AREA": {
         "TITULO": "They sell on their own",
         "TEXTO": "They quote, write the proposal and send the payment link. You only fill in your brokerage's details."
+      },
+      "PLANO": {
+        "PRECO_COM_GRATIS": "1 free day, then {preco} per month | {dias} free days, then {preco} per month",
+        "PRECO_SEM_GRATIS": "{preco} per month. The free days were already used.",
+        "PRECO_FALHOU": "I could not show the price right now. Try again in a moment.",
+        "PRECO_CARREGANDO": "Loading the price",
+        "FAIXA_GRATIS": "1 free day left. After that, {preco} per month on the Hub2You invoice. | {dias} free days left. After that, {preco} per month on the Hub2You invoice.",
+        "FAIXA_ULTIMO_DIA": "Today is the last free day. After that, {preco} per month on the Hub2You invoice.",
+        "FAIXA_PAUSADO": "The free days are over. The agent is paused and does not answer customers. To release it, talk to Hub2You."
       },
       "CARTAO": {
         "TITULO": "Universal Travel Insurance",

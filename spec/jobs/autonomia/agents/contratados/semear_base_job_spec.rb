@@ -44,6 +44,31 @@ RSpec.describe Autonomia::Agents::Contratados::SemearBaseJob do
     expect(Autonomia::Agents::Contratados::Base).not_to have_received(:semear_se_preciso!)
   end
 
+  # #3270: o embedding é pago; o agente pausado (7 dias grátis vencidos, sem a liberação) não ganha base nova.
+  describe 'agente pausado' do
+    before { contratado.update_columns(created_at: 8.days.ago) } # rubocop:disable Rails/SkipsModelValidations
+
+    it 'não semeia' do
+      described_class.perform_now(contratado.id)
+      expect(Autonomia::Agents::Contratados::Base).not_to have_received(:semear_se_preciso!)
+    end
+
+    it 'não apaga a base que existe (nem chama a Base)' do
+      base = Autonomia::Agents::Contratados::Base
+      fonte = contratado.sources.create!(account_id: account.id, source_type: 'md', kind: :knowledge, reference: base::REFERENCIA,
+                                         metadata: { base::MARCA_DA_FONTE => true }, status: :ready, review_status: 'accepted')
+      described_class.perform_now(contratado.id)
+      expect(Autonomia::Agents::Source.exists?(fonte.id)).to be(true)
+    end
+
+    it 'liberada a conta, semeia' do
+      Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
+      account.save!
+      described_class.perform_now(contratado.id)
+      expect(Autonomia::Agents::Contratados::Base).to have_received(:semear_se_preciso!).with(contratado)
+    end
+  end
+
   it 'falha do embedding: só o motivo curto no log, sem levantar' do
     allow(Autonomia::Agents::Contratados::Base).to receive(:semear_se_preciso!)
       .and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')

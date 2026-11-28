@@ -5,10 +5,11 @@ import ContratadoCartao from './ContratadoCartao.vue';
 // #3211 — "Vendem sozinhos": os agentes prontos que a corretora contrata, dentro do herói navy da página "Criar
 // agente", antes dos ramos (mockup aprovado, estado 01). Quais modelos aparecem é decisão do servidor
 // (useContratados); quem usa só monta a seção com pelo menos um modelo que a tela conhece. `abrir` leva a chave do
-// modelo, e a página navega para autonomia_contratado_modelo.
+// modelo, e a página navega para autonomia_contratado_modelo. #3270: `planos` é o preço de cada modelo, pela chave.
 defineProps({
   modelos: { type: Array, required: true },
   podeUsar: { type: Boolean, default: false },
+  planos: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['abrir']);
@@ -39,6 +40,7 @@ const { t } = useI18n();
         :key="modelo"
         :modelo="modelo"
         :pode-usar="podeUsar"
+        :plano="planos[modelo] || null"
         @abrir="chave => emit('abrir', chave)"
       />
     </ul>

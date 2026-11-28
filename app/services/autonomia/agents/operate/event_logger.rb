@@ -12,9 +12,11 @@ module Autonomia
         # engajamento (eventos skipped_*), para aparecerem em "Principais motivos" da aba Desempenho.
         # `escolhas_incompletas` (#380): o Agente de Cotação emudeceu porque as escolhas da corretora no
         # config estão incompletas — o motivo fica no evento com o próprio nome, não colapsado em `other`.
+        # `contratado_pausado` (#3270): o agente contratado com os dias grátis vencidos passou a conversa para a equipe.
         ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule
                              escolhas_incompletas assunto_atrasou recuperada_tarde recuperacao_falhou
-                             recuperacao_acordar_falhou recuperacao_passagem_falhou recuperada_so_contexto other].freeze
+                             recuperacao_acordar_falhou recuperacao_passagem_falhou recuperada_so_contexto contratado_pausado
+                             other].freeze
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.

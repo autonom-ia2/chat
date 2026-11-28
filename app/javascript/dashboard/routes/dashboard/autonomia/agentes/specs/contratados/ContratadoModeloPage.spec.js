@@ -19,6 +19,14 @@ const api = vi.hoisted(() => ({ contratar: vi.fn(), lista: vi.fn() }));
 vi.mock('dashboard/api/autonomia/contratados', () => ({ default: api }));
 
 const UNIVERSAL = 'seguro_viagem_universal';
+// O plano do modelo como o catálogo manda (#3270): sem ele, a página não deixa contratar.
+const PLANO = {
+  dias_gratis: 7,
+  preco_mensal_centavos: 19700,
+  moeda: 'BRL',
+  situacao: 'gratis',
+  dias_restantes: 7,
+};
 
 const no = seletor => document.querySelector(seletor);
 const campo = nome => no(`[data-campo="${nome}"]`);
@@ -66,7 +74,11 @@ describe('ContratadoModeloPage (#3211)', () => {
     router.push.mockClear();
     api.contratar.mockResolvedValue({ data: { id: 42 } });
     api.lista.mockResolvedValue({
-      data: { modelos: [UNIVERSAL], falta_chave_de_ia: false },
+      data: {
+        modelos: [UNIVERSAL],
+        falta_chave_de_ia: false,
+        planos: { [UNIVERSAL]: PLANO },
+      },
     });
   });
 
@@ -223,7 +235,11 @@ describe('ContratadoModeloPage (#3211)', () => {
   describe('account without its own AI key', () => {
     beforeEach(() => {
       api.lista.mockResolvedValue({
-        data: { modelos: [UNIVERSAL], falta_chave_de_ia: true },
+        data: {
+          modelos: [UNIVERSAL],
+          falta_chave_de_ia: true,
+          planos: { [UNIVERSAL]: PLANO },
+        },
       });
     });
 
@@ -263,17 +279,12 @@ describe('ContratadoModeloPage (#3211)', () => {
     });
   });
 
-  it('shows no warning and lets hire when the account has its key (or the list fails)', async () => {
+  it('shows no warning and lets hire when the account has its key', async () => {
     const wrapper = await montar();
     expect(no('[data-falta-chave-de-ia]')).toBeNull();
     expect(no('[data-contratar]').disabled).toBe(false);
+    expect(no('[data-contratar-celular]').disabled).toBe(false);
     wrapper.unmount();
-
-    api.lista.mockRejectedValue(new Error('Network Error'));
-    const semLista = await montar();
-    expect(no('[data-falta-chave-de-ia]')).toBeNull();
-    expect(no('[data-contratar]').disabled).toBe(false);
-    semLista.unmount();
   });
 
   it('says "try again" at the top when the request does not reach the server', async () => {
@@ -287,6 +298,80 @@ describe('ContratadoModeloPage (#3211)', () => {
       'AGENTS.CONTRATADOS.ERRO.GENERICO'
     );
     expect(invalido('nome_corretora')).toBe(false);
+    wrapper.unmount();
+  });
+
+  // #3270: o preço e o período grátis vêm do catálogo (`planos`); a cópia real está em planoDoContratado.spec.js.
+  it('shows the price line from the catalog, below the hero text', async () => {
+    api.lista.mockResolvedValue({
+      data: {
+        modelos: [UNIVERSAL],
+        falta_chave_de_ia: false,
+        planos: {
+          [UNIVERSAL]: {
+            dias_gratis: 7,
+            preco_mensal_centavos: 19700,
+            moeda: 'BRL',
+            situacao: 'gratis',
+            dias_restantes: 7,
+          },
+        },
+      },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.get('[data-heroi] [data-preco]').text()).toBe(
+      'AGENTS.CONTRATADOS.PLANO.PRECO_COM_GRATIS'
+    );
+    wrapper.unmount();
+  });
+
+  it('read ok but without this model plan: same as a failure, with "Contratar" off', async () => {
+    api.lista.mockResolvedValue({
+      data: { modelos: [UNIVERSAL], falta_chave_de_ia: false, planos: {} },
+    });
+    const semPlano = await montar();
+
+    expect(semPlano.find('[data-preco]').exists()).toBe(false);
+    expect(semPlano.find('[data-preco-carregando]').exists()).toBe(false);
+    expect(semPlano.get('[data-heroi] [data-preco-falhou]').text()).toBe(
+      'AGENTS.CONTRATADOS.PLANO.PRECO_FALHOU'
+    );
+    expect(no('[data-contratar]').disabled).toBe(true);
+    expect(no('[data-contratar-celular]').disabled).toBe(true);
+    semPlano.unmount();
+  });
+
+  it('shows a one-line skeleton in place of the price while it reads', async () => {
+    api.lista.mockReturnValue(new Promise(() => {}));
+    const wrapper = mount(ContratadoModeloPage, {
+      attachTo: document.body,
+      props: { modelo: UNIVERSAL },
+    });
+    await nextTick();
+
+    const esqueleto = wrapper.get('[data-heroi] [data-preco-carregando]');
+    expect(esqueleto.attributes('role')).toBe('status');
+    expect(esqueleto.text()).toBe('AGENTS.CONTRATADOS.PLANO.PRECO_CARREGANDO');
+    expect(wrapper.find('[data-preco]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('when the read fails, says the price did not show and keeps "Contratar" off', async () => {
+    api.lista.mockRejectedValue(new Error('Network Error'));
+    const wrapper = await montar();
+
+    const falha = wrapper.get('[data-heroi] [data-preco-falhou]');
+    expect(falha.attributes('role')).toBe('alert');
+    expect(falha.text()).toBe('AGENTS.CONTRATADOS.PLANO.PRECO_FALHOU');
+    expect(wrapper.find('[data-preco-carregando]').exists()).toBe(false);
+    expect(wrapper.find('[data-preco]').exists()).toBe(false);
+    expect(no('[data-falta-chave-de-ia]')).toBeNull();
+    expect(no('[data-contratar]').disabled).toBe(true);
+    expect(no('[data-contratar-celular]').disabled).toBe(true);
+
+    await abrirFormulario(wrapper);
+    expect(no('[data-contratar-enviar]')).toBeNull();
     wrapper.unmount();
   });
 
