@@ -181,6 +181,19 @@ RSpec.describe Autonomia::Agents::Operate do
       expect(notas.size).to eq(1)
     end
 
+    it 'conversa encerrada com a última mensagem do cliente: nada (mover cards em lote não acorda a equipe)' do
+      travel_to(comeco + 8.days) do
+        create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi', created_at: 3.days.ago)
+        conversation.update!(status: :resolved)
+
+        Autonomia::Agents::Operate::ReenfileirarTurno.ao_trocar_dono(conversation: conversation.reload, por: :crm)
+      end
+
+      expect(conversation.reload.awaiting_person?).to be(false)
+      expect(conversation.status).to eq('resolved')
+      expect(notas).to be_empty
+    end
+
     it 'cliente parado há mais de um dia, com a última palavra nossa: nada agora' do
       travel_to(comeco + 8.days) do
         create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi', created_at: 3.days.ago)
