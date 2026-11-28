@@ -5,8 +5,10 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Contratados::Gratis do
   let(:account) { create(:account) }
   let(:chave) { 'seguro_viagem_universal' }
-  # 10:00 UTC = 07:00 em São Paulo, o fuso da conta (Crm::Timezone::Resolver, sem fuso na conta: o padrão).
+  # 10:00 UTC = 07:00 de 02/11 em São Paulo, o fuso da conta (Crm::Timezone::Resolver, sem fuso na conta: o padrão).
+  # O último dia grátis é 09/11, inteiro, no fuso da conta; a pausa começa à meia-noite de 10/11.
   let(:comeco) { Time.zone.local(2026, 11, 2, 10, 0, 0) }
+  let(:sao_paulo) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
   let(:marca) do
     { 'modelo' => chave, 'nome_agente' => 'Bia', 'nome_corretora' => 'Corretora Exemplo', 'sobre_corretora' => 'Desde 2010.' }
   end
@@ -46,30 +48,61 @@ RSpec.describe Autonomia::Agents::Contratados::Gratis do
   describe 'a contagem' do
     before { contratar(quando: comeco) }
 
-    it 'dia 0: grátis, faltam os 7 dias' do
+    it 'no dia em que contratou, a qualquer hora: faltam os 7 dias' do
       expect(estado_em(comeco)).to have_attributes(situacao: 'gratis', dias_restantes: 7)
+      expect(estado_em(sao_paulo.local(2026, 11, 2, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 7)
     end
 
-    it 'dia 6 completo: falta 1 (a véspera do último dia)' do
-      expect(estado_em(comeco + 6.days)).to have_attributes(situacao: 'gratis', dias_restantes: 1)
-      expect(estado_em(comeco + 6.days + 12.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 1)
+    it 'na véspera do último dia: falta 1' do
+      expect(estado_em(sao_paulo.local(2026, 11, 8, 0, 0, 0))).to have_attributes(situacao: 'gratis', dias_restantes: 1)
+      expect(estado_em(sao_paulo.local(2026, 11, 8, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 1)
     end
 
-    it 'no dia em que acaba, até a hora em que contratou: 0, o último dia' do
-      expect(estado_em(comeco + 6.days + 18.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 0)
-      expect(estado_em(comeco + 7.days - 1.second)).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+    it 'o último dia vale inteiro: 0 da meia-noite às 23:59:59, mesmo depois da hora em que contratou' do
+      expect(estado_em(sao_paulo.local(2026, 11, 9, 0, 0, 0))).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(comeco + 7.days)).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(sao_paulo.local(2026, 11, 9, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 0)
     end
 
-    it 'mais tarde no dia em que contratou: ainda 7 (conta o dia do calendário, no fuso da conta)' do
-      expect(estado_em(comeco + 12.hours)).to have_attributes(situacao: 'gratis', dias_restantes: 7)
-    end
-
-    it 'dia 7 completo: pausado, sem contagem' do
-      expect(estado_em(comeco + 7.days)).to have_attributes(situacao: 'pausado', dias_restantes: nil)
+    it 'à meia-noite do dia seguinte ao último: pausado, sem contagem' do
+      expect(estado_em(sao_paulo.local(2026, 11, 10, 0, 0, 0))).to have_attributes(situacao: 'pausado', dias_restantes: nil)
     end
 
     it 'um mês depois: continua pausado' do
       expect(estado_em(comeco + 30.days)).to be_pausado
+    end
+  end
+
+  # A hora da contratação não muda o último dia: conta o dia do calendário em que contratou, no fuso da conta.
+  describe 'a hora da contratação' do
+    it 'contratou às 00:05: o grátis vai até 23:59:59 do 7º dia depois' do
+      contratar(quando: sao_paulo.local(2026, 11, 2, 0, 5, 0))
+
+      expect(estado_em(sao_paulo.local(2026, 11, 9, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(sao_paulo.local(2026, 11, 10, 0, 0, 0))).to be_pausado
+    end
+
+    it 'contratou às 23:50 (já 02:50 do dia seguinte em UTC): o último dia é o mesmo, pelo dia de São Paulo' do
+      contratar(quando: sao_paulo.local(2026, 11, 2, 23, 50, 0))
+
+      expect(estado_em(sao_paulo.local(2026, 11, 2, 23, 55, 0))).to have_attributes(situacao: 'gratis', dias_restantes: 7)
+      expect(estado_em(sao_paulo.local(2026, 11, 9, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(sao_paulo.local(2026, 11, 10, 0, 0, 0))).to be_pausado
+    end
+  end
+
+  describe 'conta com outro fuso (Tóquio, UTC+9)' do
+    let(:toquio) { ActiveSupport::TimeZone['Asia/Tokyo'] }
+
+    before { account.update!(reporting_timezone: 'Asia/Tokyo') }
+
+    # 20:00 de 02/11 em São Paulo (23:00 UTC) já é 08:00 de 03/11 em Tóquio: o dia da contratação é 03/11.
+    it 'o dia da contratação, o último dia e a meia-noite da pausa são os do fuso da conta' do
+      contratar(quando: toquio.local(2026, 11, 3, 8, 0, 0))
+
+      expect(estado_em(toquio.local(2026, 11, 3, 8, 0, 0))).to have_attributes(situacao: 'gratis', dias_restantes: 7)
+      expect(estado_em(toquio.local(2026, 11, 10, 23, 59, 59))).to have_attributes(situacao: 'gratis', dias_restantes: 0)
+      expect(estado_em(toquio.local(2026, 11, 11, 0, 0, 0))).to be_pausado
     end
   end
 
@@ -147,10 +180,10 @@ RSpec.describe Autonomia::Agents::Contratados::Gratis do
     let(:agente) { contratar(quando: comeco) }
 
     it 'no grátis, não; depois dos 7 dias, sim; liberado, não' do
-      expect(described_class.pausado?(agente, agora: comeco + 6.days)).to be(false)
-      expect(described_class.pausado?(agente, agora: comeco + 7.days)).to be(true)
+      expect(described_class.pausado?(agente, agora: comeco + 7.days)).to be(false)
+      expect(described_class.pausado?(agente, agora: comeco + 8.days)).to be(true)
       liberar
-      expect(described_class.pausado?(agente.reload, agora: comeco + 7.days)).to be(false)
+      expect(described_class.pausado?(agente.reload, agora: comeco + 8.days)).to be(false)
     end
   end
 

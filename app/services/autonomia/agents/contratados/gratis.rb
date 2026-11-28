@@ -16,8 +16,12 @@ module Autonomia::Agents::Contratados::Gratis
   LIBERADO = 'liberado'.freeze
 
   # `situacao`: GRATIS, PAUSADO ou LIBERADO. `dias_restantes`: só no GRATIS. Enquanto a conta não contratou, os dias
-  # inteiros do modelo. Depois, os dias do calendário que faltam até o dia em que o grátis acaba, no fuso da conta: 7 no
-  # dia em que contratou, 1 na véspera, 0 no último dia (o grátis acaba na hora em que contratou, 7 dias depois).
+  # inteiros do modelo. Depois, os dias do calendário que faltam até o último dia grátis, no fuso da conta.
+  #
+  # O último dia grátis é o dia do calendário `dias_gratis` depois do dia da primeira contratação, no fuso da conta, e
+  # vale INTEIRO: contratou no dia D, a qualquer hora, o grátis vai até 23:59:59 do dia D+7 e a pausa começa à
+  # meia-noite do dia seguinte. A pausa e a contagem saem da mesma data: 7 no dia em que contratou, 1 na véspera e 0 o
+  # dia inteiro do último dia ("Hoje é o último dia grátis" é verdade até a meia-noite).
   Estado = Data.define(:situacao, :dias_restantes) do
     def pausado?
       situacao == PAUSADO
@@ -34,16 +38,17 @@ module Autonomia::Agents::Contratados::Gratis
     comeco = inicio(account, chave)
     return Estado.new(situacao: GRATIS, dias_restantes: dias) if comeco.nil?
 
-    fim = comeco + dias.days
-    return Estado.new(situacao: PAUSADO, dias_restantes: nil) unless agora < fim
+    fuso = fuso_da_conta(account)
+    ultimo_dia = comeco.in_time_zone(fuso).to_date + dias
+    hoje = agora.in_time_zone(fuso).to_date
+    return Estado.new(situacao: PAUSADO, dias_restantes: nil) if hoje > ultimo_dia
 
-    Estado.new(situacao: GRATIS, dias_restantes: dias_do_calendario(account, agora, fim))
+    Estado.new(situacao: GRATIS, dias_restantes: (ultimo_dia - hoje).to_i)
   end
 
-  # Quantos dias do calendário vão de `agora` até `fim`, no fuso da conta (o mesmo leitor do CRM).
-  def dias_do_calendario(account, agora, fim)
-    fuso = Crm::Timezone::Resolver.new(account: account).zone_or_default
-    (fim.in_time_zone(fuso).to_date - agora.in_time_zone(fuso).to_date).to_i
+  # O fuso da conta, com o mesmo leitor do CRM (sem fuso na conta: o padrão, America/Sao_Paulo).
+  def fuso_da_conta(account)
+    Crm::Timezone::Resolver.new(account: account).zone_or_default
   end
 
   # -> quando os dias grátis começaram (o primeiro contratado do modelo na conta, apagados inclusive), ou nil.

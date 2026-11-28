@@ -48,12 +48,14 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
   end
 
   # #3270: a conversa acabou de ir para o agente contratado PAUSADO (a Atribuição, uma pessoa, o Sync por assunto), que
-  # não abre turno nenhum. Com o cliente ativo (a mesma janela do AoReceberPassagem), ela passa para a equipe agora, com
-  # a nota da pausa (Contratados::AvisoDaPausa); cliente parado espera a próxima mensagem dele, que faz o mesmo no
-  # ReplyJob. Mover cards em lote não acorda a equipe em conversa velha.
+  # não abre turno nenhum. Ela passa para a equipe agora, com a nota da pausa (Contratados::AvisoDaPausa), quando o
+  # cliente está ativo (a mesma janela do AoReceberPassagem) ou quando a última mensagem pública é dele: ele está
+  # esperando resposta, por mais antiga que ela seja. Conversa parada, com a última palavra nossa, espera a próxima
+  # mensagem do cliente, que faz o mesmo no ReplyJob. Mover cards em lote não acorda a equipe em conversa encerrada.
   def self.pausado_passou_para_a_equipe?(conversation)
-    ::Autonomia::Agents::Operate::AoReceberPassagem.cliente_ativo?(conversation) &&
-      ::Autonomia::Agents::Contratados::AvisoDaPausa.postar(conversation)
+    cliente_esperando = ::Autonomia::Agents::Operate::AoReceberPassagem.cliente_ativo?(conversation) ||
+                        ultima_mensagem_publica(conversation)&.incoming?
+    cliente_esperando && ::Autonomia::Agents::Contratados::AvisoDaPausa.postar(conversation)
   end
 
   def self.passagem_para_ia?(conversation, payload)

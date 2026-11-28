@@ -33,11 +33,14 @@ class Autonomia::Agents::Contratados::AvisoDaPausa
     passou || nota.present?
   end
 
-  # -> [passou, nota]. O lock relê a conversa: a passagem e a nota são decididas sobre o estado de agora.
+  # -> [passou, nota]. O lock relê a conversa: a passagem e a nota são decididas sobre o estado de agora. Uma pessoa que
+  # assumiu a conversa entre a primeira olhada e o lock fica com ela: nada passa e nenhuma nota sai.
   def self.passar_e_notar(conversation, agent_inbox)
     passou = false
     nota = nil
     conversation.with_lock do
+      next if conversation.assignee_id.present?
+
       if ::Autonomia::Agents::Operate.espelho_no_comando?(conversation, agent_inbox)
         conversation.bot_handoff!(motivo: MOTIVO)
         passou = true
