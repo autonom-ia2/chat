@@ -1,0 +1,8 @@
+<%# #3270 — os agentes contratados liberados na conta, pelo nome; nenhum: o texto de nenhum. %>
+<span data-contratados-liberados>
+  <% if field.data.present? %>
+    <%= field.data.map { |chave| t("autonomia_contratados_liberados.modelos.#{chave}.title") }.join(', ') %>
+  <% else %>
+    <%= t('autonomia_contratados_liberados.none') %>
+  <% end %>
+</span>

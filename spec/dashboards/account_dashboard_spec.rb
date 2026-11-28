@@ -17,5 +17,13 @@ RSpec.describe AccountDashboard do
       expect(dashboard::FORM_ATTRIBUTES).to include(:agents_niche)
       expect(dashboard::FORM_ATTRIBUTES.include?(:feature_instagram_assisted_onboarding)).to be(!enterprise)
     end
+
+    it "mostra e edita a liberação dos agentes contratados com enterprise?=#{enterprise} (#3270)" do
+      dashboard = dashboard_com(enterprise: enterprise)
+
+      expect(dashboard::ATTRIBUTE_TYPES[:contratados_liberados]).to eq(ContratadosLiberadosField)
+      expect(dashboard::SHOW_PAGE_ATTRIBUTES).to include(:contratados_liberados)
+      expect(dashboard::FORM_ATTRIBUTES).to include(:contratados_liberados)
+    end
   end
 end

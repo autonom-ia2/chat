@@ -34,6 +34,46 @@ RSpec.describe 'Autonomia agente contratado: dados da corretora', type: :request
                                      config: { 'contratado' => marca })
   end
 
+  # #3270: a página do agente lê o preço e o estado do período grátis em `contratado.plano` (o show e a listagem).
+  describe 'GET agents/:id: o plano do contratado' do
+    def plano_no_show
+      get "#{agents_url}/#{agente.id}", headers: admin.create_new_auth_token, as: :json
+      response.parsed_body.dig('contratado', 'plano')
+    end
+
+    it 'no grátis: os dias que faltam e o preço' do
+      agente.update_columns(created_at: 3.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(plano_no_show).to eq('dias_gratis' => 7, 'preco_mensal_centavos' => 19_700, 'moeda' => 'BRL',
+                                  'situacao' => 'gratis', 'dias_restantes' => 4)
+    end
+
+    it 'pausado e, liberada a conta, liberado' do
+      agente.update_columns(created_at: 8.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(plano_no_show).to include('situacao' => 'pausado', 'dias_restantes' => nil)
+
+      Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
+      account.save!
+      expect(plano_no_show).to include('situacao' => 'liberado', 'dias_restantes' => nil)
+    end
+
+    it 'na listagem também (a página pode ler o agente da lista)' do
+      agente.update_columns(created_at: 8.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      get agents_url, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['payload'].find { |item| item['id'] == agente.id }.dig('contratado', 'plano', 'situacao')).to eq('pausado')
+    end
+
+    it 'agente comum: sem contratado' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'sdr', instruction: 'x')
+
+      get "#{agents_url}/#{comum.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['contratado']).to be_nil
+    end
+  end
+
   describe 'PATCH agents/:agent_id/contratado' do
     it 'troca os três dados e responde o agente' do
       patch contratado_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json

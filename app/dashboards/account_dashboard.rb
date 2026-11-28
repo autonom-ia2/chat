@@ -38,7 +38,9 @@ class AccountDashboard < Administrate::BaseDashboard
     account_users: Field::HasMany,
     custom_attributes: Field::String,
     # #1429: nicho dos agentes, fora da escolha enterprise/não enterprise para aparecer nos dois ramos.
-    agents_niche: AgentsNicheField
+    agents_niche: AgentsNicheField,
+    # #3270: a liberação dos agentes contratados (a conta não pausa depois dos dias grátis), nos dois ramos também.
+    contratados_liberados: ContratadosLiberadosField
   }.merge(enterprise_attribute_types).freeze
 
   # COLLECTION_ATTRIBUTES
@@ -77,6 +79,7 @@ class AccountDashboard < Administrate::BaseDashboard
     conversations
     account_users
     agents_niche
+    contratados_liberados
   ] + enterprise_show_page_attributes).freeze
 
   # FORM_ATTRIBUTES
@@ -96,6 +99,7 @@ class AccountDashboard < Administrate::BaseDashboard
     locale
     status
     agents_niche
+    contratados_liberados
   ] + enterprise_form_attributes).freeze
 
   # COLLECTION_FILTERS

@@ -28,7 +28,12 @@ module Autonomia::Agents::Contratados
       seguradora: 'universal',
       # Para quem o modelo existe (#3269): a conta do nicho seguros com perfil corretora. Cada modelo diz o seu.
       segmento: { nicho: Autonomia::Agents::Nicho::SEGUROS, perfil: Autonomia::Agents::Nicho::PERFIL_PADRAO }.freeze,
-      conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true)
+      conversa: CONVERSA_DO_PR1.merge('humanize_delivery' => true, 'voice_reply' => true),
+      # O preço (#3270): os dias grátis contam da primeira contratação do modelo na conta (`Contratados::Gratis`); depois,
+      # o valor mensal vai na fatura da Hub2You. O único lugar desses números: a tela os recebe da API.
+      dias_gratis: 7,
+      preco_mensal_centavos: 19_700,
+      moeda: 'BRL'
     }.freeze
   }.freeze
 

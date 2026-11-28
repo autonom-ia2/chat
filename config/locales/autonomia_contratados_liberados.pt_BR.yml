@@ -1,0 +1,13 @@
+pt_BR:
+  helpers:
+    label:
+      account:
+        contratados_liberados: Agentes contratados liberados
+  autonomia_contratados_liberados:
+    label: Agentes contratados liberados
+    help: O agente liberado nunca pausa e não mostra os dias grátis. Ligue quando a fatura da Hub2You estiver paga, ou para a conta liberada sem cobrança. Sem a liberação, o agente pausa quando os dias grátis acabam.
+    card_text: Liberado. O agente continua atendendo os clientes depois dos dias grátis.
+    none: Nenhum
+    modelos:
+      seguro_viagem_universal:
+        title: Seguro Viagem Universal

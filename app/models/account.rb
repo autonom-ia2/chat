@@ -32,6 +32,7 @@ class Account < ApplicationRecord
   include Featurable
   include Autonomia::AccountProvisioningDefaults
   include Autonomia::AgentsNiche
+  include Autonomia::ContratadosLiberados
   include CacheKeys
   include CaptainFeaturable
   include AccountEmailRateLimitable

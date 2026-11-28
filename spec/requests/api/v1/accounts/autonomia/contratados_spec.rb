@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #3211 (Tarefa 21) — o catálogo dos agentes contratados e o "Contratar", pela API. O catálogo devolve só as chaves (os
-# textos são da tela) e fica vazio sem a flag. A recusa é 422 com o código e o campo que a tela destaca (R14).
+# textos são da tela) e fica vazio sem a flag. A recusa é 422 com o código e o campo que a tela destaca (R14). #3270: o
+# catálogo e o agente levam o preço e o estado do período grátis (`plano`), que a tela só formata.
 RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:admin) { create(:user, :administrator, account: account) }
@@ -10,6 +11,9 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
   let(:contratar_url) { "#{catalogo_url}/seguro_viagem_universal" }
   let(:tres_campos) { { nome_agente: 'Bia', nome_corretora: 'Corretora Exemplo', sobre_corretora: 'Corretora de seguros desde 2010.' } }
   let(:embedder) { instance_double(Autonomia::Agents::EmbeddingService, embed_batch: []) }
+  let(:plano_novo) do
+    { 'dias_gratis' => 7, 'preco_mensal_centavos' => 19_700, 'moeda' => 'BRL', 'situacao' => 'gratis', 'dias_restantes' => 7 }
+  end
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
 
@@ -35,7 +39,8 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => false)
+      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => false,
+                                         'planos' => { 'seguro_viagem_universal' => plano_novo })
     end
 
     it 'vazio sem a flag do modelo' do
@@ -44,7 +49,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false)
+      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false, 'planos' => {})
     end
 
     it 'conta que não é corretora de seguros não recebe o modelo (#3269)' do
@@ -54,7 +59,37 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false)
+      expect(response.parsed_body).to eq('modelos' => [], 'falta_chave_de_ia' => false, 'planos' => {})
+    end
+
+    describe 'o plano (#3270)' do
+      def contratado_em(momento)
+        agente = Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'sdr', instruction: 'retrato',
+                                                  config: { 'contratado' => { 'modelo' => 'seguro_viagem_universal' } })
+        agente.update_columns(created_at: momento) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      def plano_do_catalogo
+        get catalogo_url, headers: admin.create_new_auth_token, as: :json
+        response.parsed_body.dig('planos', 'seguro_viagem_universal')
+      end
+
+      it 'conta no meio do grátis: os dias que faltam' do
+        contratado_em(2.days.ago)
+        expect(plano_do_catalogo).to include('situacao' => 'gratis', 'dias_restantes' => 5)
+      end
+
+      it 'grátis vencido sem a liberação: pausado' do
+        contratado_em(8.days.ago)
+        expect(plano_do_catalogo).to include('situacao' => 'pausado', 'dias_restantes' => nil, 'preco_mensal_centavos' => 19_700)
+      end
+
+      it 'conta liberada: liberado, sem contagem' do
+        contratado_em(8.days.ago)
+        Autonomia::Agents::Contratados::Liberacao.atribuir(account, ['seguro_viagem_universal'])
+        account.save!
+        expect(plano_do_catalogo).to include('situacao' => 'liberado', 'dias_restantes' => nil)
+      end
     end
 
     it 'agente sem função não lê o catálogo' do
@@ -71,7 +106,7 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       expect(response).to have_http_status(:created)
       expect(response.parsed_body['contratado']).to eq(
         'modelo' => 'seguro_viagem_universal', 'nome_agente' => 'Bia', 'nome_corretora' => 'Corretora Exemplo',
-        'sobre_corretora' => 'Corretora de seguros desde 2010.', 'acesso' => nil
+        'sobre_corretora' => 'Corretora de seguros desde 2010.', 'acesso' => nil, 'plano' => plano_novo
       )
       expect(response.parsed_body).to include('name' => 'Bia', 'status' => 'draft')
       expect(Autonomia::Agents::Agent.find(response.parsed_body['id']).created_by).to eq(admin)
@@ -140,7 +175,8 @@ RSpec.describe 'Autonomia agentes contratados: catálogo e contratar', type: :re
       Integrations::Hook.where(account_id: account.id, app_id: 'crm_kanban_ai').delete_all
 
       get catalogo_url, headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => true)
+      expect(response.parsed_body).to eq('modelos' => ['seguro_viagem_universal'], 'falta_chave_de_ia' => true,
+                                         'planos' => { 'seguro_viagem_universal' => plano_novo })
 
       post contratar_url, params: tres_campos, headers: admin.create_new_auth_token, as: :json
 

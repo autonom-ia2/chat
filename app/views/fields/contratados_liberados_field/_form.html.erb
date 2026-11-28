@@ -1,0 +1,24 @@
+<%# #3270 — a liberação dos agentes contratados: um cartão por modelo do catálogo, com a caixa de marcar dentro do rótulo
+    (sem <select>). O campo escondido manda a lista vazia quando nenhum cartão fica marcado, para desmarcar o último
+    desligar de verdade. Os nomes seguem ContratadosLiberadosField.permitted_attribute. %>
+<% nome = "#{f.object_name}[#{field.attribute}][]" %>
+<% cartao = 'flex items-start gap-3 p-4 rounded-xl cursor-pointer min-h-11 ring-1 ring-inset ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2 has-[:checked]:ring-2 has-[:checked]:ring-n-iris-9 has-[:checked]:bg-n-iris-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-iris-9' %>
+<%= render "field", f: f, field: field, wide: true do %>
+<div data-contratados-liberados-form>
+  <p class="mt-0 mb-3 text-sm text-n-slate-11"><%= t('autonomia_contratados_liberados.help') %></p>
+  <input type="hidden" name="<%= nome %>" value="">
+  <fieldset class="grid gap-3 p-0 m-0 border-0">
+    <legend class="sr-only"><%= t('autonomia_contratados_liberados.label') %></legend>
+    <% field.modelos.each do |chave| %>
+      <label class="<%= cartao %>">
+        <input type="checkbox" id="contratado-liberado-<%= chave.dasherize %>" name="<%= nome %>" value="<%= chave %>"
+               class="mt-1 <%= ui(:checkbox) %>" <%= 'checked' if field.liberado?(chave) %>>
+        <span class="flex flex-col gap-0.5">
+          <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_contratados_liberados.modelos.#{chave}.title") %></span>
+          <span class="text-sm text-n-slate-11"><%= t('autonomia_contratados_liberados.card_text') %></span>
+        </span>
+      </label>
+    <% end %>
+  </fieldset>
+</div>
+<% end %>

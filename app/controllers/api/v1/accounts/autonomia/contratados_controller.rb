@@ -5,6 +5,9 @@
 #                                            consultas prontas e o cofre). `falta_chave_de_ia`: algum modelo listado
 #                                            não contrata por falta da chave de IA da própria conta; a página do modelo
 #                                            avisa antes de "Contratar".
+#                                            `planos` (#3270): por modelo listado, o preço e o estado na conta
+#                                            (`Contratados::Gratis.para_tela`): dias grátis, centavos por mês, moeda,
+#                                            `situacao` (gratis, pausado ou liberado) e `dias_restantes`.
 # POST .../autonomia/contratados/:modelo  { nome_agente, nome_corretora, sobre_corretora } -> 201 com o agente, como no
 #                                            `show`; a recusa é 422 com o código e o campo (`DadosDoContratado`).
 # Leitura pede `autonomia_view`; contratar pede `autonomia_manage`, como criar qualquer agente (BaseController).
@@ -14,7 +17,8 @@ class Api::V1::Accounts::Autonomia::ContratadosController < Api::V1::Accounts::A
   def index
     modelos = ::Autonomia::Agents::Contratados.disponiveis(Current.account)
     falta = modelos.any? { |modelo| !::Autonomia::Agents::Contratados.disponivel?(Current.account, modelo) }
-    render json: { modelos: modelos, falta_chave_de_ia: falta }
+    planos = modelos.index_with { |modelo| ::Autonomia::Agents::Contratados::Gratis.para_tela(Current.account, modelo) }
+    render json: { modelos: modelos, falta_chave_de_ia: falta, planos: planos }
   end
 
   def create

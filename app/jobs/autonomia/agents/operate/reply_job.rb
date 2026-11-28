@@ -237,8 +237,11 @@ module Autonomia
         end
 
         # O settle de um turno que já não tem quem responda (uma pessoa assumiu, o agente saiu) solta a marca dele.
+        # #3270: na mensagem do cliente, se quem responderia é o agente contratado pausado, a equipe recebe a nota da
+        # pausa (uma vez por conversa). O turno não roda: nenhuma chamada ao modelo, e a Atribuição fica como está.
         def sem_quem_responda(conversation, message_id, phase)
           soltar_turno(conversation, message_id) if phase == 'settle'
+          ::Autonomia::Agents::Contratados::AvisoDaPausa.postar(conversation) if phase == 'trigger'
         end
 
         def soltar_turno(conversation, message_id)

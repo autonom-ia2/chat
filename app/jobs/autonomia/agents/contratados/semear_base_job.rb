@@ -8,10 +8,7 @@ class Autonomia::Agents::Contratados::SemearBaseJob < ApplicationJob
 
   def perform(agent_id)
     agente = Autonomia::Agents::Agent.kept.find_by(id: agent_id)
-    return if agente.nil? || !agente.contratado?
-
-    # Só o modelo liberado: a chave da conta é a `Base` quem confere, sob a trava, e devolve `sem_chave_da_conta`.
-    return unless Autonomia::Agents::Contratados.liberado?(agente.account, agente.marca_do_contratado['modelo'])
+    return unless semeia?(agente)
 
     resultado = Autonomia::Agents::Contratados::Base.semear_se_preciso!(agente)
     return unless resultado.is_a?(String)
@@ -27,6 +24,17 @@ class Autonomia::Agents::Contratados::SemearBaseJob < ApplicationJob
   end
 
   private
+
+  # Contratado e com o modelo liberado: a chave da conta é a `Base` quem confere, sob a trava, e devolve
+  # `sem_chave_da_conta`. #3270: o agente pausado (dias grátis vencidos, sem a liberação) não ganha base nova: o embedding
+  # é pago e a conta não está pagando. A base que já existe fica. Liberada a conta, o cron (`BaseEmDiaJob`) semeia na hora
+  # seguinte.
+  def semeia?(agente)
+    return false if agente.nil? || !agente.contratado?
+
+    Autonomia::Agents::Contratados.liberado?(agente.account, agente.marca_do_contratado['modelo']) &&
+      !Autonomia::Agents::Contratados::Gratis.pausado?(agente)
+  end
 
   def avisar_no_log(agent_id, motivo)
     Rails.logger.warn("[autonomia][contratados] base não semeada agente=#{agent_id} motivo=#{motivo}")
