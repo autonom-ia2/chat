@@ -35,17 +35,22 @@ class Autonomia::Agents::Contratados::AvisoDaPausa
 
   # -> [passou, nota]. O lock relê a conversa: a passagem e a nota são decididas sobre o estado de agora. Uma pessoa que
   # assumiu a conversa entre a primeira olhada e o lock fica com ela: nada passa e nenhuma nota sai.
+  # O lock é de uma cópia lida do banco, não do objeto de quem chamou: a conversa que acabou de nascer chega com o
+  # `display_id` do gatilho do banco ainda marcado como mudado (Conversation#load_attributes_created_by_db_triggers), e o
+  # Rails recusa travar registro com mudança não gravada. É o caso da conversa nova que a Atribuição entrega ao agente
+  # pausado e chega aqui pelo evento de troca de dono (ReenfileirarTurno).
   def self.passar_e_notar(conversation, agent_inbox)
     passou = false
     nota = nil
-    conversation.with_lock do
-      next if conversation.assignee_id.present?
+    travada = ::Conversation.find(conversation.id)
+    travada.with_lock do
+      next if travada.assignee_id.present?
 
-      if ::Autonomia::Agents::Operate.espelho_no_comando?(conversation, agent_inbox)
-        conversation.bot_handoff!(motivo: MOTIVO)
+      if ::Autonomia::Agents::Operate.espelho_no_comando?(travada, agent_inbox)
+        travada.bot_handoff!(motivo: MOTIVO)
         passou = true
       end
-      nota = criar(conversation, agent_inbox) unless postada?(conversation)
+      nota = criar(travada, agent_inbox) unless postada?(travada)
     end
     [passou, nota]
   end
