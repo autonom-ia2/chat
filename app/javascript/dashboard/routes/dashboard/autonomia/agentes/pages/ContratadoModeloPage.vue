@@ -227,7 +227,7 @@ const contratar = async campos => {
               v-if="lendo"
               data-preco-carregando
               role="status"
-              class="block w-64 h-6 max-w-full rounded-lg bg-white/20 motion-safe:animate-pulse"
+              class="relative block w-64 h-6 max-w-full rounded-lg bg-white/20 motion-safe:animate-pulse"
             >
               <span class="sr-only">
                 {{ t('AGENTS.CONTRATADOS.PLANO.PRECO_CARREGANDO') }}

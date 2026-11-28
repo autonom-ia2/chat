@@ -41,7 +41,12 @@ describe('planoDoContratado (#3270)', () => {
   });
 
   it('uses the values the server sends, never fixed ones', () => {
-    const outro = plano({ dias_gratis: 14, preco_mensal_centavos: 25050 });
+    // Conta que nunca contratou: o servidor manda os dias inteiros do modelo em `dias_restantes`.
+    const outro = plano({
+      dias_gratis: 14,
+      dias_restantes: 14,
+      preco_mensal_centavos: 25050,
+    });
 
     expect(semNbsp(linhaDoPreco(t, outro, 'pt_BR'))).toBe(
       '14 dias grátis, depois R$ 250,50 por mês'
