@@ -30,6 +30,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
   before do
     enable_test_encryption!
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas', 'agente_ferramentas_prontas_consultas',
                              Autonomia::Agents::Operate::LeituraNoTurno::FLAG)
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)

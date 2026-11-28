@@ -20,6 +20,7 @@ RSpec.describe Autonomia::Agents::Tools::Registry do # rubocop:disable RSpec/Spe
   before do
     enable_test_encryption!
     # As ferramentas chegam com o modelo disponível no turno: a flag, as prontas e a chave de IA da própria conta.
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)

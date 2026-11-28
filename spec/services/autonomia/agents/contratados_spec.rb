@@ -5,7 +5,48 @@ RSpec.describe Autonomia::Agents::Contratados do
 
   before { enable_test_encryption! }
 
+  describe 'segmento do modelo (#3269)' do
+    let(:instalacao) { 'AUTONOMIA_NICHO_PADRAO' }
+
+    before do
+      account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
+                               'agente_ferramentas_prontas_consultas')
+    end
+
+    it 'liberado para seguros com perfil corretora' do
+      marcar_corretora!(account)
+      expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(true)
+    end
+
+    it 'recusa a conta geral' do
+      Autonomia::Agents::Nicho.atribuir(account, nicho: Autonomia::Agents::Nicho::GERAL, perfil: nil)
+      account.save!
+      expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(false)
+      expect(described_class.disponiveis(account)).to eq([])
+    end
+
+    %w[seguradora insurtech saude_beneficios].each do |perfil|
+      it "recusa seguros com perfil #{perfil}" do
+        marcar_corretora!(account, perfil: perfil)
+        expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(false)
+      end
+    end
+
+    it 'conta sem escolha segue o padrão da instalação, como a carteira (Carteira::Acesso)' do
+      with_modified_env(instalacao => 'seguros:corretora') do
+        expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(true)
+      end
+      with_modified_env(instalacao => 'seguros:seguradora') do
+        expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(false)
+      end
+      with_modified_env(instalacao => 'geral') do
+        expect(described_class.liberado?(account, 'seguro_viagem_universal')).to be(false)
+      end
+    end
+  end
+
   it 'disponível só com a flag do modelo, as duas das prontas e o cofre' do
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
     expect(described_class.disponiveis(account)).to eq(['seguro_viagem_universal'])
@@ -14,6 +55,7 @@ RSpec.describe Autonomia::Agents::Contratados do
   end
 
   it 'disponível exige a chave de IA da própria conta; liberado não (a da instalação não conta)' do
+    marcar_corretora!(account)
     account.enable_features!('agente_seguro_viagem_universal', 'agente_ferramentas_prontas',
                              'agente_ferramentas_prontas_consultas')
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'chave-da-instalacao-teste')
