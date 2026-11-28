@@ -33,6 +33,11 @@ const PAUSADO = plano({ situacao: 'pausado', dias_restantes: null });
 const CARTOES = [
   { id: 'cartao-gratis', titulo: 'Cartão: com dias grátis', plano: plano() },
   {
+    id: 'cartao-meio-do-gratis',
+    titulo: 'Cartão: no meio dos dias grátis (faltam 3)',
+    plano: plano({ dias_restantes: 3 }),
+  },
+  {
     id: 'cartao-pausado',
     titulo: 'Cartão: pausado (sem grátis)',
     plano: PAUSADO,

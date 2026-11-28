@@ -24,14 +24,32 @@ export const precoDoPlano = (plano, locale) =>
 // A conta que já gastou os dias grátis (pausada) não ganha outros: contratar de novo não os reinicia.
 const semGratis = plano => plano.situacao === SITUACAO.PAUSADO;
 
-// A linha do cartão e da página do modelo: "7 dias grátis, depois R$ 197,00 por mês", ou, para quem já usou os dias
-// grátis, "R$ 197,00 por mês. Os dias grátis já foram usados.". Sem plano: nada.
+// A conta já começou os dias grátis: faltam menos que os do modelo. No dia em que contratou faltam todos, e a linha
+// de quem nunca contratou ("7 dias grátis, depois…") continua verdadeira.
+const comecouOsDiasGratis = plano =>
+  plano.situacao === SITUACAO.GRATIS &&
+  Number.isInteger(plano.dias_restantes) &&
+  plano.dias_restantes < plano.dias_gratis;
+
+const textoDosDiasGratis = (t, plano, locale) => {
+  const preco = precoDoPlano(plano, locale);
+  const dias = plano.dias_restantes;
+  if (dias === 0) {
+    return t('AGENTS.CONTRATADOS.PLANO.FAIXA_ULTIMO_DIA', { preco });
+  }
+  return t('AGENTS.CONTRATADOS.PLANO.FAIXA_GRATIS', { dias, preco }, dias);
+};
+
+// A linha do cartão e da página do modelo. Quem nunca contratou: "7 dias grátis, depois R$ 197,00 por mês". Quem já
+// começou os dias grátis: os que faltam, com os textos da faixa ("Faltam 3 dias grátis. Depois…", ou o último dia).
+// Quem já usou os dias grátis: "R$ 197,00 por mês. Os dias grátis já foram usados.". Sem plano: nada.
 export const linhaDoPreco = (t, plano, locale) => {
   if (!plano) return '';
   const preco = precoDoPlano(plano, locale);
   if (semGratis(plano)) {
     return t('AGENTS.CONTRATADOS.PLANO.PRECO_SEM_GRATIS', { preco });
   }
+  if (comecouOsDiasGratis(plano)) return textoDosDiasGratis(t, plano, locale);
   const dias = plano.dias_gratis;
   return t('AGENTS.CONTRATADOS.PLANO.PRECO_COM_GRATIS', { dias, preco }, dias);
 };
@@ -43,15 +61,6 @@ export const iconeDoPreco = plano =>
 // A página do agente mostra a faixa só durante os dias grátis e na pausa. Conta liberada (ou sem plano): sem faixa.
 export const mostraFaixa = plano =>
   [SITUACAO.GRATIS, SITUACAO.PAUSADO].includes(plano?.situacao);
-
-const textoDosDiasGratis = (t, plano, locale) => {
-  const preco = precoDoPlano(plano, locale);
-  const dias = plano.dias_restantes;
-  if (dias === 0) {
-    return t('AGENTS.CONTRATADOS.PLANO.FAIXA_ULTIMO_DIA', { preco });
-  }
-  return t('AGENTS.CONTRATADOS.PLANO.FAIXA_GRATIS', { dias, preco }, dias);
-};
 
 // A faixa da página do agente. Nos dias grátis: quantos faltam (ou que hoje é o último) e o preço depois, como aviso
 // (`status`). Pausado: o que aconteceu e com quem falar, como alerta (`alert`): o agente não está atendendo. Sem faixa

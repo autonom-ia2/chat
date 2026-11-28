@@ -68,6 +68,33 @@ describe('planoDoContratado (#3270)', () => {
     expect(iconeDoPreco(plano({ situacao: 'pausado' }))).toBe('i-lucide-tag');
   });
 
+  it('price line for an account in the middle of the free days: the days left, with the banner texts', () => {
+    expect(
+      semNbsp(linhaDoPreco(t, plano({ dias_restantes: 3 }), 'pt_BR'))
+    ).toBe(
+      'Faltam 3 dias grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+    );
+    expect(
+      semNbsp(linhaDoPreco(t, plano({ dias_restantes: 1 }), 'pt_BR'))
+    ).toBe(
+      'Falta 1 dia grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+    );
+  });
+
+  it('price line on the last free day: today is the last one', () => {
+    expect(
+      semNbsp(linhaDoPreco(t, plano({ dias_restantes: 0 }), 'pt_BR'))
+    ).toBe(
+      'Hoje é o último dia grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+    );
+  });
+
+  it('price line for an account that never hired (all the free days left): the full offer', () => {
+    expect(
+      semNbsp(linhaDoPreco(t, plano({ dias_restantes: 7 }), 'pt_BR'))
+    ).toBe('7 dias grátis, depois R$ 197,00 por mês');
+  });
+
   it('no plan, no line', () => {
     expect(linhaDoPreco(t, null, 'pt_BR')).toBe('');
   });
@@ -231,6 +258,18 @@ describe('ContratadoCartao with the price (#3270)', () => {
     expect(texto).toBeGreaterThan(-1);
     expect(texto).toBeLessThan(preco);
     expect(preco).toBeLessThan(precisa);
+  });
+
+  it('account in the middle of the free days: the card says how many are left', () => {
+    const wrapper = mount(ContratadoCartao, {
+      props: { modelo: UNIVERSAL, plano: plano({ dias_restantes: 4 }) },
+    });
+
+    const linha = wrapper.get('[data-preco]');
+    expect(semNbsp(linha.text())).toBe(
+      'Faltam 4 dias grátis. Depois, R$ 197,00 por mês na fatura da Hub2You.'
+    );
+    expect(linha.find('.i-lucide-gift').exists()).toBe(true);
   });
 
   it('account that already used the free days: only the price, with the tag icon', () => {

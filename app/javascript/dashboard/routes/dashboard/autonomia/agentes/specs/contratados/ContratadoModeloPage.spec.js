@@ -19,6 +19,14 @@ const api = vi.hoisted(() => ({ contratar: vi.fn(), lista: vi.fn() }));
 vi.mock('dashboard/api/autonomia/contratados', () => ({ default: api }));
 
 const UNIVERSAL = 'seguro_viagem_universal';
+// O plano do modelo como o catálogo manda (#3270): sem ele, a página não deixa contratar.
+const PLANO = {
+  dias_gratis: 7,
+  preco_mensal_centavos: 19700,
+  moeda: 'BRL',
+  situacao: 'gratis',
+  dias_restantes: 7,
+};
 
 const no = seletor => document.querySelector(seletor);
 const campo = nome => no(`[data-campo="${nome}"]`);
@@ -66,7 +74,11 @@ describe('ContratadoModeloPage (#3211)', () => {
     router.push.mockClear();
     api.contratar.mockResolvedValue({ data: { id: 42 } });
     api.lista.mockResolvedValue({
-      data: { modelos: [UNIVERSAL], falta_chave_de_ia: false },
+      data: {
+        modelos: [UNIVERSAL],
+        falta_chave_de_ia: false,
+        planos: { [UNIVERSAL]: PLANO },
+      },
     });
   });
 
@@ -223,7 +235,11 @@ describe('ContratadoModeloPage (#3211)', () => {
   describe('account without its own AI key', () => {
     beforeEach(() => {
       api.lista.mockResolvedValue({
-        data: { modelos: [UNIVERSAL], falta_chave_de_ia: true },
+        data: {
+          modelos: [UNIVERSAL],
+          falta_chave_de_ia: true,
+          planos: { [UNIVERSAL]: PLANO },
+        },
       });
     });
 
@@ -310,11 +326,19 @@ describe('ContratadoModeloPage (#3211)', () => {
     wrapper.unmount();
   });
 
-  it('shows no price line when the catalog has no plan', async () => {
+  it('read ok but without this model plan: same as a failure, with "Contratar" off', async () => {
+    api.lista.mockResolvedValue({
+      data: { modelos: [UNIVERSAL], falta_chave_de_ia: false, planos: {} },
+    });
     const semPlano = await montar();
+
     expect(semPlano.find('[data-preco]').exists()).toBe(false);
     expect(semPlano.find('[data-preco-carregando]').exists()).toBe(false);
-    expect(semPlano.find('[data-preco-falhou]').exists()).toBe(false);
+    expect(semPlano.get('[data-heroi] [data-preco-falhou]').text()).toBe(
+      'AGENTS.CONTRATADOS.PLANO.PRECO_FALHOU'
+    );
+    expect(no('[data-contratar]').disabled).toBe(true);
+    expect(no('[data-contratar-celular]').disabled).toBe(true);
     semPlano.unmount();
   });
 

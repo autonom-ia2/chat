@@ -24,8 +24,9 @@ import { GAVETA } from '../utils/pagina';
 // A conta sem a chave de IA própria (`falta_chave_de_ia` da lista) vê o aviso antes de "Contratar", que fica
 // desabilitado: o servidor recusaria (`sem_chave_de_ia`). Quem administra ganha o botão para Integrações.
 // #3270: a mesma leitura traz o preço e o período grátis do modelo (`planos`), na linha logo abaixo do texto do herói.
-// Enquanto lê, uma linha de esqueleto no lugar do preço. Se a leitura falha, a linha diz que o preço não apareceu e
-// "Contratar" fica desabilitado, como sem a chave de IA: ninguém contrata sem ver quanto vai pagar.
+// Enquanto lê, uma linha de esqueleto no lugar do preço. Se a leitura falha, ou volta sem o plano deste modelo, a linha
+// diz que o preço não apareceu e "Contratar" fica desabilitado, como sem a chave de IA: ninguém contrata sem ver quanto
+// vai pagar.
 const props = defineProps({
   modelo: { type: String, required: true },
 });
@@ -49,7 +50,7 @@ onMounted(async () => {
     const { data } = await ContratadosAPI.lista();
     faltaChaveDeIa.value = data?.falta_chave_de_ia === true;
     plano.value = data?.planos?.[props.modelo] || null;
-    leitura.value = LEITURA.PRONTA;
+    leitura.value = plano.value ? LEITURA.PRONTA : LEITURA.FALHOU;
   } catch {
     leitura.value = LEITURA.FALHOU;
   }
@@ -221,7 +222,7 @@ const contratar = async campos => {
           :titulo="t('AGENTS.CONTRATADOS.MODELO.TITULO')"
           :texto="t('AGENTS.CONTRATADOS.MODELO.TEXTO')"
         >
-          <template v-if="lendo || precoFalhou || preco" #detalhe>
+          <template #detalhe>
             <span
               v-if="lendo"
               data-preco-carregando
